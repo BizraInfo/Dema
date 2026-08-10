@@ -93,6 +93,14 @@ try {
   // ── the real measurement ──────────────────────────────────────────────────
   const main = await killAndReplace({ predecessorRole: "predecessor", successorRole: "successor", home: DEMA_HOME });
 
+  // A THIRD process verifies. It never ran the work, and it is handed only the
+  // home path — it obtains the acceptance law by re-deriving the contract from
+  // the persisted fields rather than being given it by the party under judgement.
+  const verFacts = join(scratch, "verifier.json");
+  const v = spawnWorker("verifier", DEMA_HOME, verFacts);
+  await new Promise((res) => v.on("exit", res));
+  const ver = readFacts(verFacts);
+
   // ── the discriminating control, in its OWN home so it cannot read the real
   //    predecessor's state and appear to recover.
   const controlHome = mkdtempSync(join(tmpdir(), "node0-runtime-control-"));
@@ -132,6 +140,30 @@ try {
       operator_control_attempted: main.suc?.operator_control_attempted === true,
       operator_control_new_hash: main.suc?.operator_control_new_hash ?? null,
     },
+    verification: ver
+      ? {
+          executor_pid: ver.executor_pid,
+          verifier_pid: ver.verifier_pid,
+          law_source: ver.law_source,
+          executor_self_claimed_success: ver.executor_self_claimed_success,
+          independently_rederived_verdict: ver.independently_rederived_verdict,
+          positive_control_verdict: ver.positive_control_verdict,
+          authoritative_verdict_source: ver.authoritative_verdict_source,
+          exact_comparison_performed: ver.exact_comparison_performed,
+        }
+      : null,
+    // The delta is MEASURED from the on-disk envelope before and after. The
+    // carried claim is passed in only so the kernel can catch it disagreeing.
+    authority: {
+      authority_before_hash: main.pre.authority_before_hash ?? null,
+      authority_after_hash: main.suc?.authority_after_hash ?? null,
+      carried_authority_delta_claim: 0,
+      worker_a_widen_refused: main.pre.worker_a_widen_refused,
+      worker_b_widen_refused: main.suc?.worker_b_widen_refused,
+      restart_widen_refused: main.suc?.restart_widen_refused,
+      self_grant_refused: main.suc?.self_grant_refused,
+      stale_grant_refused: main.suc?.stale_grant_refused,
+    },
     evidenceClass: "OBSERVED",
     observedAt: new Date().toISOString(),
     executedCodeHash: currentRuntimeKernelHash(),
@@ -148,6 +180,13 @@ try {
     artefact,
     state_ownership_verdict: observation.state_ownership_verdict,
     contract_immutability_verdict: observation.contract_immutability_verdict,
+    verifier_independence_verdict: observation.verifier_independence_verdict,
+    authority_delta_verdict: observation.authority_delta_verdict,
+    measured_authority_delta: observation.measured_authority_delta,
+    executor_pid: ver?.executor_pid ?? null,
+    verifier_pid: ver?.verifier_pid ?? null,
+    executor_claimed: ver?.executor_self_claimed_verdict ?? null,
+    independently_rederived: ver?.independently_rederived_verdict ?? null,
     predecessor_pid: main.predecessor_pid,
     successor_pid: main.successor_pid,
     killed_with: main.pre.killed_with,
@@ -162,7 +201,7 @@ try {
       authority_delta: 0,
     },
     what_this_does_not_prove:
-      "Does not prove the production mission loop uses these modules, that any model or mission ran, that a supervisor detected the death (the harness performed the replacement), or that Node0 is closed. Two invariants of ten.",
+      "Does not prove the production mission loop uses these modules, that any model or mission ran, that a supervisor detected the death (the harness performed the replacement), or that Node0 is closed. Four invariants of ten.",
   };
 
   if (JSON_MODE) console.log(JSON.stringify(report, null, 2));
@@ -171,6 +210,9 @@ try {
     console.log(`contract immutable:${report.contract_immutability_verdict}`);
     console.log(`killed:            ${report.killed_with}  pids ${report.predecessor_pid} -> ${report.successor_pid}`);
     console.log(`control recovered: ${report.control_recovered}  (must be false)`);
+    console.log(`verifier indep:    ${report.verifier_independence_verdict}`);
+    console.log(`authority delta:   ${report.authority_delta_verdict} (measured ${report.measured_authority_delta})`);
+    console.log(`executor claimed ${report.executor_claimed} / verifier re-derived ${report.independently_rederived}  pids ${report.executor_pid} vs ${report.verifier_pid}`);
     console.log(`artefact:          ${artefact}`);
   }
 } finally {

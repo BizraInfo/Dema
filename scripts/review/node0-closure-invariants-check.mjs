@@ -42,8 +42,12 @@ import {
   missionPrimaryStateObservation,
   contractImmutabilityObservation,
   runtimeMissionDiagnostic,
+  verifierIndependenceObservation,
+  cycleAuthorityDeltaObservation,
   STATE_OWNERSHIP_INVARIANT_ID,
   CONTRACT_IMMUTABILITY_INVARIANT_ID,
+  VERIFIER_INDEPENDENCE_INVARIANT_ID,
+  CYCLE_AUTHORITY_DELTA_INVARIANT_ID,
 } from "../../packages/core/src/node0-runtime-mission-adapter.js";
 
 /// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
@@ -114,6 +118,16 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
   Object.freeze({
     invariant_id: CONTRACT_IMMUTABILITY_INVARIANT_ID,
     observe: () => contractImmutabilityObservation(),
+    diagnose: () => runtimeMissionDiagnostic(),
+  }),
+  Object.freeze({
+    invariant_id: VERIFIER_INDEPENDENCE_INVARIANT_ID,
+    observe: () => verifierIndependenceObservation(),
+    diagnose: () => runtimeMissionDiagnostic(),
+  }),
+  Object.freeze({
+    invariant_id: CYCLE_AUTHORITY_DELTA_INVARIANT_ID,
+    observe: () => cycleAuthorityDeltaObservation(),
     diagnose: () => runtimeMissionDiagnostic(),
   }),
 ]);

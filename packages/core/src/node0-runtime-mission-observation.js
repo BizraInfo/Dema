@@ -72,6 +72,47 @@ export const CONTRACT_IMMUTABILITY_VERDICTS = Object.freeze([
   "CONTRACT_IMMUTABLE_PROVEN",
 ]);
 
+export const NODE0_VERIFIER_INDEPENDENCE_SCOPE = "node0_verifier_independence";
+export const NODE0_CYCLE_AUTHORITY_DELTA_SCOPE = "node0_cycle_authority_delta";
+
+export const VERIFIER_INDEPENDENCE_VERDICTS = Object.freeze([
+  "NOT_ATTEMPTED",
+  "NOT_OBSERVED",
+  "OPERATOR_ASSERTED_ONLY",
+  "CONTROL_NOT_RUN",
+  "CONTROL_DID_NOT_DISCRIMINATE",
+  "SAME_PROCESS_VERIFIED",
+  "LAW_NOT_INDEPENDENTLY_OBTAINED",
+  "VERIFIER_USED_EXECUTOR_CLAIM",
+  "NO_EXACT_COMPARISON",
+  "VERIFICATION_EXTERNAL_PROVEN",
+]);
+
+export const AUTHORITY_DELTA_VERDICTS = Object.freeze([
+  "NOT_ATTEMPTED",
+  "NOT_OBSERVED",
+  "OPERATOR_ASSERTED_ONLY",
+  "CONTROL_NOT_RUN",
+  "WIDENING_ACCEPTED",
+  "AUTHORITY_WIDENED",
+  "CARRIED_CLAIM_CONTRADICTS_MEASUREMENT",
+  "AUTHORITY_DELTA_ZERO_PROVEN",
+]);
+
+/// Every widening vector the cycle must have TRIED. An untried vector is
+/// CONTROL_NOT_RUN, never a silent pass: "nobody attempted to widen authority"
+/// and "widening was refused" are different facts.
+const WIDENING_VECTORS = Object.freeze([
+  "worker_a_widen_refused",
+  "worker_b_widen_refused",
+  "restart_widen_refused",
+  "self_grant_refused",
+  "stale_grant_refused",
+]);
+
+const CLEAN_VERIF = "VERIFICATION_EXTERNAL_PROVEN";
+const CLEAN_AUTH = "AUTHORITY_DELTA_ZERO_PROVEN";
+
 const CLEAN_STATE = "MISSION_STATE_PRIMARY_PROVEN";
 const CLEAN_IMMUT = "CONTRACT_IMMUTABLE_PROVEN";
 const isStr = (v) => typeof v === "string" && v.length > 0;
@@ -112,6 +153,51 @@ function classifyContractImmutability(im, evidenceClass) {
   return CLEAN_IMMUT;
 }
 
+function classifyVerifierIndependence(v, evidenceClass) {
+  if (!v) return "NOT_ATTEMPTED";
+  if (evidenceClass === "OPERATOR_ASSERTED") return "OPERATOR_ASSERTED_ONLY";
+  if (evidenceClass !== "OBSERVED") return "NOT_OBSERVED";
+  // A verifier that only ever REJECTS discriminates nothing, so the episode must
+  // also contain one independently re-derived ACCEPT.
+  if (!isStr(v.positive_control_verdict)) return "CONTROL_NOT_RUN";
+  if (v.positive_control_verdict !== "ACCEPT") return "CONTROL_DID_NOT_DISCRIMINATE";
+  // THE SELF-CERTIFICATION CONTROL. The executor must have claimed success on
+  // something the independent verifier then REJECTED. If the two agreed, the
+  // episode shows they coincided, not that self-certification fails.
+  if (v.executor_self_claimed_success === true && v.independently_rederived_verdict !== "REJECT") {
+    return "CONTROL_DID_NOT_DISCRIMINATE";
+  }
+  if (!isInt(v.executor_pid) || !isInt(v.verifier_pid) || v.executor_pid === v.verifier_pid) {
+    return "SAME_PROCESS_VERIFIED";
+  }
+  // Being HANDED the law by the party under judgement is not independence.
+  if (v.law_source !== "rederived_from_persisted_contract_fields") return "LAW_NOT_INDEPENDENTLY_OBTAINED";
+  if (v.authoritative_verdict_source !== "independent_verifier") return "VERIFIER_USED_EXECUTOR_CLAIM";
+  if (v.exact_comparison_performed !== true) return "NO_EXACT_COMPARISON";
+  return CLEAN_VERIF;
+}
+
+/// The delta is MEASURED here from the before/after hashes. A carried
+/// `authority_delta: 0` is treated as a claim to be checked, never as the answer.
+function measureAuthorityDelta(a) {
+  if (!a || !isStr(a.authority_before_hash) || !isStr(a.authority_after_hash)) return null;
+  return a.authority_before_hash === a.authority_after_hash ? 0 : 1;
+}
+
+function classifyAuthorityDelta(a, evidenceClass, measured) {
+  if (!a) return "NOT_ATTEMPTED";
+  if (evidenceClass === "OPERATOR_ASSERTED") return "OPERATOR_ASSERTED_ONLY";
+  if (evidenceClass !== "OBSERVED") return "NOT_OBSERVED";
+  if (measured === null) return "CONTROL_NOT_RUN";
+  for (const k of WIDENING_VECTORS) {
+    if (typeof a[k] !== "boolean") return "CONTROL_NOT_RUN";
+  }
+  if (WIDENING_VECTORS.some((k) => a[k] === false)) return "WIDENING_ACCEPTED";
+  if (measured !== 0) return "AUTHORITY_WIDENED";
+  if (a.carried_authority_delta_claim !== measured) return "CARRIED_CLAIM_CONTRADICTS_MEASUREMENT";
+  return CLEAN_AUTH;
+}
+
 /**
  * Build one deep-frozen, re-derivable runtime observation.
  *
@@ -124,6 +210,8 @@ export function buildRuntimeMissionObservation({
   successor = null,
   workerLocalControl = null,
   immutability = null,
+  verification = null,
+  authority = null,
   evidenceClass = "NONE",
   observedAt = null,
   executedCodeHash = null,
@@ -137,6 +225,9 @@ export function buildRuntimeMissionObservation({
   const suc = successor && typeof successor === "object" ? successor : null;
   const ctl = workerLocalControl && typeof workerLocalControl === "object" ? workerLocalControl : null;
   const im = immutability && typeof immutability === "object" ? immutability : null;
+  const vf = verification && typeof verification === "object" ? verification : null;
+  const au = authority && typeof authority === "object" ? authority : null;
+  const measured_authority_delta = measureAuthorityDelta(au);
 
   const body = {
     schema: NODE0_RUNTIME_MISSION_SCHEMA,
@@ -145,6 +236,11 @@ export function buildRuntimeMissionObservation({
     contract_immutability_scope: NODE0_CONTRACT_IMMUTABILITY_SCOPE,
     state_ownership_verdict: classifyStateOwnership(pre, suc, ctl, cls),
     contract_immutability_verdict: classifyContractImmutability(im, cls),
+    verifier_independence_scope: NODE0_VERIFIER_INDEPENDENCE_SCOPE,
+    cycle_authority_delta_scope: NODE0_CYCLE_AUTHORITY_DELTA_SCOPE,
+    verifier_independence_verdict: classifyVerifierIndependence(vf, cls),
+    authority_delta_verdict: classifyAuthorityDelta(au, cls, measured_authority_delta),
+    measured_authority_delta,
     predecessor_pid: pre?.pid ?? null,
     predecessor_exited: pre?.exited ?? null,
     predecessor_killed_with: pre?.killed_with ?? null,
@@ -166,6 +262,18 @@ export function buildRuntimeMissionObservation({
     refusal_receipted: im?.refusal_receipted ?? null,
     operator_control_attempted: im?.operator_control_attempted ?? null,
     operator_control_new_hash: im?.operator_control_new_hash ?? null,
+    executor_pid: vf?.executor_pid ?? null,
+    verifier_pid: vf?.verifier_pid ?? null,
+    law_source: vf?.law_source ?? null,
+    executor_self_claimed_success: vf?.executor_self_claimed_success ?? null,
+    independently_rederived_verdict: vf?.independently_rederived_verdict ?? null,
+    positive_control_verdict: vf?.positive_control_verdict ?? null,
+    authoritative_verdict_source: vf?.authoritative_verdict_source ?? null,
+    exact_comparison_performed: vf?.exact_comparison_performed ?? null,
+    authority_before_hash: au?.authority_before_hash ?? null,
+    authority_after_hash: au?.authority_after_hash ?? null,
+    carried_authority_delta_claim: au?.carried_authority_delta_claim ?? null,
+    widening_vectors_refused: au ? Object.fromEntries(WIDENING_VECTORS.map((k) => [k, au[k] ?? null])) : null,
     executed_code_hash: executedCodeHash,
     authority_delta: 0,
   };
@@ -191,4 +299,12 @@ export function isCleanEligibleStateOwnership(o) {
 
 export function isCleanEligibleContractImmutability(o) {
   return o?.evidence_class === "OBSERVED" && o?.contract_immutability_verdict === CLEAN_IMMUT;
+}
+
+export function isCleanEligibleVerifierIndependence(o) {
+  return o?.evidence_class === "OBSERVED" && o?.verifier_independence_verdict === CLEAN_VERIF;
+}
+
+export function isCleanEligibleAuthorityDelta(o) {
+  return o?.evidence_class === "OBSERVED" && o?.authority_delta_verdict === CLEAN_AUTH;
 }

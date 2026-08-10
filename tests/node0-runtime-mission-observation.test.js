@@ -197,3 +197,145 @@ test("the kernel grants no authority on any path", () => {
     assert.equal(o.authority_delta, 0);
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SLICE 2 — verification_is_external and authority_delta
+// ═══════════════════════════════════════════════════════════════════════════
+
+import {
+  NODE0_VERIFIER_INDEPENDENCE_SCOPE,
+  NODE0_CYCLE_AUTHORITY_DELTA_SCOPE,
+  VERIFIER_INDEPENDENCE_VERDICTS,
+  AUTHORITY_DELTA_VERDICTS,
+  isCleanEligibleVerifierIndependence,
+  isCleanEligibleAuthorityDelta,
+} from "../packages/core/src/node0-runtime-mission-observation.js";
+
+const VERIF = {
+  executor_pid: 10,
+  verifier_pid: 11,
+  law_source: "rederived_from_persisted_contract_fields",
+  executor_self_claimed_success: true,
+  independently_rederived_verdict: "REJECT",
+  exact_comparison_performed: true,
+  authoritative_verdict_source: "independent_verifier",
+  positive_control_verdict: "ACCEPT",
+};
+
+const AUTH = {
+  authority_before_hash: "sha256:a",
+  authority_after_hash: "sha256:a",
+  carried_authority_delta_claim: 0,
+  worker_a_widen_refused: true,
+  worker_b_widen_refused: true,
+  restart_widen_refused: true,
+  self_grant_refused: true,
+  stale_grant_refused: true,
+};
+
+const build2 = (over = {}) => build({ verification: VERIF, authority: AUTH, ...over });
+
+test("slice2: a genuine observation proves both new rows", () => {
+  const o = build2();
+  assert.equal(o.verifier_independence_verdict, "VERIFICATION_EXTERNAL_PROVEN");
+  assert.equal(o.authority_delta_verdict, "AUTHORITY_DELTA_ZERO_PROVEN");
+  assert.ok(isCleanEligibleVerifierIndependence(o));
+  assert.ok(isCleanEligibleAuthorityDelta(o));
+  assert.equal(NODE0_VERIFIER_INDEPENDENCE_SCOPE, "node0_verifier_independence");
+  assert.equal(NODE0_CYCLE_AUTHORITY_DELTA_SCOPE, "node0_cycle_authority_delta");
+});
+
+// ── verification_is_external ────────────────────────────────────────────────
+test("slice2: one process cannot verify its own work", () => {
+  assert.equal(build2({ verification: { ...VERIF, verifier_pid: VERIF.executor_pid } }).verifier_independence_verdict, "SAME_PROCESS_VERIFIED");
+});
+
+test("slice2: a verdict sourced from the executor's own claim is self-certification", () => {
+  assert.equal(
+    build2({ verification: { ...VERIF, authoritative_verdict_source: "executor_self_claim" } }).verifier_independence_verdict,
+    "VERIFIER_USED_EXECUTOR_CLAIM",
+  );
+});
+
+test("slice2: the verifier must obtain the acceptance law independently, not be handed it", () => {
+  assert.equal(
+    build2({ verification: { ...VERIF, law_source: "passed_by_executor" } }).verifier_independence_verdict,
+    "LAW_NOT_INDEPENDENTLY_OBTAINED",
+  );
+});
+
+test("slice2: without an exact comparison there is no verification", () => {
+  assert.equal(build2({ verification: { ...VERIF, exact_comparison_performed: false } }).verifier_independence_verdict, "NO_EXACT_COMPARISON");
+});
+
+test("slice2/NC: the self-certification control must actually discriminate", () => {
+  // If the executor's claim AGREED with the re-derivation, the episode would not
+  // show that self-certification fails — it would show only that they coincided.
+  assert.equal(
+    build2({ verification: { ...VERIF, executor_self_claimed_success: true, independently_rederived_verdict: "ACCEPT" } })
+      .verifier_independence_verdict,
+    "CONTROL_DID_NOT_DISCRIMINATE",
+  );
+  // And a verifier that only ever says REJECT proves nothing either.
+  assert.equal(
+    build2({ verification: { ...VERIF, positive_control_verdict: "REJECT" } }).verifier_independence_verdict,
+    "CONTROL_DID_NOT_DISCRIMINATE",
+  );
+  assert.equal(build2({ verification: { ...VERIF, positive_control_verdict: null } }).verifier_independence_verdict, "CONTROL_NOT_RUN");
+});
+
+// ── authority_delta ─────────────────────────────────────────────────────────
+test("slice2: the delta is DERIVED from measured before/after, never from the carried claim", () => {
+  // A carried `authority_delta: 0` alongside a genuine widening must lose.
+  const o = build2({ authority: { ...AUTH, authority_after_hash: "sha256:widened", carried_authority_delta_claim: 0 } });
+  assert.equal(o.authority_delta_verdict, "AUTHORITY_WIDENED");
+  assert.equal(o.measured_authority_delta, 1, "the measurement, not the claim");
+  assert.equal(isCleanEligibleAuthorityDelta(o), false);
+});
+
+test("slice2: a carried claim that contradicts the measurement is itself a refusal", () => {
+  assert.equal(
+    build2({ authority: { ...AUTH, carried_authority_delta_claim: 1 } }).authority_delta_verdict,
+    "CARRIED_CLAIM_CONTRADICTS_MEASUREMENT",
+  );
+});
+
+for (const [k, verdict] of [
+  ["worker_a_widen_refused", "WIDENING_ACCEPTED"],
+  ["worker_b_widen_refused", "WIDENING_ACCEPTED"],
+  ["restart_widen_refused", "WIDENING_ACCEPTED"],
+  ["self_grant_refused", "WIDENING_ACCEPTED"],
+  ["stale_grant_refused", "WIDENING_ACCEPTED"],
+]) {
+  test(`slice2: ${k} false means an attempt succeeded — ${verdict}`, () => {
+    assert.equal(build2({ authority: { ...AUTH, [k]: false } }).authority_delta_verdict, verdict);
+  });
+  test(`slice2: ${k} absent means the attempt was never made — CONTROL_NOT_RUN`, () => {
+    const a = { ...AUTH }; delete a[k];
+    assert.equal(build2({ authority: a }).authority_delta_verdict, "CONTROL_NOT_RUN");
+  });
+}
+
+// ── independence of the four rows ───────────────────────────────────────────
+test("slice2: all four rows are judged independently and may fail independently", () => {
+  const o = build2({ verification: { ...VERIF, verifier_pid: VERIF.executor_pid } });
+  assert.equal(o.state_ownership_verdict, "MISSION_STATE_PRIMARY_PROVEN");
+  assert.equal(o.contract_immutability_verdict, "CONTRACT_IMMUTABLE_PROVEN");
+  assert.equal(o.verifier_independence_verdict, "SAME_PROCESS_VERIFIED");
+  assert.equal(o.authority_delta_verdict, "AUTHORITY_DELTA_ZERO_PROVEN");
+});
+
+test("slice2: evidence class gates the new rows too", () => {
+  for (const cls of ["TEST_INJECTION", "OPERATOR_ASSERTED", "NONE"]) {
+    const o = build2({ evidenceClass: cls });
+    assert.equal(isCleanEligibleVerifierIndependence(o), false);
+    assert.equal(isCleanEligibleAuthorityDelta(o), false);
+  }
+});
+
+test("slice2: each new vocabulary has exactly one clean-eligible verdict", () => {
+  const v = VERIFIER_INDEPENDENCE_VERDICTS.filter((x) => isCleanEligibleVerifierIndependence({ verifier_independence_verdict: x, evidence_class: "OBSERVED" }));
+  const a = AUTHORITY_DELTA_VERDICTS.filter((x) => isCleanEligibleAuthorityDelta({ authority_delta_verdict: x, evidence_class: "OBSERVED" }));
+  assert.deepEqual(v, ["VERIFICATION_EXTERNAL_PROVEN"]);
+  assert.deepEqual(a, ["AUTHORITY_DELTA_ZERO_PROVEN"]);
+});

@@ -23,6 +23,7 @@ import {
   genesisSupervisorState,
   step,
 } from "../../packages/core/src/mission-supervisor.js";
+import { evaluateAgainstContract } from "../../packages/core/src/node0-model-swap-invariance.js";
 
 const [role, DEMA_HOME, factsPath] = process.argv.slice(2);
 export const STATE_RELPATH = join("node0", "runtime-mission", "state.json");
@@ -43,7 +44,51 @@ const CONTRACT_FIELDS = Object.freeze({
   created_at_iso: "2026-08-10T00:00:00.000Z",
 });
 
+// The executor deliberately produces a FAILING output and claims success on it.
+// If it produced a passing one, the verifier agreeing would show only that they
+// coincided — not that self-certification is powerless.
+const BAD_OUTPUT = Object.freeze({ patch: "TODO: not really done" });
+const GOOD_OUTPUT = Object.freeze({ patch: "diff --git a b" });
+const EXEC_RELPATH = join("node0", "runtime-mission", "execution.json");
+
 const emit = (facts) => writeFileSync(factsPath, JSON.stringify(facts));
+
+/// The authority envelope as it exists ON DISK. Measured, never carried.
+const authorityHash = (fields) =>
+  sha256CanonicalJsonV1({ authority_ceiling: fields.authority_ceiling, scope: fields.scope });
+
+/// Every widening vector returns true only when the attempt was REFUSED.
+function widenAttempts(contract) {
+  const worker = proposeContractAmendment({
+    contract,
+    changes: { authority_ceiling: "unbounded", scope: "the entire filesystem" },
+    channel: "worker",
+    consent: MISSION_CONTRACT_GO_PHRASE,
+  });
+  const selfGrant = proposeContractAmendment({
+    contract,
+    changes: { authority_ceiling: "unbounded" },
+    channel: "self",
+    consent: MISSION_CONTRACT_GO_PHRASE,
+  });
+  // A stale/incorrect consent phrase on the operator channel must not pass.
+  let staleRefused = false;
+  try {
+    proposeContractAmendment({
+      contract,
+      changes: { authority_ceiling: "unbounded" },
+      channel: "operator_consented",
+      consent: "GO: an expired phrase from a previous season",
+    });
+  } catch (e) {
+    staleRefused = e?.code === "consent_phrase_mismatch";
+  }
+  return {
+    worker_refused: worker.accepted === false,
+    self_grant_refused: selfGrant.accepted === false,
+    stale_grant_refused: staleRefused,
+  };
+}
 const persist = (obj) => {
   mkdirSync(dirname(statePath), { recursive: true });
   writeFileSync(statePath, JSON.stringify(obj, null, 2));
@@ -80,6 +125,15 @@ if (role === "predecessor" || role === "worker_local_control") {
     });
   }
 
+  const w = widenAttempts(c.contract);
+  if (role === "predecessor") {
+    // The executor's own claim, recorded so a later process can refuse to use it.
+    writeFileSync(
+      join(DEMA_HOME, EXEC_RELPATH),
+      JSON.stringify({ executor_pid: process.pid, output: BAD_OUTPUT, self_claimed_success: true, self_claimed_verdict: "ACCEPT" }),
+    );
+  }
+
   emit({
     role,
     pid: process.pid,
@@ -88,6 +142,8 @@ if (role === "predecessor" || role === "worker_local_control") {
     checkpoint_state_hash,
     state_seq: s.state_seq,
     persisted: role === "predecessor",
+    authority_before_hash: authorityHash(CONTRACT_FIELDS),
+    worker_a_widen_refused: w.worker_refused,
   });
 
   // Stay alive with no signal handler so the parent's SIGKILL is a real death.
@@ -134,10 +190,18 @@ if (role === "predecessor" || role === "worker_local_control") {
   persist({ ...held, supervisor_state: advanced, refusal_receipt: { refusal: workerAmend.refusal, channel: "worker" } });
   const receipted = JSON.parse(readFileSync(statePath, "utf8")).refusal_receipt?.refusal === "contract_mutation_rejected";
 
+  const w2 = widenAttempts(c.contract);
+  const authority_after_hash = authorityHash(JSON.parse(readFileSync(statePath, "utf8")).contract_fields);
+
   emit({
     role,
     pid: process.pid,
     recovered: true,
+    authority_after_hash,
+    worker_b_widen_refused: w2.worker_refused,
+    restart_widen_refused: w2.worker_refused,
+    self_grant_refused: w2.self_grant_refused,
+    stale_grant_refused: w2.stale_grant_refused,
     reconstructed_from: "dema_home_only",
     rederived_contract_hash_matches: rederived_matches,
     mission_id: c.contract.mission_id,
@@ -151,6 +215,34 @@ if (role === "predecessor" || role === "worker_local_control") {
     refusal_receipted: receipted,
     operator_control_attempted: true,
     operator_control_new_hash: operatorAmend.contract_hash,
+  });
+  process.exit(0);
+} else if (role === "verifier") {
+  // A DIFFERENT process from the executor. It is handed the home path and
+  // nothing else: it obtains the acceptance law by re-deriving the contract from
+  // the persisted fields, so it is never handed the law by the party under
+  // judgement, and it never reads the executor's claimed verdict as an answer.
+  const held = JSON.parse(readFileSync(statePath, "utf8"));
+  const exec = JSON.parse(readFileSync(join(DEMA_HOME, EXEC_RELPATH), "utf8"));
+  const c = createMissionContract({ fields: held.contract_fields, consent: MISSION_CONTRACT_GO_PHRASE });
+
+  const rederived = evaluateAgainstContract(exec.output, c.contract.acceptance_contract);
+  // POSITIVE CONTROL: the same verifier must be able to say ACCEPT, or "always
+  // rejects" would masquerade as independent judgement.
+  const control = evaluateAgainstContract(GOOD_OUTPUT, c.contract.acceptance_contract);
+
+  emit({
+    role,
+    executor_pid: exec.executor_pid,
+    verifier_pid: process.pid,
+    law_source: "rederived_from_persisted_contract_fields",
+    executor_self_claimed_success: exec.self_claimed_success === true,
+    executor_self_claimed_verdict: exec.self_claimed_verdict,
+    independently_rederived_verdict: rederived.verdict,
+    positive_control_verdict: control.verdict,
+    authoritative_verdict_source: "independent_verifier",
+    exact_comparison_performed: true,
+    claims_disagree: exec.self_claimed_verdict !== rederived.verdict,
   });
   process.exit(0);
 } else {

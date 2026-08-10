@@ -167,3 +167,53 @@ test("RMA-06: the diagnostic carries neither `observed` nor `source`", () => {
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+// ── slice 2 · verification_is_external and authority_delta ───────────────────
+import {
+  verifierIndependenceObservation,
+  cycleAuthorityDeltaObservation,
+  VERIFIER_INDEPENDENCE_INVARIANT_ID,
+  CYCLE_AUTHORITY_DELTA_INVARIANT_ID,
+} from "../packages/core/src/node0-runtime-mission-adapter.js";
+
+test("RMA-07: a genuine run yields all FOUR observations at ledger-declared scopes", () => {
+  const { home, report } = produce();
+  try {
+    assert.equal(report.verifier_independence_verdict, "VERIFICATION_EXTERNAL_PROVEN");
+    assert.equal(report.authority_delta_verdict, "AUTHORITY_DELTA_ZERO_PROVEN");
+    assert.equal(report.measured_authority_delta, 0);
+    // The self-certification control must have DISCRIMINATED in the real run:
+    // the executor claimed ACCEPT and the independent verifier said REJECT.
+    assert.equal(report.executor_claimed, "ACCEPT");
+    assert.equal(report.independently_rederived, "REJECT");
+    assert.notEqual(report.executor_pid, report.verifier_pid, "the verifier must not be the executor");
+
+    const v = verifierIndependenceObservation({ demaHome: home });
+    const a = cycleAuthorityDeltaObservation({ demaHome: home });
+    const rowV = CLOSURE_INVARIANTS.find((r) => r.id === VERIFIER_INDEPENDENCE_INVARIANT_ID);
+    const rowA = CLOSURE_INVARIANTS.find((r) => r.id === CYCLE_AUTHORITY_DELTA_INVARIANT_ID);
+    assert.equal(v.scope, rowV.required_scope);
+    assert.equal(a.scope, rowA.required_scope);
+    // authority_delta is one of the two inverted rows: the required value is 0.
+    assert.equal(a.observed, rowA.required);
+    assert.ok(a.source.includes("measured_delta=0"));
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("RMA-08: tampering with an authority fact silences the authority row alone", () => {
+  const { home, artefactPath } = produce();
+  try {
+    const o = JSON.parse(readFileSync(artefactPath, "utf8"));
+    o.authority_after_hash = "sha256:widened";
+    writeFileSync(artefactPath, JSON.stringify(o, null, 2));
+    // The whole artefact fails re-derivation, so EVERY row falls silent — which is
+    // the honest outcome: an edited artefact is not partially trustworthy.
+    assert.equal(cycleAuthorityDeltaObservation({ demaHome: home }), null);
+    assert.equal(verifierIndependenceObservation({ demaHome: home }), null);
+    assert.equal(runtimeMissionDiagnostic({ demaHome: home }).state, "HASH_UNVERIFIED");
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});

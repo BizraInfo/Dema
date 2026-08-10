@@ -27,13 +27,19 @@ import {
   NODE0_RUNTIME_MISSION_SCHEMA,
   NODE0_RUNTIME_STATE_OWNERSHIP_SCOPE,
   NODE0_CONTRACT_IMMUTABILITY_SCOPE,
+  NODE0_VERIFIER_INDEPENDENCE_SCOPE,
+  NODE0_CYCLE_AUTHORITY_DELTA_SCOPE,
   verifyRuntimeMissionHash,
   isCleanEligibleStateOwnership,
   isCleanEligibleContractImmutability,
+  isCleanEligibleVerifierIndependence,
+  isCleanEligibleAuthorityDelta,
 } from "./node0-runtime-mission-observation.js";
 
 export const STATE_OWNERSHIP_INVARIANT_ID = "mission_is_primary_state";
 export const CONTRACT_IMMUTABILITY_INVARIANT_ID = "contract_is_immutable";
+export const VERIFIER_INDEPENDENCE_INVARIANT_ID = "verification_is_external";
+export const CYCLE_AUTHORITY_DELTA_INVARIANT_ID = "authority_delta";
 export const RUNTIME_MISSION_ARTEFACT_RELPATH = join("node0", "runtime-mission", "observation.json");
 
 const KERNEL_PATH = join(dirname(fileURLToPath(import.meta.url)), "node0-runtime-mission-observation.js");
@@ -125,6 +131,31 @@ export function contractImmutabilityObservation(opts = {}) {
   });
 }
 
+/// `verification_is_external`. Judged independently of the three other rows.
+export function verifierIndependenceObservation(opts = {}) {
+  const { demaHome, kernelPath, readFile } = { ...readerDefaults(), ...opts };
+  const { state, artefact } = classifyRuntimeArtefact({ demaHome, kernelPath, readFile });
+  if (state !== "ACCEPTED" || !isCleanEligibleVerifierIndependence(artefact)) return null;
+  return Object.freeze({
+    observed: true,
+    source: `NODE0-RUNTIME-MISSION-1A ${artefact.verifier_independence_verdict} ${artefact.observation_hash}`,
+    scope: NODE0_VERIFIER_INDEPENDENCE_SCOPE,
+  });
+}
+
+/// `authority_delta`. The MEASURED delta is what the kernel judged; this adapter
+/// re-reads the artefact and never recomputes a friendlier answer.
+export function cycleAuthorityDeltaObservation(opts = {}) {
+  const { demaHome, kernelPath, readFile } = { ...readerDefaults(), ...opts };
+  const { state, artefact } = classifyRuntimeArtefact({ demaHome, kernelPath, readFile });
+  if (state !== "ACCEPTED" || !isCleanEligibleAuthorityDelta(artefact)) return null;
+  return Object.freeze({
+    observed: 0,
+    source: `NODE0-RUNTIME-MISSION-1A ${artefact.authority_delta_verdict} measured_delta=${artefact.measured_authority_delta} ${artefact.observation_hash}`,
+    scope: NODE0_CYCLE_AUTHORITY_DELTA_SCOPE,
+  });
+}
+
 /// Why a row fell silent — a reason, never evidence. It carries no `observed` and
 /// no `source` by construction, and it does not report the home path: the ledger
 /// is a publishable truth surface and the operator's filesystem layout is not
@@ -137,6 +168,8 @@ export function runtimeMissionDiagnostic(opts = {}) {
     integrity_suspect: RUNTIME_MISSION_INTEGRITY_SUSPECT_STATES.includes(state),
     state_ownership_verdict: artefact?.state_ownership_verdict ?? null,
     contract_immutability_verdict: artefact?.contract_immutability_verdict ?? null,
+    verifier_independence_verdict: artefact?.verifier_independence_verdict ?? null,
+    authority_delta_verdict: artefact?.authority_delta_verdict ?? null,
     settles_nothing: true,
   });
 }
