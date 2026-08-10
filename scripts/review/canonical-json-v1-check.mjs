@@ -127,6 +127,14 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // to guarantee. Registration is adoption review only; the reducer is pure and
   // performs no execution.
   "packages/core/src/mission-supervisor.js",
+  // MISSION-WORKER-ADAPTER-0A (TASK-026 phase 03) — the demonstration receipt is
+  // the artefact a stranger reads to decide whether the swap really happened, and
+  // T-05 requires two runs of the same fixture to be byte-identical. That is a
+  // key-order claim before it is anything else. The proposal hash at the seam is
+  // computed over untrusted worker input, so a serializer that reordered keys
+  // would let one proposal present two identities to the duplicate check.
+  // Registration is adoption review only; the module is pure and spawns nothing.
+  "packages/core/src/mission-worker-adapter.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
