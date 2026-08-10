@@ -1,571 +1,183 @@
 // KEYCONSENT-2A · Single-use Nonce Registry kernel tests
 //
-// Covers all 9 DOD criteria from docs/security/KEYCONSENT_2_PREFLIGHT.md §9.
-// Pure kernel; no CLI; no integration with existing gates; no network.
+// Registry on disk: $DEMA_HOME/consent/used-nonces.json
 //
-// Registry on disk:        $DEMA_HOME/consent/used-nonces.json
-// Atomic write pattern:    tmp + rename (mirrors local-index-writer.js)
-// File mode after rename:  0o600
-// Containing dir mode:     0o700 on first create
+// ── RETIRED 2026-08-11 · consent cutover part 3 ──────────────────────────────
 //
-// Reuses:
-// - sha256, stableStringify   packages/consent/src/consent-common.js
-// - DEMA_HOME resolution      packages/receipts/src/authorship-key-store.js
+// This suite proved nine DOD criteria for `recordConsentNonce`, the aggregate
+// read-modify-write consumption writer. Part 3 retired that writer: it creates
+// nothing, for any caller, with no flag or privileged path that re-enables it.
+// A suite that kept asserting write behaviour would have had to un-retire it.
+//
+// WHAT MOVED, so nothing is silently lost. The write-side criteria described a
+// SECOND authority entitled to decide consent consumption, which is the thing
+// canon rejects. Their properties now belong to `consent-nonce-claim.js` and are
+// proved against it:
+//
+//   9.1 first-call / repeat-call semantics   → CNA-03, CNA-06 (consent-nonce-atomic)
+//   9.3 atomic write, no leftover tmp file   → CNA-01, CNA-02 (O_EXCL, no lost update)
+//   9.5 no private key material              → still true by construction; the claim
+//                                              module loads no key path
+//   9.6 consumed_at captured at consumption  → claimedAtIso on the canonical claim
+//   9.7 file/dir modes                       → claim writes 0o600 under a 0o700 dir
+//   9.8 determinism of the record bytes      → claim_hash, re-derived on every read
+//                                              (NRC suite, consent-nonce-claim.test)
+//
+// WHAT STAYS HERE. Reading. The superseded store remains readable so the
+// canonical claim can consult it for REFUSAL, and a nonce spent under the old
+// regime can never be re-won. Retirement is not deletion — no history is
+// removed, rewritten, or migrated, and no migration record is fabricated for it.
+//
+// The original write-side assertions live in git history at 8f42685^.
 
 import { describe, it } from "node:test";
 import { strict as assert } from "node:assert";
-import {
-  mkdtemp,
-  rm,
-  writeFile,
-  readFile,
-  mkdir,
-  stat,
-  readdir,
-} from "node:fs/promises";
+import { mkdtemp, rm, writeFile, mkdir, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   recordConsentNonce,
   isConsentNonceUsed,
+  _internal,
 } from "../packages/receipts/src/consent-nonce-registry.js";
-import {
-  sha256,
-  stableStringify,
-} from "../packages/consent/src/consent-common.js";
 
-const FIXED_NONCE_A = "deadbeef".repeat(8); // 64 hex chars
-const FIXED_NONCE_B = "cafebabe".repeat(8);
-const FIXED_NONCE_C = "feedface".repeat(8);
-const FIXED_ACTION_TYPE = "MINT_VERDICT_RECEIPT";
-const FIXED_TARGET_HASH = "a".repeat(64);
-const FIXED_CONSENT_PROOF_HASH = "b".repeat(64);
-const FIXED_CONSUMED_AT = "2026-05-30T08:00:00.000Z";
-const FIXED_CONSUMED_AT_2 = "2026-05-30T08:01:00.000Z";
+const RETIRED = "legacy_consent_authority_retired";
+const FIXED_NONCE_A = "nonce-aaaa-0001";
+const FIXED_NONCE_B = "nonce-bbbb-0002";
 
-async function freshHome() {
-  return await mkdtemp(join(tmpdir(), "dema-consent-nonce-registry-test-"));
+const freshHome = () => mkdtemp(join(tmpdir(), "keyconsent2a-"));
+const registryPath = (home) => join(home, "consent", "used-nonces.json");
+
+const withHome = async (fn) => {
+  const home = await freshHome();
+  try { return await fn(home); } finally { await rm(home, { recursive: true, force: true }); }
+};
+
+/// Seeds the store the way HISTORY left it — as bytes. Deliberately not through
+/// the retired writer: a fixture that needed the writer alive would make
+/// retirement untestable, and the evidence that matters is the file on disk.
+async function seedHistoricalRegistry(home, entries) {
+  await mkdir(join(home, "consent"), { recursive: true, mode: 0o700 });
+  await writeFile(registryPath(home), JSON.stringify(entries), { mode: 0o600 });
 }
 
-function registryPath(home) {
-  return join(home, "consent", "used-nonces.json");
-}
+const historicalEntry = (consumedAtIso = "2026-01-01T00:00:00.000Z") => ({
+  action_type: "C3_LOCAL_WRITE",
+  target_hash: "t".repeat(64),
+  consumed_at_iso: consumedAtIso,
+  consent_proof_hash: "c".repeat(64),
+});
 
-describe("consent-nonce-registry · recordConsentNonce (DOD 9.1, 9.3, 9.5, 9.6, 9.7, 9.8)", () => {
-  it("DOD-9.1 first call with a given nonce → {recorded: true, registry_entry_hash}", async () => {
-    const home = await freshHome();
-    try {
+describe("consent-nonce-registry · the writer is structurally retired", () => {
+  it("KC2A-R1: recording refuses on a FRESH home and creates no registry", async () => {
+    await withHome(async (home) => {
       const r = await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
+        nonce: FIXED_NONCE_A, actionType: "C3_LOCAL_WRITE",
+        targetHash: "t".repeat(64), consentProofHash: "c".repeat(64), demaHome: home,
       });
-      assert.equal(r.recorded, true);
-      assert.ok(
-        /^[a-f0-9]{64}$/.test(r.registry_entry_hash),
-        "registry_entry_hash must be sha256 hex",
-      );
-      // Expected hash: sha256(stableStringify({nonce, action_type, target_hash, consumed_at_iso, consent_proof_hash}))
-      const expected = sha256(
-        stableStringify({
-          nonce: FIXED_NONCE_A,
-          action_type: FIXED_ACTION_TYPE,
-          target_hash: FIXED_TARGET_HASH,
-          consumed_at_iso: FIXED_CONSUMED_AT,
-          consent_proof_hash: FIXED_CONSENT_PROOF_HASH,
-        }),
-      );
-      assert.equal(r.registry_entry_hash, expected);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
+      assert.equal(r.recorded, false);
+      assert.equal(r.error, RETIRED);
+      assert.equal(r.superseded_by, "packages/receipts/src/consent-nonce-claim.js");
+      // A fresh home is the case that would betray a writer still working: there
+      // is nothing to collide with, so a refusal here can only be structural.
+      await assert.rejects(() => readFile(registryPath(home)), /ENOENT/);
+    });
   });
 
-  it("DOD-9.1 repeat call with the SAME nonce → {recorded:false, error, existing_entry}; existing entry NOT overwritten", async () => {
-    const home = await freshHome();
-    try {
-      const first = await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      assert.equal(first.recorded, true);
-
-      // Second call deliberately uses DIFFERENT action_type / target / proof
-      // hash / timestamp. The original record must NOT be overwritten.
-      const second = await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: "DIFFERENT_ACTION",
-        targetHash: "f".repeat(64),
-        consentProofHash: "e".repeat(64),
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT_2,
-      });
-      assert.equal(second.recorded, false);
-      assert.equal(second.error, "consent_nonce_already_used");
-      assert.ok(second.existing_entry, "existing_entry must be returned");
-      assert.equal(second.existing_entry.action_type, FIXED_ACTION_TYPE);
-      assert.equal(second.existing_entry.target_hash, FIXED_TARGET_HASH);
-      assert.equal(second.existing_entry.consumed_at_iso, FIXED_CONSUMED_AT);
-      assert.equal(
-        second.existing_entry.consent_proof_hash,
-        FIXED_CONSENT_PROOF_HASH,
-      );
-
-      // Verify on disk the original record stands.
-      const disk = JSON.parse(await readFile(registryPath(home), "utf8"));
-      assert.equal(disk[FIXED_NONCE_A].action_type, FIXED_ACTION_TYPE);
-      assert.equal(disk[FIXED_NONCE_A].target_hash, FIXED_TARGET_HASH);
-      assert.equal(disk[FIXED_NONCE_A].consumed_at_iso, FIXED_CONSUMED_AT);
-      assert.equal(
-        disk[FIXED_NONCE_A].consent_proof_hash,
-        FIXED_CONSENT_PROOF_HASH,
-      );
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
+  it("KC2A-R2: no argument shape re-enables it", async () => {
+    await withHome(async (home) => {
+      const shapes = [
+        {},
+        { nonce: FIXED_NONCE_A, demaHome: home },
+        { nonce: FIXED_NONCE_A, demaHome: home, consumedAtIso: "2026-01-01T00:00:00.000Z" },
+        { nonce: FIXED_NONCE_A, actionType: "X", targetHash: "t".repeat(64), consentProofHash: "c".repeat(64), demaHome: home, force: true },
+      ];
+      for (const args of shapes) {
+        const r = await recordConsentNonce(args);
+        assert.equal(r.recorded, false, `re-enabled by ${JSON.stringify(Object.keys(args))}`);
+        assert.equal(r.error, RETIRED);
+      }
+      assert.deepEqual(await readdir(home), [], "not one of those shapes created anything");
+    });
   });
 
-  it("DOD-9.1 second distinct nonce is appended; both records co-exist", async () => {
-    const home = await freshHome();
-    try {
-      const a = await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const b = await recordConsentNonce({
-        nonce: FIXED_NONCE_B,
-        actionType: "MARK_URP_SHAREABLE",
-        targetHash: "c".repeat(64),
-        consentProofHash: "d".repeat(64),
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT_2,
-      });
-      assert.equal(a.recorded, true);
-      assert.equal(b.recorded, true);
-      const disk = JSON.parse(await readFile(registryPath(home), "utf8"));
-      assert.ok(disk[FIXED_NONCE_A]);
-      assert.ok(disk[FIXED_NONCE_B]);
-      assert.equal(Object.keys(disk).length, 2);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.3 atomic write: registry directory is created with mode 0o700 on first write", async () => {
-    const home = await freshHome();
-    try {
+  it("KC2A-R3: it does not rewrite or delete history it finds", async () => {
+    await withHome(async (home) => {
+      await seedHistoricalRegistry(home, { [FIXED_NONCE_A]: historicalEntry() });
+      const before = await readFile(registryPath(home), "utf8");
       await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
+        nonce: FIXED_NONCE_B, actionType: "C3_LOCAL_WRITE",
+        targetHash: "t".repeat(64), consentProofHash: "c".repeat(64), demaHome: home,
       });
-      const dirStat = await stat(join(home, "consent"));
-      assert.equal(
-        dirStat.mode & 0o777,
-        0o700,
-        "consent dir mode must be 0o700",
-      );
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.3 atomic write: no leftover tmp file in consent dir after a successful write", async () => {
-    const home = await freshHome();
-    try {
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const entries = await readdir(join(home, "consent"));
-      const tmpLeft = entries.filter((n) => n.includes(".tmp."));
-      assert.deepEqual(tmpLeft, [], "no .tmp.* artifacts must remain");
-      // canonical file must exist
-      assert.ok(entries.includes("used-nonces.json"));
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.5 no private key material is read, derived, embedded, or referenced", async () => {
-    const home = await freshHome();
-    try {
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const raw = await readFile(registryPath(home), "utf8");
-      assert.ok(
-        !raw.includes("BEGIN PRIVATE KEY"),
-        "registry must NOT contain BEGIN PRIVATE KEY marker",
-      );
-      assert.ok(
-        !raw.includes("PRIVATE KEY"),
-        "registry must NOT contain any PRIVATE KEY marker",
-      );
-      assert.ok(
-        !raw.includes("BEGIN"),
-        "registry must NOT contain BEGIN markers at all",
-      );
-      // Entry whitelist: only nonce + action_type + target_hash + consumed_at_iso + consent_proof_hash
-      const disk = JSON.parse(raw);
-      const entry = disk[FIXED_NONCE_A];
-      assert.deepEqual(Object.keys(entry).sort(), [
-        "action_type",
-        "consent_proof_hash",
-        "consumed_at_iso",
-        "target_hash",
-      ]);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.6 consumed_at_iso is captured at consumption time and stored in the registry record", async () => {
-    const home = await freshHome();
-    try {
-      const r = await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      assert.equal(r.recorded, true);
-      const disk = JSON.parse(await readFile(registryPath(home), "utf8"));
-      assert.equal(disk[FIXED_NONCE_A].consumed_at_iso, FIXED_CONSUMED_AT);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.6 omitted consumedAtIso → registry captures a real ISO timestamp at write time", async () => {
-    const home = await freshHome();
-    try {
-      const before = new Date().toISOString();
-      const r = await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-      });
-      const after = new Date().toISOString();
-      assert.equal(r.recorded, true);
-      const disk = JSON.parse(await readFile(registryPath(home), "utf8"));
-      const ts = disk[FIXED_NONCE_A].consumed_at_iso;
-      assert.ok(
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(ts),
-        "consumed_at_iso must be a valid ISO-8601 UTC timestamp",
-      );
-      // sanity bound — generated timestamp falls in [before, after]
-      assert.ok(ts >= before && ts <= after);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.7 registry file mode is 0o600 after first write", async () => {
-    const home = await freshHome();
-    try {
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const s = await stat(registryPath(home));
-      assert.equal(
-        s.mode & 0o777,
-        0o600,
-        "registry mode must be 0o600 after first write",
-      );
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.7 registry file mode is 0o600 after a subsequent rewrite (second nonce added)", async () => {
-    const home = await freshHome();
-    try {
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_B,
-        actionType: "MARK_URP_SHAREABLE",
-        targetHash: "c".repeat(64),
-        consentProofHash: "d".repeat(64),
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT_2,
-      });
-      const s = await stat(registryPath(home));
-      assert.equal(
-        s.mode & 0o777,
-        0o600,
-        "registry mode must be 0o600 after rewrite",
-      );
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.8 determinism: same inputs + injected consumedAtIso → byte-identical registry bytes", async () => {
-    const home1 = await freshHome();
-    const home2 = await freshHome();
-    try {
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home1,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home2,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const bytes1 = await readFile(registryPath(home1));
-      const bytes2 = await readFile(registryPath(home2));
-      assert.ok(
-        bytes1.equals(bytes2),
-        "byte-identical registry bytes across runs with identical inputs",
-      );
-    } finally {
-      await rm(home1, { recursive: true, force: true });
-      await rm(home2, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.8 determinism: registry_entry_hash matches sha256(stableStringify(record)) and is stable across runs", async () => {
-    const home1 = await freshHome();
-    const home2 = await freshHome();
-    try {
-      const a = await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home1,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const b = await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home2,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      assert.equal(a.registry_entry_hash, b.registry_entry_hash);
-    } finally {
-      await rm(home1, { recursive: true, force: true });
-      await rm(home2, { recursive: true, force: true });
-    }
+      assert.equal(await readFile(registryPath(home), "utf8"), before,
+        "a retired writer must not touch the historical record either");
+    });
   });
 });
 
-describe("consent-nonce-registry · isConsentNonceUsed (DOD 9.4)", () => {
+describe("consent-nonce-registry · isConsentNonceUsed (DOD 9.4) — reading is untouched", () => {
   it("DOD-9.4 missing registry file → false (reader is pure/stateless)", async () => {
-    const home = await freshHome();
-    try {
-      const used = await isConsentNonceUsed({
-        nonce: FIXED_NONCE_A,
-        demaHome: home,
-      });
-      assert.equal(used, false);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
+    await withHome(async (home) => {
+      assert.equal(await isConsentNonceUsed({ nonce: FIXED_NONCE_A, demaHome: home }), false);
+    });
   });
 
   it("DOD-9.4 nonce on the list → true", async () => {
-    const home = await freshHome();
-    try {
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const used = await isConsentNonceUsed({
-        nonce: FIXED_NONCE_A,
-        demaHome: home,
-      });
-      assert.equal(used, true);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
+    await withHome(async (home) => {
+      await seedHistoricalRegistry(home, { [FIXED_NONCE_A]: historicalEntry() });
+      assert.equal(await isConsentNonceUsed({ nonce: FIXED_NONCE_A, demaHome: home }), true,
+        "the superseded store must remain readable as refusal evidence");
+    });
   });
 
   it("DOD-9.4 nonce NOT on the list (registry exists with other nonces) → false", async () => {
-    const home = await freshHome();
-    try {
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const used = await isConsentNonceUsed({
-        nonce: FIXED_NONCE_C,
-        demaHome: home,
-      });
-      assert.equal(used, false);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
+    await withHome(async (home) => {
+      await seedHistoricalRegistry(home, { [FIXED_NONCE_A]: historicalEntry() });
+      assert.equal(await isConsentNonceUsed({ nonce: FIXED_NONCE_B, demaHome: home }), false,
+        "a populated registry must not read as universally consumed");
+    });
+  });
+
+  it("DOD-9.9 an orphan tmp file is harmless; canonical state is preserved", async () => {
+    await withHome(async (home) => {
+      await seedHistoricalRegistry(home, { [FIXED_NONCE_A]: historicalEntry() });
+      await writeFile(join(home, "consent", `used-nonces.json.tmp.${process.pid}.simcrash`), "{ partial", "utf8");
+      assert.equal(await isConsentNonceUsed({ nonce: FIXED_NONCE_A, demaHome: home }), true);
+      assert.equal(await isConsentNonceUsed({ nonce: FIXED_NONCE_B, demaHome: home }), false);
+    });
+  });
+
+  it("DOD-9.9 consent dir exists but used-nonces.json is missing → false (not throw)", async () => {
+    await withHome(async (home) => {
+      await mkdir(join(home, "consent"), { recursive: true, mode: 0o700 });
+      assert.equal(await isConsentNonceUsed({ nonce: FIXED_NONCE_A, demaHome: home }), false);
+    });
   });
 });
 
-describe("consent-nonce-registry · DOD 9.2 DEMA_HOME resolution + 9.9 crash safety", () => {
+describe("consent-nonce-registry · DOD 9.2 home resolution", () => {
   it("DOD-9.2 explicit demaHome arg is used (never touches ~/.dema)", async () => {
-    const home = await freshHome();
-    try {
-      // Stash + null out env so the resolver MUST use the arg.
-      const prev = process.env.DEMA_HOME;
-      delete process.env.DEMA_HOME;
-      try {
-        await recordConsentNonce({
-          nonce: FIXED_NONCE_A,
-          actionType: FIXED_ACTION_TYPE,
-          targetHash: FIXED_TARGET_HASH,
-          consentProofHash: FIXED_CONSENT_PROOF_HASH,
-          demaHome: home,
-          consumedAtIso: FIXED_CONSUMED_AT,
-        });
-        const s = await stat(registryPath(home));
-        assert.ok(
-          s.isFile(),
-          "registry must be written under the injected demaHome",
-        );
-      } finally {
-        if (prev !== undefined) process.env.DEMA_HOME = prev;
-      }
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
+    await withHome(async (home) => {
+      await seedHistoricalRegistry(home, { [FIXED_NONCE_A]: historicalEntry() });
+      assert.equal(_internal.paths(home).file, registryPath(home));
+      assert.equal(await isConsentNonceUsed({ nonce: FIXED_NONCE_A, demaHome: home }), true);
+    });
   });
 
   it("DOD-9.2 falls back to process.env.DEMA_HOME when demaHome not supplied", async () => {
-    const home = await freshHome();
-    const prev = process.env.DEMA_HOME;
-    process.env.DEMA_HOME = home;
-    try {
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const s = await stat(registryPath(home));
-      assert.ok(s.isFile(), "env-resolved demaHome must back the registry");
-      const used = await isConsentNonceUsed({ nonce: FIXED_NONCE_A });
-      assert.equal(used, true);
-    } finally {
-      if (prev === undefined) delete process.env.DEMA_HOME;
-      else process.env.DEMA_HOME = prev;
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.9 crash safety: orphan *.tmp.* file is harmless; canonical state is preserved", async () => {
-    const home = await freshHome();
-    try {
-      // First, record a real nonce so canonical state exists.
-      await recordConsentNonce({
-        nonce: FIXED_NONCE_A,
-        actionType: FIXED_ACTION_TYPE,
-        targetHash: FIXED_TARGET_HASH,
-        consentProofHash: FIXED_CONSENT_PROOF_HASH,
-        demaHome: home,
-        consumedAtIso: FIXED_CONSUMED_AT,
-      });
-      const canonicalBefore = await readFile(registryPath(home));
-
-      // Simulate a crash: writer wrote tmp but never renamed.
-      const tmpPath = join(
-        home,
-        "consent",
-        `used-nonces.json.tmp.${process.pid}.simcrash`,
-      );
-      await writeFile(tmpPath, JSON.stringify({ ghost: "data" }), {
-        mode: 0o600,
-      });
-
-      // Reader: nonce-A is still used; orphan tmp is invisible.
-      const usedA = await isConsentNonceUsed({
-        nonce: FIXED_NONCE_A,
-        demaHome: home,
-      });
-      assert.equal(usedA, true);
-
-      const usedC = await isConsentNonceUsed({
-        nonce: FIXED_NONCE_C,
-        demaHome: home,
-      });
-      assert.equal(usedC, false);
-
-      // Canonical bytes unchanged.
-      const canonicalAfter = await readFile(registryPath(home));
-      assert.ok(canonicalBefore.equals(canonicalAfter));
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
-  });
-
-  it("DOD-9.9 reading when consent dir exists but used-nonces.json is missing → false (not throw)", async () => {
-    const home = await freshHome();
-    try {
-      // Create just the dir, no registry file.
-      await mkdir(join(home, "consent"), { recursive: true, mode: 0o700 });
-      const used = await isConsentNonceUsed({
-        nonce: FIXED_NONCE_A,
-        demaHome: home,
-      });
-      assert.equal(used, false);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-    }
+    await withHome(async (home) => {
+      await seedHistoricalRegistry(home, { [FIXED_NONCE_A]: historicalEntry() });
+      const prior = process.env.DEMA_HOME;
+      process.env.DEMA_HOME = home;
+      try {
+        assert.equal(await isConsentNonceUsed({ nonce: FIXED_NONCE_A }), true);
+        // NEGATIVE CONTROL: without the fallback working, the assertion above
+        // could pass from an unrelated ambient home.
+        assert.equal(await isConsentNonceUsed({ nonce: FIXED_NONCE_B }), false);
+      } finally {
+        if (prior === undefined) delete process.env.DEMA_HOME;
+        else process.env.DEMA_HOME = prior;
+      }
+    });
   });
 });

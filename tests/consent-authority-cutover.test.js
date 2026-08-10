@@ -13,7 +13,7 @@
 
 import { describe, it } from "node:test";
 import { strict as assert } from "node:assert";
-import { mkdtemp, rm, readFile } from "node:fs/promises";
+import { mkdtemp, rm, readFile, mkdir, writeFile } from "node:fs/promises";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,7 +23,6 @@ import { buildConsentProof } from "../packages/receipts/src/consent-proof.js";
 import { initAuthorshipKey, KEY_INIT_CONSENT_PHRASE } from "../packages/receipts/src/authorship-key-store.js";
 import { sha256, stableStringify } from "../packages/consent/src/consent-common.js";
 import { claimConsentNonce } from "../packages/receipts/src/consent-nonce-claim.js";
-import { recordConsentNonce } from "../packages/receipts/src/consent-nonce-registry-atomic.js";
 
 const VALID_INPUT = Object.freeze({ name: "alice", value: 100 });
 const VALID_RULE = "canonical-shape.v0.1";
@@ -85,14 +84,21 @@ describe("consent authority cutover · verdict-attest uses the canonical claim",
   it("a nonce consumed under the LEGACY regime still cannot be spent attesting", async () => {
     const home = await freshHomeWithKey();
     try {
-      const rec = await recordConsentNonce({
-        nonce: NONCE,
-        actionType: ATTEST_ACTION_TYPE,
-        targetHash: sha256(stableStringify(VALID_INPUT)),
-        consentProofHash: `sha256:${"9".repeat(64)}`,
-        demaHome: home,
-      });
-      assert.equal(rec.recorded, true, "precondition: a historical legacy marker exists");
+      // Cutover part 3 retired the legacy WRITER, so the historical marker is
+      // seeded as history actually left it — the bytes on disk — rather than
+      // through an API that no longer creates consumption. The property under
+      // test is unchanged and is about the READ: legacy history must still
+      // refuse. A fixture that needed the writer alive would have made
+      // retirement untestable.
+      const legacyDir = join(home, "consent", "nonces");
+      await mkdir(legacyDir, { recursive: true, mode: 0o700 });
+      await writeFile(join(legacyDir, `${NONCE}.json`), JSON.stringify({
+        action_type: ATTEST_ACTION_TYPE,
+        target_hash: sha256(stableStringify(VALID_INPUT)),
+        consumed_at_iso: "2026-01-01T00:00:00.000Z",
+        consent_proof_hash: `sha256:${"9".repeat(64)}`,
+      }), { mode: 0o600 });
+      assert.equal(existsSync(join(legacyDir, `${NONCE}.json`)), true, "precondition: a historical legacy marker exists");
       const r = await attest(home, await consentFor(home, NONCE));
       assert.equal(r.attested, false, "legacy history must remain a refusal, never erased");
     } finally { await rm(home, { recursive: true, force: true }); }

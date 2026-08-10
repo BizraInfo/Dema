@@ -51,50 +51,36 @@ const entryHash = (nonce, entry) =>
   sha256(JSON.stringify({ nonce, ...entry }));
 
 /**
- * Consume a nonce exactly once. Concurrency-safe by exclusive create.
- * @returns {Promise<{recorded:true, registry_entry_hash:string}
- *                 | {recorded:false, error:"consent_nonce_already_used", existing_entry:object}
- *                 | {recorded:false, error:"consent_nonce_malformed"}>}
+ * RETIRED 2026-08-11 — consent cutover part 3. Creates nothing, for any caller.
+ *
+ * This consumed a nonce by exclusive create in `consent/nonces`. Cutover part 2
+ * removed its last production caller; part 3 removes its ABILITY, because a
+ * clean call graph is a fact about today and expires the moment somebody writes
+ * a new call. `consent-nonce-claim.js` is the one authority that may create a
+ * consumption.
+ *
+ * There is no flag, environment variable or privileged caller that re-enables
+ * this. A fixture that needs historical bytes writes them with `_internal`
+ * (`paths` + `buildEntry`) — which is honest, because the evidence that matters
+ * is the file the old regime left on disk, not the API that made it.
+ *
+ * READING IS UNTOUCHED. `isConsentNonceUsed` below still reports this store, and
+ * the canonical claim still consults it for REFUSAL, so a nonce spent under the
+ * old regime can never be re-won. Retirement is not deletion: no history is
+ * removed, rewritten, or migrated, and no migration record is fabricated.
+ *
+ * It refuses rather than throwing so that a caller reintroduced by mistake fails
+ * closed on the path it already handles — an unrecorded consumption — instead of
+ * crashing somewhere that might be caught and read as success.
+ *
+ * @returns {Promise<{recorded:false, error:"legacy_consent_authority_retired"}>}
  */
-export async function recordConsentNonce({
-  nonce, actionType, targetHash, consentProofHash, demaHome, consumedAtIso,
-}) {
-  if (typeof nonce !== "string" || !NONCE_RE.test(nonce)) {
-    return Object.freeze({ recorded: false, error: "consent_nonce_malformed" });
-  }
-
-  const { dir, entry: entryPath } = paths(demaHome);
-  await mkdir(dir, { recursive: true });
-
-  const entry = buildEntry({
-    actionType,
-    targetHash,
-    consumedAtIso:
-      typeof consumedAtIso === "string" && consumedAtIso.length > 0
-        ? consumedAtIso
-        : new Date().toISOString(),
-    consentProofHash,
+export async function recordConsentNonce() {
+  return Object.freeze({
+    recorded: false,
+    error: "legacy_consent_authority_retired",
+    superseded_by: "packages/receipts/src/consent-nonce-claim.js",
   });
-
-  try {
-    // O_EXCL. The filesystem arbitrates; exactly one caller can succeed.
-    await writeFile(entryPath(nonce), JSON.stringify(entry), { flag: "wx", mode: 0o600 });
-  } catch (e) {
-    if (e?.code !== "EEXIST") throw e;
-    let existing = null;
-    try {
-      existing = JSON.parse(await readFile(entryPath(nonce), "utf8"));
-    } catch {
-      existing = null; // corrupt — still consumed; see the fail-closed note above
-    }
-    return Object.freeze({
-      recorded: false,
-      error: "consent_nonce_already_used",
-      existing_entry: Object.freeze(existing ?? { corrupt: true }),
-    });
-  }
-
-  return Object.freeze({ recorded: true, registry_entry_hash: entryHash(nonce, entry) });
 }
 
 /**

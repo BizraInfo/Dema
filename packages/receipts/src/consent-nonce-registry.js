@@ -142,50 +142,20 @@ function entryHash(nonce, entry) {
  * @param {string}  [args.consumedAtIso]    injected consumption timestamp (for determinism tests).
  * @returns {Promise<{recorded: true, registry_entry_hash: string} | {recorded: false, error: "consent_nonce_already_used", existing_entry: object}>}
  */
-export async function recordConsentNonce({
-  nonce,
-  actionType,
-  targetHash,
-  consentProofHash,
-  demaHome,
-  consumedAtIso,
-}) {
-  const { dir, file } = paths(demaHome);
-
-  const registry = await readRegistry(file);
-
-  if (Object.prototype.hasOwnProperty.call(registry, nonce)) {
-    const existing = registry[nonce];
-    return Object.freeze({
-      recorded: false,
-      error: "consent_nonce_already_used",
-      existing_entry: Object.freeze({
-        action_type: existing.action_type,
-        target_hash: existing.target_hash,
-        consumed_at_iso: existing.consumed_at_iso,
-        consent_proof_hash: existing.consent_proof_hash,
-      }),
-    });
-  }
-
-  const ts =
-    typeof consumedAtIso === "string" && consumedAtIso.length > 0
-      ? consumedAtIso
-      : new Date().toISOString();
-
-  const entry = buildEntry({
-    actionType,
-    targetHash,
-    consumedAtIso: ts,
-    consentProofHash,
-  });
-
-  const next = { ...registry, [nonce]: entry };
-  await writeRegistry(dir, file, next);
-
+export async function recordConsentNonce() {
+  // RETIRED 2026-08-11 — consent cutover part 3. See the note on the atomic
+  // module's writer: part 2 removed the last production caller, part 3 removes
+  // the ability, because a clean call graph expires the moment somebody writes a
+  // new call. `consent-nonce-claim.js` is the one authority that may create a
+  // consumption.
+  //
+  // This aggregate registry was the earlier of the two superseded stores and had
+  // no caller left even before part 2. Reading is untouched below, and the
+  // canonical claim still consults this namespace for REFUSAL.
   return Object.freeze({
-    recorded: true,
-    registry_entry_hash: entryHash(nonce, entry),
+    recorded: false,
+    error: "legacy_consent_authority_retired",
+    superseded_by: "packages/receipts/src/consent-nonce-claim.js",
   });
 }
 
