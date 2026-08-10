@@ -97,6 +97,9 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_MINIMUM_SEASON_SAVE_RESUME_1A",
   "NODE0_CLOSURE_INVARIANTS_1A",
   "ACCEPTANCE_MODEL_BLIND_ADAPTER_1A",
+  "MISSION_CONTRACT_STATE_0A",
+  "MISSION_SUPERVISOR_0A",
+  "MISSION_WORKER_ADAPTER_0A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -716,7 +719,7 @@ function defaultCapabilityRows() {
       capability_id: "NODE0_CLOSURE_INVARIANTS_1A",
       truth_label: "IMPLEMENTED_LOCAL",
       summary:
-        "Evaluate the ten Node0 closure invariants from sourced, scope-declared observations and re-derive the verdict from the rows; the published ledger is OPEN with zero evidence adapters wired.",
+        "Evaluate the ten Node0 closure invariants from sourced, scope-declared observations and re-derive the verdict from the rows; governed evidence adapters exist, how many rows are settled is environment-dependent, and the published ledger stays OPEN until all ten are satisfied.",
       evidence: evidence({
         source_paths: ["packages/core/src/node0-closure-invariants.js"],
         test_paths: ["tests/node0-closure-invariants.test.js"],
@@ -729,7 +732,7 @@ function defaultCapabilityRows() {
       what_this_proves:
         "Dema can name the ten closure invariants, refuse an unsourced or wrongly scoped observation, score silence as UNKNOWN rather than satisfaction, re-derive the verdict and every summary field from the rows, and refuse a forged CLOSED report.",
       what_this_does_not_prove:
-        "It does not prove Node0 closure, any satisfied invariant, endurance, activation, live runtime, worker handoff, replay, or that any observation was honestly measured. Zero evidence adapters are wired: the ledger is OPEN at 0 satisfied of 10.",
+        "It does not prove Node0 closure, endurance, activation, live runtime, or that any observation was honestly measured. This sentence previously read 'zero evidence adapters are wired' and was left standing after adapters were registered; no replacement count is pinned here, because a row backed by a recorded artefact reads SATISFIED only on a machine where the producer actually ran. The ledger is OPEN until all ten are satisfied.",
       forbidden_claims: [
         "node0 closed",
         "invariant satisfied",
@@ -738,6 +741,63 @@ function defaultCapabilityRows() {
         "live execution",
         "unattended runtime",
       ],
+    }),
+    capability({
+      capability_id: "MISSION_CONTRACT_STATE_0A",
+      truth_label: "IMPLEMENTED_LOCAL",
+      summary:
+        "Own a mission's identity and durable state independently of any worker: the contract is content-addressed over canonical JSON v1 and deeply frozen, and schema v0.2 binds the machine-executable acceptance law inside contract_hash so no worker can supply or replace it after freeze.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/mission-contract-state.js"],
+        test_paths: ["tests/mission-contract-state.test.js"],
+        review_gate_paths: ["scripts/review/canonical-json-v1-check.mjs"],
+        documentation_paths: ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim that any mission ran, that contract_is_immutable is satisfied, or that state survived a real worker death. Promotion requires a scoped runtime observation, not a unit test.",
+      what_this_proves:
+        "There is no in-place edit path: an amendment is a new hash requiring the exact operator phrase, a worker-channel proposal is refused without moving the authoritative hash, and resume refuses on contract mismatch, tamper, chain gap and concurrent heads before yielding state.",
+      what_this_does_not_prove:
+        "It does not prove that any mission ran, that a worker ever died, or that the acceptance law was ever executed against real output. It emits no scoped closure observation, so contract_is_immutable remains UNKNOWN.",
+      forbidden_claims: ["mission executed", "invariant satisfied", "contract immutability proven", "live runtime"],
+    }),
+    capability({
+      capability_id: "MISSION_SUPERVISOR_0A",
+      truth_label: "IMPLEMENTED_LOCAL",
+      summary:
+        "Walk a mission through the nine stages DISCOVER..DECIDE with a frozen legal-transition table, a bounded iteration budget whose exhaustion is terminal and receipted, one chained receipt per accepted transition, and a deterministic replay that is the same reducer re-walked.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/mission-supervisor.js"],
+        test_paths: ["tests/mission-supervisor.test.js"],
+        review_gate_paths: ["scripts/review/canonical-json-v1-check.mjs", "scripts/review/kernel-purity-check.mjs"],
+        documentation_paths: ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live conduction, that anything executed, or that any runtime closure invariant is satisfied. EXECUTE means an execution-result event was injected.",
+      what_this_proves:
+        "The verdict is delegated to node0-model-swap-invariance and the call site is never handed worker_id, so model-blindness is structural; an event carrying its own acceptance law is refused; FATE holds rather than skipping; and failure never widens authority_ceiling or scope.",
+      what_this_does_not_prove:
+        "It does not prove that real work happened in EXECUTE, that a live worker ran, or that any closure invariant is satisfied. It emits no scoped observation. Implementation is not observation.",
+      forbidden_claims: ["live conduction", "mission executed", "invariant satisfied", "unattended runtime"],
+    }),
+    capability({
+      capability_id: "MISSION_WORKER_ADAPTER_0A",
+      truth_label: "IMPLEMENTED_LOCAL",
+      summary:
+        "Define the worker seam and run the ten-demonstration swap protocol on two SIMULATED deterministic identities: a worker receives exactly {checkpoint, eligible_actions}, and a proposal naming a forbidden field is refused on shape before any hash is computed.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/mission-worker-adapter.js"],
+        test_paths: ["tests/mission-worker-adapter.test.js"],
+        review_gate_paths: ["scripts/review/canonical-json-v1-check.mjs", "scripts/review/kernel-purity-check.mjs"],
+        documentation_paths: ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live worker conduction. Both identities are simulated fixtures; a live-worker run is a separate operator-authorised act outside this repo, receipted under its own truth label.",
+      what_this_proves:
+        "A mission survives a worker swap: the prestigious identity's failing output is judged REJECT and the small local identity's valid output ACCEPT by the delegated judge; the contract, checkpoint chain and replay identity are unchanged by who produced the output; and a swap during a consent hold does not launder consent.",
+      what_this_does_not_prove:
+        "Nothing about live conduction, production autonomy, or any economic consequence. No process was spawned, no model invoked, no network used. It emits no scoped observation, so recovery_after_worker_exit and the other runtime rows remain UNKNOWN.",
+      forbidden_claims: ["live worker execution", "model invoked", "invariant satisfied", "autonomous runtime"],
     }),
     capability({
       capability_id: "ACCEPTANCE_MODEL_BLIND_ADAPTER_1A",
