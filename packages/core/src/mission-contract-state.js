@@ -21,15 +21,42 @@
 
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
+import { validateAcceptanceContract } from "./node0-model-swap-invariance.js";
 
-export const MISSION_CONTRACT_SCHEMA = "bizra.dema.mission_contract.v0.1";
+// ── SCHEMA v0.2 · WHY THE IDENTIFIER MOVED ──────────────────────────────────
+// v0.1 (commit bf8d38e6) carried human `acceptance_criteria` and nothing a judge
+// could execute. That left the rule deciding success OUTSIDE the frozen contract,
+// which hollows out the whole point of content-addressing it: a worker could
+// supply the predicates after freeze and the hash would not notice.
+//
+// v0.2 binds `acceptance_contract` INSIDE contract_hash. Because v0.1 refuses
+// unknown fields by construction, it is not extensible — the shapes are
+// incompatible, so the identifier is versioned rather than reused. Contracts
+// created under v0.1 do not validate here, and that is the intended direction of
+// failure.
+export const MISSION_CONTRACT_SCHEMA = "bizra.dema.mission_contract.v0.2";
+export const MISSION_CONTRACT_SCHEMA_V0_1 = "bizra.dema.mission_contract.v0.1";
 export const MISSION_STATE_SCHEMA = "bizra.dema.mission_state.v0.1";
 export const MISSION_CONTRACT_TRUTH_LABEL = "MISSION_CONTRACT_STATE_PREVIEW";
 export const MISSION_CONTRACT_GO_PHRASE = "GO: create mission contract";
 
+// ── ONE ACCEPTANCE SOURCE OF TRUTH ──────────────────────────────────────────
+// `acceptance_contract` is NORMATIVE: it is the machine-executable law, and the
+// only surface that decides a verdict. `acceptance_criteria` is human-readable
+// mission intent — it is hash-bound so it cannot be rewritten after the fact, but
+// it decides nothing. Two surfaces with no declared precedence is how a mission
+// comes to have a human answer and a machine answer that disagree, with no rule
+// for which one is true.
+export const ACCEPTANCE_PRECEDENCE = Object.freeze({
+  normative: "acceptance_contract",
+  advisory: "acceptance_criteria",
+  rule: "the machine verdict is decided by acceptance_contract alone; acceptance_criteria is hash-bound human intent and never consulted by a judge",
+});
+
 /// Field order is irrelevant to the hash (canonical-json-v1 sorts), but the list
 /// is exact: an unknown or missing field is a refusal, not a silent default.
 export const CONTRACT_FIELDS = Object.freeze([
+  "acceptance_contract",
   "acceptance_criteria",
   "authority_ceiling",
   "completion_conditions",
@@ -107,9 +134,20 @@ export function createMissionContract({ fields, consent } = {}) {
   if (!isNonBlank(fields.mission_id)) {
     throw new MissionContractError("mission_id_missing", "mission_id must be a non-blank string");
   }
-  // EC-4 — a mission that cannot be judged cannot be conducted.
+  // EC-4 — a mission that cannot be judged cannot be conducted. Both halves are
+  // required: the human intent AND the executable law that actually decides.
   if (!isStringList(fields.acceptance_criteria) || fields.acceptance_criteria.length === 0) {
     throw new MissionContractError("acceptance_criteria_empty", "at least one acceptance criterion is required");
+  }
+  // The judge owns acceptance semantics; this kernel does not re-implement them.
+  // A vacuous law (`{}`, or predicates that constrain nothing) is refused here
+  // rather than at verdict time, because a contract that cannot fail anything
+  // would make every EXECUTE trivially acceptable.
+  const acceptanceCheck = validateAcceptanceContract(fields.acceptance_contract);
+  if (!acceptanceCheck.valid) {
+    throw new MissionContractError("acceptance_contract_invalid", "acceptance_contract is not an admissible acceptance law", {
+      blocked_by: acceptanceCheck.blocked_by,
+    });
   }
   // EC-5
   if (!Number.isInteger(fields.iteration_budget) || fields.iteration_budget <= 0) {

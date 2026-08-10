@@ -11,8 +11,10 @@ import assert from "node:assert/strict";
 
 import {
   MISSION_CONTRACT_SCHEMA,
+  MISSION_CONTRACT_SCHEMA_V0_1,
   MISSION_STATE_SCHEMA,
   MISSION_CONTRACT_GO_PHRASE,
+  ACCEPTANCE_PRECEDENCE,
   createMissionContract,
   proposeContractAmendment,
   buildMissionState,
@@ -28,6 +30,12 @@ const FIELDS = Object.freeze({
   mission_id: "MISSION-REPAIR-001",
   purpose: "Repair one bounded local defect",
   scope: "packages/core/src only",
+  // NORMATIVE: the only surface that decides a verdict.
+  acceptance_contract: Object.freeze({
+    required_output_keys: Object.freeze(["patch", "test_result"]),
+    forbidden_substrings: Object.freeze(["TODO"]),
+  }),
+  // ADVISORY: hash-bound human intent, consulted by no judge.
   acceptance_criteria: Object.freeze(["focused test green", "full gates green"]),
   prohibited_outcomes: Object.freeze(["push", "merge", "network"]),
   authority_ceiling: "local_reversible",
@@ -195,8 +203,60 @@ test("T-06: boundary is canonical and all-false", () => {
 });
 
 test("T-06: schemas are declared and stable", () => {
-  assert.equal(MISSION_CONTRACT_SCHEMA, "bizra.dema.mission_contract.v0.1");
+  assert.equal(MISSION_CONTRACT_SCHEMA, "bizra.dema.mission_contract.v0.2");
   assert.equal(MISSION_STATE_SCHEMA, "bizra.dema.mission_state.v0.1");
+});
+
+// ── ACCEPTANCE LAW · one normative surface, bound inside the hash ─────────────
+test("the schema identifier moved rather than being reused for a new shape", () => {
+  assert.notEqual(MISSION_CONTRACT_SCHEMA, MISSION_CONTRACT_SCHEMA_V0_1);
+  // v0.1's exact-field rule means a v0.1 contract genuinely cannot validate here.
+  const { acceptance_contract, ...v01 } = FIELDS;
+  assert.throws(
+    () => createMissionContract({ fields: v01, consent: GO }),
+    (e) => e.code === "contract_shape_invalid",
+  );
+});
+
+test("precedence is declared: exactly one surface decides the machine verdict", () => {
+  assert.equal(ACCEPTANCE_PRECEDENCE.normative, "acceptance_contract");
+  assert.equal(ACCEPTANCE_PRECEDENCE.advisory, "acceptance_criteria");
+});
+
+test("an inadmissible or vacuous acceptance law is refused at creation", () => {
+  // Vacuous: shape is fine, but it constrains nothing — every output would pass.
+  assert.throws(
+    () => contractOf({ acceptance_contract: {} }),
+    (e) => e.code === "acceptance_contract_invalid" && e.blocked_by.includes("contract_vacuous:no_effective_predicate"),
+  );
+  // Delegated, not reimplemented: the judge's own code surfaces verbatim.
+  assert.throws(
+    () => contractOf({ acceptance_contract: { required_output_keys: "patch" } }),
+    (e) => e.blocked_by.includes("contract_malformed:required_output_keys"),
+  );
+});
+
+// ── NC-A1 · predicates cannot be changed under a stable identity ──────────────
+test("NC-A1: changing acceptance predicates changes contract identity; the old stays intact", () => {
+  const base = contractOf();
+  const widened = contractOf({ acceptance_contract: { required_output_keys: ["patch"] } });
+  assert.notEqual(widened.contract_hash, base.contract_hash, "the law is inside the hash");
+  // Positive control: an unrelated re-creation of the SAME law reproduces the hash,
+  // so the inequality above is caused by the change and not by nondeterminism.
+  assert.equal(contractOf().contract_hash, base.contract_hash);
+  assert.deepEqual([...base.contract.acceptance_contract.required_output_keys], ["patch", "test_result"]);
+});
+
+// ── NC-A7 · worker-channel scope widening ─────────────────────────────────────
+test("NC-A7: a worker cannot widen scope or the acceptance law; the authoritative hash is unchanged", () => {
+  const base = contractOf();
+  for (const changes of [{ scope: "the entire repository" }, { acceptance_contract: { required_output_keys: ["patch"] } }]) {
+    const r = proposeContractAmendment({ contract: base.contract, changes, channel: "worker", consent: GO });
+    assert.equal(r.accepted, false);
+    assert.equal(r.refusal, "contract_mutation_rejected");
+    assert.equal(r.contract_hash, base.contract_hash);
+  }
+  assert.equal(base.contract.scope, "packages/core/src only");
 });
 
 // ── Negative control · the state hash must actually cover the state ───────────

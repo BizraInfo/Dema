@@ -118,6 +118,15 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // Registration is adoption review only; the kernel is pure, promotes nothing,
   // and conducts no mission.
   "packages/core/src/mission-contract-state.js",
+  // MISSION-SUPERVISOR-0A (TASK-026 phase 02) — the conductor's transition
+  // receipts and its derived decision-state identity are both canonical hashes,
+  // and both are compared ACROSS processes: replay re-derives a state that a
+  // different process walked live, and the receipt chain is checked by a reader
+  // that did not write it. Key-order instability would make an honest replay
+  // diverge from the run it is replaying, which is the one property FR-7 exists
+  // to guarantee. Registration is adoption review only; the reducer is pure and
+  // performs no execution.
+  "packages/core/src/mission-supervisor.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
