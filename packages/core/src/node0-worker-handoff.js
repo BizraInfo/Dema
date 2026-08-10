@@ -70,8 +70,29 @@ const isNonEmptyString = (v) => typeof v === "string" && v.length > 0;
  *
  * `hash` is injected so this kernel never imports crypto and the digest can be
  * re-derived independently. It covers the OBSERVED FACTS only — never
- * `observed_at`, which is metadata: two identical handoffs recorded years apart
- * must bind to the same witness.
+ * `observed_at`.
+ *
+ * ── EVENT-WITNESS HASH SEMANTICS ──
+ * `observation_hash` identifies ONE concrete empirical observation event. Run
+ * identity (pid, boot/process identity, fencing state) is intentionally
+ * load-bearing: it is what proves a specific runtime event actually occurred, so
+ * a stale artefact from an older execution can never stand in for proof that
+ * THIS run happened.
+ *
+ * `observed_at` is excluded because wall-clock recording time is not part of the
+ * truth being attested. That exclusion does NOT imply two separate executions
+ * produce identical hashes — measured 2026-08-10, they do not, because run
+ * identity differs. Two executions may demonstrate the same invariant while
+ * hashing differently.
+ *
+ * EVENT REPRODUCIBILITY (repeated real executions independently demonstrate the
+ * same verdict) and ARTEFACT IDENTITY (the same hash) are different properties.
+ * Node0 closure requires the first. It does not require hash(runA)==hash(runB).
+ *
+ * CORRECTED 2026-08-10. This previously read "two identical handoffs recorded
+ * years apart must bind to the same witness" — which cannot happen while pid and
+ * fencing tokens are inside the digest, and so described a reproducibility this
+ * design does not provide. No hashing behaviour changed.
  */
 export function buildWorkerHandoffObservation({
   predecessor = null,
