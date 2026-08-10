@@ -9,6 +9,7 @@ import {
   verifyReceiptChain,
   SAT_RECEIPT_CHAIN_VERIFIER_PERSONA,
 } from "../packages/core/src/sat-receipt-chain-verifier.js";
+import { shapeReceiptCandidate } from "../packages/core/src/pat-receipt-recorder.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
 const HASH_A = "a".repeat(64);
@@ -162,6 +163,38 @@ test("verifyReceiptChain · empty chain passes (false green)", () => {
   // closure row from this must rule out the empty case first — which
   // `verifyReplay` does explicitly (`receipts.length > 0`) and this does not.
   assert.equal(verifyReceiptChain({ receipts: [] }).passed, true);
+});
+
+// ── PAT → SAT SEAM · the boundary this verifier actually serves ─────────────
+// Until now pat-receipt-recorder and sat-receipt-chain-verifier were each
+// tested alone: 2 test files for the producer, 1 for the verifier, none
+// importing both. That gap is structural, not incidental — it is exactly how
+// the mumu-chain drift above went unnoticed. A producer and a verifier that
+// never meet in a test can drift apart field by field and stay green.
+//
+// This binds them. It is the one seam the repo's own PAT/SAT separation rule
+// treats as load-bearing, so it should fail loudly if either side renames a
+// field, changes hash width, or adds a prefix.
+test("PAT-6 → SAT-4 seam · a recorded chain verifies end to end", () => {
+  const a = shapeReceiptCandidate({ event_schema: "seam.a", prev_receipt_hash: null });
+  const b = shapeReceiptCandidate({
+    event_schema: "seam.b",
+    prev_receipt_hash: a.candidate_hash,
+  });
+
+  const v = verifyReceiptChain({ receipts: [a, b] });
+  assert.equal(v.verdict, "chain_verified");
+  assert.equal(v.passed, true);
+  assert.deepEqual([...v.violations], []);
+});
+
+test("PAT-6 → SAT-4 seam · the producer's field names are ones the verifier reads", () => {
+  // Named explicitly so a rename on either side fails here with a readable
+  // reason rather than as a mystery chain_violated.
+  const r = shapeReceiptCandidate({ event_schema: "seam.fields" });
+  assert.equal(typeof r.candidate_hash, "string", "producer must emit candidate_hash");
+  assert.match(r.candidate_hash, /^[a-f0-9]{64}$/, "bare 64-hex, no sha256: prefix");
+  assert.ok("prev_receipt_hash" in r, "producer must emit prev_receipt_hash");
 });
 
 test("Summary + exports · kernel pre-configured", () => {
