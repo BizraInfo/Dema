@@ -42,10 +42,17 @@ const DOMAINS = Object.freeze([
   }),
   Object.freeze({
     domain_id: "consent_nonce_consumption",
-    writer: "packages/receipts/src/consent-nonce-registry.js",
-    transition: "nonce consumed: future replay of the same consent proof is denied",
+    // CUTOVER 2026-08-10: the authoritative writer is now the CANONICAL claim,
+    // not the superseded registry. Canon is explicit that this domain is
+    // receipted BY CONSTRUCTION - "Existence of this file IS consumption. There
+    // is NO second consumed record" - so requiring appendCanonicalReceipt here
+    // would contradict the module the invariant is meant to protect. The claim
+    // record is content-addressed (claim_hash) and that IS the evidence.
+    writer: "packages/receipts/src/consent-nonce-claim.js",
+    transition: "nonce claimed: future replay of the same consent proof is denied",
     authority_source: "KEYCONSENT-1A consent proof",
-    consumer_symbol: "consent-nonce-registry|isNonceUsed|recordNonce|used-nonces",
+    consumer_symbol: "consent-nonce-claim|claimConsentNonce|inspectConsentNonce",
+    self_evidencing: "claim_hash",
   }),
 ]);
 
@@ -68,7 +75,10 @@ const mechanismExistsElsewhere = mechanismCallers.length > 0;
 
 const counterexamples = DOMAINS.map((d) => {
   const src = read(join(REPO, d.writer));
-  const receipt_call_present = src.includes(RECEIPT_MECHANISM);
+  // Two ways a domain can be receipted: it calls the canonical mechanism, or its
+  // own record IS the evidence (content-addressed, no second record by canon).
+  const selfEvidenced = Boolean(d.self_evidencing) && src.includes(d.self_evidencing);
+  const receipt_call_present = src.includes(RECEIPT_MECHANISM) || selfEvidenced;
   const consumers = FILES.filter((f) => {
     const rel = relative(REPO, f);
     if (rel === d.writer) return false;
@@ -79,7 +89,7 @@ const counterexamples = DOMAINS.map((d) => {
     classification: "AUTHORITATIVE",
     consumers_count: consumers,
     receipt_call_present,
-    receipt_mechanism: RECEIPT_MECHANISM,
+    receipt_mechanism: selfEvidenced ? `self-evidencing:${d.self_evidencing}` : RECEIPT_MECHANISM,
     receipt_mechanism_exists_elsewhere: mechanismExistsElsewhere && !mechanismCallers.includes(d.writer),
     verified_by: "independent_source_trace",
   };

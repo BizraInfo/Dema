@@ -43,6 +43,14 @@ export const CONSENT_NONCE_RELDIR = join("consent", "nonces-v1");
 export const LEGACY_NAMESPACES = Object.freeze({
   cliReservation: join("missions", "consent-nonces"),
   weldRegistry: join("consent", "nonces"),
+  // THIRD superseded store, added 2026-08-10 during the verdict-attest cutover.
+  // `consent-nonce-registry.js` (the non-atomic writer verdict-attest used) keeps
+  // ONE aggregate file rather than one file per nonce, so it needs a membership
+  // read rather than a path probe. It was missing here, which meant every nonce
+  // attest had ever consumed was invisible to this authority — cutting attest
+  // over without it would have silently dropped that replay protection. Found by
+  // KEYCONSENT-2B DOD-10.4, which exists for exactly this.
+  attestRegistryFile: join("consent", "used-nonces.json"),
 });
 
 // PATH KEY ONLY. Domain-separated so this digest can never collide with any
@@ -140,6 +148,32 @@ async function legacyRefs(home, nonce) {
     } else if (weldProbe.present) {
       refs.push(Object.freeze({
         namespace: LEGACY_NAMESPACES.weldRegistry, key: "raw", status: "LEGACY_CONSUMED",
+      }));
+    }
+  }
+  // Aggregate-file store: membership, not existence. Unreadable-but-present is an
+  // ERROR, never "absent" \u2014 an unreadable registry is not an empty one, and this
+  // path decides whether consent may be spent again.
+  const attestFile = join(home, LEGACY_NAMESPACES.attestRegistryFile);
+  const attestProbe = await probePath(attestFile);
+  if (attestProbe.error) {
+    errors.push(Object.freeze({ namespace: LEGACY_NAMESPACES.attestRegistryFile, error: attestProbe.error }));
+  } else if (attestProbe.present) {
+    let holds = null;
+    try {
+      const parsed = JSON.parse(await readFile(attestFile, "utf8"));
+      const entries = parsed && typeof parsed === "object" ? (parsed.nonces ?? parsed.entries ?? parsed) : null;
+      if (Array.isArray(entries)) holds = entries.some((e) => (typeof e === "string" ? e : e?.nonce) === nonce);
+      else if (entries && typeof entries === "object") holds = Object.prototype.hasOwnProperty.call(entries, nonce);
+    } catch {
+      holds = null;
+    }
+    if (holds === null) {
+      // Present but unparseable: cannot prove unused, so never grant.
+      errors.push(Object.freeze({ namespace: LEGACY_NAMESPACES.attestRegistryFile, error: "unreadable_or_unrecognised_shape" }));
+    } else if (holds) {
+      refs.push(Object.freeze({
+        namespace: LEGACY_NAMESPACES.attestRegistryFile, key: "raw-in-aggregate", status: "LEGACY_CONSUMED",
       }));
     }
   }

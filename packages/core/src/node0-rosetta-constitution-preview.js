@@ -105,7 +105,7 @@ const CAPABILITY_LEDGER = Object.freeze([
   c("kernel_purity", "Kernel purity (no fs/net/exec in pure tier)", "IMPLEMENTED", "scripts/review/kernel-purity-check.mjs", "0 violations across packages"),
   c("exact_string_consent", "Exact-string consent gates", "IMPLEMENTED", "packages/receipts/src/authorship-key-store.js", "key init/sign/attest phrase-gated"),
   c("cryptographic_consent_proof", "Cryptographic consent proof (scope + freshness)", "IMPLEMENTED", "packages/receipts/src/consent-proof.js", "external-pubkey verify, 5-min window"),
-  c("consent_nonce_replay_close", "Single-use consent nonce registry (replay close)", "IMPLEMENTED", "packages/receipts/src/consent-nonce-registry.js", "wired into verdict-attest"),
+  c("consent_nonce_replay_close", "Single-use consent nonce claim (replay close)", "IMPLEMENTED", "packages/receipts/src/consent-nonce-claim.js", "sole consumption authority; verdict-attest cut over 2026-08-10, legacy stores read for refusal only"),
   c("proof_passport_verify", "Proof passport / deep verification", "IMPLEMENTED", "packages/receipts/src/proof-passport-verify.js", "chain integrity verified"),
   c("canonical_receipt", "Canonical content-addressed receipt", "IMPLEMENTED", "packages/receipts/src/canonical-receipt.js", "hash-bound receipts"),
   c("agent_dna_root_coherence", "Agent-DNA root coherence (Law of Assumption gate)", "IMPLEMENTED", "packages/agents/src/agent-dna-root-coherence.js", "fail-closed in npm check"),
