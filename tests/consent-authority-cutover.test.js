@@ -119,10 +119,11 @@ describe("consent authority cutover · no live decision surface writes the legac
     ["packages/receipts/src/consent-nonce-registry.js", "the legacy writer itself"],
     ["packages/receipts/src/consent-nonce-registry-atomic.js", "the legacy writer itself"],
     ["packages/core/src/node0-rosetta-constitution-preview.js", "documentation string only — names the file, imports nothing"],
-    // KNOWN REMAINING live caller. Cutover part 2 removes it: it hands the
-    // closure kernel a {has, add} adapter, and canon rejects that SHAPE, so it
-    // cannot be fixed by swapping the writer alone.
-    ["packages/mission/src/corridor-closure-gatherer.js", "cutover part 2 — pending, tracked"],
+    // corridor-closure-gatherer.js was listed here as the KNOWN REMAINING live
+    // caller pending cutover part 2. Part 2 landed 2026-08-11: the gatherer's
+    // adapters now commit through claimConsentNonce and it imports the legacy
+    // module nowhere. The exemption is SPENT and removed — leaving it would give
+    // a future regression a place to hide.
   ]);
 
   function liveSources(dir, out = []) {
@@ -163,8 +164,19 @@ describe("consent authority cutover · no live decision surface writes the legac
   it("control: the classifier finds a real use and ignores a mere mention", () => {
     // Without both halves, the empty result above could come from a broken scan
     // OR from a scan so loose that every comment is a violation.
-    assert.equal(USES_LEGACY(readFileSync("packages/mission/src/corridor-closure-gatherer.js", "utf8")), true, "known part-2 caller must be detected");
+    //
+    // The positive half was a real file — corridor-closure-gatherer.js, the last
+    // known caller — until part 2 cut it over. After part 2 NO live source uses
+    // the legacy writer, which is the goal and which leaves the positive control
+    // with nothing real to point at. It is synthetic now, and permanently: a
+    // control anchored to the last remaining offender dies the moment the
+    // cutover it guards succeeds, and dies silently, leaving the empty result
+    // above indistinguishable from a broken scan.
+    assert.equal(USES_LEGACY(`import { recordConsentNonce } from "../receipts/src/consent-nonce-registry-atomic.js";\n`), true, "a real import must be detected");
+    assert.equal(USES_LEGACY("const r = await recordConsentNonce({ nonce });\n"), true, "a real call must be detected");
+    assert.equal(USES_LEGACY("if (await isConsentNonceUsed({ nonce })) return;\n"), true, "the legacy read is a use too");
     assert.equal(USES_LEGACY(readFileSync("packages/receipts/src/verdict-attest.js", "utf8")), false, "a cutover comment naming the old function is not a use");
+    assert.equal(USES_LEGACY(readFileSync("packages/mission/src/corridor-closure-gatherer.js", "utf8")), false, "the part-2 cutover must read as clean, comments and all");
     assert.equal(USES_LEGACY("// we used to call recordConsentNonce here\n"), false, "prose alone must not trip it");
   });
 });

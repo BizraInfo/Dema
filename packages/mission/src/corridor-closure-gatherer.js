@@ -4,16 +4,27 @@
 // the durable nonce store or the receipt ledger, so it can check that a consent
 // registry is well-SHAPED but never that it is telling the TRUTH:
 //
-//   consentRegistry: { has: () => false, add: () => {} }   → COMPLETED_VERIFIED
+//   consentRegistry: { claim: async () => ({ granted: true }) }  → COMPLETED_VERIFIED
 //
 // That is the documented ceiling in the kernel header, the same shape-not-binding
 // ceiling peak-self-loop-preview.js records for evidence. This module is the
 // caller that closes it: the production route re-reads the one canonical C1
 // nonce claim, binds that claim to the exact prepared intent and C2 transaction,
 // and binds the remaining surfaces to the canonical receipt ledger, real
-// filesystem, and anchor log. The legacy O_EXCL nonce adapter remains exported
-// only for compatibility tests; the production C3 route never creates a second
-// authority marker.
+// filesystem, and anchor log.
+//
+// ── CONSENT CUTOVER 2026-08-11 (part 2) ──
+//
+// Both adapters below used to expose `{ has, add }` over the superseded
+// `consent/nonces` store, and the kernel ran its entire transaction between the
+// two calls. Two missions holding one nonce both passed `has`, both acted, and
+// the loser found out when its `add` threw — the authority arbitrated the record,
+// never the act.
+//
+// They now expose ONE `claim(nonce)` that commits and answers, and the disk
+// adapter commits through `claimConsentNonce` — the single canonical consumption
+// fact, which consults the superseded stores for REFUSAL so nothing spent under
+// the old regime can be re-won. No legacy writer is reachable from this module.
 //
 // I/O tier by design (allowlisted in scripts/review/kernel-purity-allowlist.js).
 // All paths stay under DEMA_HOME. No network, no child_process, no model.
@@ -52,11 +63,12 @@ import {
   CANONICAL_RECEIPT_CONSENT_PHRASE, verifyCanonicalChain,
 } from "../../receipts/src/canonical-receipt.js";
 import { loadPublicKey } from "../../receipts/src/authorship-key-store.js";
+// CUTOVER 2026-08-11 (part 2): the superseded consent-nonce-registry-atomic
+// import is gone. This module no longer references the legacy writer at all —
+// its authority is the canonical claim below, which still consults the legacy
+// stores for REFUSAL, so nothing spent under the old regime can be re-won.
 import {
-  recordConsentNonce, isConsentNonceUsed, _internal as nonceInternal,
-} from "../../receipts/src/consent-nonce-registry-atomic.js";
-import {
-  inspectConsentNonce, nonceDigest,
+  claimConsentNonce, inspectConsentNonce, nonceDigest,
 } from "../../receipts/src/consent-nonce-claim.js";
 import {
   acquireClosureOwnership, validateFencingToken,
@@ -439,44 +451,84 @@ export function resolveDemaHome(override) {
   return process.env.DEMA_HOME || join(homedir(), ".dema");
 }
 
+/// The one shape the weld accepts: `claim(nonce)` commits and answers.
+///
+///   { granted: true,  consumed: false }            fresh exclusive win — proceed
+///   { granted: true,  consumed: false, recovered } the exact holder re-entering
+///   { granted: false, consumed: true,  reason }    held by someone else — refuse
+///
+/// `granted` decides whether the operation may proceed. `reason` is what the weld
+/// reports; `consent_already_consumed` is the value a resume reads as "the prior
+/// attempt already acted", so an adapter that refuses for that cause must say so.
+const CONSENT_ALREADY_CONSUMED = "consent_already_consumed";
+
+const consentGranted = (extra = {}) => Object.freeze({ granted: true, consumed: false, ...extra });
+const consentRefused = (reason = CONSENT_ALREADY_CONSUMED, extra = {}) =>
+  Object.freeze({ granted: false, consumed: true, reason, ...extra });
+
 /**
- * Single-use consent bound to REAL bytes: one O_EXCL file per nonce.
+ * Single-use consent committed against the CANONICAL claim — one exclusive
+ * create, before any effect.
  *
- * `has` fails CLOSED (an unreadable entry reads as USED), so a corrupted
- * registry can never hand back a spent authority. `add` THROWS when the
- * registry refuses — the weld treats a thrown add as a failed transaction
- * rather than silently proceeding on unrecorded consent.
+ * CUTOVER 2026-08-11 (part 2). This used to expose `has` + `add` over the
+ * superseded `consent/nonces` store, and the weld ran its entire transaction
+ * between the two. Two behaviours changed, and only together do they close it:
+ *
+ *   THE AUTHORITY MOVED. `claimConsentNonce` is the one canonical consumption
+ *   fact, and it consults the superseded stores for REFUSAL before creating —
+ *   so a nonce spent under the old regime can never be re-won here. Records now
+ *   land in `consent/nonces-v1`; nothing writes `consent/nonces` on this path.
+ *
+ *   THE DECISION MOVED. It happens once, before the effect, and the operation
+ *   proceeds from it. A loser refuses at the gate and never touches the world.
+ *
+ * `resumable` is the canonical claim's own same-transaction judgement: it holds
+ * only when the transaction id matches AND every binding it committed to still
+ * agrees (mission, contract, consent context, action kind and class, checkpoint,
+ * prepared intent, recovery policy). Re-aimed authority is not recovery, so a
+ * drifted binding refuses rather than resumes.
  */
-export function buildDiskConsentRegistry({ demaHome, actionType = "C3_LOCAL_WRITE", targetHash, consentProofHash }) {
+export function buildDiskConsentRegistry({
+  demaHome, actionType = "C3_LOCAL_WRITE", targetHash, consentProofHash, binding = {},
+} = {}) {
   const home = resolveDemaHome(demaHome);
-  // Create the registry directory up front so that its LATER absence is
-  // unambiguous evidence of tampering, and `has` can keep failing closed on an
-  // unreadable directory. Without this, a never-initialised registry is
-  // indistinguishable from an erased one, and the fail-closed read reports every
-  // nonce as already consumed — refusing every first closure on a fresh home.
-  mkdirSync(nonceInternal.paths(home).dir, { recursive: true, mode: 0o700 });
   return Object.freeze({
-    has: (nonce) => isConsentNonceUsed({ nonce, demaHome: home }),
-    add: async (nonce) => {
-      const r = await recordConsentNonce({
-        nonce, actionType, targetHash, consentProofHash, demaHome: home,
+    claim: async (nonce) => {
+      const r = await claimConsentNonce({
+        ...binding,
+        nonce,
+        demaHome: home,
+        actionKind: binding.actionKind ?? actionType,
+        targetHash,
+        consentProofHash,
       });
-      if (!r.recorded) {
-        // Losing the exclusive create means somebody else consumed this nonce
-        // between our `has` and our `add`. That is precisely the race D3 exists
-        // to arbitrate, and the loser must not proceed.
-        throw new Error(`consent nonce not recorded: ${r.error}`);
+      if (r.claimed === true) return consentGranted({ claim_hash: r.claim.claim_hash });
+      // Only the claim's OWN transaction, with every binding intact, may continue.
+      if (r.resumable === true && r.existing_claim) {
+        return consentGranted({ recovered: true, claim_hash: r.existing_claim.claim_hash });
       }
-      return r;
+      // Everything else is refusal, including the fail-closed cases. An
+      // unreadable or unwritable registry is not an empty one, so it refuses on
+      // its own reason rather than being flattened into "already consumed" —
+      // which a resume would misread as "the effect already happened".
+      return consentRefused(
+        r.reason === "consent_nonce_already_claimed" || r.reason === "consent_nonce_legacy_consumed"
+          ? CONSENT_ALREADY_CONSUMED
+          : r.reason,
+        r.escalate_to_human === true ? { escalate_to_human: true } : {},
+      );
     },
   });
 }
 
 /**
- * Compatibility adapter for the weld after C1 has already consumed authority.
- * It never creates a second marker: both probes re-read the one canonical C1
- * claim and require exact byte-bound identity with the claim the orchestrator
- * received. The weld's old has/add interface remains intact for other callers.
+ * The weld's adapter for a transaction whose C1 claim was already committed
+ * upstream by the CLI. It creates no second marker: it re-reads that one
+ * canonical claim and returns the decision the operation proceeds from.
+ *
+ * Exclusivity was settled at C1 by the same `claimConsentNonce` the disk adapter
+ * calls, so this is not a check — it is a read of an authority already
+ * committed, which is exactly what "proceeds from the committed claim" means.
  */
 export function buildClaimBoundConsentRegistry({ demaHome, claim }) {
   const home = resolveDemaHome(demaHome);
@@ -490,15 +542,10 @@ export function buildClaimBoundConsentRegistry({ demaHome, claim }) {
       && seen.claim?.transaction_id === claim.transaction_id;
   };
   return Object.freeze({
-    // `has` here means "unavailable to THIS transaction". The exact C1 holder
-    // may proceed; any missing, corrupt, or different claim fails closed.
-    has: async (nonce) => !(await exactClaimHeld(nonce)),
-    add: async (nonce) => {
-      if (!(await exactClaimHeld(nonce))) {
-        throw new Error("canonical consent claim is missing, corrupt, or not held by this transaction");
-      }
-      return Object.freeze({ recorded: true, authority: "C1", claim_hash: claim.claim_hash });
-    },
+    claim: async (nonce) => (await exactClaimHeld(nonce)
+      ? consentGranted({ authority: "C1", claim_hash: claim.claim_hash })
+      // Missing, corrupt, or held by a different transaction all fail closed.
+      : consentRefused()),
   });
 }
 

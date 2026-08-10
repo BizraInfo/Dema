@@ -47,6 +47,24 @@ function makeWorld({ files = { "a.txt": "A", "b.txt": "B" } } = {}) {
   };
 }
 
+/// The injected consent authority in its smallest honest form: ONE call that
+/// commits exclusively and answers. `granted` decides whether the operation may
+/// proceed; `consumed` is what a resume reads as "the prior attempt already
+/// acted". A real adapter puts an O_EXCL create where the `add` below is — the
+/// shape is the contract, the filesystem is only the arbiter.
+function memoryConsentAuthority() {
+  const held = new Set();
+  return {
+    claim: async (key) => {
+      if (held.has(key)) {
+        return { granted: false, consumed: true, reason: "consent_already_consumed" };
+      }
+      held.add(key);
+      return { granted: true, consumed: false };
+    },
+  };
+}
+
 const LEASE = { lease_id: "L1", scope_root: "/scope", expires_at: 9_999, budget_acts: 1 };
 const CONSENT = { by: "operator", ref: "consent-1", nonce: "n-1" };
 const MISSION = { objective: "weld probe", root: "/scope" };
@@ -60,10 +78,15 @@ const BASE = () => {
     anchorDir: "/anchor-outside", effect: w.adapter, now: 1_000,
     appendReceipt: async () => ({ ok: true, head: "sha256:" + "1".repeat(64) }),
     verifyAdmission: () => ({ admitted: true, self_verifiable: true }),
-    // Single-use consent needs somewhere to record consumption. Injected (not
+    // Single-use consent needs an AUTHORITY, not a record. Injected (not
     // ambient) so the kernel stays pure and a hostile/absent registry is testable.
     // REQUIRED: its absence means single-use cannot be proven (MCW-16).
-    consentRegistry: new Set(),
+    //
+    // This was `new Set()` until the 2026-08-11 consent cutover, and that it
+    // worked is what the cutover was about: a Set answers "was it there" and
+    // "put it there", so the kernel had to ask before acting and record after.
+    // One call that commits and answers cannot be a Set.
+    consentRegistry: memoryConsentAuthority(),
     __world: w,
   };
 };

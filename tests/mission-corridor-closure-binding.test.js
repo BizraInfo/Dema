@@ -243,23 +243,46 @@ describe("CCB · corridor closure BINDING — real consent, real nonces, real le
     const registry = buildDiskConsentRegistry({
       demaHome: home, targetHash: "t".repeat(64), consentProofHash: "c".repeat(64),
     });
-    // A fresh, initialised registry reports unused — the failure mode that made
-    // every first closure refuse before the directory was created eagerly.
-    assert.equal(await registry.has("ccb-n1"), false);
-    await registry.add("ccb-n1");
-    assert.equal(await registry.has("ccb-n1"), true, "consumption must survive as bytes on disk");
+    // Cutover 2026-08-11: this exercised `has` then `add`. Every property it
+    // proved is preserved below against the single `claim` call that replaced
+    // them — including the one that motivated eager directory creation, since a
+    // fresh home must GRANT rather than refuse the first closure.
+    const first = await registry.claim("ccb-n1");
+    assert.equal(first.granted, true, "a fresh home must grant the first claim");
 
     // The replay is refused by the filesystem's exclusive create, not by a flag.
-    await assert.rejects(() => registry.add("ccb-n1"), /already_used/);
+    const replay = await registry.claim("ccb-n1");
+    assert.equal(replay.granted, false, "consumption must survive as bytes on disk");
+    assert.equal(replay.consumed, true);
+    assert.equal(replay.reason, "consent_already_consumed");
 
-    // A path-escaping nonce can never address a file outside the registry.
-    await assert.rejects(() => registry.add("../escape"), /malformed/);
-    assert.equal(await registry.has("../escape"), true, "malformed nonces never read as available");
+    // A path-escaping nonce still cannot address a file outside the registry —
+    // and the reason CHANGED with the cutover, so the assertion changes with it.
+    //
+    // The legacy store used the raw nonce as the filename, so it had to REJECT
+    // `../escape` to stay inside its directory. The canonical claim names every
+    // file by the nonce's digest, so no nonce can address anything outside the
+    // registry by construction, and it deliberately accepts any non-NUL string.
+    // Re-asserting the old rejection would pin the WEAKER guarantee and would
+    // also make this adapter stricter than the single consent authority it is
+    // supposed to be a face for. So the structural property is asserted instead.
+    const escape = await registry.claim("../escape");
+    assert.equal(escape.granted, true, "safety here is structural, not a veto on the nonce's text");
+    const claimFiles = await readdir(join(home, "consent", "nonces-v1"));
+    assert.equal(claimFiles.length, 2, "both claims landed in the registry directory");
+    for (const f of claimFiles) {
+      assert.match(f, /^[0-9a-f]{64}\.json$/, "every claim file is digest-named, never nonce-named");
+    }
+    assert.deepEqual(await readdir(home), ["consent"], "a hostile nonce wrote nothing outside the registry");
 
     // A SECOND registry over the same home sees the same bytes — the guarantee
     // does not live in process memory.
     const reopened = buildDiskConsentRegistry({ demaHome: home });
-    assert.equal(await reopened.has("ccb-n1"), true);
+    assert.equal((await reopened.claim("ccb-n1")).granted, false);
+
+    // And the record landed in the CANONICAL namespace, not the superseded one.
+    assert.equal(existsSync(join(home, "consent", "nonces-v1")), true);
+    assert.equal(existsSync(join(home, "consent", "nonces")), false);
   });
 
   // Found by a blind-spot ledger over this slice: MCW-12 races two in-process

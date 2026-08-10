@@ -26,14 +26,21 @@
 // cannot be PROVEN, so the route refuses (BLOCKED_MISSING_EVIDENCE). Measured
 // adversarially — an absent registry and a non-registry object both fail closed.
 //
-// It does NOT close forgery. A registry whose `has()` always returns false still
-// yields COMPLETE:
+// It does NOT close forgery. A registry that simply grants still yields
+// COMPLETE:
 //
-//   consentRegistry: { has: () => false, add: () => {} }   → COMPLETED_VERIFIED
+//   consentRegistry: { claim: async () => ({ granted: true }) }  → COMPLETED_VERIFIED
 //
 // This is the SAME ceiling peak-self-loop-preview.js documents for evidence:
 // purity forbids this kernel from reading the durable nonce store, so it can
 // check that a registry is well-shaped but never that it is telling the truth.
+//
+// CUTOVER 2026-08-11 (part 2). The injected contract was `{ has, add }` and this
+// kernel asked, acted, and then recorded — with the whole Omega0 transaction in
+// between. It now takes ONE `claim(nonce)` that commits before the effect and
+// proceeds from that decision. The shape moved because the shape was the defect:
+// `{ has, add }` was satisfied by a plain `new Set()`, which can never express
+// an exclusive commitment.
 //
 // The production CLI path closes that ceiling through
 // `corridor-closure-gatherer.js`: one canonical C1 nonce claim is bound to the
@@ -491,17 +498,32 @@ export async function runCorridorClosure(p = {}) {
   // the kernel cannot PROVE this consent is unused, and unprovable is not
   // permission. Missing evidence is UNKNOWN, never PASS (MCW-16).
   const registry = p.consentRegistry;
-  if (!registry || typeof registry.has !== "function" || typeof registry.add !== "function") {
+  if (!registry || typeof registry.claim !== "function") {
     return terminal("BLOCKED_MISSING_EVIDENCE", null, {
       reason_detail: "consent_registry_absent_single_use_unprovable",
     });
   }
-  // Awaited so a REAL disk-backed registry (async, O_EXCL per nonce) can bind
-  // here, not only an in-memory Set. `await` on a plain boolean is a no-op, so
-  // a synchronous registry behaves exactly as before.
+  // ONE call. The authority commits here and the transaction below proceeds FROM
+  // that committed decision — it is never re-asked, and nothing is recorded
+  // afterwards. The old contract asked `has`, ran the entire Omega0 transaction,
+  // and only then called `add`; two missions holding one nonce both answered
+  // "unused", both acted, and the loser learned it had spent authority it never
+  // held when its `add` threw. That arbitrated the RECORD, never the ACT.
+  //
+  // That the old contract was satisfied by a plain `new Set()` is the tell: a Set
+  // can say "was it there" and "put it there" and cannot say "commit exclusively,
+  // and tell me whether I hold it". The shape was the defect, so swapping the
+  // writer underneath has/add could not have fixed it.
   const consentKey = consent.nonce ?? consent.ref;
-  if (await registry.has(consentKey)) {
-    return terminal("REFUSED_POLICY", null, { reason_detail: "consent_already_consumed" });
+  const consentClaim = await registry.claim(consentKey);
+  if (!consentClaim || typeof consentClaim !== "object" || consentClaim.granted !== true) {
+    // Not-granted is refusal in every form: a false grant, a mute answer, and a
+    // truthy non-object all fail closed. Unprovable is not permission.
+    return terminal("REFUSED_POLICY", null, {
+      reason_detail: typeof consentClaim?.reason === "string" && consentClaim.reason.length > 0
+        ? consentClaim.reason
+        : "consent_claim_refused",
+    });
   }
 
   // ── The bounded Omega0 transaction. The ordinary pure-kernel path performs
@@ -543,7 +565,9 @@ export async function runCorridorClosure(p = {}) {
   }
 
   // SEALED is a CANDIDATE. Everything below must also succeed.
-  await registry.add(consentKey);
+  //
+  // Nothing is recorded here. Consent was committed before the effect; a second
+  // write after it would be the old check-then-act pair wearing a new name.
 
   // ── IN-PROCESS JUDGE-FREE verification. The proposer and certifier identifiers
   // differ, so the actor does not certify itself — but both run inside THIS
@@ -679,28 +703,33 @@ export async function runCorridorClosure(p = {}) {
  * receipt.
  */
 export async function resumeCorridorClosure(p = {}) {
-  const { consent, consentRegistry } = p;
-  const key = consent?.nonce ?? consent?.ref;
+  // Resume asks the authority NOTHING of its own. It runs the same closure and
+  // re-reads the one committed decision that run already made.
+  //
+  // A separate probe here would have been a second check-then-act — the exact
+  // shape this cutover removes, reintroduced on the recovery path. Because the
+  // claim commits BEFORE the effect, a spent authority refuses at the consent
+  // gate and the effect is never reached, so "no replay" is enforced by the same
+  // gate that enforces single use rather than by a second opinion about it.
+  //
+  // The distinction resume adds is interpretive, not authoritative: for a fresh
+  // caller a spent nonce is a refusal, while for a restart it is the durability
+  // signal that the prior attempt already acted (MCW-05) and already appended
+  // (MCW-06). Same fact, same decision, different reading.
+  const r = await runCorridorClosure(p);
+  if (r?.terminal_outcome !== "REFUSED_POLICY") return r;
+  if (r.reason_detail !== "consent_already_consumed") return r;
 
-  // The consent registry IS the durability signal. If this consent was consumed,
-  // the effect already happened and the receipt was already attempted — replaying
-  // either would duplicate a real-world act (MCW-05) or a ledger entry (MCW-06).
-  if (await consentRegistry?.has?.(key)) {
-    return Object.freeze({
-      schema: MISSION_CORRIDOR_CLOSURE_SCHEMA,
-      state: "STOPPED",
-      terminal_outcome: "RECOVERY_REQUIRED",
-      resumed: true,
-      effect_performed: false,   // by THIS call — the prior call performed it
-      receipt_appended: false,   // no duplicate append
-      authority_delta: 0,
-      reason_detail: "transaction_already_committed_no_replay",
-    });
-  }
-
-  // Nothing was consumed — the crash happened before authority was spent, so a
-  // fresh attempt is safe and is exactly what the caller wants.
-  return runCorridorClosure(p);
+  return Object.freeze({
+    schema: MISSION_CORRIDOR_CLOSURE_SCHEMA,
+    state: "STOPPED",
+    terminal_outcome: "RECOVERY_REQUIRED",
+    resumed: true,
+    effect_performed: false,   // by THIS call — the prior call performed it
+    receipt_appended: false,   // no duplicate append
+    authority_delta: 0,
+    reason_detail: "transaction_already_committed_no_replay",
+  });
 }
 
 /**
