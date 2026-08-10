@@ -34,11 +34,23 @@ test("SAT-4 EffectCap valid", () => {
   assert.ok(cap.blocked_effects.includes("modify_receipt"));
 });
 
-test("verifyReceiptChain · empty chain → trivially compliant", () => {
+test("verifyReceiptChain · empty chain → NO_VERDICT, never proof", () => {
   const v = verifyReceiptChain({ receipts: [] });
-  assert.equal(v.passed, true);
+  assert.equal(v.passed, false);
   assert.equal(v.verdict, "empty_chain");
   assert.equal(v.receipt_count, 0);
+  assert.equal(v.truth_label, "NO_VERDICT");
+  assert.equal(v.receipt_shape_ready, false);
+  assert.deepEqual(v.violations, ["chain_is_empty_no_proof"]);
+});
+
+test("verifyReceiptChain · semantically empty input → NO_VERDICT", () => {
+  const v = verifyReceiptChain({ receipts: [null, undefined, "not-a-receipt"] });
+  assert.equal(v.passed, false);
+  assert.equal(v.verdict, "empty_chain");
+  assert.equal(v.receipt_count, 0);
+  assert.equal(v.truth_label, "NO_VERDICT");
+  assert.equal(v.receipt_shape_ready, false);
 });
 
 test("verifyReceiptChain · single genesis receipt with null prev → verified", () => {
