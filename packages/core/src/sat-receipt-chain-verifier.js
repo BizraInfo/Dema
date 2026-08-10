@@ -105,12 +105,16 @@ export function verifyReceiptChain({ receipts = [] } = {}) {
   const violations = [];
   const linkResults = [];
 
+  // NO_VACUOUS_PROOF: absence is not a verified chain. An empty input cannot
+  // establish integrity because there is no receipt, link, or genesis fact to
+  // inspect. Preserve the distinct empty_chain verdict, but never promote it to
+  // MEASURED or receipt-ready proof.
   if (list.length === 0) {
     return buildVerdict({
       verdict: "empty_chain",
-      passed: true,
+      passed: false,
       receipt_count: 0,
-      violations: ["chain_is_empty_trivially_compliant"],
+      violations: ["chain_is_empty_no_proof"],
       link_results: [],
     });
   }
@@ -208,7 +212,12 @@ function buildVerdict({
 }) {
   return Object.freeze({
     schema: VERDICT_SCHEMA,
-    truth_label: passed ? "MEASURED" : "CHAIN_VIOLATION",
+    truth_label:
+      verdict === "empty_chain"
+        ? "NO_VERDICT"
+        : passed
+          ? "MEASURED"
+          : "CHAIN_VIOLATION",
     mode: "verdict",
     verified_by: SAT4_PERSONA.sat_id,
     verified_at: new Date().toISOString(),
