@@ -9,6 +9,29 @@
 // the tree. Without that control, "no receipt here" is indistinguishable from
 // "this tree receipts nothing".
 //
+// ── WHY DETECTION IS A CALL SCAN AND NOT A SUBSTRING TEST (repair 2026-08-10) ──
+//
+// Both questions above were previously answered with `source.includes(name)`.
+// Measured against this producer at 36200ce, that failed in both directions:
+//
+//   ERASURE. Appending one comment to the writer —
+//     `// NOTE: this generation transition does not yet call appendCanonicalReceipt.`
+//   — set `receipt_call_present` true, dropped the counterexample, and moved
+//   `receipt_per_transition` from VIOLATED to UNKNOWN in the canonical ledger.
+//   A comment asserting the transition is UNRECEIPTED deleted the proof that it
+//   is unreceipted. Prose must never be able to retract a measured refutation.
+//
+//   A CONTROL THAT STOPPED CONTROLLING. The caller control reported five files
+//   on the unmodified tree; only two were call sites. `mission-corridor-closure.js`
+//   mentions the mechanism in a comment, `canonical-ledger.js` DECLARES it, and
+//   this producer holds the name in a string constant. Had the two real calls
+//   ever been removed, three non-uses would have kept the control reading true.
+//
+// So both sides now scan CODE: comments, string and template literals are removed,
+// declarations are excluded (defining a mechanism is not using it), and the name
+// must appear as a call at an identifier boundary. This changes no schema, no
+// kernel, and no hash input — the kernel still judges what it is handed.
+//
 // BOUNDARY: read-only over the repository plus one artefact write under the given
 // DEMA_HOME. No network, no model, no spawn, no key material.
 
@@ -56,6 +79,80 @@ const DOMAINS = Object.freeze([
   }),
 ]);
 
+/**
+ * Blank every comment, string and template literal, leaving code in place.
+ *
+ * Written as one pass rather than a chain of replaces because the chain has no
+ * safe order: strip strings first and an apostrophe in `// don't` opens a
+ * literal that swallows the next line; strip comments first and the `//` inside
+ * `"https://x"` eats the rest of that line. A scanner that knows which state it
+ * is in has neither failure.
+ *
+ * ponytail: does not track regex literals, so `/["']/` could still mislead it.
+ * No authoritative writer in this tree contains one; upgrade to a real lexer if
+ * that stops being true.
+ */
+export function stripCommentsAndStrings(text) {
+  const out = [];
+  let i = 0;
+  const n = text.length;
+  while (i < n) {
+    const c = text[i];
+    const d = text[i + 1];
+    if (c === "/" && d === "/") {
+      while (i < n && text[i] !== "\n") { out.push(" "); i += 1; }
+      continue;
+    }
+    if (c === "/" && d === "*") {
+      while (i < n && !(text[i] === "*" && text[i + 1] === "/")) {
+        out.push(text[i] === "\n" ? "\n" : " ");
+        i += 1;
+      }
+      out.push(" ", " ");
+      i += 2;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      const quote = c;
+      out.push(" ");
+      i += 1;
+      while (i < n && text[i] !== quote) {
+        if (text[i] === "\\") { out.push(" "); i += 1; }
+        if (i < n) { out.push(text[i] === "\n" ? "\n" : " "); i += 1; }
+      }
+      out.push(" ");
+      i += 1;
+      continue;
+    }
+    out.push(c);
+    i += 1;
+  }
+  return out.join("");
+}
+
+const boundedToken = (name) => `(?<![\\w$])${name}(?![\\w$])`;
+
+/**
+ * True when `name` is CALLED in this source. A declaration is removed first:
+ * `canonical-ledger.js` defines the mechanism and never uses it, and counting a
+ * definition as a use would let a tree where nothing receipts anything still
+ * satisfy the "mechanism exists elsewhere" control.
+ */
+export function callsMechanism(source, name) {
+  const code = stripCommentsAndStrings(source)
+    .replace(new RegExp(`\\bfunction\\s+${name}\\s*\\(`, "g"), " ");
+  return new RegExp(`${boundedToken(name)}\\s*\\(`).test(code);
+}
+
+/**
+ * True when `name` appears in CODE — for domains whose own record IS the
+ * receipt, where the evidence is a real field rather than a call. Same reason as
+ * above: a comment naming the field is not the field.
+ */
+export function mentionsTokenInCode(source, name) {
+  return new RegExp(boundedToken(name)).test(stripCommentsAndStrings(source));
+}
+
 function walk(dir, out = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (e.name === "node_modules" || e.name === ".next" || e.name === ".git") continue;
@@ -65,24 +162,30 @@ function walk(dir, out = []) {
   }
   return out;
 }
-const FILES = ["packages", "apps", "bin", "scripts"].flatMap((d) => walk(join(REPO, d)));
 const read = (p) => { try { return readFileSync(p, "utf8"); } catch { return ""; } };
 
-// THE CONTROL: the canonical receipt mechanism must be used somewhere, or an
-// absence proves nothing about any individual writer.
-const mechanismCallers = FILES.filter((f) => read(f).includes(RECEIPT_MECHANISM)).map((f) => relative(REPO, f));
+function main() {
+const FILES = ["packages", "apps", "bin", "scripts"].flatMap((d) => walk(join(REPO, d)));
+
+// THE CONTROL: the canonical receipt mechanism must be CALLED somewhere, or an
+// absence proves nothing about any individual writer. Scanned as code — a file
+// that only names the mechanism in a comment, a string, or its own declaration
+// is not a user of it, and counting one would let the control read true in a
+// tree where the last real call had been deleted.
+const mechanismCallers = FILES.filter((f) => callsMechanism(read(f), RECEIPT_MECHANISM)).map((f) => relative(REPO, f));
 const mechanismExistsElsewhere = mechanismCallers.length > 0;
 
 const counterexamples = DOMAINS.map((d) => {
   const src = read(join(REPO, d.writer));
   // Two ways a domain can be receipted: it calls the canonical mechanism, or its
   // own record IS the evidence (content-addressed, no second record by canon).
-  const selfEvidenced = Boolean(d.self_evidencing) && src.includes(d.self_evidencing);
-  const receipt_call_present = src.includes(RECEIPT_MECHANISM) || selfEvidenced;
+  // Both are read from code: a comment claiming either is not either.
+  const selfEvidenced = Boolean(d.self_evidencing) && mentionsTokenInCode(src, d.self_evidencing);
+  const receipt_call_present = callsMechanism(src, RECEIPT_MECHANISM) || selfEvidenced;
   const consumers = FILES.filter((f) => {
     const rel = relative(REPO, f);
     if (rel === d.writer) return false;
-    return new RegExp(d.consumer_symbol).test(read(f));
+    return new RegExp(d.consumer_symbol).test(stripCommentsAndStrings(read(f)));
   }).length;
   return {
     ...d,
@@ -137,3 +240,9 @@ else {
   console.log(`scanned:   ${report.files_scanned} files`);
   console.log(`artefact:  ${artefact}`);
 }
+}
+
+// Importable for its detector, runnable as the producer. Without this guard the
+// tests that pin the detector would walk the repo and write an artefact just by
+// importing the module.
+if (process.argv[1] && process.argv[1].endsWith("node0-transition-coverage-proof.mjs")) main();
