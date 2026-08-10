@@ -135,6 +135,28 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // would let one proposal present two identities to the duplicate check.
   // Registration is adoption review only; the module is pure and spawns nothing.
   "packages/core/src/mission-worker-adapter.js",
+  // NODE0-RUNTIME-MISSION-OBSERVATION-1A reader — re-derives a recorded runtime
+  // artefact's digest instead of trusting the one it carries, and compares the
+  // artefact's `executed_code_hash` against the classification kernel's bytes on
+  // disk. Both comparisons are made by a READER against a digest written earlier
+  // by a process that is now dead, so key-order stability is the entire contract:
+  // an unstable serializer would invalidate every honest artefact and validate
+  // none. Registration is adoption review only; this half performs one file read.
+  "packages/core/src/node0-runtime-mission-adapter.js",
+  // NODE0-RUNTIME-MISSION-OBSERVATION-1A producer — the writing half. It records
+  // the digest the reader above later re-derives, in a DIFFERENT process from the
+  // one that reads it, and it also hashes the supervisor state that a SIGKILLed
+  // predecessor left behind so its successor can prove it resumed that exact
+  // checkpoint rather than a fresh one. Registered separately from the reader
+  // because writing a digest and reading one are distinct adoptions, and this one
+  // performs real execution (spawns and a SIGKILL) while the reader performs none.
+  "scripts/proof/node0-runtime-mission-proof.mjs",
+  // NODE0-RUNTIME-MISSION-OBSERVATION-1A worker — the disposable process itself.
+  // It hashes the supervisor state it checkpoints, and a DIFFERENT process later
+  // compares that digest to prove it resumed that exact checkpoint rather than a
+  // fresh one. Predecessor and successor never share memory — only bytes on disk
+  // — so key-order stability is what makes the comparison mean anything.
+  "scripts/proof/node0-runtime-mission-worker.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

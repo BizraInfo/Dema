@@ -121,6 +121,8 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "metadata-only Node0 filesystem census with optional exact-consent content hashing and DEMA_HOME checkpoint persistence (I/O tier by design)",
   "node0-worker-handoff-adapter.js":
     "NODE0-WORKER-HANDOFF-1A: two bounded reads and nothing else — one recorded handoff artefact under DEMA_HOME||~/.dema, and the classification kernel's own bytes to bind the artefact to the rules that judged it. Reader tier by design: `worker_is_replaceable` cannot be measured without killing a process, so the producer executes and THIS module only reads, which is what lets the review gate keep declaring execution_allowed:false honestly. No write, no spawn, no network, no clock; the pure kernel it judges with (node0-worker-handoff.js) imports nothing.",
+  "node0-runtime-mission-adapter.js":
+    "NODE0-RUNTIME-MISSION-OBSERVATION-1A: two bounded reads and nothing else \u2014 one recorded runtime artefact under DEMA_HOME||~/.dema, and the classification kernel's own bytes to bind the artefact to the rules that judged it. Reader tier by design: `mission_is_primary_state` and `contract_is_immutable` cannot be measured without killing a process and reconstructing from disk, so the producer executes and THIS module only reads, which is what lets the review gate keep declaring execution_allowed:false honestly. No write, no spawn, no network, no clock; the pure kernel it judges with (node0-runtime-mission-observation.js) imports nothing.",
   "master-craftsmanship-audit.js":
     "external-witness audit log; injected fs with a node:fs/promises fallback (persistence I/O by design; DI-pure when fs is injected)",
   "operator-profile.js":

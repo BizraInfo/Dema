@@ -38,6 +38,13 @@ import {
   workerHandoffDiagnostic,
   WORKER_HANDOFF_INVARIANT_ID,
 } from "../../packages/core/src/node0-worker-handoff-adapter.js";
+import {
+  missionPrimaryStateObservation,
+  contractImmutabilityObservation,
+  runtimeMissionDiagnostic,
+  STATE_OWNERSHIP_INVARIANT_ID,
+  CONTRACT_IMMUTABILITY_INVARIANT_ID,
+} from "../../packages/core/src/node0-runtime-mission-adapter.js";
 
 /// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
 /// its own `task_id`, which the attestation's content hash covers — so anyone
@@ -93,6 +100,21 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
     // Reason-only channel; see gatherAdapterDiagnostics. Never consulted by the
     // evaluator, so it cannot settle this row however it answers.
     diagnose: () => workerHandoffDiagnostic(),
+  }),
+  // NODE0-RUNTIME-MISSION-OBSERVATION-1A. ONE artefact, TWO independently judged
+  // rows: an artefact can honestly prove state ownership and fail contract
+  // immutability, so each adapter re-reads and re-judges rather than sharing a
+  // verdict. Both emit only when the recorded run was OBSERVED, hash-verified,
+  // and judged by the kernel bytes currently on disk.
+  Object.freeze({
+    invariant_id: STATE_OWNERSHIP_INVARIANT_ID,
+    observe: () => missionPrimaryStateObservation(),
+    diagnose: () => runtimeMissionDiagnostic(),
+  }),
+  Object.freeze({
+    invariant_id: CONTRACT_IMMUTABILITY_INVARIANT_ID,
+    observe: () => contractImmutabilityObservation(),
+    diagnose: () => runtimeMissionDiagnostic(),
   }),
 ]);
 
