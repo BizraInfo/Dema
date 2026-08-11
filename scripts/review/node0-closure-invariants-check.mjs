@@ -64,6 +64,11 @@ import {
   fullHistoryReplayableObservation,
   historyReplayDiagnostic,
 } from "../../packages/core/src/node0-history-replay-adapter.js";
+import {
+  RUNTIME_WRITE_SURFACE_INVARIANT_ID,
+  remoteWriteObservation,
+  runtimeWriteSurfaceDiagnostic,
+} from "../../packages/core/src/node0-runtime-write-surface-adapter.js";
 
 /// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
 /// its own `task_id`, which the attestation's content hash covers — so anyone
@@ -173,6 +178,18 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
     invariant_id: HISTORY_REPLAY_INVARIANT_ID,
     observe: () => fullHistoryReplayableObservation(),
     diagnose: () => historyReplayDiagnostic(),
+  }),
+  // NODE0-RUNTIME-WRITE-SURFACE-1A. The tenth row, and the one whose scope was
+  // misread longest: `node0_deployment_remote_write` is the write surface of the
+  // RUNNING host, not evidence that a Node0 was deployed to the internet. The
+  // producer observes the real Genesis host read-only; this adapter reads only
+  // the artefact. It can emit `observed:true` (a writer was seen -> VIOLATED) as
+  // well as `false`, and stays silent whenever coverage is incomplete - which is
+  // the whole reason a source scan was refused here in the first place.
+  Object.freeze({
+    invariant_id: RUNTIME_WRITE_SURFACE_INVARIANT_ID,
+    observe: () => remoteWriteObservation(),
+    diagnose: () => runtimeWriteSurfaceDiagnostic(),
   }),
 ]);
 

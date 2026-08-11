@@ -176,6 +176,13 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // which WROTE it is gone. A fresh interpreter re-derives the digest from bytes it
   // never authored, so key-order stability is not a nicety here: it is the only
   // reason a replay observation means anything after its producer exits.
+  // NODE0-RUNTIME-WRITE-SURFACE-1A \u2014 the tenth row's artefact. It can carry a
+  // REFUTATION (a writer was observed) into the closure ledger, so its digest is what
+  // stands between a measured violation and an edited one; a reader in a different
+  // process re-derives it, and key-order instability would let an edited artefact keep
+  // its hash.
+  "packages/core/src/node0-runtime-write-surface-adapter.js",
+  "scripts/proof/node0-runtime-write-surface-proof.mjs",
   "packages/core/src/node0-history-replay-adapter.js",
   "scripts/proof/node0-history-replay-proof.mjs",
   "packages/core/src/node0-transition-coverage-adapter.js",
