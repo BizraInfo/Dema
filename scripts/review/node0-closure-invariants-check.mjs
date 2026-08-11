@@ -59,6 +59,11 @@ import {
   transitionCoverageDiagnostic,
   TRANSITION_COVERAGE_INVARIANT_ID,
 } from "../../packages/core/src/node0-transition-coverage-adapter.js";
+import {
+  HISTORY_REPLAY_INVARIANT_ID,
+  fullHistoryReplayableObservation,
+  historyReplayDiagnostic,
+} from "../../packages/core/src/node0-history-replay-adapter.js";
 
 /// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
 /// its own `task_id`, which the attestation's content hash covers — so anyone
@@ -157,6 +162,17 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
     invariant_id: TRANSITION_COVERAGE_INVARIANT_ID,
     observe: () => transitionCoverageObservation(),
     diagnose: () => transitionCoverageDiagnostic(),
+  }),
+  // NODE0-HISTORY-REPLAY-1A. Its own artefact, because the evidence is the one
+  // thing an in-process check can never supply: a reconstruction performed by an
+  // interpreter that never saw the history being written. The producer spends its
+  // own process to make that true, and records whether four specific corruptions
+  // were REFUSED - a replayer that accepts a forgery is refuted, not merely
+  // unproven, so this adapter can emit `observed:false` as well as silence.
+  Object.freeze({
+    invariant_id: HISTORY_REPLAY_INVARIANT_ID,
+    observe: () => fullHistoryReplayableObservation(),
+    diagnose: () => historyReplayDiagnostic(),
   }),
 ]);
 

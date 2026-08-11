@@ -172,6 +172,12 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // between a measured violation and a forged one. The producer re-derives every
   // counterexample from source and a reader in a different process re-derives the
   // digest; key-order instability would let an edited artefact keep its hash.
+  // NODE0-HISTORY-REPLAY-1A \u2014 the artefact whose whole point is that the process
+  // which WROTE it is gone. A fresh interpreter re-derives the digest from bytes it
+  // never authored, so key-order stability is not a nicety here: it is the only
+  // reason a replay observation means anything after its producer exits.
+  "packages/core/src/node0-history-replay-adapter.js",
+  "scripts/proof/node0-history-replay-proof.mjs",
   "packages/core/src/node0-transition-coverage-adapter.js",
   "scripts/proof/node0-transition-coverage-proof.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
