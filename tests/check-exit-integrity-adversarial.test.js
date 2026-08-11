@@ -318,17 +318,20 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
   // at index 87, again ahead of the isolated TAP command: 203 -> 204, isolated
   // 127 -> 128, coverage 128 -> 129. Positions MEASURED by importing `commands`,
   // not carried over from the previous slice's arithmetic.
+  // AUTHORITATIVE-POINTER-PARITY-1A appends the pointer-parity gate ahead of the
+  // isolated TAP command: 208 -> 209, isolated 132 -> 133, coverage 133 -> 134.
+  // MEASURED by importing `commands`, per this block's own law — not arithmetic.
   // These are exact positional snapshots and will drift again on the next gate
   // added ahead of the isolated TAP command; that coupling is this lane's to decide on.
-  assert.equal(commands.length, 208);
-  assert.equal(commands.indexOf(isolated), 132);
-  assert.deepEqual(commands[133].slice(0, 2), ["npm", ["run", "coverage"]]);
-  assert.equal(commands.length, 208);
-  assert.equal(commands.indexOf(isolated), 132);
-  assert.deepEqual(commands[133].slice(0, 2), ["npm", ["run", "coverage"]]);
-  assert.equal(commands.length, 208);
-  assert.equal(commands.indexOf(isolated), 132);
-  assert.deepEqual(commands[133].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 209);
+  assert.equal(commands.indexOf(isolated), 133);
+  assert.deepEqual(commands[134].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 209);
+  assert.equal(commands.indexOf(isolated), 133);
+  assert.deepEqual(commands[134].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 209);
+  assert.equal(commands.indexOf(isolated), 133);
+  assert.deepEqual(commands[134].slice(0, 2), ["npm", ["run", "coverage"]]);
   // 2026-08-09: NODE0-CLOSURE-INVARIANTS-1A's ledger gate is added right after
   // node0-local-closure-readiness-check, which is ahead of the isolated TAP
   // command, so 204 -> 205 and the isolated index 128 -> 129.
@@ -336,9 +339,9 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
   // directly after the closure-invariants gate, again ahead of the isolated TAP
   // command: 207 -> 208, isolated 131 -> 132, coverage 132 -> 133. Positions
   // MEASURED by importing `commands`, never carried over by arithmetic.
-  assert.equal(commands.length, 208);
-  assert.equal(commands.indexOf(isolated), 132);
-  assert.deepEqual(commands[133].slice(0, 2), ["npm", ["run", "coverage"]]);
+  assert.equal(commands.length, 209);
+  assert.equal(commands.indexOf(isolated), 133);
+  assert.deepEqual(commands[134].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];

@@ -48,6 +48,12 @@ export const commands = [
   ["node", ["scripts/review/node0-evidence-source-registry-check.mjs"]],
   ["node", ["scripts/review/node0-local-closure-readiness-check.mjs"]],
   ["node", ["scripts/review/node0-closure-invariants-check.mjs"]],
+  // AUTHORITATIVE-POINTER-PARITY-1A. Four engines answer "which record is
+  // authoritative" with unequal guarantees; this reports the ledger. It runs
+  // here because an unwired gate detects nothing — measured this session, a
+  // closure-authority violation survived two commits in a workspace that
+  // qualified against tsc/eslint/build instead of the repo gate set.
+  ["node", ["scripts/review/authoritative-pointer-parity-check.mjs"]],
   ["node", ["scripts/review/legacy-consent-authority-check.mjs"]],
   ["node", ["scripts/review/dema-stand-check.mjs"]],
   ["node", ["scripts/review/dema-steward-chain-check.mjs"]],

@@ -28,6 +28,10 @@ import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.
 
 export const SEASON_STATE_SCHEMA = "bizra.dema.node0_season_state.v0.1";
 export const SEASON_RECEIPT_SCHEMA = "bizra.dema.node0_season_save_receipt.v0.1";
+// REALM0-ANCHOR-BINDING-0B. v0.2 adds exactly one field — `world_anchor_ref` —
+// INSIDE the hashed body. Publication identity gains a world binding; semantic
+// identity (SEMANTIC_STATE_FIELDS, state_hash) does not move by one byte.
+export const SEASON_RECEIPT_SCHEMA_V0_2 = "bizra.dema.node0_season_save_receipt.v0.2";
 export const SEASON_HEAD_SCHEMA = "bizra.dema.node0_season_head.v0.1";
 
 export const SEASON_STATE_DOMAIN = "BIZRA:NODE0_SEASON_STATE:v1";
@@ -577,6 +581,67 @@ export function verifySeasonState(state) {
   return Object.freeze({ ok: true, state_hash: recomputed });
 }
 
+
+// ── world anchor (REALM0-ANCHOR-BINDING-0B) ─────────────────────────────────
+// The anchor is an opaque, content-addressed statement of "what the world was"
+// when a publication was created. 0B proves the CONTRACT: the object is
+// durable, re-derivable and unstrippable from the receipt that references it.
+// A later observer slice supplies real `observed` content; tests use synthetic
+// payloads on purpose.
+export const WORLD_ANCHOR_SCHEMA = "bizra.dema.realm0_world_anchor.v0.1";
+export const WORLD_ANCHOR_DOMAIN = "BIZRA:REALM0_WORLD_ANCHOR:v1";
+export const WORLD_ANCHOR_FIELDS = Object.freeze([
+  "schema", "domain", "season_id", "observed", "anchor_hash",
+]);
+// Same family, different version: a fact this verifier must refuse to compare,
+// which is a DIFFERENT fact from rot. Collapsing them would let a version bump
+// masquerade as corruption — or worse, corruption as a mere version bump.
+const WORLD_ANCHOR_SCHEMA_FAMILY_RE = /^bizra\.dema\.realm0_world_anchor\.v\d+\.\d+$/;
+
+export function worldAnchorBody({ season_id, observed }) {
+  return {
+    schema: WORLD_ANCHOR_SCHEMA,
+    domain: WORLD_ANCHOR_DOMAIN,
+    season_id,
+    observed,
+  };
+}
+
+export function buildWorldAnchor(args) {
+  const body = worldAnchorBody(args);
+  return Object.freeze({ ...body, anchor_hash: sha256CanonicalJsonV1(body) });
+}
+
+export function verifyWorldAnchor(anchor) {
+  if (!anchor || typeof anchor !== "object" || Array.isArray(anchor)) {
+    return Object.freeze({ ok: false, reason: "anchor_not_object" });
+  }
+  if (anchor.schema !== WORLD_ANCHOR_SCHEMA || anchor.domain !== WORLD_ANCHOR_DOMAIN) {
+    if (
+      anchor.domain === WORLD_ANCHOR_DOMAIN &&
+      WORLD_ANCHOR_SCHEMA_FAMILY_RE.test(String(anchor.schema ?? ""))
+    ) {
+      return Object.freeze({ ok: false, reason: "anchor_version_incomparable" });
+    }
+    return Object.freeze({ ok: false, reason: "unknown_schema" });
+  }
+  const present = Object.keys(anchor).sort();
+  const expected = [...WORLD_ANCHOR_FIELDS].sort();
+  if (present.length !== expected.length || present.some((k, i) => k !== expected[i])) {
+    return Object.freeze({ ok: false, reason: "anchor_fields_unexpected" });
+  }
+  let recomputed;
+  try {
+    recomputed = sha256CanonicalJsonV1(worldAnchorBody(anchor));
+  } catch {
+    return Object.freeze({ ok: false, reason: "anchor_hash_mismatch" });
+  }
+  if (recomputed !== anchor.anchor_hash) {
+    return Object.freeze({ ok: false, reason: "anchor_hash_mismatch", recomputed_hash: recomputed });
+  }
+  return Object.freeze({ ok: true, anchor_hash: recomputed });
+}
+
 // ── save receipt ────────────────────────────────────────────────────────────
 // The receipt is where the clock is bound. It attests "this exact semantic state
 // was published at this time", which is why `saved_at` can be excluded from the
@@ -598,8 +663,31 @@ export function receiptBody({ season_id, state_hash, state_sequence, previous_st
   };
 }
 
+export const RECEIPT_FIELDS_V0_2 = Object.freeze([
+  "schema", "domain", "season_id", "state_hash", "state_sequence",
+  "previous_state_hash", "saved_at", "world_anchor_ref", "receipt_hash",
+]);
+
+export function receiptBodyV0_2({
+  season_id, state_hash, state_sequence, previous_state_hash, saved_at, world_anchor_ref,
+}) {
+  return {
+    schema: SEASON_RECEIPT_SCHEMA_V0_2,
+    domain: SEASON_RECEIPT_DOMAIN,
+    season_id,
+    state_hash,
+    state_sequence,
+    previous_state_hash: previous_state_hash ?? null,
+    saved_at,
+    world_anchor_ref,
+  };
+}
+
 export function buildSeasonReceipt(args) {
-  const body = receiptBody(args);
+  // A ref selects the v0.2 body; its absence selects v0.1 byte-identically.
+  // Legacy callers cannot produce a v0.2 receipt by accident, and an anchored
+  // caller cannot silently lose the ref — it is inside the hashed body.
+  const body = args?.world_anchor_ref != null ? receiptBodyV0_2(args) : receiptBody(args);
   return Object.freeze({ ...body, receipt_hash: sha256CanonicalJsonV1(body) });
 }
 
@@ -608,17 +696,25 @@ export function verifySeasonReceipt(receipt, state) {
   if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) {
     return Object.freeze({ ok: false, reason: "receipt_not_object" });
   }
-  if (receipt.schema !== SEASON_RECEIPT_SCHEMA || receipt.domain !== SEASON_RECEIPT_DOMAIN) {
+  const v2 = receipt.schema === SEASON_RECEIPT_SCHEMA_V0_2;
+  if ((!v2 && receipt.schema !== SEASON_RECEIPT_SCHEMA) || receipt.domain !== SEASON_RECEIPT_DOMAIN) {
     return Object.freeze({ ok: false, reason: "unknown_schema" });
   }
+  // Schema-specific CLOSED field set and schema-specific body construction.
+  // A v0.1 receipt must not gain fields; a v0.2 receipt must not lose the ref —
+  // stripping it changes the field set AND the recomputed hash, so it can never
+  // be read as a smaller-but-valid receipt.
   const present = Object.keys(receipt).sort();
-  const expected = [...RECEIPT_FIELDS].sort();
+  const expected = [...(v2 ? RECEIPT_FIELDS_V0_2 : RECEIPT_FIELDS)].sort();
   if (present.length !== expected.length || present.some((k, i) => k !== expected[i])) {
     return Object.freeze({ ok: false, reason: "receipt_fields_unexpected" });
   }
+  if (v2 && !TAGGED_SHA256_RE.test(String(receipt.world_anchor_ref ?? ""))) {
+    return Object.freeze({ ok: false, reason: "world_anchor_ref_malformed" });
+  }
   let recomputed;
   try {
-    recomputed = sha256CanonicalJsonV1(receiptBody(receipt));
+    recomputed = sha256CanonicalJsonV1(v2 ? receiptBodyV0_2(receipt) : receiptBody(receipt));
   } catch {
     return Object.freeze({ ok: false, reason: "receipt_hash_mismatch" });
   }

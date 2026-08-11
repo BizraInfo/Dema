@@ -92,7 +92,21 @@ export async function cmd_season(ctx) {
       if (!json) console.error(`season save refused: ${r.reason}`);
       return emit(r);
     }
-    const result = await saveSeasonState({ demaHome, state: input });
+    // REALM0-ANCHOR-BINDING-0B. An anchored save binds the publication to a
+    // world anchor INSIDE receipt_hash. The CLI only carries the operator's
+    // observed payload through; it never invents one — absence stays legacy.
+    const anchorObserved = argValue(argv, "--world-anchor-observed");
+    let worldAnchor = null;
+    if (anchorObserved !== undefined) {
+      try {
+        worldAnchor = { observed: JSON.parse(anchorObserved) };
+      } catch {
+        const r = { ok: false, outcome: "REFUSED", reason: "world_anchor_observed_unparseable" };
+        if (!json) console.error(`season save refused: ${r.reason}`);
+        return emit(r);
+      }
+    }
+    const result = await saveSeasonState({ demaHome, state: input, worldAnchor });
     if (!json) {
       if (result.ok) {
         console.log("Season state saved");
@@ -100,6 +114,7 @@ export async function cmd_season(ctx) {
         console.log(`  sequence: ${result.state_sequence}`);
         console.log(`  state:    ${result.state_hash}`);
         console.log(`  receipt:  ${result.receipt_hash}`);
+        if (result.world_anchor_ref) console.log(`  anchor:   ${result.world_anchor_ref}`);
       } else {
         console.error(`season save refused: ${result.reason}`);
         for (const b of result.blocked_by ?? []) console.error(`    ${b}`);
@@ -134,6 +149,7 @@ export async function cmd_season(ctx) {
           console.log(`  consent:   ${result.pending_consent_pending ? `${result.pending_consent_count} PENDING` : "none pending"}`);
           console.log(`  repo:      ${result.repository_commit} / ${result.repository_tree}`);
           console.log(`  state:     ${result.state_hash}`);
+          console.log(`  anchor:    ${result.world_anchor}${result.world_anchor_ref ? ` ${result.world_anchor_ref}` : ""}`);
         } else console.error(`season status refused: ${result.reason}`);
       }
       return emit(result);
@@ -149,6 +165,7 @@ export async function cmd_season(ctx) {
       else if (result.ok) {
         const c = result.continuation;
         console.log("Season resumed (reconstruction only — nothing executed)");
+        console.log(`  anchor:    ${result.world_anchor} ${result.world_anchor_ref}`);
         console.log(`  mission:   ${c.mission_id}`);
         console.log(`  phase:     ${c.mission_phase}`);
         console.log(`  next:      ${c.next_safe_action}`);
@@ -171,7 +188,8 @@ export async function cmd_season(ctx) {
     console.error("Usage: dema season save|status|resume [--json]");
     console.error("  dema season save --season <id> --mission <id> --phase <PHASE> --next <ACTION> \\");
     console.error("       --repo-commit <sha40> --repo-tree <sha40> [--step <s>]... [--must-not-repeat <s>]... \\");
-    console.error("       [--pending-consent none|<phrase>::<scope>]... [--from <state.json>] [--dema-home <path>]");
+    console.error("       [--pending-consent none|<phrase>::<scope>]... [--from <state.json>] [--dema-home <path>] \\");
+    console.error("       [--world-anchor-observed <json>]");
     console.error("  dema season status [--season <id>] [--dema-home <path>]");
     console.error("  dema season resume [--season <id>] [--repo-commit <sha40>] [--repo-tree <sha40>]");
   }

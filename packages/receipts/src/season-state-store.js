@@ -43,7 +43,11 @@ import {
   verifySeasonChainLink,
   verifyRepositoryBinding,
   projectContinuation,
+  SEASON_RECEIPT_SCHEMA_V0_2,
+  buildWorldAnchor,
+  verifyWorldAnchor,
 } from "../../core/src/node0-minimum-season-save-resume.js";
+import { buildEvent, appendEvent } from "../../core/src/event-log.js";
 
 export const SEASONS_RELDIR = "seasons";
 const SEASON_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
@@ -63,6 +67,7 @@ const seasonDir = (home, id) => join(home, SEASONS_RELDIR, id);
 const statesDir = (home, id) => join(seasonDir(home, id), "states");
 const receiptsDir = (home, id) => join(seasonDir(home, id), "receipts");
 const seqDir = (home, id) => join(seasonDir(home, id), "seq");
+const anchorsDir = (home, id) => join(seasonDir(home, id), "anchors");
 const headPath = (home, id) => join(seasonDir(home, id), "HEAD.json");
 const objectName = (taggedHash) => `${taggedHash.replace(":", "-")}.json`;
 const seqName = (n) => `${String(n).padStart(6, "0")}.json`;
@@ -242,6 +247,40 @@ export async function loadSeasonHead({ demaHome, seasonId } = {}) {
   }
   if (receipt.receipt_hash !== head.receipt_hash) return refuse("receipt_hash_mismatch");
 
+  // REALM0-ANCHOR-BINDING-0B. A v0.2 receipt binds a world anchor INSIDE
+  // receipt_hash; the publication is authoritative only while that anchor
+  // re-derives. Absence, rot and version drift are three different facts and
+  // three different refusals — collapsing them would tell a reader to repair
+  // the wrong thing, or worse, to accept the wrong world. v0.1 receipts are
+  // classified LEGACY explicitly; they are never reinterpreted as anchored.
+  let worldAnchor = "LEGACY_WORLD_ANCHOR_ABSENT";
+  let anchor = null;
+  if (receipt.schema === SEASON_RECEIPT_SCHEMA_V0_2) {
+    const anchorRead = await readJson(join(anchorsDir(home, seasonId), objectName(receipt.world_anchor_ref)));
+    if (!anchorRead.found) {
+      return refuse("world_anchor_missing", { world_anchor_ref: receipt.world_anchor_ref });
+    }
+    if (anchorRead.error) return refuse("world_anchor_invalid", { detail: anchorRead.error });
+    const anchorCheck = verifyWorldAnchor(anchorRead.value);
+    if (!anchorCheck.ok) {
+      return refuse(
+        anchorCheck.reason === "anchor_version_incomparable"
+          ? "world_anchor_incomparable"
+          : "world_anchor_invalid",
+        { detail: anchorCheck.reason },
+      );
+    }
+    // Content addressing is only meaningful if the address is re-derived.
+    if (anchorRead.value.anchor_hash !== receipt.world_anchor_ref) {
+      return refuse("world_anchor_invalid", { detail: "anchor_object_hash_mismatch" });
+    }
+    if (anchorRead.value.season_id !== seasonId) {
+      return refuse("world_anchor_invalid", { detail: "anchor_season_mismatch" });
+    }
+    worldAnchor = "WORLD_ANCHOR_MATCH";
+    anchor = anchorRead.value;
+  }
+
   // Previous-state binding, where one is claimed.
   let previous = null;
   if (state.previous_state_hash) {
@@ -262,6 +301,7 @@ export async function loadSeasonHead({ demaHome, seasonId } = {}) {
   return Object.freeze({
     ok: true, outcome: "OK", reason: null,
     season_id: seasonId, head, state, receipt, previous,
+    world_anchor: worldAnchor, anchor,
   });
 }
 
@@ -277,9 +317,14 @@ export async function loadSeasonHead({ demaHome, seasonId } = {}) {
  * `hooks` exists so a test can terminate a REAL process at an exact point. It is
  * never used in production paths. Injected-fs patching would be a silent no-op
  * here — the seam has to be the module's own.
+ *
+ * Wrapped by `saveSeasonState` below, which witnesses the attempt to the event
+ * log AFTER this returns. The witness is at the boundary rather than at each of
+ * the ~25 `refuse()` sites on purpose: one seam cannot forget a path, and every
+ * future refusal is witnessed the day it is written.
  */
-export async function saveSeasonState({
-  demaHome, state: input, ops = DEFAULT_STORE_OPS, hooks = {},
+async function saveSeasonStateInner({
+  demaHome, state: input, worldAnchor = null, ops = DEFAULT_STORE_OPS, hooks = {},
 } = {}) {
   const home = resolveDemaHome(demaHome);
   const seasonId = input?.season_id;
@@ -316,18 +361,48 @@ export async function saveSeasonState({
     if (!chain.ok) return refuse(chain.reason);
   }
 
+  // REALM0-ANCHOR-BINDING-0B. The anchor is built from the caller's observed
+  // payload and becomes the FIRST durable object — write-ahead: anchor, then
+  // state, then the receipt that references it, then fence, then HEAD. An
+  // authoritative HEAD never requires an object that was not already durable.
+  let builtAnchor = null;
+  if (worldAnchor !== null && worldAnchor !== undefined) {
+    if (typeof worldAnchor !== "object" || Array.isArray(worldAnchor) || worldAnchor.observed === undefined) {
+      return refuse("world_anchor_input_invalid");
+    }
+    try {
+      builtAnchor = buildWorldAnchor({ season_id: seasonId, observed: worldAnchor.observed });
+    } catch {
+      return refuse("world_anchor_input_invalid");
+    }
+  }
+
   const receipt = buildSeasonReceipt({
     season_id: state.season_id,
     state_hash: state.state_hash,
     state_sequence: state.state_sequence,
     previous_state_hash: state.previous_state_hash,
     saved_at: state.saved_at,
+    world_anchor_ref: builtAnchor ? builtAnchor.anchor_hash : undefined,
   });
 
-  for (const d of [statesDir(home, seasonId), receiptsDir(home, seasonId), seqDir(home, seasonId)]) {
+  const dirs = [statesDir(home, seasonId), receiptsDir(home, seasonId), seqDir(home, seasonId)];
+  if (builtAnchor) dirs.push(anchorsDir(home, seasonId));
+  for (const d of dirs) {
     await mkdir(d, { recursive: true, mode: 0o700 });
   }
   if (!(await withinHome(home, seasonDir(home, seasonId)))) return refuse("season_path_escapes_home");
+
+  if (builtAnchor) {
+    const anchorBytes = JSON.stringify(builtAnchor, null, 2) + "\n";
+    const anchorPub = await publishNoReplace(
+      anchorsDir(home, seasonId),
+      join(anchorsDir(home, seasonId), objectName(builtAnchor.anchor_hash)),
+      anchorBytes, ops,
+    );
+    if (!anchorPub.published && !anchorPub.already) return refuse(anchorPub.reason);
+    if (hooks.afterAnchorPublish) await hooks.afterAnchorPublish({ anchor: builtAnchor });
+  }
 
   // 5+6. content-addressed state, fsynced. EEXIST is success: the address IS the
   // content, so an existing file at this path already holds these exact bytes.
@@ -356,32 +431,97 @@ export async function saveSeasonState({
     seqDir(home, seasonId), join(seqDir(home, seasonId), seqName(state.state_sequence)), fenceBytes, ops,
   );
   let idempotent = false;
+  /** Set when this retry adopted the fence's existing publication. */
+  let adoptedReceiptHash = null;
   if (!fencePub.published) {
     if (fencePub.already) {
       const owner = await readJson(join(seqDir(home, seasonId), seqName(state.state_sequence)));
-      const sameWriter = !owner.error && owner.value?.state_hash === state.state_hash;
-      if (!sameWriter) {
+      const sameState = !owner.error && owner.value?.state_hash === state.state_hash;
+      if (!sameState) {
         return refuse("stale_head_lost_race", {
           state_sequence: state.state_sequence, winner_state_hash: owner.value?.state_hash ?? null,
         });
       }
-      // We already own this sequence with these exact bytes — this is the SAME
-      // save replayed, not a conflict. Deliberately DO NOT return here: a writer
-      // that died between winning the fence and replacing HEAD leaves HEAD one
-      // behind, and returning "ok" now would report success while the
-      // authoritative pointer stayed stale. Falling through republishes HEAD,
-      // so a retry after a crash in that window actually repairs it.
+      // SEASON-PUBLICATION-IDENTITY-1A. The same SEMANTIC STATE is not the same
+      // PUBLICATION. `saved_at` is excluded from the state hash and included in
+      // the receipt hash, so a retry with a fresh clock reconstructs an identical
+      // state under a NEW receipt. The previous code compared `state_hash` alone
+      // and then built HEAD from the CANDIDATE's receipt — publishing a HEAD that
+      // named a receipt this fence does not own. Its comment claimed "these exact
+      // bytes"; nothing checked them.
+      //
+      // Refusing here would be worse than the bug: this branch exists so a writer
+      // that died between winning the fence and replacing HEAD can come back and
+      // repair it, and a fresh clock on that retry is normal. Refusal would turn a
+      // recoverable crash into a permanent stall.
+      //
+      // So the law is ADOPTION, not refusal: HEAD may only ever name the receipt
+      // the fence already owns. That is safe because of the publication order —
+      // state, then receipt, THEN fence — so a fence naming R proves R was durable
+      // before the fence existed. The candidate's own receipt object stays on disk
+      // as orphan evidence and is never authoritative.
       idempotent = true;
+      if (owner.value?.receipt_hash && owner.value.receipt_hash !== receipt.receipt_hash) {
+        adoptedReceiptHash = owner.value.receipt_hash;
+      }
     } else {
       return refuse(fencePub.reason);
     }
   }
   if (hooks.afterFencePublish) await hooks.afterFencePublish({ state, receipt });
 
+  // PI-09. A fence naming R1 proves R1 was durable WHEN THE FENCE WAS CREATED —
+  // not that R1 is valid now. Adopting the fence's hash on faith would publish
+  // an authoritative HEAD naming an object that no longer verifies, replacing a
+  // good HEAD with a broken one and noticing only afterwards. So the winner is
+  // reloaded and fully reverified BEFORE HEAD; on failure the save refuses with
+  // zero publication — the candidate is never substituted, the fence never
+  // rewritten. Recovery of a lost winner is an operator act, not a retry's.
+  if (adoptedReceiptHash) {
+    const winRead = await readJson(join(receiptsDir(home, seasonId), objectName(adoptedReceiptHash)));
+    if (!winRead.found || winRead.error) {
+      return refuse("publication_recovery_required", {
+        previous_head_intact: true,
+        winning_receipt_hash: adoptedReceiptHash,
+        detail: winRead.error ?? "winning_receipt_missing",
+      });
+    }
+    const winner = winRead.value;
+    const winCheck = verifySeasonReceipt(winner, state);
+    if (!winCheck.ok || winner.receipt_hash !== adoptedReceiptHash) {
+      return refuse("publication_recovery_required", {
+        previous_head_intact: true,
+        winning_receipt_hash: adoptedReceiptHash,
+        detail: winCheck.ok ? "receipt_object_hash_mismatch" : winCheck.reason,
+      });
+    }
+    // 0B: an anchored winner is only repairable while ITS anchor re-derives.
+    // Repairing HEAD to a publication whose world binding cannot be verified
+    // would be the same fail-open one object deeper — and substituting the
+    // candidate's fresh anchor would renegotiate assumptions the winning
+    // publication already fixed. Refuse; recovery is an operator act.
+    if (winner.schema === SEASON_RECEIPT_SCHEMA_V0_2) {
+      const wRead = await readJson(join(anchorsDir(home, seasonId), objectName(winner.world_anchor_ref)));
+      const wOk = wRead.found && !wRead.error &&
+        verifyWorldAnchor(wRead.value).ok &&
+        wRead.value.anchor_hash === winner.world_anchor_ref;
+      if (!wOk) {
+        return refuse("publication_recovery_required", {
+          previous_head_intact: true,
+          winning_receipt_hash: adoptedReceiptHash,
+          detail: !wRead.found ? "winning_world_anchor_missing"
+            : (wRead.error ?? "winning_world_anchor_unverifiable"),
+        });
+      }
+    }
+  }
+
   // 9+10. atomically replace HEAD, then fsync the containing directory.
+  // PI-05: never the candidate's receipt when the fence owns another.
+  const publishedReceiptHash = adoptedReceiptHash ?? receipt.receipt_hash;
   const head = buildSeasonHead({
     season_id: seasonId, state_hash: state.state_hash,
-    receipt_hash: receipt.receipt_hash, state_sequence: state.state_sequence,
+    receipt_hash: publishedReceiptHash, state_sequence: state.state_sequence,
   });
   try {
     await ops.replaceFileAtomic(
@@ -404,18 +544,102 @@ export async function saveSeasonState({
     return refuse("post_save_verification_failed", { detail: confirmed.reason ?? confirmed.outcome });
   }
   if (confirmed.state.state_hash !== state.state_hash) return refuse("post_save_verification_failed");
+  // Publication identity is BOTH hashes. Verifying only the state hash here was
+  // the same blind spot as the retry branch, one step later.
+  if (confirmed.receipt.receipt_hash !== publishedReceiptHash) {
+    return refuse("post_save_verification_failed", { detail: "receipt_hash_mismatch" });
+  }
 
-  // 12. return the new state hash and receipt hash.
+  // 12. report what was ACTUALLY published. When this retry adopted the fence's
+  // existing publication, the caller's candidate receipt was NOT published, and
+  // saying otherwise would be the quietest possible false success.
   return Object.freeze({
-    ok: true, outcome: "OK", reason: idempotent ? "already_saved_idempotently" : null,
-    idempotent, season_id: seasonId,
-    state_hash: state.state_hash, receipt_hash: receipt.receipt_hash,
+    ok: true, outcome: "OK",
+    reason: adoptedReceiptHash ? "adopted_existing_publication"
+      : idempotent ? "already_saved_idempotently" : null,
+    idempotent, adopted_existing_publication: adoptedReceiptHash !== null,
+    season_id: seasonId,
+    state_hash: state.state_hash, receipt_hash: publishedReceiptHash,
+    candidate_receipt_hash: receipt.receipt_hash,
+    // §24 return-value consistency: the reported anchor is the PUBLISHED
+    // receipt's, never the candidate's. The candidate's is disclosed under its
+    // own name so an adopted retry cannot mix the two identities.
+    world_anchor_ref: confirmed.receipt.world_anchor_ref ?? null,
+    receipt_schema: confirmed.receipt.schema,
+    candidate_world_anchor_ref: builtAnchor ? builtAnchor.anchor_hash : null,
     state_sequence: state.state_sequence,
     state: confirmed.state, receipt: confirmed.receipt,
     state_path: join(statesDir(home, seasonId), objectName(state.state_hash)),
-    receipt_path: join(receiptsDir(home, seasonId), objectName(receipt.receipt_hash)),
+    receipt_path: join(receiptsDir(home, seasonId), objectName(publishedReceiptHash)),
     head_path: headPath(home, seasonId),
   });
+}
+
+/**
+ * The event fields for one save attempt. Pure, so a negative control can prove
+ * the mapper actually reads the result instead of always reporting success.
+ *
+ * PRIMITIVES ONLY, and deliberately NOT the returned `*_path` fields: those are
+ * absolute host paths, and a log is the last place an environment path belongs.
+ */
+function seasonSaveEventFields(input, result, thrown) {
+  const outcome = thrown ? "error" : result?.ok ? "ok" : "refused";
+  // Bounded: `season_id` is caller input and is witnessed even when malformed,
+  // so an unbounded id would let a caller bloat every line of the log.
+  const id = String(input?.season_id ?? "unknown").slice(0, 64);
+  return {
+    command: "season.save",
+    outcome,
+    correlation_id: `${id}#${result?.state_sequence ?? input?.state_sequence ?? "?"}`,
+    boundary: {
+      authority_delta: 0,
+      consent_consumed: false,
+      network_used: false,
+      model_invoked: false,
+    },
+    metadata: {
+      reason: thrown ? "threw" : (result?.reason ?? null),
+      state_hash: result?.state_hash ?? null,
+      receipt_hash: result?.receipt_hash ?? null,
+      candidate_receipt_hash: result?.candidate_receipt_hash ?? null,
+      adopted_existing_publication: result?.adopted_existing_publication ?? null,
+      idempotent: result?.idempotent ?? null,
+      state_sequence: result?.state_sequence ?? null,
+    },
+  };
+}
+
+/**
+ * SAVE WITNESS. Write-BEHIND and fail-OPEN, which is the exact inverse of how
+ * this module treats authority (write-ahead, fail-closed), and the difference is
+ * not stylistic: the log sits OUTSIDE `receipt_hash`, so it explains what
+ * happened and never proves it. If a broken log could fail a save, anyone able
+ * to make `$DEMA_HOME/events` unwritable could deny every save — the log would
+ * become authority through the back door. So every error here is swallowed.
+ */
+function recordSeasonSaveEvent(args, result, thrown) {
+  try {
+    appendEvent({
+      home: resolveDemaHome(args?.demaHome),
+      event: buildEvent(seasonSaveEventFields(args?.state, result, thrown)),
+    });
+  } catch {
+    // Intentionally silent. Authority must never depend on its own narration.
+  }
+}
+
+/** SAVE LAW, witnessed. See `saveSeasonStateInner` for the law itself. */
+export async function saveSeasonState(args = {}) {
+  let result;
+  let thrown;
+  try {
+    result = await saveSeasonStateInner(args);
+  } catch (err) {
+    thrown = err ?? new Error("season.save threw a falsy value");
+  }
+  recordSeasonSaveEvent(args, result, thrown);
+  if (thrown) throw thrown;
+  return result;
 }
 
 /** STATUS LAW. Read-only. Verifies every hop and mutates nothing. */
@@ -434,6 +658,8 @@ export async function seasonStatus({ demaHome, seasonId } = {}) {
     repository_commit: s.repository_commit, repository_tree: s.repository_tree,
     last_receipt_hash: s.last_receipt_hash, state_hash: s.state_hash,
     receipt_hash: loaded.receipt.receipt_hash, saved_at: s.saved_at,
+    world_anchor: loaded.world_anchor,
+    world_anchor_ref: loaded.receipt.world_anchor_ref ?? null,
     verified: true,
   });
 }
@@ -456,9 +682,27 @@ export async function resumeSeason({ demaHome, seasonId, repositoryCommit, repos
       expected_commit: loaded.state.repository_commit, expected_tree: loaded.state.repository_tree,
     });
   }
+  // REALM0-ANCHOR-BINDING-0B — baseline law. Resume never establishes an
+  // anchor expectation, and every anchor outcome except WORLD_ANCHOR_MATCH
+  // withholds the continuation: handing back "where we were" while the world
+  // binding is absent or unverifiable would erase exactly the divergence the
+  // anchor exists to detect. Reporting stays available through seasonStatus;
+  // only the CONTINUATION is withheld. Legacy publications resume again the
+  // moment an explicit anchored save establishes the expectation.
+  if (loaded.world_anchor !== "WORLD_ANCHOR_MATCH") {
+    return Object.freeze({
+      ok: false, outcome: "CONTINUATION_WITHHELD", reason: loaded.world_anchor,
+      world_anchor: loaded.world_anchor,
+      receipt_hash: loaded.receipt.receipt_hash,
+      saved_at: loaded.state.saved_at,
+      executed: false, mutated: false, consent_granted: false,
+    });
+  }
   return Object.freeze({
     ok: true, outcome: "OK", reason: null,
     continuation: projectContinuation(loaded.state),
+    world_anchor: "WORLD_ANCHOR_MATCH",
+    world_anchor_ref: loaded.receipt.world_anchor_ref,
     receipt_hash: loaded.receipt.receipt_hash,
     saved_at: loaded.state.saved_at,
     executed: false, mutated: false, consent_granted: false,
@@ -482,6 +726,7 @@ export async function listSeasons({ demaHome } = {}) {
 }
 
 export const _internal = Object.freeze({
-  publishNoReplace, readJson, fsyncPath, seasonDir, statesDir, receiptsDir, seqDir,
+  publishNoReplace, readJson, fsyncPath, seasonDir, statesDir, receiptsDir, seqDir, anchorsDir,
   headPath, objectName, seqName, SEASON_ID_RE, HASH_FILE_RE, SEQ_FILE_RE, withinHome,
+  seasonSaveEventFields,
 });
