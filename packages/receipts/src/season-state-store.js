@@ -356,22 +356,39 @@ export async function saveSeasonState({
     seqDir(home, seasonId), join(seqDir(home, seasonId), seqName(state.state_sequence)), fenceBytes, ops,
   );
   let idempotent = false;
+  /** Set when this retry adopted the fence's existing publication. */
+  let adoptedReceiptHash = null;
   if (!fencePub.published) {
     if (fencePub.already) {
       const owner = await readJson(join(seqDir(home, seasonId), seqName(state.state_sequence)));
-      const sameWriter = !owner.error && owner.value?.state_hash === state.state_hash;
-      if (!sameWriter) {
+      const sameState = !owner.error && owner.value?.state_hash === state.state_hash;
+      if (!sameState) {
         return refuse("stale_head_lost_race", {
           state_sequence: state.state_sequence, winner_state_hash: owner.value?.state_hash ?? null,
         });
       }
-      // We already own this sequence with these exact bytes — this is the SAME
-      // save replayed, not a conflict. Deliberately DO NOT return here: a writer
-      // that died between winning the fence and replacing HEAD leaves HEAD one
-      // behind, and returning "ok" now would report success while the
-      // authoritative pointer stayed stale. Falling through republishes HEAD,
-      // so a retry after a crash in that window actually repairs it.
+      // SEASON-PUBLICATION-IDENTITY-1A. The same SEMANTIC STATE is not the same
+      // PUBLICATION. `saved_at` is excluded from the state hash and included in
+      // the receipt hash, so a retry with a fresh clock reconstructs an identical
+      // state under a NEW receipt. The previous code compared `state_hash` alone
+      // and then built HEAD from the CANDIDATE's receipt — publishing a HEAD that
+      // named a receipt this fence does not own. Its comment claimed "these exact
+      // bytes"; nothing checked them.
+      //
+      // Refusing here would be worse than the bug: this branch exists so a writer
+      // that died between winning the fence and replacing HEAD can come back and
+      // repair it, and a fresh clock on that retry is normal. Refusal would turn a
+      // recoverable crash into a permanent stall.
+      //
+      // So the law is ADOPTION, not refusal: HEAD may only ever name the receipt
+      // the fence already owns. That is safe because of the publication order —
+      // state, then receipt, THEN fence — so a fence naming R proves R was durable
+      // before the fence existed. The candidate's own receipt object stays on disk
+      // as orphan evidence and is never authoritative.
       idempotent = true;
+      if (owner.value?.receipt_hash && owner.value.receipt_hash !== receipt.receipt_hash) {
+        adoptedReceiptHash = owner.value.receipt_hash;
+      }
     } else {
       return refuse(fencePub.reason);
     }
@@ -379,9 +396,11 @@ export async function saveSeasonState({
   if (hooks.afterFencePublish) await hooks.afterFencePublish({ state, receipt });
 
   // 9+10. atomically replace HEAD, then fsync the containing directory.
+  // PI-05: never the candidate's receipt when the fence owns another.
+  const publishedReceiptHash = adoptedReceiptHash ?? receipt.receipt_hash;
   const head = buildSeasonHead({
     season_id: seasonId, state_hash: state.state_hash,
-    receipt_hash: receipt.receipt_hash, state_sequence: state.state_sequence,
+    receipt_hash: publishedReceiptHash, state_sequence: state.state_sequence,
   });
   try {
     await ops.replaceFileAtomic(
@@ -404,16 +423,27 @@ export async function saveSeasonState({
     return refuse("post_save_verification_failed", { detail: confirmed.reason ?? confirmed.outcome });
   }
   if (confirmed.state.state_hash !== state.state_hash) return refuse("post_save_verification_failed");
+  // Publication identity is BOTH hashes. Verifying only the state hash here was
+  // the same blind spot as the retry branch, one step later.
+  if (confirmed.receipt.receipt_hash !== publishedReceiptHash) {
+    return refuse("post_save_verification_failed", { detail: "receipt_hash_mismatch" });
+  }
 
-  // 12. return the new state hash and receipt hash.
+  // 12. report what was ACTUALLY published. When this retry adopted the fence's
+  // existing publication, the caller's candidate receipt was NOT published, and
+  // saying otherwise would be the quietest possible false success.
   return Object.freeze({
-    ok: true, outcome: "OK", reason: idempotent ? "already_saved_idempotently" : null,
-    idempotent, season_id: seasonId,
-    state_hash: state.state_hash, receipt_hash: receipt.receipt_hash,
+    ok: true, outcome: "OK",
+    reason: adoptedReceiptHash ? "adopted_existing_publication"
+      : idempotent ? "already_saved_idempotently" : null,
+    idempotent, adopted_existing_publication: adoptedReceiptHash !== null,
+    season_id: seasonId,
+    state_hash: state.state_hash, receipt_hash: publishedReceiptHash,
+    candidate_receipt_hash: receipt.receipt_hash,
     state_sequence: state.state_sequence,
     state: confirmed.state, receipt: confirmed.receipt,
     state_path: join(statesDir(home, seasonId), objectName(state.state_hash)),
-    receipt_path: join(receiptsDir(home, seasonId), objectName(receipt.receipt_hash)),
+    receipt_path: join(receiptsDir(home, seasonId), objectName(publishedReceiptHash)),
     head_path: headPath(home, seasonId),
   });
 }
