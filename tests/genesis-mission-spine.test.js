@@ -300,3 +300,49 @@ test("GS-13: stages and envelope are closed vocabularies", () => {
   assert.deepEqual([...SPINE_RISK_ENVELOPE], ["LOW", "MEDIUM"]);
   assert.match(GENESIS_MISSION_SPINE_SCHEMA, /^bizra\.dema\.genesis_mission_spine\.v0\.1$/);
 });
+
+// ── GS-14 / GS-15 · NO BINDING DOWNGRADE ────────────────────────────────────
+// Law: backward compatibility may preserve historical data; it may never
+// provide a downgrade path for a newly stronger authority profile. The spine
+// makes omission STRUCTURALLY impossible: it computes prepared_intent_hash
+// from the sealed preview AFTER spreading the caller's context, so no caller
+// can omit the binding (GS-14) or spoof it (GS-15).
+test("GS-14: the gate context always carries the sealed preview hash — omission cannot reach legacy semantics", async () => {
+  const home = await anchoredHome();
+  const seasonLoad = await loadSeasonHead({ demaHome: home, seasonId: SEASON });
+  let seen = null;
+  const capture = (args) => { seen = args.corridorContext; return { verdict: "REFUSED", ok: false, stage: "CAPTURED" }; };
+  walkGenesisMissionSpine({
+    intention: INTENTION, effect: EFFECT, seasonLoad,
+    executingRepository: await execBinding(), actionId: ACTION,
+    corridorContext: corridorContext(), // caller supplies NO prepared_intent_hash
+    now: NOW, evaluateGate: capture,
+  });
+  const expected = buildDemaReversibleFileStewardPayload(EFFECT).content_hash;
+  assert.equal(seen.prepared_intent_hash, expected,
+    "the spine must inject the sealed preview hash — absence may never fall back to unbound legacy consent");
+});
+
+test("GS-15: a caller-supplied spoof hash is overridden by the sealed preview's — and a naive merge order would not", async () => {
+  const home = await anchoredHome();
+  const seasonLoad = await loadSeasonHead({ demaHome: home, seasonId: SEASON });
+  const spoof = `sha256:${"d".repeat(64)}`;
+  let seen = null;
+  const capture = (args) => { seen = args.corridorContext; return { verdict: "REFUSED", ok: false, stage: "CAPTURED" }; };
+  walkGenesisMissionSpine({
+    intention: INTENTION, effect: EFFECT, seasonLoad,
+    executingRepository: await execBinding(), actionId: ACTION,
+    corridorContext: corridorContext({ prepared_intent_hash: spoof }), // spoof attempt
+    now: NOW, evaluateGate: capture,
+  });
+  const expected = buildDemaReversibleFileStewardPayload(EFFECT).content_hash;
+  assert.equal(seen.prepared_intent_hash, expected, "the spine's binding must win over any caller-supplied value");
+  assert.notEqual(seen.prepared_intent_hash, spoof);
+
+  // Negative control — the seam the override order closes: a naive composition
+  // that spreads the caller LAST would let the spoof win. Without this control,
+  // GS-15 could pass against a spine that merely happened to agree.
+  const naive = { prepared_intent_hash: expected, ...corridorContext({ prepared_intent_hash: spoof }) };
+  assert.equal(naive.prepared_intent_hash, spoof,
+    "control: the naive merge genuinely lets a caller downgrade the binding");
+});
