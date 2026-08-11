@@ -44,6 +44,7 @@ import {
   verifyRepositoryBinding,
   projectContinuation,
 } from "../../core/src/node0-minimum-season-save-resume.js";
+import { buildEvent, appendEvent } from "../../core/src/event-log.js";
 
 export const SEASONS_RELDIR = "seasons";
 const SEASON_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
@@ -277,8 +278,13 @@ export async function loadSeasonHead({ demaHome, seasonId } = {}) {
  * `hooks` exists so a test can terminate a REAL process at an exact point. It is
  * never used in production paths. Injected-fs patching would be a silent no-op
  * here — the seam has to be the module's own.
+ *
+ * Wrapped by `saveSeasonState` below, which witnesses the attempt to the event
+ * log AFTER this returns. The witness is at the boundary rather than at each of
+ * the ~25 `refuse()` sites on purpose: one seam cannot forget a path, and every
+ * future refusal is witnessed the day it is written.
  */
-export async function saveSeasonState({
+async function saveSeasonStateInner({
   demaHome, state: input, ops = DEFAULT_STORE_OPS, hooks = {},
 } = {}) {
   const home = resolveDemaHome(demaHome);
@@ -448,6 +454,73 @@ export async function saveSeasonState({
   });
 }
 
+/**
+ * The event fields for one save attempt. Pure, so a negative control can prove
+ * the mapper actually reads the result instead of always reporting success.
+ *
+ * PRIMITIVES ONLY, and deliberately NOT the returned `*_path` fields: those are
+ * absolute host paths, and a log is the last place an environment path belongs.
+ */
+function seasonSaveEventFields(input, result, thrown) {
+  const outcome = thrown ? "error" : result?.ok ? "ok" : "refused";
+  // Bounded: `season_id` is caller input and is witnessed even when malformed,
+  // so an unbounded id would let a caller bloat every line of the log.
+  const id = String(input?.season_id ?? "unknown").slice(0, 64);
+  return {
+    command: "season.save",
+    outcome,
+    correlation_id: `${id}#${result?.state_sequence ?? input?.state_sequence ?? "?"}`,
+    boundary: {
+      authority_delta: 0,
+      consent_consumed: false,
+      network_used: false,
+      model_invoked: false,
+    },
+    metadata: {
+      reason: thrown ? "threw" : (result?.reason ?? null),
+      state_hash: result?.state_hash ?? null,
+      receipt_hash: result?.receipt_hash ?? null,
+      candidate_receipt_hash: result?.candidate_receipt_hash ?? null,
+      adopted_existing_publication: result?.adopted_existing_publication ?? null,
+      idempotent: result?.idempotent ?? null,
+      state_sequence: result?.state_sequence ?? null,
+    },
+  };
+}
+
+/**
+ * SAVE WITNESS. Write-BEHIND and fail-OPEN, which is the exact inverse of how
+ * this module treats authority (write-ahead, fail-closed), and the difference is
+ * not stylistic: the log sits OUTSIDE `receipt_hash`, so it explains what
+ * happened and never proves it. If a broken log could fail a save, anyone able
+ * to make `$DEMA_HOME/events` unwritable could deny every save — the log would
+ * become authority through the back door. So every error here is swallowed.
+ */
+function recordSeasonSaveEvent(args, result, thrown) {
+  try {
+    appendEvent({
+      home: resolveDemaHome(args?.demaHome),
+      event: buildEvent(seasonSaveEventFields(args?.state, result, thrown)),
+    });
+  } catch {
+    // Intentionally silent. Authority must never depend on its own narration.
+  }
+}
+
+/** SAVE LAW, witnessed. See `saveSeasonStateInner` for the law itself. */
+export async function saveSeasonState(args = {}) {
+  let result;
+  let thrown;
+  try {
+    result = await saveSeasonStateInner(args);
+  } catch (err) {
+    thrown = err ?? new Error("season.save threw a falsy value");
+  }
+  recordSeasonSaveEvent(args, result, thrown);
+  if (thrown) throw thrown;
+  return result;
+}
+
 /** STATUS LAW. Read-only. Verifies every hop and mutates nothing. */
 export async function seasonStatus({ demaHome, seasonId } = {}) {
   const loaded = await loadSeasonHead({ demaHome, seasonId });
@@ -514,4 +587,5 @@ export async function listSeasons({ demaHome } = {}) {
 export const _internal = Object.freeze({
   publishNoReplace, readJson, fsyncPath, seasonDir, statesDir, receiptsDir, seqDir,
   headPath, objectName, seqName, SEASON_ID_RE, HASH_FILE_RE, SEQ_FILE_RE, withinHome,
+  seasonSaveEventFields,
 });
