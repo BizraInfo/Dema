@@ -317,9 +317,12 @@ test("A7 direct TAP is isolated and a later authoritative gate executes", () => 
   // not carried over from the previous slice's arithmetic.
   // These are exact positional snapshots and will drift again on the next gate
   // added ahead of the isolated TAP command; that coupling is this lane's to decide on.
-  assert.equal(commands.length, 204);
-  assert.equal(commands.indexOf(isolated), 128);
-  assert.deepEqual(commands[129].slice(0, 2), ["npm", ["run", "coverage"]]);
+  // AUTHORITATIVE-POINTER-PARITY-1A appends the pointer-parity gate ahead of the
+  // isolated TAP command: 204 -> 205, isolated 128 -> 129, coverage 129 -> 130.
+  // MEASURED by importing `commands`, per this block's own law — not arithmetic.
+  assert.equal(commands.length, 205);
+  assert.equal(commands.indexOf(isolated), 129);
+  assert.deepEqual(commands[130].slice(0, 2), ["npm", ["run", "coverage"]]);
 
   const evidence = [];
   const calls = [];
