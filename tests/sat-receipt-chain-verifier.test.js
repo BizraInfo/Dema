@@ -91,6 +91,20 @@ test("verifyReceiptChain · prev_hash mismatch → violated", () => {
   assert.ok(v.violations.some((vio) => vio.includes("prev_hash_mismatch")));
 });
 
+test("verifyReceiptChain · reordered chain → violated", () => {
+  // Negative control pair: these exact receipts in correct order are verified
+  // by "two correctly linked receipts → verified" above. Reversal must fail.
+  const v = verifyReceiptChain({
+    receipts: [
+      { receipt_id: HASH_B, prev_hash: HASH_A },
+      { receipt_id: HASH_A, prev_hash: null },
+    ],
+  });
+  assert.equal(v.passed, false);
+  assert.equal(v.truth_label, "CHAIN_VIOLATION");
+  assert.ok(v.violations.length > 0);
+});
+
 test("verifyReceiptChain · invalid hash format → violated", () => {
   const v = verifyReceiptChain({
     receipts: [{ receipt_id: "not-a-hash", prev_hash: null }],
