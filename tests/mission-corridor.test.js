@@ -1074,3 +1074,41 @@ test("review gate itself fails closed: injected bad fixture and tampered boundar
   // default (no injection) still runs the real fixture and passes — no regression
   assert.equal(runMissionCorridorCheck().ok, true);
 });
+
+// ── GENESIS-MISSION-SPINE-1A · §5.5 at the corridor: the scope binds the preview ──
+test("START consent scope binds a presented prepared effect; omission is byte-identical to legacy", () => {
+  const common = {
+    kind: "START",
+    mission_id: "genesis-mission-001",
+    contract_hash: `sha256:${"c".repeat(64)}`,
+    permitted_actions: ["analyze", "edit", "test"],
+    mission_root: "/tmp/genesis-mission-root",
+    nonce: "genesis-nonce-0001",
+    expires_at: "2026-08-11T23:59:59Z",
+  };
+  // Golden vector computed from the PRE-change tree (c65166a1 bytes): omitting
+  // the prepared effect must preserve every previously derived context hash
+  // EXACTLY — additive by omission, the same law receipt v0.2 follows.
+  const legacy = buildCorridorConsentContext({ ...common });
+  assert.equal(legacy.ok, true, legacy.blocked_by.join(","));
+  assert.equal(
+    legacy.envelope.consent_context_hash,
+    "sha256:46a018875acac9fb808e7a75d47d1d5f4ab6e555aadb0a984a7743a14c9cd5a5",
+    "omission changed the legacy consent context — previously captured consents would all invalidate",
+  );
+
+  const intentA = `sha256:${"a".repeat(64)}`;
+  const intentB = `sha256:${"b".repeat(64)}`;
+  const withA = buildCorridorConsentContext({ ...common, prepared_intent_hash: intentA });
+  const withB = buildCorridorConsentContext({ ...common, prepared_intent_hash: intentB });
+  assert.equal(withA.ok, true, withA.blocked_by.join(","));
+  assert.notEqual(withA.envelope.consent_context_hash, legacy.envelope.consent_context_hash,
+    "presenting a prepared effect must change what the human consents to");
+  assert.notEqual(withA.envelope.consent_context_hash, withB.envelope.consent_context_hash,
+    "one START approval must not authorize a different prepared effect");
+
+  // Fail closed: a malformed binding never degrades to an unbound consent.
+  const malformed = buildCorridorConsentContext({ ...common, prepared_intent_hash: "not-a-hash" });
+  assert.equal(malformed.ok, false);
+  assert.ok(malformed.blocked_by.includes("prepared_intent_hash_invalid"));
+});

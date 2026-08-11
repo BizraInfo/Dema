@@ -556,6 +556,13 @@ export function buildCorridorConsentContext({
     && (typeof prepared_intent_hash !== "string" || !CONTRACT_HASH_RE.test(prepared_intent_hash))) {
     blocked_by.push("prepared_intent_hash_invalid");
   }
+  // GENESIS-MISSION-SPINE-1A. Any kind MAY present a prepared effect; when one
+  // is presented it must be well-formed — a malformed binding fails closed
+  // rather than silently degrading to an unbound consent.
+  if (kind !== "COMPLETE" && prepared_intent_hash != null
+    && (typeof prepared_intent_hash !== "string" || !CONTRACT_HASH_RE.test(prepared_intent_hash))) {
+    blocked_by.push("prepared_intent_hash_invalid");
+  }
   if (
     kind === "START" &&
     (!Array.isArray(permitted_actions) || permitted_actions.length === 0)
@@ -600,9 +607,16 @@ export function buildCorridorConsentContext({
   const envelope = buildConsentContext({
     proposal_hash: contract_hash,
     action_class: CORRIDOR_WRITE_ACTION_CLASS,
+    // GENESIS-MISSION-SPINE-1A — §5.5: consent binds the PREVIEW, not a
+    // category of work. When a prepared effect is presented, its content hash
+    // enters the consent SCOPE, so a phrase captured against one preview can
+    // never verify against another. Additive by omission: with no prepared
+    // effect the object is byte-identical to the legacy shape, so every
+    // previously derived consent context hash is preserved exactly.
     capability_scope_hash: sha256CanonicalJsonV1({
       kind,
       permitted_actions: kind === "START" ? [...permitted_actions] : SCOPE_ACTIONS[kind],
+      ...(prepared_intent_hash != null ? { prepared_intent_hash } : {}),
     }),
     payload_hash,
     root_set_hash: sha256CanonicalJsonV1({ roots: [mission_root] }),
