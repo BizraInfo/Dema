@@ -66,7 +66,7 @@ import {
 // the Node's provisioned genesis root, NOT on loadPublicKey(home). "Who signs
 // today" and "where does this history begin" are two different questions, and
 // this path only ever needed the second one.
-import { loadNodeRootTrust } from "../../genesis/src/node-root-trust.js";
+import { loadAnchoredGenesisRoot } from "../../genesis/src/node0-genesis-witness.js";
 // CUTOVER 2026-08-11 (part 2): the superseded consent-nonce-registry-atomic
 // import is gone. This module no longer references the legacy writer at all —
 // its authority is the canonical claim below, which still consults the legacy
@@ -1891,7 +1891,7 @@ export async function verifyRecoveryStopBinding({ demaHome, event } = {}) {
  * module API constant (not operator authority) — the operator's authority was
  * already established by the corridor consent gate before this point.
  */
-export function buildLedgerAppender({ demaHome, now, transactionId = null }) {
+export function buildLedgerAppender({ demaHome, now, transactionId = null, witnessPath = undefined }) {
   const home = resolveDemaHome(demaHome);
   return async ({ canonicalBody, truthLabel }) => {
     if (transactionId !== null) {
@@ -1912,7 +1912,14 @@ export function buildLedgerAppender({ demaHome, now, transactionId = null }) {
         // no fallback: an unprovisioned Node refuses rather than nominating the
         // oldest key it can reach, because a chain that picks its own ancestor
         // proves nothing about its ancestry.
-        const root = await loadNodeRootTrust({ demaHome: home });
+        // NODE0-GENESIS-ANCHOR-1A. This used to resolve the root through the
+        // STRUCTURAL reader, whose body hash covers its own body — so an actor
+        // who rewrote the record rewrote the digest and the read succeeded.
+        // Measured at 4bc2b8a: the anchored loader existed and had ZERO
+        // production callers, which made the defence decorative. The anchored
+        // path compares the record against a ceremony pin held OUTSIDE
+        // DEMA_HOME, so a self-rehashed forgery no longer survives here.
+        const root = await loadAnchoredGenesisRoot({ demaHome: home, witnessPath });
         if (!root.ok) {
           throw new Error(`ledger append refused: ${root.reason}`);
         }

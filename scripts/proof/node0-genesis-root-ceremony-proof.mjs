@@ -60,6 +60,15 @@ async function phase1(home) {
   if (established.code !== 0) throw new Error(`phase1 ceremony failed: ${established.out}`);
   const report = JSON.parse(established.out);
 
+  // Genesis is not established until the root is PINNED out of band.
+  const wit = await import(P("packages/genesis/src/node0-genesis-witness.js"));
+  const pinned = await wit.establishGenesisWitness({
+    demaHome: home, witnessPath: `${home}-witness.json`, nodeId: NODE_ID,
+    ceremonyId: "proof-ceremony", consent: wit.WITNESS_GENESIS_ROOT_CONSENT_PHRASE,
+    witnessedAt: "2026-08-11T00:00:00.000Z",
+  });
+  if (!pinned.ok) throw new Error(`phase1 pin failed: ${pinned.reason}`);
+
   // A second ceremony must refuse against the very origin just written.
   const second = dema(home, ["genesis", "root", "establish", "--node-id", NODE_ID,
     "--ceremony-id", "proof-ceremony-2", "--consent", CONSENT, "--json"]);
@@ -120,6 +129,7 @@ async function phase2(home, expect) {
   // (7) the ordinary production consumer, resolving its own anchor from disk.
   const append = corridor.buildLedgerAppender({
     demaHome: home, now: "2026-08-11T02:00:00.000Z", transactionId: "ceremony-proof-tx",
+    witnessPath: `${home}-witness.json`,
   });
   let consumer = { ok: false, error: null };
   try {

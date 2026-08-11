@@ -33,18 +33,23 @@ import { initAuthorshipKey, KEY_INIT_CONSENT_PHRASE, loadPublicKey } from "../pa
 import {
   provisionNodeRootTrust, ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
 } from "../packages/genesis/src/node-root-trust.js";
+import {
+  establishGenesisWitness, WITNESS_GENESIS_ROOT_CONSENT_PHRASE,
+} from "../packages/genesis/src/node0-genesis-witness.js";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DEMA = join(REPO, "bin/dema");
 const ID = "ccb-closure-probe";
 
 const newHome = () => mkdtemp(join(tmpdir(), "ccb-"));
+/// The ceremony pin lives OUTSIDE the home it guards; the CLI resolves it via env.
+const witnessFor = (h) => `${h}-witness.json`;
 const future = () => new Date(Date.now() + 3_600_000).toISOString();
 
 function run(home, args, { allowFail = false } = {}) {
   try {
     return execFileSync("node", [DEMA, ...args, "--dema-home", home, "--json"], {
-      cwd: REPO, encoding: "utf8", env: { ...process.env, DEMA_HOME: home },
+      cwd: REPO, encoding: "utf8", env: { ...process.env, DEMA_HOME: home, DEMA_GENESIS_WITNESS: witnessFor(home) },
     });
   } catch (e) {
     if (allowFail) return `${e.stdout ?? ""}${e.stderr ?? ""}`;
@@ -83,6 +88,14 @@ async function startedCorridor(home) {
     establishedAt: "2026-08-11T00:00:00.000Z",
   });
   assert.equal(rooted.ok, true, rooted.reason ?? "root trust must provision");
+  // Genesis is not established until the root is PINNED out of band, and the
+  // production appender now refuses an unpinned root.
+  const pinned = await establishGenesisWitness({
+    demaHome: home, witnessPath: witnessFor(home), nodeId: "ccb-node",
+    ceremonyId: "ccb-genesis", consent: WITNESS_GENESIS_ROOT_CONSENT_PHRASE,
+    witnessedAt: "2026-08-11T00:00:00.000Z",
+  });
+  assert.equal(pinned.ok, true, pinned.reason ?? "ceremony pin must establish");
   const expires = future();
   const args = [
     "mission", "corridor", "start", "--id", ID,

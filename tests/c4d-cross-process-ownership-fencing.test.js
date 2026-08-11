@@ -56,6 +56,9 @@ import {
   provisionNodeRootTrust, ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
 } from "../packages/genesis/src/node-root-trust.js";
 import {
+  establishGenesisWitness, WITNESS_GENESIS_ROOT_CONSENT_PHRASE,
+} from "../packages/genesis/src/node0-genesis-witness.js";
+import {
   buildClaimBoundConsentRegistry,
   buildRenameEffectAdapter,
   buildRenameEffectIntent,
@@ -726,6 +729,14 @@ async function postLedgerTailFixture({ retireOwner = true } = {}) {
     establishedAt: "2026-08-11T00:00:00.000Z",
   });
   assert.equal(rooted.ok, true, rooted.reason ?? "root trust must provision");
+  // Genesis is not established until the root is PINNED out of band.
+  const pinned = await establishGenesisWitness({
+    demaHome, witnessPath: `${demaHome}-witness.json`, nodeId: "c4d-node",
+    ceremonyId: `c4d-genesis-${tailFixtureSeq}`, consent: WITNESS_GENESIS_ROOT_CONSENT_PHRASE,
+    witnessedAt: "2026-08-11T00:00:00.000Z",
+  });
+  assert.equal(pinned.ok, true, pinned.reason ?? "ceremony pin must establish");
+  process.env.DEMA_GENESIS_WITNESS = `${demaHome}-witness.json`;
 
   const prepared = buildRenameEffectIntent({
     scopeRoot: estate,

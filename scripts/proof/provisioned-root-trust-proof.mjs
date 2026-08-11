@@ -33,6 +33,7 @@ const load = {
   receipt: () => import(P("packages/receipts/src/canonical-receipt.js")),
   sig: () => import(P("packages/receipts/src/authorship-signature.js")),
   root: () => import(P("packages/genesis/src/node-root-trust.js")),
+  witness: () => import(P("packages/genesis/src/node0-genesis-witness.js")),
   corridor: () => import(P("packages/mission/src/corridor-closure-gatherer.js")),
 };
 
@@ -59,6 +60,17 @@ async function phase1(home) {
     ceremonyId: "proof-ceremony", establishedAt: "2026-08-11T00:00:00.000Z",
   });
   if (!prov.ok) throw new Error(`phase1 provision failed: ${prov.reason}`);
+
+  // Genesis is not established until the root is PINNED out of band. Without
+  // this the production consumer in phase 2 refuses, which is the correct
+  // behaviour and would make the proof measure an unestablished node.
+  const wit = await load.witness();
+  const pinned = await wit.establishGenesisWitness({
+    demaHome: home, witnessPath: `${home}-witness.json`, nodeId: NODE_ID,
+    ceremonyId: "proof-ceremony", consent: wit.WITNESS_GENESIS_ROOT_CONSENT_PHRASE,
+    witnessedAt: "2026-08-11T00:00:00.000Z",
+  });
+  if (!pinned.ok) throw new Error(`phase1 pin failed: ${pinned.reason}`);
 
   // (2) ordinary history signed by K0.
   for (let i = 0; i < 2; i += 1) {
@@ -117,6 +129,7 @@ async function phase2(home, expect) {
   // The real production consumer, resolving its own anchor from disk.
   const append = corridor.buildLedgerAppender({
     demaHome: home, now: "2026-08-11T02:00:00.000Z", transactionId: "proof-tx",
+    witnessPath: `${home}-witness.json`,
   });
   let consumer = { ok: false, error: null };
   try {

@@ -34,6 +34,10 @@ import {
   VALID_TRUTH_LABELS,
 } from "../packages/receipts/src/canonical-receipt.js";
 import { fingerprintPublicKeyPem } from "../packages/receipts/src/authorship-signature.js";
+import {
+  establishGenesisWitness,
+  WITNESS_GENESIS_ROOT_CONSENT_PHRASE,
+} from "../packages/genesis/src/node0-genesis-witness.js";
 import { buildLedgerAppender } from "../packages/mission/src/corridor-closure-gatherer.js";
 
 /**
@@ -74,8 +78,21 @@ const DEMA = join(REPO, "bin/dema");
 const LABEL = VALID_TRUTH_LABELS[0];
 const NODE = "grc-node0";
 const CEREMONY = "grc-ceremony-1";
+const AT = "2026-08-11T00:00:00.000Z";
 
 const home = () => mkdtemp(join(tmpdir(), "grc-"));
+
+/// The ceremony pin lives OUTSIDE the home it guards.
+const witnessFor = (h) => `${h}-witness.json`;
+
+/// Pin an already-established root, so a fixture reaches the state production
+/// requires: genesis is not established until BOTH the root and its pin exist.
+async function pin(h, ceremonyId = CEREMONY) {
+  return establishGenesisWitness({
+    demaHome: h, witnessPath: witnessFor(h), nodeId: NODE, ceremonyId,
+    consent: WITNESS_GENESIS_ROOT_CONSENT_PHRASE, witnessedAt: AT,
+  });
+}
 
 /** Drive the REAL shipped CLI. Returns {code, out} — never throws on refusal. */
 function dema(home, args) {
@@ -89,10 +106,14 @@ function dema(home, args) {
   }
 }
 
-const cliEstablish = (h, extra = []) =>
-  dema(h, ["genesis", "root", "establish", "--node-id", NODE,
-           "--ceremony-id", CEREMONY, "--consent", ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
-           ...extra]);
+async function cliEstablish(h, extra = []) {
+  const r = dema(h, ["genesis", "root", "establish", "--node-id", NODE,
+    "--ceremony-id", CEREMONY, "--consent", ESTABLISH_ROOT_TRUST_CONSENT_PHRASE, ...extra]);
+  // The pin is the sovereign act's durable half. The CLI does not write it (that
+  // is its own consent), so the fixture performs it explicitly.
+  if (r.code === 0) await pin(h, extra.includes("--ceremony-id") ? extra[extra.indexOf("--ceremony-id") + 1] : CEREMONY);
+  return r;
+}
 
 const kernelEstablish = (h, over = {}) =>
   establishNodeGenesisRoot({
@@ -133,6 +154,7 @@ async function rotate(h) {
 async function productionConsumer(h, txId = "grc-transaction") {
   const append = buildLedgerAppender({
     demaHome: h, now: "2026-08-11T02:00:00.000Z", transactionId: txId,
+    witnessPath: witnessFor(h),
   });
   return append({
     canonicalBody: { closure_transaction_id: txId, omega0_seal_head: "e".repeat(64) },
@@ -150,7 +172,7 @@ test("GRC-01: a human establishes a fresh Node's genesis root through the real C
   const h = await home();
   const K0 = await initK0(h);
 
-  const r = cliEstablish(h, ["--json"]);
+  const r = await cliEstablish(h, ["--json"]);
   assert.equal(r.code, 0, r.out);
   const report = JSON.parse(r.out);
   assert.equal(report.schema, GENESIS_ROOT_CEREMONY_SCHEMA);
@@ -213,12 +235,12 @@ test("GRC-03: a wrong or near-miss phrase refuses and writes zero root bytes", a
 test("GRC-04: a second ceremony refuses with zero durable byte change", async () => {
   const h = await home();
   await initK0(h);
-  assert.equal(cliEstablish(h).code, 0);
+  assert.equal((await cliEstablish(h)).code, 0);
 
   const before = await rootBytes(h);
   const beforeStat = await stat(nodeRootTrustPath(h));
 
-  const second = cliEstablish(h, ["--ceremony-id", "grc-ceremony-2", "--json"]);
+  const second = await cliEstablish(h, ["--ceremony-id", "grc-ceremony-2", "--json"]);
   assert.equal(second.code, 1);
   const report = JSON.parse(second.out);
   assert.equal(report.established, false);
@@ -240,7 +262,7 @@ test("GRC-05: canonical history already exists — the ceremony may not manufact
   assert.ok(fresh.blocked_by.includes("canonical_history_exists"));
   assert.equal(fresh.ledger_entries, 1);
 
-  const r = cliEstablish(h, ["--json"]);
+  const r = await cliEstablish(h, ["--json"]);
   assert.equal(r.code, 1);
   const report = JSON.parse(r.out);
   assert.equal(report.reason, GENESIS_ROOT_REQUIRES_FRESH_NODE);
@@ -265,7 +287,7 @@ test("GRC-06: a prior rotation blocks the ceremony — K1 is never promoted to g
   assert.equal(fresh.generation_count, 2);
   assert.equal(fresh.retired_count, 1);
 
-  const r = cliEstablish(h, ["--json"]);
+  const r = await cliEstablish(h, ["--json"]);
   assert.equal(r.code, 1);
   assert.equal(JSON.parse(r.out).reason, GENESIS_ROOT_REQUIRES_FRESH_NODE);
   assert.equal(await rootBytes(h), null,
@@ -278,7 +300,7 @@ test("GRC-07: human ceremony -> K0 history -> K0->K1 -> production verification 
   const K0 = await initK0(h);
 
   // The ONLY establishment step, performed by the real shipped command.
-  assert.equal(cliEstablish(h).code, 0);
+  assert.equal((await cliEstablish(h)).code, 0);
 
   await appendHistory(h, 2);
   const K1 = await rotate(h);
@@ -395,7 +417,7 @@ test("GRC-10: the full path DEPENDS on the ceremony — skipping it fails GRC-01
   // ceremony and nothing else about the fixture.
   const ok = await home();
   await initK0(ok);
-  assert.equal(cliEstablish(ok).code, 0);
+  assert.equal((await cliEstablish(ok)).code, 0);
   await appendHistory(ok, 2);
   await rotate(ok);
   assert.equal((await productionConsumer(ok)).ok, true);

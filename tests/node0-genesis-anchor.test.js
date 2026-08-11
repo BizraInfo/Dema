@@ -376,3 +376,74 @@ test("ROOT-ANCHOR-C3: the witness schema and epistemic status are declared", asy
       rootRecordCommitment(JSON.parse(readFileSync(nodeRootTrustPath(f.home), "utf8"))));
   } finally { cleanup(f); }
 });
+
+// ── ROOT-ANCHOR-13 ── PRODUCTION WIRING ───────────────────────────────────
+test("ROOT-ANCHOR-13: the production historical verifier refuses a self-rehashed forged root", async () => {
+  // THE GAP THIS CLOSES. The anchor above is only worth the path that calls it.
+  // Committed at 4bc2b8a, `loadAnchoredGenesisRoot` had ZERO production callers
+  // and the corridor still resolved its root through the structural reader — so
+  // the forgery proven refused in ROOT-ANCHOR-03 was refused only by a function
+  // no production path invoked. A hardened kernel nothing calls is not a defence.
+  const f = fixture();
+  try {
+    await establishedNode(f);
+    // Real K0-signed history, so the appender reaches its historical check.
+    const cl = await import("../packages/receipts/src/canonical-ledger.js");
+    const cr = await import("../packages/receipts/src/canonical-receipt.js");
+    for (let i = 0; i < 2; i += 1) {
+      const r = await cl.appendCanonicalReceipt({
+        canonicalBody: { schema: "anchor.wire.v0", event: "E", n: i },
+        truthLabel: cr.VALID_TRUTH_LABELS[0], whatProves: "history", whatDoesNotProve: "nothing",
+        consent: cr.CANONICAL_RECEIPT_CONSENT_PHRASE, demaHome: f.home,
+        now: `2026-08-11T00:2${i}:00.000Z`,
+      });
+      assert.equal(r.appended, true, r.error ?? "");
+    }
+
+    const { buildLedgerAppender } = await import("../packages/mission/src/corridor-closure-gatherer.js");
+    const run = () => buildLedgerAppender({
+      demaHome: f.home, now: "2026-08-11T03:00:00.000Z",
+      transactionId: "anchor-wire-tx", witnessPath: f.witnessPath,
+    })({
+      canonicalBody: { closure_transaction_id: "anchor-wire-tx", omega0_seal_head: "e".repeat(64) },
+      truthLabel: "MEASURED_LOCAL",
+    });
+
+    // Control: with an honest root and its pin, the real consumer still works.
+    assert.equal((await run()).ok, true, "control: legitimate state must still append");
+
+    // Now forge the root and recompute its digest — internally perfect, and the
+    // key is untouched so a fingerprint-only check would not notice.
+    forgeRoot(f.home, (r) => ({ ...r, established_at: "2099-01-01T00:00:00.000Z" }));
+    await assert.rejects(run, /genesis_witness_commitment_mismatch/,
+      "the PRODUCTION consumer must refuse the forgery, not just the kernel");
+  } finally { cleanup(f); }
+});
+
+test("ROOT-ANCHOR-14: a production consumer with no pin fails closed, never silently accepts", async () => {
+  const f = fixture();
+  try {
+    await establishedNode(f);
+    const cl = await import("../packages/receipts/src/canonical-ledger.js");
+    const cr = await import("../packages/receipts/src/canonical-receipt.js");
+    await cl.appendCanonicalReceipt({
+      canonicalBody: { schema: "anchor.wire.v0", event: "E", n: 0 },
+      truthLabel: cr.VALID_TRUTH_LABELS[0], whatProves: "history", whatDoesNotProve: "nothing",
+      consent: cr.CANONICAL_RECEIPT_CONSENT_PHRASE, demaHome: f.home, now: "2026-08-11T00:20:00.000Z",
+    });
+    rmSync(f.witnessPath, { force: true });
+
+    const { buildLedgerAppender } = await import("../packages/mission/src/corridor-closure-gatherer.js");
+    await assert.rejects(
+      () => buildLedgerAppender({
+        demaHome: f.home, now: "2026-08-11T03:00:00.000Z",
+        transactionId: "anchor-nopin-tx", witnessPath: f.witnessPath,
+      })({
+        canonicalBody: { closure_transaction_id: "anchor-nopin-tx", omega0_seal_head: "e".repeat(64) },
+        truthLabel: "MEASURED_LOCAL",
+      }),
+      /genesis_witness_unavailable/,
+      "an unpinned root must not be silently trusted by production",
+    );
+  } finally { cleanup(f); }
+});

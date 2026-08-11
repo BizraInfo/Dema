@@ -31,6 +31,10 @@ import {
   generateEd25519Keypair,
   fingerprintPublicKeyPem,
 } from "../packages/receipts/src/authorship-signature.js";
+import {
+  establishGenesisWitness,
+  WITNESS_GENESIS_ROOT_CONSENT_PHRASE,
+} from "../packages/genesis/src/node0-genesis-witness.js";
 import { buildLedgerAppender } from "../packages/mission/src/corridor-closure-gatherer.js";
 
 /**
@@ -66,16 +70,32 @@ const AT = "2026-08-11T00:00:00.000Z";
 
 const home = () => mkdtemp(join(tmpdir(), "rta-"));
 
-const provision = (h, pem, over = {}) =>
-  provisionNodeRootTrust({
+/// The ceremony pin lives OUTSIDE the home it guards, so each fixture gets a
+/// sibling trust directory. Derived from the home path so it needs no bookkeeping.
+const witnessFor = (h) => `${h}-witness.json`;
+
+/// Provision the root AND pin it. Genesis is not established until both exist,
+/// so a fixture that only did the first would be testing a state production can
+/// no longer reach.
+async function provision(h, pem, over = {}) {
+  const ceremonyId = over.ceremonyId ?? "rta-ceremony";
+  const r = await provisionNodeRootTrust({
     demaHome: h,
     nodeId: NODE,
     rootPublicKeyPem: pem,
     consent: ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
-    ceremonyId: "rta-ceremony",
+    ceremonyId,
     establishedAt: AT,
     ...over,
   });
+  if (r.ok) {
+    await establishGenesisWitness({
+      demaHome: h, witnessPath: witnessFor(h), nodeId: over.nodeId ?? NODE,
+      ceremonyId, consent: WITNESS_GENESIS_ROOT_CONSENT_PHRASE, witnessedAt: AT,
+    });
+  }
+  return r;
+}
 
 /** A K0 identity plus one ordinary receipt it legitimately signed. */
 async function homeWithK0History(h, { receipts = 1 } = {}) {
@@ -115,7 +135,10 @@ async function rotate(h, n = 1) {
  * expected to succeed or throw — both are real outcomes of the real path.
  */
 async function runProductionConsumer(h, txId = "rta-transaction") {
-  const append = buildLedgerAppender({ demaHome: h, now: "2026-08-11T02:00:00.000Z", transactionId: txId });
+  const append = buildLedgerAppender({
+    demaHome: h, now: "2026-08-11T02:00:00.000Z", transactionId: txId,
+    witnessPath: witnessFor(h),
+  });
   return append({
     canonicalBody: { closure_transaction_id: txId, omega0_seal_head: "e".repeat(64) },
     truthLabel: "MEASURED_LOCAL",
