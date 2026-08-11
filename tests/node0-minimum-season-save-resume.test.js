@@ -151,7 +151,7 @@ test("S3: a brand-new process reconstructs the exact continuation from DEMA_HOME
 
   const saver = await childScript(home, "proc-a.mjs", `
 import { saveSeasonState } from ${JSON.stringify(STORE)};
-const r = await saveSeasonState({ demaHome: process.env.DEMA_HOME, state: ${JSON.stringify(stateA)} });
+const r = await saveSeasonState({ demaHome: process.env.DEMA_HOME, state: ${JSON.stringify(stateA)}, worldAnchor: { observed: { fixture: "S3-world" } } });
 if (!r.ok) { console.error(JSON.stringify(r)); process.exit(1); }
 console.log(JSON.stringify({ state_hash: r.state_hash, receipt_hash: r.receipt_hash }));
 `);
@@ -180,9 +180,16 @@ console.log(JSON.stringify({ state_hash: r.state_hash, receipt_hash: r.receipt_h
 // ── S4 ──────────────────────────────────────────────────────────────────────
 test("S4: resume preserves pending consent as pending and grants no authority", async () => {
   const home = await newHome();
+  // REALM0-ANCHOR-BINDING-0B refusal record — original property: pending consent survives as PENDING.
+  // Original expected blocker: none (legacy resume returned the continuation).
+  // New prerequisite: WORLD_ANCHOR_MATCH (resume withholds on every other
+  // outcome). The save is therefore anchored through the PRODUCTION path so
+  // the test still reaches and proves its original property; the legacy
+  // withholding itself is proven by B-07 in realm0-anchor-binding.test.js.
   await saveSeasonState({
     demaHome: home,
     state: baseState({ pending_consent: [{ phrase: "GO: push the season slice", scope: "push" }] }),
+    worldAnchor: { observed: { fixture: "S4-world" } },
   });
   const r = await resumeSeason({ demaHome: home, seasonId: "season-test" });
   assert.equal(r.ok, true);
@@ -208,7 +215,17 @@ test("S5: three prohibited repeats survive a new process byte-exactly", async ()
     "alter commit 68b8efd43925335a4b3f3742ea735baaa501c2b9",
     "  begin  Node1  ",
   ];
-  await saveSeasonState({ demaHome: home, state: baseState({ must_not_repeat: prohibited }) });
+  // REALM0-ANCHOR-BINDING-0B refusal record — original property: must_not_repeat survives byte-exactly.
+  // Original expected blocker: none (legacy resume returned the continuation).
+  // New prerequisite: WORLD_ANCHOR_MATCH (resume withholds on every other
+  // outcome). The save is therefore anchored through the PRODUCTION path so
+  // the test still reaches and proves its original property; the legacy
+  // withholding itself is proven by B-07 in realm0-anchor-binding.test.js.
+  await saveSeasonState({
+    demaHome: home,
+    state: baseState({ must_not_repeat: prohibited }),
+    worldAnchor: { observed: { fixture: "S5-world" } },
+  });
 
   const r = cli(["season", "resume", "--json", "--dema-home", home]);
   assert.equal(r.status, 0, r.stderr);
@@ -360,7 +377,15 @@ test("S9b: a HEAD re-hashed after tampering still fails — the fence, not HEAD,
 // ── S10 ─────────────────────────────────────────────────────────────────────
 test("S10: resume against a different commit or tree returns typed REPOSITORY_MISMATCH", async () => {
   const home = await newHome();
-  await saveSeasonState({ demaHome: home, state: baseState() });
+  // REALM0-ANCHOR-BINDING-0B refusal record — original property: wrong commit/tree is a typed REPOSITORY_MISMATCH; the matching pair resumes.
+  // Original expected blocker: none (legacy resume returned the continuation).
+  // New prerequisite: WORLD_ANCHOR_MATCH (resume withholds on every other
+  // outcome). The save is therefore anchored through the PRODUCTION path so
+  // the test still reaches and proves its original property; the legacy
+  // withholding itself is proven by B-07 in realm0-anchor-binding.test.js.
+  await saveSeasonState({
+    demaHome: home, state: baseState(), worldAnchor: { observed: { fixture: "S10-world" } },
+  });
 
   const wrongCommit = await resumeSeason({ demaHome: home, seasonId: "season-test", repositoryCommit: "a".repeat(40) });
   assert.equal(wrongCommit.ok, false);

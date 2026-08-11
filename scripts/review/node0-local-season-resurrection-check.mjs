@@ -78,7 +78,13 @@ const healthReceipts = (home) => {
 
 function saveState(home, state, path) {
   writeFileSync(path, JSON.stringify(state, null, 2));
-  return parse(cli(["season", "save", "--from", path, "--dema-home", home, "--json"], home).stdout);
+  // REALM0-ANCHOR-BINDING-0B refusal record — original property: resurrection
+  // resumes the continuation. New prerequisite: WORLD_ANCHOR_MATCH (resume
+  // withholds on legacy). The driver therefore saves ANCHORED through the
+  // shipped CLI flag, so its ordering proof reaches its original property;
+  // legacy withholding itself is proven by B-07 in realm0-anchor-binding.
+  return parse(cli(["season", "save", "--from", path, "--dema-home", home, "--json",
+    "--world-anchor-observed", JSON.stringify({ fixture: "resurrection-driver-world" })], home).stdout);
 }
 
 function headSequence(home) {
