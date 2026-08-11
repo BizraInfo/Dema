@@ -11,6 +11,8 @@ import {
   listSeasons,
 } from "../../../../packages/receipts/src/season-state-store.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
+import { buildLocalModelInventoryScan } from "../../../../packages/core/src/local-model-inventory-scan.js";
+import { buildLocalModelWorldObservation } from "../../../../packages/core/src/realm0-world-observer.js";
 import { readFileSync } from "node:fs";
 
 function argValue(argv, name) {
@@ -96,8 +98,35 @@ export async function cmd_season(ctx) {
     // world anchor INSIDE receipt_hash. The CLI only carries the operator's
     // observed payload through; it never invents one — absence stays legacy.
     const anchorObserved = argValue(argv, "--world-anchor-observed");
+    // REALM0-WORLD-OBSERVER-1A. The operator observes the REAL local model
+    // world rather than typing a hash: the shipped scanner produces the estate,
+    // the observer normalizes it to identity, and 0B binds the digest-bearing
+    // payload. A blind observation REFUSES the save — it never fabricates an
+    // anchor. Mutually exclusive with a hand-supplied payload.
+    const observeWorld = argv.includes("--observe-world-local-models");
     let worldAnchor = null;
-    if (anchorObserved !== undefined) {
+    if (observeWorld && anchorObserved !== undefined) {
+      const r = { ok: false, outcome: "REFUSED", reason: "world_anchor_source_ambiguous" };
+      if (!json) console.error(`season save refused: ${r.reason}`);
+      return emit(r);
+    }
+    if (observeWorld) {
+      const scan = await buildLocalModelInventoryScan();
+      const observation = buildLocalModelWorldObservation({ scan });
+      if (observation.status !== "OBSERVED") {
+        const r = {
+          ok: false, outcome: "REFUSED",
+          reason: `world_observation_unavailable:${observation.reason ?? "unknown"}`,
+          blind_sources: observation.blind_sources,
+        };
+        if (!json) {
+          console.error(`season save refused: ${r.reason}`);
+          for (const b of observation.blind_sources ?? []) console.error(`    blind: ${b}`);
+        }
+        return emit(r);
+      }
+      worldAnchor = { observed: observation.observed };
+    } else if (anchorObserved !== undefined) {
       try {
         worldAnchor = { observed: JSON.parse(anchorObserved) };
       } catch {
@@ -189,7 +218,7 @@ export async function cmd_season(ctx) {
     console.error("  dema season save --season <id> --mission <id> --phase <PHASE> --next <ACTION> \\");
     console.error("       --repo-commit <sha40> --repo-tree <sha40> [--step <s>]... [--must-not-repeat <s>]... \\");
     console.error("       [--pending-consent none|<phrase>::<scope>]... [--from <state.json>] [--dema-home <path>] \\");
-    console.error("       [--world-anchor-observed <json>]");
+    console.error("       [--world-anchor-observed <json> | --observe-world-local-models]");
     console.error("  dema season status [--season <id>] [--dema-home <path>]");
     console.error("  dema season resume [--season <id>] [--repo-commit <sha40>] [--repo-tree <sha40>]");
   }

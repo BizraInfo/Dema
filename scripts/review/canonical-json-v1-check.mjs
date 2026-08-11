@@ -41,6 +41,12 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // identical bytes. Registration is adoption review only; the trace grants no
   // authority and promotes nothing.
   "packages/mission/src/genesis-mission-trace.js",
+  // REALM0-WORLD-OBSERVER-1A — the local-model world observer. The observation
+  // digest IS the canonical hash of the identity-only payload; two processes
+  // must derive the same digest from the same estate or the anchor cannot
+  // match. Registration is adoption review only; the observer reads, hashes,
+  // grants nothing, and mutates nothing.
+  "packages/core/src/realm0-world-observer.js",
   // Gate C, C3 — the disk-bound closure orchestrator and CLI derive the exact
   // prepared-effect / transaction identity with canonical JSON v1. Registration
   // is adoption review only; it does not promote the dirty candidate or Node0.
