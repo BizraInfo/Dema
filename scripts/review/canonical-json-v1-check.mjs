@@ -35,6 +35,12 @@ const JSON_MODE = process.argv.includes("--json");
 // (outside tests and this gate) still fails the scan.
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/mission/src/mission-corridor.js",
+  // GENESIS-MISSION-TRACE-SEAM-0A — the causal trace journal. Every trace
+  // event's identity IS the canonical hash of its body, and the chain's order
+  // integrity depends on two processes deriving the identical event_hash from
+  // identical bytes. Registration is adoption review only; the trace grants no
+  // authority and promotes nothing.
+  "packages/mission/src/genesis-mission-trace.js",
   // Gate C, C3 — the disk-bound closure orchestrator and CLI derive the exact
   // prepared-effect / transaction identity with canonical JSON v1. Registration
   // is adoption review only; it does not promote the dirty candidate or Node0.
