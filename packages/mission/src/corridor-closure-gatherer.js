@@ -60,9 +60,13 @@ import {
   CANONICAL_LEDGER_RELPATH, loadCanonicalLedger, appendCanonicalReceipt,
 } from "../../receipts/src/canonical-ledger.js";
 import {
-  CANONICAL_RECEIPT_CONSENT_PHRASE, verifyCanonicalChain,
+  CANONICAL_RECEIPT_CONSENT_PHRASE, verifyCanonicalAuthorityChain,
 } from "../../receipts/src/canonical-receipt.js";
-import { loadPublicKey } from "../../receipts/src/authorship-key-store.js";
+// PROVISIONED-ROOT-TRUST-BOUNDARY-1A: the historical check below is anchored on
+// the Node's provisioned genesis root, NOT on loadPublicKey(home). "Who signs
+// today" and "where does this history begin" are two different questions, and
+// this path only ever needed the second one.
+import { loadNodeRootTrust } from "../../genesis/src/node-root-trust.js";
 // CUTOVER 2026-08-11 (part 2): the superseded consent-nonce-registry-atomic
 // import is gone. This module no longer references the legacy writer at all —
 // its authority is the canonical claim below, which still consults the legacy
@@ -1896,8 +1900,25 @@ export function buildLedgerAppender({ demaHome, now, transactionId = null }) {
       }
       const entries = await loadCanonicalLedger({ demaHome: home });
       if (entries.length > 0) {
-        const publicKey = await loadPublicKey(home);
-        const verified = verifyCanonicalChain({ entries, pubkeyPem: publicKey });
+        // PROVISIONED-ROOT-TRUST-BOUNDARY-1A. This check used to resolve its
+        // anchor with loadPublicKey(home) — the CURRENT active key — and then
+        // ask verifyCanonicalChain whether that one key signed every entry.
+        // Measured on this branch: it verified before a rotation and returned
+        // signature_invalid at index 0 after one, because K1 never signed K0's
+        // history and was never supposed to have.
+        //
+        // The anchor is now the Node's provisioned genesis root, established
+        // once out-of-band under its own consent phrase. There is deliberately
+        // no fallback: an unprovisioned Node refuses rather than nominating the
+        // oldest key it can reach, because a chain that picks its own ancestor
+        // proves nothing about its ancestry.
+        const root = await loadNodeRootTrust({ demaHome: home });
+        if (!root.ok) {
+          throw new Error(`ledger append refused: ${root.reason}`);
+        }
+        const verified = verifyCanonicalAuthorityChain({
+          entries, genesisPubkeyPem: root.rootTrustAnchorPem,
+        });
         if (!verified.verified) {
           throw new Error(`ledger append refused: existing_chain_${verified.reason}`);
         }

@@ -13,6 +13,8 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "mkdir/writeFile/rename/unlink scoped to DEMA_HOME||~/.dema receipts dir; writes flywheel-<id>.json via wx atomic tmp+rename; localhost-only, no net/child_process.",
   "packages/flywheel/src/flywheel-xp-state.js":
     "mkdir/readFile/writeFile/rename/unlink scoped to DEMA_HOME||~/.dema; appends agents/flywheel-xp-state.ndjson via atomic tmp+rename; network_used:false.",
+  "packages/genesis/src/node-root-trust.js":
+    "PROVISIONED-ROOT-TRUST-BOUNDARY-1A. mkdir/open/link/readFile/unlink scoped to DEMA_HOME||~/.dema; creates genesis/root-trust-v1.json exactly once via wx tmp + link (EEXIST = already provisioned) + dir fsync, and reads it back. Habitat root-trust STATE, not a kernel and not a receipt stream; no network/child_process, no clock, never a private key byte.",
   "packages/installer/src/dema-recovery.js":
     "Bounded read-only walk of DEMA_HOME (readdirSync/openSync/readFileSync/fstatSync) to sha256 each file; capped MAX_FILES=20000, MAX_DEPTH=24, skips symlinks; read_only:true, network_used:false.",
   "packages/installer/src/setup.js":

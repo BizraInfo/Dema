@@ -30,6 +30,9 @@ import {
 } from "../packages/mission/src/corridor-closure-gatherer.js";
 import { inspectClosureOwnership } from "../packages/receipts/src/mission-closure-ownership.js";
 import { initAuthorshipKey, KEY_INIT_CONSENT_PHRASE, loadPublicKey } from "../packages/receipts/src/authorship-key-store.js";
+import {
+  provisionNodeRootTrust, ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
+} from "../packages/genesis/src/node-root-trust.js";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DEMA = join(REPO, "bin/dema");
@@ -67,6 +70,19 @@ function consented(home, args, nonce, extra = []) {
 // a later clock can never silently change the contract the operator approved.
 async function startedCorridor(home) {
   await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home });
+  // PROVISIONED-ROOT-TRUST-BOUNDARY-1A: a Node that will verify its own ledger
+  // history must first know where that history begins. Before this slice the
+  // corridor inferred the anchor from the current active key; it now requires a
+  // provisioned root, so bootstrapping one is part of standing a habitat up.
+  const rooted = await provisionNodeRootTrust({
+    demaHome: home,
+    nodeId: "ccb-node",
+    rootPublicKeyPem: await loadPublicKey(home),
+    consent: ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
+    ceremonyId: "ccb-genesis",
+    establishedAt: "2026-08-11T00:00:00.000Z",
+  });
+  assert.equal(rooted.ok, true, rooted.reason ?? "root trust must provision");
   const expires = future();
   const args = [
     "mission", "corridor", "start", "--id", ID,

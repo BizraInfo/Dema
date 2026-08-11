@@ -50,7 +50,11 @@ import { loadCanonicalLedger } from "../packages/receipts/src/canonical-ledger.j
 import {
   initAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
+  loadPublicKey,
 } from "../packages/receipts/src/authorship-key-store.js";
+import {
+  provisionNodeRootTrust, ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
+} from "../packages/genesis/src/node-root-trust.js";
 import {
   buildClaimBoundConsentRegistry,
   buildRenameEffectAdapter,
@@ -710,6 +714,18 @@ async function postLedgerTailFixture({ retireOwner = true } = {}) {
   mkdirSync(estate, { recursive: true });
   writeFileSync(join(estate, TAIL_SOURCE), "{\"proof\":true}\n");
   await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome });
+  // PROVISIONED-ROOT-TRUST-BOUNDARY-1A: the tail resume appends to a ledger
+  // that already has entries, which is exactly the path that now demands a
+  // provisioned genesis root instead of nominating the current active key.
+  const rooted = await provisionNodeRootTrust({
+    demaHome,
+    nodeId: "c4d-node",
+    rootPublicKeyPem: await loadPublicKey(demaHome),
+    consent: ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
+    ceremonyId: `c4d-genesis-${tailFixtureSeq}`,
+    establishedAt: "2026-08-11T00:00:00.000Z",
+  });
+  assert.equal(rooted.ok, true, rooted.reason ?? "root trust must provision");
 
   const prepared = buildRenameEffectIntent({
     scopeRoot: estate,
