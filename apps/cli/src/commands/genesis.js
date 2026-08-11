@@ -29,6 +29,7 @@ import {
   ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
   GENESIS_ROOT_REQUIRES_FRESH_NODE,
 } from "../../../../packages/genesis/src/node0-genesis-root-ceremony.js";
+import { resolveWitnessPath } from "../../../../packages/genesis/src/node0-genesis-witness.js";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -99,6 +100,9 @@ export async function cmd_genesis(ctx) {
       // A real human act happens at a real time. The clock is read HERE, at the
       // authority boundary, never inside the kernel.
       now: new Date().toISOString(),
+      // The erasure law: the surviving out-of-home pin may veto a "fresh"
+      // origin. Env is read HERE, at the boundary — the kernel stays pure.
+      witnessPath: resolveWitnessPath(process.env),
     });
     if (wantJsonG) {
       console.log(JSON.stringify(result, null, 2));

@@ -57,6 +57,7 @@ import {
   loadNodeRootTrust,
   ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
 } from "./node-root-trust.js";
+import { loadGenesisWitness } from "./node0-genesis-witness.js";
 
 export const GENESIS_ROOT_CEREMONY_SCHEMA =
   "bizra.dema.node0_genesis_root_ceremony.v0.1";
@@ -98,11 +99,21 @@ async function retiredCount(ap) {
  * Node deserves the whole picture in one answer, and a partial one invites a
  * second ceremony attempt against a state that was never going to qualify.
  *
+ * When `witnessPath` is supplied, the surviving out-of-home pin is consulted
+ * too — the erasure law. Every other predicate here lives INSIDE DEMA_HOME, so
+ * erasing DEMA_HOME resets them all to "fresh"; the pin is the one fact that
+ * survives, and a pin at that path — present, or present-but-unreadable — is
+ * proof this machine already witnessed an origin. Only a genuinely ABSENT pin
+ * (`genesis_witness_unavailable`) leaves freshness intact. The pin stays
+ * veto-only: it can block a fresh root; it can never supply one. Additive by
+ * omission — callers that do not pass `witnessPath` keep the exact prior
+ * behavior.
+ *
  * @returns {{fresh:boolean, blocked_by:string[], active_fingerprint:string|null,
  *            ledger_entries:number|null, generation_count:number|null,
  *            retired_count:number|null}}
  */
-export async function inspectGenesisRootFreshness({ demaHome } = {}) {
+export async function inspectGenesisRootFreshness({ demaHome, witnessPath } = {}) {
   const blocked = [];
   let activeFingerprint = null;
   let ledgerEntries = null;
@@ -149,6 +160,18 @@ export async function inspectGenesisRootFreshness({ demaHome } = {}) {
     blocked.push(`retired_registry_unreadable:${err?.code ?? "unknown"}`);
   }
 
+  if (isStr(witnessPath)) {
+    const pin = await loadGenesisWitness({ witnessPath });
+    if (pin.ok) {
+      blocked.push("genesis_witness_pin_present");
+    } else if (pin.reason !== "genesis_witness_unavailable") {
+      // A pin that exists but cannot be trusted is NOT an absent pin. Same law
+      // as an unreadable root record above: "I could not tell" never means
+      // "fresh".
+      blocked.push(`genesis_witness_unreadable:${pin.reason}`);
+    }
+  }
+
   return Object.freeze({
     fresh: blocked.length === 0,
     blocked_by: Object.freeze(blocked),
@@ -186,6 +209,7 @@ export async function establishNodeGenesisRoot({
   consent,
   ceremonyId,
   now,
+  witnessPath,
 } = {}) {
   // Consent first, before any disk read. An unauthorized caller learns nothing
   // about this Node's state, and no I/O happens on its behalf.
@@ -198,7 +222,7 @@ export async function establishNodeGenesisRoot({
   if (!isStr(ceremonyId)) return refuse("ceremony_id_required");
   if (!isStr(now)) return refuse("established_at_required");
 
-  const freshness = await inspectGenesisRootFreshness({ demaHome });
+  const freshness = await inspectGenesisRootFreshness({ demaHome, witnessPath });
   if (!freshness.fresh) {
     return refuse(GENESIS_ROOT_REQUIRES_FRESH_NODE, {
       blocked_by: freshness.blocked_by,
