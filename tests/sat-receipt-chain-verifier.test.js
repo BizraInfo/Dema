@@ -34,11 +34,23 @@ test("SAT-4 EffectCap valid", () => {
   assert.ok(cap.blocked_effects.includes("modify_receipt"));
 });
 
-test("verifyReceiptChain · empty chain → trivially compliant", () => {
+test("verifyReceiptChain · empty chain → UNKNOWN, never proof", () => {
   const v = verifyReceiptChain({ receipts: [] });
-  assert.equal(v.passed, true);
+  assert.equal(v.passed, false);
   assert.equal(v.verdict, "empty_chain");
   assert.equal(v.receipt_count, 0);
+  assert.equal(v.truth_label, "UNKNOWN");
+  assert.equal(v.receipt_shape_ready, false);
+  assert.deepEqual(v.violations, ["chain_is_empty_no_proof"]);
+});
+
+test("verifyReceiptChain · semantically empty input → UNKNOWN", () => {
+  const v = verifyReceiptChain({ receipts: [null, undefined, "not-a-receipt"] });
+  assert.equal(v.passed, false);
+  assert.equal(v.verdict, "empty_chain");
+  assert.equal(v.receipt_count, 0);
+  assert.equal(v.truth_label, "UNKNOWN");
+  assert.equal(v.receipt_shape_ready, false);
 });
 
 test("verifyReceiptChain · single genesis receipt with null prev → verified", () => {
@@ -77,6 +89,20 @@ test("verifyReceiptChain · prev_hash mismatch → violated", () => {
   });
   assert.equal(v.passed, false);
   assert.ok(v.violations.some((vio) => vio.includes("prev_hash_mismatch")));
+});
+
+test("verifyReceiptChain · reordered chain → violated", () => {
+  // Negative control pair: these exact receipts in correct order are verified
+  // by "two correctly linked receipts → verified" above. Reversal must fail.
+  const v = verifyReceiptChain({
+    receipts: [
+      { receipt_id: HASH_B, prev_hash: HASH_A },
+      { receipt_id: HASH_A, prev_hash: null },
+    ],
+  });
+  assert.equal(v.passed, false);
+  assert.equal(v.truth_label, "CHAIN_VIOLATION");
+  assert.ok(v.violations.length > 0);
 });
 
 test("verifyReceiptChain · invalid hash format → violated", () => {
