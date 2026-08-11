@@ -153,6 +153,134 @@ export function mentionsTokenInCode(source, name) {
   return new RegExp(boundedToken(name)).test(stripCommentsAndStrings(source));
 }
 
+/// Write calls whose first argument names the target path.
+const WRITE_CALL =
+  /(?<![\w$])(writeFileSync|appendFileSync|mkdirSync|rmSync|unlinkSync|copyFileSync|renameSync|createWriteStream)\s*\(/g;
+
+/// The first argument of each write call, as source text. Balanced-paren aware so
+/// `join(outDir, rel)` is captured whole rather than truncated at its first comma.
+function writeTargets(code) {
+  const targets = [];
+  for (const m of code.matchAll(WRITE_CALL)) {
+    let i = m.index + m[0].length;
+    let depth = 1;
+    let buf = "";
+    while (i < code.length && depth > 0) {
+      const c = code[i];
+      if (c === "(") depth += 1;
+      else if (c === ")") { depth -= 1; if (depth === 0) break; }
+      if (depth === 1 && c === ",") break;
+      buf += c;
+      i += 1;
+    }
+    targets.push(buf.trim());
+  }
+  return targets;
+}
+
+/**
+ * True when some WRITE in this source targets a path derived from `rootIdent`.
+ *
+ * This is how a "root" is told apart from a "scope": a directory the tool only
+ * reads is an input, and a directory it writes into is state. Scanned as code so
+ * a comment or string mentioning the root cannot manufacture a write — the same
+ * law `callsMechanism` enforces, for the same reason.
+ */
+export function writesUnderRoot(source, rootIdent) {
+  const code = stripCommentsAndStrings(source);
+  const ref = new RegExp(boundedToken(rootIdent));
+  return writeTargets(code).some((t) => ref.test(t));
+}
+
+/**
+ * True when this source issues a state-changing HTTP call.
+ *
+ * The method literal is read from the ORIGINAL text, because here the string IS
+ * the payload — `method: "POST"` is the evidence, and stripping strings would
+ * erase exactly what is being measured. That is the opposite of the receipt-call
+ * scan and deliberately so: there the string was camouflage, here it is the fact.
+ */
+export function hasMutatingHttpCall(source) {
+  return /(?<![\w$])method\s*:\s*["'`]?(POST|PUT|PATCH|DELETE)/i.test(source);
+}
+
+/**
+ * The domains the registry carried as UNDETERMINED, each with the measurement
+ * that decides it and the CONTROL that makes a negative answer mean something.
+ *
+ * `control` must hold before `settled` is consulted. Without that ordering a
+ * source the reader cannot see — empty, missing, renamed — would answer "no
+ * writes" and "no mutating calls" and classify itself, which is how a
+ * completeness count gets driven to zero by breaking the reader rather than by
+ * measuring the tree.
+ */
+export const OPEN_DOMAINS = Object.freeze([
+  Object.freeze({
+    domain_id: "bizra_mumu_root",
+    writer: "scripts/node0-mumu-loop.mjs",
+    question: "authoritative state root, or read-only scan scope?",
+    classification: "SCAN_SCOPE",
+    // Control: the tool must actually write somewhere, or "writes nothing to the
+    // root" is trivially true of a file that writes nothing at all.
+    control: (src) => /(?<![\w$])(writeFileSync|appendFileSync|mkdirSync)\s*\(/.test(
+      stripCommentsAndStrings(src)),
+    settled: (src) => !writesUnderRoot(src, "root"),
+    evidence: (src) =>
+      `${writeTargets(stripCommentsAndStrings(src)).length} write target(s), none derived from the scan root`,
+  }),
+  Object.freeze({
+    domain_id: "gateway_chain",
+    writer: "packages/node-adapter/src/gateway-http-adapter.js",
+    question: "does local code advance the gateway chain?",
+    classification: "EXTERNAL_AUTHORITATIVE",
+    // Control: it must genuinely speak HTTP, or "issues no mutating call" is
+    // true of every file in the tree that never opens a socket.
+    control: (src) => /(?<![\w$])fetch\s*\(/.test(stripCommentsAndStrings(src)),
+    settled: (src) => !hasMutatingHttpCall(src),
+    evidence: () => "HTTP client present; every call is a read (no POST/PUT/PATCH/DELETE)",
+  }),
+]);
+
+/**
+ * Classify each open domain from source. A domain is determined only when its
+ * control holds AND its settling measurement passes; anything else stays
+ * unclassified, which the kernel scores as REGISTRY_INCOMPLETE.
+ */
+export function classifyOpenDomains({ readSource }) {
+  const determined = [];
+  const undetermined = [];
+  for (const d of OPEN_DOMAINS) {
+    let src;
+    try {
+      src = readSource(d.writer);
+    } catch (err) {
+      undetermined.push({ domain_id: d.domain_id, reason: `unreadable:${err?.code ?? "unknown"}` });
+      continue;
+    }
+    if (typeof src !== "string" || !d.control(src)) {
+      undetermined.push({ domain_id: d.domain_id, reason: "control_absent" });
+      continue;
+    }
+    if (!d.settled(src)) {
+      undetermined.push({ domain_id: d.domain_id, reason: "measurement_refuted_classification" });
+      continue;
+    }
+    determined.push({
+      domain_id: d.domain_id,
+      writer: d.writer,
+      question: d.question,
+      classification: d.classification,
+      evidence: d.evidence(src),
+      verified_by: "independent_source_trace",
+    });
+  }
+  return {
+    determined: Object.freeze(determined),
+    undetermined: Object.freeze(undetermined),
+    unclassified_count: undetermined.length,
+  };
+}
+
 function walk(dir, out = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (e.name === "node_modules" || e.name === ".next" || e.name === ".git") continue;
@@ -198,12 +326,19 @@ const counterexamples = DOMAINS.map((d) => {
   };
 });
 
+// The two domains the registry carried as open are now MEASURED rather than
+// asserted. This number was a literal `2` with a comment naming them; a literal
+// cannot become true by being edited, and editing it to `0` would have moved the
+// canonical ledger without observing anything. It is derived here, and each
+// domain's negative answer is gated behind a control so an unreadable writer
+// stays unclassified instead of classifying itself.
+const openRegistry = classifyOpenDomains({
+  readSource: (rel) => readFileSync(join(REPO, rel), "utf8"),
+});
+
 const observation = buildTransitionCoverageObservation({
   registry: {
-    // Two domains remain open (BIZRA_MUMU_ROOT, gateway chain), so the registry is
-    // NOT complete — which blocks SATISFIED and, by design, changes nothing about
-    // a proven counterexample.
-    unclassified_count: 2,
+    unclassified_count: openRegistry.unclassified_count,
     authoritative_domains: DOMAINS.length,
     receipted_domains: counterexamples.filter((c) => c.receipt_call_present).length,
   },
@@ -229,8 +364,10 @@ const report = {
   control_receipt_mechanism_callers: mechanismCallers,
   files_scanned: FILES.length,
   observation_hash: observation.observation_hash,
+  open_domains_determined: openRegistry.determined,
+  open_domains_undetermined: openRegistry.undetermined,
   what_this_does_not_prove:
-    "Does not prove the registry is complete (two domains remain open), and does not prove any OTHER domain is receipted. It proves that at least one authoritative transition occurs without the canonical receipt.",
+    "Does not prove any domain outside the declared registry is receipted, and does not prove the two newly classified domains are harmless for any purpose other than transition-receipt coverage. Classification is a source trace over the writers named here; a writer that changes must be re-measured.",
 };
 if (JSON_MODE) console.log(JSON.stringify(report, null, 2));
 else {
