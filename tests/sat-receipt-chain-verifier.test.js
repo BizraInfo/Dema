@@ -183,12 +183,15 @@ test("verifyReceiptChain · MISREADS the estate's own chain shape (false red)", 
   );
 });
 
-test("verifyReceiptChain · empty chain passes (false green)", () => {
-  // The mirror hazard. Point this at a namespace it cannot parse and you get a
-  // red; point it at nothing and you get a green. An adapter that settles a
-  // closure row from this must rule out the empty case first — which
-  // `verifyReplay` does explicitly (`receipts.length > 0`) and this does not.
-  assert.equal(verifyReceiptChain({ receipts: [] }).passed, true);
+test("verifyReceiptChain · empty chain refuses (false green closed)", () => {
+  // The mirror hazard this test once PINNED — point the verifier at nothing
+  // and get a green — is now structurally closed: an empty chain refuses with
+  // UNKNOWN (NO_VACUOUS_PROOF, landed via PR #456). Adapters no longer need to
+  // rule out the empty case themselves, but `verifyReplay`'s explicit
+  // `receipts.length > 0` remains correct defence in depth.
+  const v = verifyReceiptChain({ receipts: [] });
+  assert.equal(v.passed, false);
+  assert.equal(v.truth_label, "UNKNOWN");
 });
 
 // ── PAT → SAT SEAM · the boundary this verifier actually serves ─────────────
