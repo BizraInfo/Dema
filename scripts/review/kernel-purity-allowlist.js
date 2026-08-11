@@ -13,6 +13,8 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "mkdir/writeFile/rename/unlink scoped to DEMA_HOME||~/.dema receipts dir; writes flywheel-<id>.json via wx atomic tmp+rename; localhost-only, no net/child_process.",
   "packages/flywheel/src/flywheel-xp-state.js":
     "mkdir/readFile/writeFile/rename/unlink scoped to DEMA_HOME||~/.dema; appends agents/flywheel-xp-state.ndjson via atomic tmp+rename; network_used:false.",
+  "packages/genesis/src/node0-genesis-root-ceremony.js":
+    "NODE0-GENESIS-ROOT-BOOTSTRAP-CEREMONY-1A. readdir/readFile scoped to DEMA_HOME||~/.dema — counts key generations and retirements to prove the Node is at its own beginning before delegating the write. READ-ONLY here: it performs no write of its own and holds no second copy of the provisioning logic; node-root-trust.js remains the single writer. Unreadable state refuses rather than reading as fresh. No network/child_process, no clock (the caller supplies it), never a private key byte.",
   "packages/genesis/src/node-root-trust.js":
     "PROVISIONED-ROOT-TRUST-BOUNDARY-1A. mkdir/open/link/readFile/unlink scoped to DEMA_HOME||~/.dema; creates genesis/root-trust-v1.json exactly once via wx tmp + link (EEXIST = already provisioned) + dir fsync, and reads it back. Habitat root-trust STATE, not a kernel and not a receipt stream; no network/child_process, no clock, never a private key byte.",
   "packages/installer/src/dema-recovery.js":

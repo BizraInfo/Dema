@@ -331,6 +331,17 @@ Genesis:
                     prerequisite slots (11 operator-signed, poi_rule verifiable)
                     without reading the private key, producing a signature, or
                     sealing Block0. Preview only.
+  dema genesis root establish [--node-id <id>] [--ceremony-id <id>] [--consent "<phrase>"] [--json]
+                    Establish this Node's genesis root trust: the key its
+                    canonical history begins at. HUMAN BOOTSTRAP AUTHORITY —
+                    not a mission, PAT, agent, or RSI capability. Requires the
+                    exact phrase "ESTABLISH NODE GENESIS ROOT TRUST" and a
+                    genuinely fresh Node: a verified first key, no existing
+                    root, an empty canonical ledger, no prior generation, and
+                    no completed key retirement. Written once; no update,
+                    rotate, or force path exists. Refuses after any history or
+                    rotation rather than manufacturing an ancestor. Touches no
+                    private key bytes and writes no receipt.
   dema genesis verify-node0 [--years 3] [--json] [--root <path>]
                     Pre-token Node0 historical contribution verification:
                     metadata-only asset awareness + git time-span + canon witness

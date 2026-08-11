@@ -24,6 +24,11 @@ import {
   gatherGitTimeSpanEvidence,
 } from "./node0-historical-gatherer.js";
 import { gatherNode0HardwareObservations } from "./hardware-profile-gatherer.js";
+import {
+  establishNodeGenesisRoot,
+  ESTABLISH_ROOT_TRUST_CONSENT_PHRASE,
+  GENESIS_ROOT_REQUIRES_FRESH_NODE,
+} from "../../../../packages/genesis/src/node0-genesis-root-ceremony.js";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -81,6 +86,56 @@ export async function cmd_genesis(ctx) {
     );
     process.exit(process.exitCode ?? 0);
   }
+  // NODE0-GENESIS-ROOT-BOOTSTRAP-CEREMONY-1A. The one production path by which
+  // a human gives this Node an origin. Deliberately a THIN adapter: it parses
+  // flags, delegates the entire decision to the ceremony kernel, and prints.
+  // No provisioning logic lives here, and no second way to write a root exists.
+  if (genesisSub === "root" && genesisAction === "establish") {
+    const result = await establishNodeGenesisRoot({
+      demaHome: resolveDemaHome(),
+      nodeId: argValue(argv, "--node-id") ?? "",
+      consent: argValue(argv, "--consent") ?? "",
+      ceremonyId: argValue(argv, "--ceremony-id") ?? "",
+      // A real human act happens at a real time. The clock is read HERE, at the
+      // authority boundary, never inside the kernel.
+      now: new Date().toISOString(),
+    });
+    if (wantJsonG) {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (result.established) {
+      console.log("Node Genesis Root Established");
+      console.log("=".repeat(40));
+      console.log(`  Node id:      ${result.node_id}`);
+      console.log(`  Root key fp:  ${result.root_public_key_fingerprint}`);
+      console.log(`  Ceremony id:  ${result.ceremony_id}`);
+      console.log(`  Established:  ${result.established_at}`);
+      console.log("");
+      console.log("  This is where this Node's history begins. It is written once");
+      console.log("  and cannot be changed by any runtime path.");
+    } else if (result.reason === "consent_required") {
+      console.error(
+        `Consent required. Use: --consent "${ESTABLISH_ROOT_TRUST_CONSENT_PHRASE}"`,
+      );
+    } else if (result.reason === GENESIS_ROOT_REQUIRES_FRESH_NODE) {
+      console.error(
+        "Refused: a genesis root may only be established on a fresh Node, " +
+          "before any canonical history or key rotation exists.",
+      );
+      for (const reason of result.blocked_by ?? []) console.error(`  - ${reason}`);
+      console.error(
+        "Recovering an already-historic rootless Node is a separate, unshipped act.",
+      );
+    } else if (result.reason === "node_id_required") {
+      console.error("Node id required. Use: --node-id <id>");
+    } else if (result.reason === "ceremony_id_required") {
+      console.error("Ceremony id required. Use: --ceremony-id <id>");
+    } else {
+      console.error(`Genesis root not established: ${result.reason}`);
+    }
+    if (!result.established) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
   if (genesisSub === "verify-node0") {
     const root = argValue(argv, "--root") || process.cwd();
     const lookbackYears = Number(argValue(argv, "--years") ?? "3");
@@ -110,6 +165,7 @@ export async function cmd_genesis(ctx) {
   console.error(
     "Usage: dema genesis composition blueprint [--json]\n" +
       "       dema genesis seal preview [--json]\n" +
+      "       dema genesis root establish --node-id <id> --ceremony-id <id> --consent <phrase> [--json]\n" +
       "       dema genesis verify-node0 --root <path> [--years 3] [--json]",
   );
   process.exitCode = 1;
