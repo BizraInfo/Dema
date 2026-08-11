@@ -401,6 +401,33 @@ async function saveSeasonStateInner({
   }
   if (hooks.afterFencePublish) await hooks.afterFencePublish({ state, receipt });
 
+  // PI-09. A fence naming R1 proves R1 was durable WHEN THE FENCE WAS CREATED —
+  // not that R1 is valid now. Adopting the fence's hash on faith would publish
+  // an authoritative HEAD naming an object that no longer verifies, replacing a
+  // good HEAD with a broken one and noticing only afterwards. So the winner is
+  // reloaded and fully reverified BEFORE HEAD; on failure the save refuses with
+  // zero publication — the candidate is never substituted, the fence never
+  // rewritten. Recovery of a lost winner is an operator act, not a retry's.
+  if (adoptedReceiptHash) {
+    const winRead = await readJson(join(receiptsDir(home, seasonId), objectName(adoptedReceiptHash)));
+    if (!winRead.found || winRead.error) {
+      return refuse("publication_recovery_required", {
+        previous_head_intact: true,
+        winning_receipt_hash: adoptedReceiptHash,
+        detail: winRead.error ?? "winning_receipt_missing",
+      });
+    }
+    const winner = winRead.value;
+    const winCheck = verifySeasonReceipt(winner, state);
+    if (!winCheck.ok || winner.receipt_hash !== adoptedReceiptHash) {
+      return refuse("publication_recovery_required", {
+        previous_head_intact: true,
+        winning_receipt_hash: adoptedReceiptHash,
+        detail: winCheck.ok ? "receipt_object_hash_mismatch" : winCheck.reason,
+      });
+    }
+  }
+
   // 9+10. atomically replace HEAD, then fsync the containing directory.
   // PI-05: never the candidate's receipt when the fence owns another.
   const publishedReceiptHash = adoptedReceiptHash ?? receipt.receipt_hash;

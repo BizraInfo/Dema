@@ -173,6 +173,61 @@ test("PI-08: adoption mutates no already-durable object", async () => {
   }
 });
 
+// ── PI-09 ──────────────────────────────────────────────────────────────────
+// A fence naming R1 proves R1 was durable WHEN THE FENCE WAS CREATED. It does
+// not prove R1 is valid NOW. Between the crash and this retry the winning
+// receipt can be lost or corrupted; repairing HEAD from the fence's hash on
+// faith would publish an authoritative HEAD naming an object that does not
+// verify. Required: reload and fully reverify the winner BEFORE HEAD, and on
+// failure refuse with publication_recovery_required — never publish, never
+// substitute the candidate.
+test("PI-09: retry with the winning receipt MISSING refuses before HEAD, never publishes", async () => {
+  const h = await home();
+  await saveThenDieAfterFence(h, "2026-08-11T15:00:00Z");
+  const fence = await readFence(h, 1);
+
+  // The winning receipt R1 disappears (crash-adjacent corruption / loss).
+  const { unlink } = await import("node:fs/promises");
+  await unlink(join(_internal.receiptsDir(h, SEASON), _internal.objectName(fence.receipt_hash)));
+
+  // Retry with a fresh clock: candidate R2, semantically equal state.
+  const retry = await saveSeasonState({ demaHome: h, state: input("2026-08-11T15:00:30Z") });
+  assert.equal(retry.ok, false, "a retry must not succeed against an unverifiable winner");
+  assert.equal(retry.reason, "publication_recovery_required",
+    `refusal must be publication_recovery_required, got: ${retry.reason}`);
+
+  // The load-bearing half: HEAD was NEVER published. A refusal after
+  // publication would leave a broken authoritative HEAD behind.
+  const head = await loadSeasonHead({ demaHome: h, seasonId: SEASON });
+  assert.equal(head.outcome, "EMPTY",
+    "HEAD must remain unset — publishing then failing verification is the defect this test exists to refuse");
+});
+
+test("PI-09: retry with the winning receipt CORRUPT refuses before HEAD, never substitutes R2", async () => {
+  const h = await home();
+  await saveThenDieAfterFence(h, "2026-08-11T16:00:00Z");
+  const fence = await readFence(h, 1);
+
+  // R1's bytes rot: still JSON, still at the content address, hash now false.
+  const { writeFile } = await import("node:fs/promises");
+  const p = join(_internal.receiptsDir(h, SEASON), _internal.objectName(fence.receipt_hash));
+  const rotten = JSON.parse(await readFile(p, "utf8"));
+  rotten.saved_at = "1970-01-01T00:00:00Z"; // body changed, receipt_hash not recomputed
+  await writeFile(p, JSON.stringify(rotten, null, 2) + "\n");
+
+  const retry = await saveSeasonState({ demaHome: h, state: input("2026-08-11T16:00:30Z") });
+  assert.equal(retry.ok, false);
+  assert.equal(retry.reason, "publication_recovery_required");
+
+  const head = await loadSeasonHead({ demaHome: h, seasonId: SEASON });
+  assert.equal(head.outcome, "EMPTY", "no HEAD may name a receipt that does not verify");
+
+  // And R2 was not silently substituted: the fence still owns R1.
+  const fenceAfter = await readFence(h, 1);
+  assert.equal(fenceAfter.receipt_hash, fence.receipt_hash,
+    "the fence's ownership must survive the refusal untouched");
+});
+
 // ── negative control ───────────────────────────────────────────────────────
 test("negative control: a genuinely different state still loses the race", async () => {
   const h = await home();
