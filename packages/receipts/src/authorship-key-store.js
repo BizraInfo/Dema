@@ -1228,6 +1228,13 @@ export async function migrateLegacyAuthorshipKey({
   // historical class-consent semantics are preserved for the generic API —
   // the Genesis ceremony profile never omits it.
   expectedFingerprint,
+  // GENESIS-ACT1-COMPOSED-READINESS-1A: when supplied, the target estate
+  // (canonical realpath/dev/ino of the governed home) is RE-OBSERVED under
+  // the identity lease, before the first durable write, and any divergence
+  // refuses — the estate law follows the fingerprint law. Enforce-when-
+  // present; the Genesis ceremony profile always supplies both.
+  expectedTargetEstate,
+  observeTargetEstate,
 } = {}) {
   if (consent !== KEY_MIGRATE_CONSENT_PHRASE) {
     return Object.freeze({
@@ -1318,6 +1325,47 @@ export async function migrateLegacyAuthorshipKey({
     }
     if (pointerCls.class !== "NO_ACTIVE_IDENTITY") {
       return migrateRecoveryRefusal(pointerCls);
+    }
+
+    // Estate law, under the lease: PRECONDITION_CHECKED !=
+    // PRECONDITION_COMMITTED. The outer gate's comparison happened before
+    // this transaction owned the transition; the directory at the governed
+    // path could have been swapped since. Re-observe HERE — the last safe
+    // point before the first durable write — and refuse on any divergence.
+    // A refusal after the nonce claim is the intended durable record of the
+    // attempt; the governed identity surface stays untouched.
+    if (expectedTargetEstate !== undefined || observeTargetEstate !== undefined) {
+      const estateStr = (v) => typeof v === "string" && v.length > 0;
+      const estateShape = (t) =>
+        !!t && typeof t === "object" && !Array.isArray(t) &&
+        estateStr(t.realpath) && estateStr(t.dev) && estateStr(t.ino);
+      const refuseEstate = (error) =>
+        Object.freeze({
+          schema: KEY_MIGRATE_SCHEMA,
+          migrated: false,
+          error,
+          authority_delta: 0,
+          boundary: buildBoundary(false),
+        });
+      if (!estateShape(expectedTargetEstate) || typeof observeTargetEstate !== "function") {
+        return refuseEstate("target_estate_unverifiable_at_lease");
+      }
+      let leaseTimeEstate;
+      try {
+        leaseTimeEstate = observeTargetEstate();
+      } catch {
+        return refuseEstate("target_estate_unverifiable_at_lease");
+      }
+      if (!estateShape(leaseTimeEstate)) {
+        return refuseEstate("target_estate_unverifiable_at_lease");
+      }
+      if (
+        leaseTimeEstate.realpath !== expectedTargetEstate.realpath ||
+        leaseTimeEstate.dev !== expectedTargetEstate.dev ||
+        leaseTimeEstate.ino !== expectedTargetEstate.ino
+      ) {
+        return refuseEstate("target_estate_mismatch_at_lease");
+      }
     }
 
     // Exact-target law: PREVIEWED == CONSENT_BOUND == EXECUTION_TIME_DERIVED.

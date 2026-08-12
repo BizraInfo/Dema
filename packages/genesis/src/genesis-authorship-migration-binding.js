@@ -404,6 +404,14 @@ export async function executeGenesisAuthorshipMigration({
     demaHome,
     now,
     expectedFingerprint: preview.expected_fingerprint,
+    // The estate law follows the fingerprint law: the sealed expectation and
+    // the SAME injected observer travel into the mutation authority, which
+    // re-observes UNDER the identity lease at the last safe point before the
+    // first durable write. PRECONDITION_CHECKED != PRECONDITION_COMMITTED —
+    // the gate comparison above does not survive to that boundary; the
+    // lease-time observation does.
+    expectedTargetEstate: preview.target_estate,
+    observeTargetEstate,
   });
   if (!r.migrated) {
     return refuse(r.error, {

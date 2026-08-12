@@ -40,6 +40,7 @@ import {
 } from "../../../../packages/genesis/src/genesis-authorship-migration-binding.js";
 import {
   readExecutingRepositoryBinding,
+  readExecutingWorktreePosture,
   REPO_ROOT as BINDING_REPO_ROOT,
 } from "../../../../packages/mission/src/executing-repository-binding.js";
 import { KEY_MIGRATE_CONSENT_PHRASE } from "../../../../packages/receipts/src/authorship-key-store.js";
@@ -155,7 +156,21 @@ export async function cmd_genesis(ctx) {
   // the sovereign consent envelope, and the executing repository/subject before
   // any write. The generic phrase-only writer is unreachable from here.
   if (genesisSub === "migrate-key") {
-    const demaHome = resolveDemaHome();
+    // CE-02: observe the RAW spelling first (a final-component symlink still
+    // refuses — that rule is not weakened), then the observed canonical
+    // realpath becomes THE governed home for everything downstream: preview,
+    // executor, nonce store, key-store paths and the post-transition loader
+    // all see one spelling, so parent aliases converge instead of committing
+    // a pointer one verifier later rejects. RAW_PATH_SPELLING !=
+    // ESTATE_IDENTITY.
+    const rawDemaHome = resolveDemaHome();
+    let entryEstate = null;
+    try {
+      entryEstate = captureDirectoryIdentity(rawDemaHome);
+    } catch {
+      entryEstate = null;
+    }
+    const demaHome = entryEstate ? entryEstate.realpath : rawDemaHome;
     const executingBinding = await readExecutingRepositoryBinding({
       runGit: realGitRunner,
     });
@@ -164,14 +179,29 @@ export async function cmd_genesis(ctx) {
     // the resolved governed home — never accepted from a caller flag.
     // DIRECTORY_IDENTITY != NODE_IDENTITY: node_id stays sovereign-declared.
     const observeTargetEstate = () => captureDirectoryIdentity(demaHome);
+    // CE-03: the ceremony refuses a dirty or unmeasurable executing worktree
+    // on both sovereign-facing surfaces — the sovereign is never asked to
+    // consent to, and authority can never spend from, loaded bytes that are
+    // not the committed bytes. COMMITTED_OBJECT_IDENTITY !=
+    // LOADED_WORKTREE_BYTE_IDENTITY.
+    if (genesisAction === "preview" || genesisAction === "execute") {
+      const posture = await readExecutingWorktreePosture({ runGit: realGitRunner });
+      if (!posture.ok) {
+        console.error("Refused: working_tree_unverifiable — the executing worktree's posture could not be measured");
+        process.exit(1);
+      }
+      if (!posture.working_tree_clean) {
+        console.error("Refused: working_tree_dirty — load-bearing sources differ from the committed tree");
+        for (const p of posture.dirty_load_bearing) console.error(`  dirty: ${p}`);
+        process.exit(1);
+      }
+    }
     if (genesisAction === "preview") {
-      let targetEstate;
-      try {
-        targetEstate = observeTargetEstate();
-      } catch {
+      if (!entryEstate) {
         console.error("Refused: target_estate_unverifiable — the governed home's directory identity could not be independently observed");
         process.exit(1);
       }
+      const targetEstate = entryEstate;
       const pv = await buildAuthorshipMigrationPreview({
         demaHome,
         nodeId: argValue(argv, "--node-id") ?? "",
