@@ -6,7 +6,6 @@ import {
 } from "../../../../packages/receipts/src/authorship-signature.js";
 import {
   initAuthorshipKey,
-  migrateLegacyAuthorshipKey,
   rotateAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
   KEY_MIGRATE_CONSENT_PHRASE,
@@ -73,24 +72,26 @@ export async function cmd_authorship(ctx) {
   }
 
   if (subCmdA === "key" && argv[2] === "migrate") {
-    const consent = argValue(argv, "--consent") ?? "";
-    const result = await migrateLegacyAuthorshipKey({ consent });
+    // GENESIS-AUTHORSHIP-MIGRATION-PRODUCTION-WIRING-1A: the phrase-only
+    // migration was a live downgrade path around the exact-target Genesis
+    // profile. It is closed here. Establishing an origin key runs through the
+    // governed ceremony — `dema genesis migrate-key` — which binds an exact
+    // sealed preview, a preview-bound sovereign consent envelope, and the
+    // executing repository/subject before any write. This surface never calls
+    // the generic writer again.
+    const result = Object.freeze({
+      migrated: false,
+      error: "genesis_governed_path_required",
+      governed_command: "dema genesis migrate-key",
+      why: "phrase-only migration cannot bind the exact fingerprint the sovereign authorized",
+    });
     if (wantJsonA) {
       console.log(JSON.stringify(result, null, 2));
-    } else if (result.migrated) {
-      console.log("Authorship Key Migrated to Generation Store");
-      console.log("=".repeat(40));
-      console.log(`  Fingerprint: ${result.fingerprint}`);
-      console.log(`  Generation:  ${result.generation_path}`);
-      console.log(`  Legacy files: ${result.legacy_policy}`);
-    } else if (result.error === "consent_required") {
-      console.error(
-        `Consent required. Use: --consent "${KEY_MIGRATE_CONSENT_PHRASE}"`,
-      );
     } else {
-      console.error(`Migration refused: ${result.error}`);
+      console.error("Migration refused: genesis_governed_path_required");
+      console.error('Use the governed ceremony: dema genesis migrate-key');
     }
-    if (!result.migrated) process.exitCode = 1;
+    process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
   }
 

@@ -246,7 +246,7 @@ export function isSpkiPublicKeyPem(value) {
 // path. Require BOTH keys to be Ed25519 before any authority write. Returns
 // { ok, fingerprint } | { ok:false, error:"unsupported_key_algorithm" } |
 // { ok:false } (mismatched pair).
-function pairConsistency(privateKeyPem, publicKeyPem) {
+export function pairConsistency(privateKeyPem, publicKeyPem) {
   try {
     if (!isSpkiPublicKeyPem(publicKeyPem)) {
       return { ok: false, error: "public_key_invalid" };

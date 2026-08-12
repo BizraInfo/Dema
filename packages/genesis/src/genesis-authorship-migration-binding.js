@@ -37,6 +37,7 @@ import { createHash } from "node:crypto";
 import {
   keyPaths,
   migrateLegacyAuthorshipKey,
+  pairConsistency,
   KEY_MIGRATE_CONSENT_PHRASE,
 } from "../../receipts/src/authorship-key-store.js";
 import { fingerprintPublicKeyPem } from "../../receipts/src/authorship-signature.js";
@@ -46,7 +47,20 @@ export const AUTHORSHIP_MIGRATION_PREVIEW_SCHEMA =
   "bizra.dema.genesis_authorship_migration_preview.v0.1";
 export const AUTHORSHIP_MIGRATION_RESULT_SCHEMA =
   "bizra.dema.genesis_authorship_migration_result.v0.1";
+export const AUTHORSHIP_MIGRATION_CONSENT_SCHEMA =
+  "bizra.dema.genesis_authorship_migration_consent.v0.1";
 export const AUTHORSHIP_MIGRATION_OPERATION = "MIGRATE_AUTHORSHIP_KEY";
+
+/**
+ * The one repository-identity derivation, used by BOTH the sealing side and
+ * the executing side, so the comparison is exact-string over values derived
+ * the same way — never a caller-composed display string.
+ * CALLER_SUPPLIED_REPOSITORY != EXECUTING_REPOSITORY_IDENTITY.
+ */
+export function repositoryIdentityFromCommit(commit) {
+  if (typeof commit !== "string" || !/^[0-9a-f]{40}$/.test(commit)) return null;
+  return `git:${commit}`;
+}
 
 // Domain-separated so this digest can never collide with any other sha256 in
 // the system. The hash covers the identity-bearing fields in FIXED order —
@@ -120,11 +134,32 @@ export async function buildAuthorshipMigrationPreview({
       reason: privatePresent ? "legacy_private_key_unreadable" : "no_legacy_key",
     });
   }
+  // Preview quality: the sovereign must never be shown a fingerprint whose
+  // pair cannot actually migrate. Coherence (Ed25519, private matches public)
+  // is proven HERE, read-only — not discovered at execution time.
+  let privatePem;
+  try {
+    privatePem = await readFile(paths.privateKey, "utf8");
+  } catch {
+    return Object.freeze({ ok: false, reason: "legacy_private_key_unreadable" });
+  }
+  const pair = pairConsistency(privatePem, publicPem);
+  if (!pair.ok) {
+    return Object.freeze({
+      ok: false,
+      reason: pair.error === "unsupported_key_algorithm"
+        ? "unsupported_key_algorithm"
+        : "legacy_pair_incoherent",
+    });
+  }
   let fingerprint;
   try {
     fingerprint = fingerprintPublicKeyPem(publicPem);
   } catch {
     return Object.freeze({ ok: false, reason: "legacy_key_unreadable" });
+  }
+  if (fingerprint !== pair.fingerprint) {
+    return Object.freeze({ ok: false, reason: "fingerprint_derivation_disagreement" });
   }
 
   const fields = {
@@ -152,24 +187,74 @@ export async function buildAuthorshipMigrationPreview({
 }
 
 /**
- * The Genesis migration profile. Consent-first, then the sealed preview is
- * verified (presence of the bound target, hash integrity, freshness), the
- * nonce is claimed through the one consent-nonce authority, and only then is
- * the exact-target migration delegated. Refusals mutate nothing except the
- * nonce ledger once claiming has begun — a consumed nonce is the intended
- * durable record of an attempt.
+ * Build the sovereign consent envelope: the human's authorization artifact,
+ * bound to the EXACT sealed preview by hash and nonce. CONSENT_TO_PHRASE !=
+ * CONSENT_TO_PREVIEW — the phrase alone authorizes nothing on this path.
+ */
+export function buildAuthorshipMigrationConsentEnvelope({ preview, consent, now } = {}) {
+  if (!preview || typeof preview !== "object" || !isStr(preview.preview_hash)) {
+    return Object.freeze({ ok: false, reason: "preview_required" });
+  }
+  if (!isStr(preview.nonce) || !isStr(preview.expires_at)) {
+    return Object.freeze({ ok: false, reason: "preview_malformed" });
+  }
+  if (!isStr(consent)) return Object.freeze({ ok: false, reason: "consent_required" });
+  if (!isStr(now)) return Object.freeze({ ok: false, reason: "issued_at_required" });
+  return Object.freeze({
+    ok: true,
+    envelope: Object.freeze({
+      schema: AUTHORSHIP_MIGRATION_CONSENT_SCHEMA,
+      operation: AUTHORSHIP_MIGRATION_OPERATION,
+      consent,
+      preview_hash: preview.preview_hash,
+      nonce: preview.nonce,
+      issued_at: now,
+      expires_at: preview.expires_at,
+      authority_delta: 0,
+    }),
+  });
+}
+
+/**
+ * The Genesis migration profile — the ONLY production path to a legacy-key
+ * migration. Envelope-first, then the sealed preview is verified, then the
+ * human's consent binding is verified against the RE-DERIVED preview hash
+ * (never against a field the caller could edit), then repository and subject
+ * bindings, and only then is the nonce claimed and the exact-target migration
+ * delegated. Refusals mutate nothing except the nonce ledger once claiming
+ * has begun — a consumed nonce is the intended durable record of an attempt.
  */
 export async function executeGenesisAuthorshipMigration({
   preview,
-  consent,
+  consentEnvelope,
   demaHome,
   now,
+  executingRepository,
+  subjectNodeId,
   // Accepted and deliberately IGNORED in favor of the sealed preview's
   // target — see MC-04. Present in the signature so a confused caller's
   // value cannot silently reach the binding through any merge order.
   expectedFingerprint: _callerSupplied,
+  // Legacy positional phrase — no longer sufficient; the envelope carries it.
+  consent: _phraseOnly,
 } = {}) {
-  if (consent !== KEY_MIGRATE_CONSENT_PHRASE) {
+  const env = consentEnvelope;
+  if (!env || typeof env !== "object" || Array.isArray(env)) {
+    return refuse("consent_envelope_required");
+  }
+  if (env.schema !== AUTHORSHIP_MIGRATION_CONSENT_SCHEMA) {
+    return refuse("consent_envelope_malformed:schema");
+  }
+  if (env.operation !== AUTHORSHIP_MIGRATION_OPERATION) {
+    return refuse("consent_envelope_wrong_operation");
+  }
+  if (env.authority_delta !== 0) {
+    return refuse("consent_envelope_authority_nonzero");
+  }
+  for (const k of ["preview_hash", "nonce"]) {
+    if (!isStr(env[k])) return refuse(`consent_envelope_malformed:${k}`);
+  }
+  if (env.consent !== KEY_MIGRATE_CONSENT_PHRASE) {
     return refuse("consent_required", { required_phrase: KEY_MIGRATE_CONSENT_PHRASE });
   }
   if (!preview || typeof preview !== "object" || Array.isArray(preview)) {
@@ -188,8 +273,19 @@ export async function executeGenesisAuthorshipMigration({
   for (const k of ["node_id", "nonce", "expires_at", "repository", "preview_hash"]) {
     if (!isStr(preview[k])) return refuse(`preview_malformed:${k}`);
   }
-  if (previewHash(preview) !== preview.preview_hash) {
+  const derivedHash = previewHash(preview);
+  if (derivedHash !== preview.preview_hash) {
     return refuse("preview_hash_mismatch");
+  }
+  // THE BINDING LAW, verified before the nonce claim and any mutation:
+  //   HUMAN_CONSENT.preview_hash == SEALED_PREVIEW.preview_hash (re-derived)
+  // The comparison side is the RE-DERIVED hash — evidence the caller cannot
+  // edit into agreement — never the preview's own carried field.
+  if (env.preview_hash !== derivedHash) {
+    return refuse("consent_binding_mismatch");
+  }
+  if (env.nonce !== preview.nonce) {
+    return refuse("consent_nonce_binding_mismatch");
   }
   const expiresMs = Date.parse(preview.expires_at);
   const nowMs = Date.parse(now);
@@ -199,6 +295,29 @@ export async function executeGenesisAuthorshipMigration({
   if (nowMs >= expiresMs) {
     return refuse("preview_expired");
   }
+  if (isStr(env.expires_at) && nowMs >= Date.parse(env.expires_at)) {
+    return refuse("consent_envelope_expired");
+  }
+  if (isStr(env.issued_at) && Date.parse(env.issued_at) > nowMs + 300000) {
+    return refuse("consent_envelope_future");
+  }
+  // Repository binding: the executing identity is derived by the boundary
+  // through repositoryIdentityFromCommit, never composed from caller args.
+  // Unknown is refused, not assumed — REFUSE/UNKNOWN, never silent accept.
+  if (!isStr(executingRepository)) {
+    return refuse("repository_binding_unverifiable");
+  }
+  if (executingRepository !== preview.repository) {
+    return refuse("repository_binding_mismatch");
+  }
+  // Subject binding: the human re-asserts the subject at execution; the
+  // sealed preview's node_id must be the same one.
+  if (!isStr(subjectNodeId)) {
+    return refuse("subject_binding_unverifiable");
+  }
+  if (subjectNodeId !== preview.node_id) {
+    return refuse("subject_binding_mismatch");
+  }
 
   const claim = await claimConsentNonce({ nonce: preview.nonce, demaHome });
   if (!claim.claimed) {
@@ -206,7 +325,7 @@ export async function executeGenesisAuthorshipMigration({
   }
 
   const r = await migrateLegacyAuthorshipKey({
-    consent,
+    consent: env.consent,
     demaHome,
     now,
     expectedFingerprint: preview.expected_fingerprint,

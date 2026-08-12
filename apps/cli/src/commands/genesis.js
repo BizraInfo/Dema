@@ -30,6 +30,13 @@ import {
   GENESIS_ROOT_REQUIRES_FRESH_NODE,
 } from "../../../../packages/genesis/src/node0-genesis-root-ceremony.js";
 import { resolveWitnessPath } from "../../../../packages/genesis/src/node0-genesis-witness.js";
+import {
+  buildAuthorshipMigrationPreview,
+  buildAuthorshipMigrationConsentEnvelope,
+  executeGenesisAuthorshipMigration,
+  repositoryIdentityFromCommit,
+} from "../../../../packages/genesis/src/genesis-authorship-migration-binding.js";
+import { execFileSync } from "node:child_process";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -38,6 +45,21 @@ function argValue(argv, name) {
 
 function resolveDemaHome() {
   return process.env.DEMA_HOME || join(homedir(), ".dema");
+}
+
+// The executing repository identity is DERIVED here at the boundary from the
+// real git HEAD, through the one shared derivation both sides use — never a
+// caller-supplied string. Unresolvable → null, which the executor refuses as
+// `repository_binding_unverifiable` rather than silently accepting anything.
+function resolveExecutingRepositoryIdentity() {
+  try {
+    const commit = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: process.cwd(), encoding: "utf8",
+    }).trim();
+    return repositoryIdentityFromCommit(commit);
+  } catch {
+    return null;
+  }
 }
 
 // Mirror scripts/node0-genesis-key-ceremony-preflight.mjs — fail closed: missing
@@ -91,6 +113,59 @@ export async function cmd_genesis(ctx) {
   // a human gives this Node an origin. Deliberately a THIN adapter: it parses
   // flags, delegates the entire decision to the ceremony kernel, and prints.
   // No provisioning logic lives here, and no second way to write a root exists.
+  // GENESIS-AUTHORSHIP-MIGRATION-PRODUCTION-WIRING-1A. The ONE production path
+  // to migrate a legacy authorship key into the governed generation store.
+  // `preview` is read-only and emits the exact sealed preview the sovereign
+  // authorizes; `execute` runs the governed executor, which binds the preview,
+  // the sovereign consent envelope, and the executing repository/subject before
+  // any write. The generic phrase-only writer is unreachable from here.
+  if (genesisSub === "migrate-key") {
+    const demaHome = resolveDemaHome();
+    const executingRepository = resolveExecutingRepositoryIdentity();
+    if (genesisAction === "preview") {
+      const pv = await buildAuthorshipMigrationPreview({
+        demaHome,
+        nodeId: argValue(argv, "--node-id") ?? "",
+        nonce: argValue(argv, "--nonce") ?? "",
+        expiresAt: argValue(argv, "--expires-at") ?? "",
+        repository: executingRepository ?? "",
+        now: new Date().toISOString(),
+      });
+      console.log(JSON.stringify(pv, null, 2));
+      process.exit(pv.ok ? 0 : 1);
+    }
+    if (genesisAction === "execute") {
+      const previewPath = argValue(argv, "--preview");
+      const envelopePath = argValue(argv, "--consent-envelope");
+      if (!previewPath || !envelopePath) {
+        console.error("Refused: --preview and --consent-envelope are both required");
+        console.error("The sovereign authorizes an exact sealed preview; the phrase alone cannot.");
+        process.exit(1);
+      }
+      let preview;
+      let consentEnvelope;
+      try {
+        preview = JSON.parse(readFileSync(previewPath, "utf8"));
+        consentEnvelope = JSON.parse(readFileSync(envelopePath, "utf8"));
+      } catch (e) {
+        console.error(`Refused: unreadable preview/envelope — ${e?.code ?? e}`);
+        process.exit(1);
+      }
+      const result = await executeGenesisAuthorshipMigration({
+        preview,
+        consentEnvelope,
+        demaHome,
+        now: new Date().toISOString(),
+        executingRepository,
+        subjectNodeId: preview?.node_id,
+      });
+      console.log(JSON.stringify(result, null, 2));
+      process.exit(result.migrated ? 0 : 1);
+    }
+    console.error("Usage: dema genesis migrate-key preview | execute");
+    process.exit(1);
+  }
+
   if (genesisSub === "root" && genesisAction === "establish") {
     const result = await establishNodeGenesisRoot({
       demaHome: resolveDemaHome(),

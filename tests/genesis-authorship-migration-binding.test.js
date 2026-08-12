@@ -9,6 +9,7 @@ import { join, relative } from "node:path";
 
 import {
   buildAuthorshipMigrationPreview,
+  buildAuthorshipMigrationConsentEnvelope,
   executeGenesisAuthorshipMigration,
   AUTHORSHIP_MIGRATION_PREVIEW_SCHEMA,
 } from "../packages/genesis/src/genesis-authorship-migration-binding.js";
@@ -97,6 +98,26 @@ function preview(h, extra = {}) {
   });
 }
 
+// GENESIS-AUTHORSHIP-MIGRATION-PRODUCTION-WIRING-1A tightened the executor to
+// require a preview-bound sovereign consent envelope plus executing repository
+// and subject bindings. These exact-target invariants are unchanged; this
+// helper carries the human's consent binding so each MC case exercises the
+// same target law through the now-mandatory envelope. A forged preview is
+// consented-to as forged — the executor still catches it.
+function execTarget(previewObj, h, over = {}) {
+  const env = buildAuthorshipMigrationConsentEnvelope({
+    preview: previewObj, consent: KEY_MIGRATE_CONSENT_PHRASE, now: AT,
+  });
+  return executeGenesisAuthorshipMigration({
+    preview: previewObj,
+    consentEnvelope: env.ok ? env.envelope : undefined,
+    demaHome: h, now: LATER,
+    executingRepository: REPO,
+    subjectNodeId: previewObj?.node_id,
+    ...over,
+  });
+}
+
 // ── MC-01 ── exact target: preview A, consent binds A, execution re-derives A
 test("MC-01: exact-target migration proceeds when all three fingerprints agree", async () => {
   const h = home();
@@ -108,9 +129,7 @@ test("MC-01: exact-target migration proceeds when all three fingerprints agree",
     assert.equal(pv.preview.expected_fingerprint, A.public_key_fingerprint);
     assert.equal(pv.preview.schema, AUTHORSHIP_MIGRATION_PREVIEW_SCHEMA);
 
-    const r = await executeGenesisAuthorshipMigration({
-      preview: pv.preview, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r = await execTarget(pv.preview, h);
     assert.equal(r.migrated, true, r.error ?? "");
     assert.equal(r.fingerprint, A.public_key_fingerprint);
   } finally { cleanup(h); }
@@ -133,9 +152,7 @@ test("MC-02: a different coherent pair at execution time refuses with zero mutat
     writeLegacyPair(h, B);
 
     const before = snapshotGoverned(h, { excludeConsent: true });
-    const r = await executeGenesisAuthorshipMigration({
-      preview: pv.preview, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r = await execTarget(pv.preview, h);
     assert.equal(r.migrated, false);
     assert.equal(r.error, "expected_fingerprint_mismatch");
     // Zero durable identity mutation: no generation, no pointer, no promotion.
@@ -157,9 +174,7 @@ test("MC-03: malformed execution-time pair refuses before mutation", async () =>
     writeFileSync(p.publicKey, "-----BEGIN PUBLIC KEY-----\ngarbage\n-----END PUBLIC KEY-----\n");
 
     const before = snapshotGoverned(h, { excludeConsent: true });
-    const r = await executeGenesisAuthorshipMigration({
-      preview: pv.preview, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r = await execTarget(pv.preview, h);
     assert.equal(r.migrated, false);
     assert.equal(snapshotGoverned(h, { excludeConsent: true }), before);
   } finally { cleanup(h); }
@@ -175,10 +190,7 @@ test("MC-04: caller-supplied fingerprint cannot override the sealed preview", as
     const pv = await preview(h);
     assert.equal(pv.preview.expected_fingerprint, B.public_key_fingerprint);
 
-    const r = await executeGenesisAuthorshipMigration({
-      preview: pv.preview, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-      expectedFingerprint: A.public_key_fingerprint, // spoof — must be ignored
-    });
+    const r = await execTarget(pv.preview, h, { expectedFingerprint: A.public_key_fingerprint });
     assert.equal(r.migrated, true, r.error ?? "");
     // A naive merge order ({...preview, ...callerArgs}) would have bound A and
     // refused against disk B. The sealed preview's target must have won:
@@ -200,9 +212,7 @@ test("MC-05: a preview without an expected fingerprint refuses — no downgrade"
     delete forged.expected_fingerprint;
 
     const before = snapshotGoverned(h);
-    const r = await executeGenesisAuthorshipMigration({
-      preview: forged, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r = await execTarget(forged, h);
     assert.equal(r.migrated, false);
     assert.ok(
       ["binding_target_missing", "preview_hash_mismatch"].includes(r.error),
@@ -222,9 +232,7 @@ test("MC-06: expiry and nonce replay both refuse", async () => {
     // Expired preview refuses before anything durable happens.
     const stale = await preview(h, { expiresAt: "2026-08-11T00:00:00.000Z" });
     const before = snapshotGoverned(h);
-    const r1 = await executeGenesisAuthorshipMigration({
-      preview: stale.preview, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r1 = await execTarget(stale.preview, h);
     assert.equal(r1.migrated, false);
     assert.equal(r1.error, "preview_expired");
     assert.equal(snapshotGoverned(h), before);
@@ -236,16 +244,12 @@ test("MC-06: expiry and nonce replay both refuse", async () => {
     const B = generateEd25519Keypair();
     const pv1 = await preview(h, { nonce: N });
     writeLegacyPair(h, B); // force MC-02-style refusal, consuming N
-    const r2 = await executeGenesisAuthorshipMigration({
-      preview: pv1.preview, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r2 = await execTarget(pv1.preview, h);
     assert.equal(r2.migrated, false);
     assert.equal(r2.error, "expected_fingerprint_mismatch");
 
     const pv2 = await preview(h, { nonce: N }); // same nonce, now binds B
-    const r3 = await executeGenesisAuthorshipMigration({
-      preview: pv2.preview, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r3 = await execTarget(pv2.preview, h);
     assert.equal(r3.migrated, false);
     assert.ok(String(r3.error).includes("nonce"), `got ${r3.error}`);
   } finally { cleanup(h); }
@@ -258,9 +262,7 @@ test("MC-07: after success the canonical active-key loader accepts fingerprint A
     const A = generateEd25519Keypair();
     writeLegacyPair(h, A);
     const pv = await preview(h);
-    const r = await executeGenesisAuthorshipMigration({
-      preview: pv.preview, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r = await execTarget(pv.preview, h);
     assert.equal(r.migrated, true, r.error ?? "");
     const loaded = await loadActiveKeyPair(h);
     assert.equal(loaded.ok, true, loaded.error ?? "");
@@ -278,9 +280,7 @@ test("MC-09: editing the bound fingerprint after sealing refuses on the hash", a
     const pv = await preview(h);
     const forged = { ...pv.preview, expected_fingerprint: B.public_key_fingerprint };
     // hash NOT recomputed — the seal must catch the edit
-    const r = await executeGenesisAuthorshipMigration({
-      preview: forged, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r = await execTarget(forged, h);
     assert.equal(r.migrated, false);
     assert.equal(r.error, "preview_hash_mismatch");
   } finally { cleanup(h); }
@@ -293,9 +293,7 @@ test("MC-10: success reports authority_delta 0 with an explicit state delta", as
     const A = generateEd25519Keypair();
     writeLegacyPair(h, A);
     const pv = await preview(h);
-    const r = await executeGenesisAuthorshipMigration({
-      preview: pv.preview, consent: KEY_MIGRATE_CONSENT_PHRASE, demaHome: h, now: LATER,
-    });
+    const r = await execTarget(pv.preview, h);
     assert.equal(r.migrated, true, r.error ?? "");
     assert.equal(r.authority_delta, 0);
     assert.equal(r.state_delta.generation_written, true);
