@@ -36,7 +36,6 @@ import {
   executeGenesisAuthorshipMigration,
   repositoryIdentityFromCommit,
 } from "../../../../packages/genesis/src/genesis-authorship-migration-binding.js";
-import { execFileSync } from "node:child_process";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -47,18 +46,15 @@ function resolveDemaHome() {
   return process.env.DEMA_HOME || join(homedir(), ".dema");
 }
 
-// The executing repository identity is DERIVED here at the boundary from the
-// real git HEAD, through the one shared derivation both sides use — never a
-// caller-supplied string. Unresolvable → null, which the executor refuses as
-// `repository_binding_unverifiable` rather than silently accepting anything.
-function resolveExecutingRepositoryIdentity() {
+// Read a JSON artifact named by a CLI flag, in the estate's established
+// {parsed}|{error} shape (mirrors steward.js). A missing flag or unreadable
+// file is an error the caller turns into a refusal — never a throw.
+function readCliJson(path) {
+  if (!path) return { error: "path_flag_missing" };
   try {
-    const commit = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: process.cwd(), encoding: "utf8",
-    }).trim();
-    return repositoryIdentityFromCommit(commit);
+    return { parsed: JSON.parse(readFileSync(path, "utf8")) };
   } catch {
-    return null;
+    return { error: "file_unreadable_or_not_json" };
   }
 }
 
@@ -121,7 +117,13 @@ export async function cmd_genesis(ctx) {
   // any write. The generic phrase-only writer is unreachable from here.
   if (genesisSub === "migrate-key") {
     const demaHome = resolveDemaHome();
-    const executingRepository = resolveExecutingRepositoryIdentity();
+    // Repository identity via the estate's OWN pattern (season's --repo-commit),
+    // derived through the one shared repositoryIdentityFromCommit — not a
+    // bespoke git subprocess. The operator states the commit; the executor
+    // verifies it against the sealed preview, so a caller string is never
+    // silently accepted.
+    const executingRepository =
+      repositoryIdentityFromCommit(argValue(argv, "--repo-commit") ?? "");
     if (genesisAction === "preview") {
       const pv = await buildAuthorshipMigrationPreview({
         demaHome,
@@ -135,34 +137,25 @@ export async function cmd_genesis(ctx) {
       process.exit(pv.ok ? 0 : 1);
     }
     if (genesisAction === "execute") {
-      const previewPath = argValue(argv, "--preview");
-      const envelopePath = argValue(argv, "--consent-envelope");
-      if (!previewPath || !envelopePath) {
-        console.error("Refused: --preview and --consent-envelope are both required");
+      const preview = readCliJson(argValue(argv, "--preview"));
+      const consentEnvelope = readCliJson(argValue(argv, "--consent-envelope"));
+      if (preview.error || consentEnvelope.error) {
+        console.error("Refused: --preview and --consent-envelope must each name a readable JSON file");
         console.error("The sovereign authorizes an exact sealed preview; the phrase alone cannot.");
         process.exit(1);
       }
-      let preview;
-      let consentEnvelope;
-      try {
-        preview = JSON.parse(readFileSync(previewPath, "utf8"));
-        consentEnvelope = JSON.parse(readFileSync(envelopePath, "utf8"));
-      } catch (e) {
-        console.error(`Refused: unreadable preview/envelope — ${e?.code ?? e}`);
-        process.exit(1);
-      }
       const result = await executeGenesisAuthorshipMigration({
-        preview,
-        consentEnvelope,
+        preview: preview.parsed,
+        consentEnvelope: consentEnvelope.parsed,
         demaHome,
         now: new Date().toISOString(),
         executingRepository,
-        subjectNodeId: preview?.node_id,
+        subjectNodeId: preview.parsed?.node_id,
       });
       console.log(JSON.stringify(result, null, 2));
       process.exit(result.migrated ? 0 : 1);
     }
-    console.error("Usage: dema genesis migrate-key preview | execute");
+    console.error("Usage: dema genesis migrate-key preview --repo-commit <sha40> | execute --preview <f> --consent-envelope <f> --repo-commit <sha40>");
     process.exit(1);
   }
 

@@ -425,7 +425,13 @@ describe("CLI: dema authorship key migrate", () => {
     }
   }
 
-  it("refuses without the exact consent phrase (exit 1) and migrates with it (exit 0)", async () => {
+  // CHARACTERIZATION FLIPPED by GENESIS-AUTHORSHIP-MIGRATION-PRODUCTION-WIRING-1A.
+  // This command was the measured downgrade path: phrase-only migration around
+  // the exact-target Genesis profile. It now refuses on BOTH the missing-phrase
+  // and the phrase-present paths, and names the governed ceremony. The success
+  // path is proven in tests/genesis-authorship-migration-production-wiring.test.js
+  // through the sealed preview + consent envelope, not the bare phrase.
+  it("refuses phrase-only migration (exit 1) and routes to the governed ceremony", async () => {
     const home = freshHome();
     const legacy = generateEd25519Keypair();
     const lp = keyPaths(home);
@@ -436,16 +442,18 @@ describe("CLI: dema authorship key migrate", () => {
     const refused = runCli(["authorship", "key", "migrate", "--json"], home);
     assert.equal(refused.exitCode, 1);
 
-    const done = runCli(
+    const phraseOnly = runCli(
       ["authorship", "key", "migrate", "--consent", KEY_MIGRATE_CONSENT_PHRASE, "--json"],
       home,
     );
-    assert.equal(done.exitCode, 0, done.stdout);
-    const doc = JSON.parse(done.stdout);
-    assert.equal(doc.migrated, true);
-    assert.equal(doc.fingerprint, legacy.public_key_fingerprint);
+    assert.equal(phraseOnly.exitCode, 1, phraseOnly.stdout);
+    const doc = JSON.parse(phraseOnly.stdout);
+    assert.equal(doc.migrated, false);
+    assert.equal(doc.error, "genesis_governed_path_required");
+    assert.equal(doc.governed_command, "dema genesis migrate-key");
+    // And nothing was migrated behind the refusal.
     const pair = await loadActiveKeyPair(home);
-    assert.equal(pair.ok, true);
+    assert.equal(pair.ok, false);
   });
 });
 
