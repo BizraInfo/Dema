@@ -1221,6 +1221,13 @@ export async function migrateLegacyAuthorshipKey({
   consent,
   demaHome,
   now = new Date().toISOString(),
+  // GENESIS-AUTHORSHIP-MIGRATION-CONSENT-BINDING-1A: when supplied, the
+  // migration is bound to this EXACT public-key fingerprint. The pair is
+  // re-read and re-derived UNDER the identity lease, before the first durable
+  // write, and any divergence refuses with zero mutation. Omitted, the
+  // historical class-consent semantics are preserved for the generic API —
+  // the Genesis ceremony profile never omits it.
+  expectedFingerprint,
 } = {}) {
   if (consent !== KEY_MIGRATE_CONSENT_PHRASE) {
     return Object.freeze({
@@ -1313,13 +1320,59 @@ export async function migrateLegacyAuthorshipKey({
       return migrateRecoveryRefusal(pointerCls);
     }
 
+    // Exact-target law: PREVIEWED == CONSENT_BOUND == EXECUTION_TIME_DERIVED.
+    // The comparison's execution side is re-read from disk HERE, under the
+    // lease — evidence the caller does not control — so a pair swapped in
+    // after preview/consent is caught, and the bytes that get written are the
+    // bytes that were just verified, never the pre-lease read.
+    let effPrivate = privateKeyPem;
+    let effPublic = publicKeyPem;
+    let effPair = pair;
+    if (typeof expectedFingerprint === "string" && expectedFingerprint.length > 0) {
+      const freshPrivate = await readKeyFile(paths, paths.privateKey);
+      const freshPublic = await readKeyFile(paths, paths.publicKey);
+      if (!freshPrivate || !freshPublic) {
+        return Object.freeze({
+          schema: KEY_MIGRATE_SCHEMA,
+          migrated: false,
+          error: "no_legacy_key",
+          boundary: buildBoundary(false),
+        });
+      }
+      const freshPair = pairConsistency(freshPrivate, freshPublic);
+      if (!freshPair.ok) {
+        return Object.freeze({
+          schema: KEY_MIGRATE_SCHEMA,
+          migrated: false,
+          error: freshPair.error === "unsupported_key_algorithm"
+            ? "unsupported_key_algorithm"
+            : "pair_mismatch",
+          boundary: buildBoundary(false),
+        });
+      }
+      if (freshPair.fingerprint !== expectedFingerprint) {
+        return Object.freeze({
+          schema: KEY_MIGRATE_SCHEMA,
+          migrated: false,
+          error: "expected_fingerprint_mismatch",
+          expected_fingerprint: expectedFingerprint,
+          derived_fingerprint: freshPair.fingerprint,
+          authority_delta: 0,
+          boundary: buildBoundary(false),
+        });
+      }
+      effPrivate = freshPrivate;
+      effPublic = freshPublic;
+      effPair = freshPair;
+    }
+
     await mkdir(ap.generationsDir, { recursive: true });
     const expected = {
-      public_key_fingerprint: pair.fingerprint,
-      private_key_pem: privateKeyPem,
-      public_key_pem: publicKeyPem,
+      public_key_fingerprint: effPair.fingerprint,
+      private_key_pem: effPrivate,
+      public_key_pem: effPublic,
     };
-    const cls = await classifyGeneration(ap, pair.fingerprint, expected);
+    const cls = await classifyGeneration(ap, effPair.fingerprint, expected);
     // Finding A (1C): only "absent" / "complete_verified" / "incomplete_
     // repairable" may proceed. "conflict" / "recovery_required" halt with the
     // evidence preserved — never a success over material we cannot verify.
@@ -1334,9 +1387,9 @@ export async function migrateLegacyAuthorshipKey({
     }
 
     const keys = {
-      public_key_fingerprint: pair.fingerprint,
-      private_key_pem: privateKeyPem,
-      public_key_pem: publicKeyPem,
+      public_key_fingerprint: effPair.fingerprint,
+      private_key_pem: effPrivate,
+      public_key_pem: effPublic,
     };
     // write-if-absent fills only missing files; a present-but-malformed
     // metadata is explicitly repaired (bad bytes preserved as recovery).
@@ -1351,7 +1404,7 @@ export async function migrateLegacyAuthorshipKey({
       });
     }
     await activateGeneration(ap, {
-      fingerprint: pair.fingerprint,
+      fingerprint: effPair.fingerprint,
       now,
       previous: null,
     });
@@ -1362,7 +1415,7 @@ export async function migrateLegacyAuthorshipKey({
     const verified = await loadActiveKeyPair(demaHome);
     if (
       !verified.ok ||
-      verified.fingerprint !== pair.fingerprint ||
+      verified.fingerprint !== effPair.fingerprint ||
       verified.generation_path !== generationPath
     ) {
       // 1E: the committed pointer and generation are PRESERVED as evidence —
@@ -1386,7 +1439,7 @@ export async function migrateLegacyAuthorshipKey({
     return Object.freeze({
       schema: KEY_MIGRATE_SCHEMA,
       migrated: true,
-      fingerprint: pair.fingerprint,
+      fingerprint: effPair.fingerprint,
       generation_path: generationPath,
       resumed: cls.state !== "absent",
       legacy_policy: "preserved_in_place",
