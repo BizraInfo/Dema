@@ -1,5 +1,5 @@
 // `dema genesis` command handler — extracted from index.js (④).
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { execFile as execFileCb } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -42,6 +42,7 @@ import {
   readExecutingRepositoryBinding,
   REPO_ROOT as BINDING_REPO_ROOT,
 } from "../../../../packages/mission/src/executing-repository-binding.js";
+import { KEY_MIGRATE_CONSENT_PHRASE } from "../../../../packages/receipts/src/authorship-key-store.js";
 
 const execFileAsyncGit = promisify(execFileCb);
 const realGitRunner = async (args, { cwd } = {}) => {
@@ -74,6 +75,23 @@ function readCliJson(path) {
     return { parsed: JSON.parse(readFileSync(path, "utf8")) };
   } catch {
     return { error: "file_unreadable_or_not_json" };
+  }
+}
+
+// Write a canonical authority artifact exactly once. The estate's exclusive-
+// create idiom (`wx` — root marker, nonce claim): an existing target refuses,
+// so a stale ceremony artifact can never be silently replaced. This is an
+// operator_requested_artifact_write at a caller-named path — never a
+// DEMA_HOME authority mutation.
+function writeArtifactExclusive(path, artifact) {
+  try {
+    writeFileSync(path, JSON.stringify(artifact, null, 2) + "\n", { flag: "wx" });
+    return { written: true };
+  } catch (err) {
+    return {
+      written: false,
+      reason: err?.code === "EEXIST" ? "artifact_exists" : "artifact_write_failed",
+    };
   }
 }
 
@@ -149,8 +167,63 @@ export async function cmd_genesis(ctx) {
         repository: executingRepository ?? "",
         now: new Date().toISOString(),
       });
+      const previewOutPath = argValue(argv, "--out");
+      if (pv.ok && previewOutPath) {
+        // stdout stays the presentation wrapper; the artifact is the inner
+        // sealed preview — exactly the schema `execute` consumes.
+        // PRESENTATION != AUTHORITY_ARTIFACT.
+        const w = writeArtifactExclusive(previewOutPath, pv.preview);
+        if (!w.written) {
+          console.error(`Refused: ${w.reason}: ${previewOutPath}`);
+          console.error("The canonical preview artifact is create-once; name a fresh path.");
+          process.exit(1);
+        }
+      }
       console.log(JSON.stringify(pv, null, 2));
       process.exit(pv.ok ? 0 : 1);
+    }
+    if (genesisAction === "consent") {
+      // The sovereign's authorization artifact, built by the ONE kernel
+      // builder and bound to the exact sealed preview by hash + nonce. The
+      // CLI knows the required phrase but never supplies or defaults it —
+      // PHRASE_KNOWN_BY_SYSTEM != PHRASE_PRESENTED_BY_SOVEREIGN.
+      const previewFile = readCliJson(argValue(argv, "--preview"));
+      const consentOutPath = argValue(argv, "--out");
+      if (previewFile.error || !consentOutPath) {
+        console.error(
+          "Refused: consent requires --preview <preview.json> and --out <envelope.json>",
+        );
+        process.exit(1);
+      }
+      const phrase = argValue(argv, "--consent");
+      if (typeof phrase === "string" && phrase.length > 0 && phrase !== KEY_MIGRATE_CONSENT_PHRASE) {
+        // Same law, same vocabulary as the executor: a wrong phrase is not
+        // consent. The required phrase is deliberately not echoed here.
+        console.error("Refused: consent_required — the supplied phrase is not the exact sovereign phrase");
+        process.exit(1);
+      }
+      const consentEnv = buildAuthorshipMigrationConsentEnvelope({
+        preview: previewFile.parsed,
+        consent: phrase,
+        now: new Date().toISOString(),
+      });
+      if (!consentEnv.ok) {
+        console.error(`Refused: ${consentEnv.reason}`);
+        process.exit(1);
+      }
+      const w = writeArtifactExclusive(consentOutPath, consentEnv.envelope);
+      if (!w.written) {
+        console.error(`Refused: ${w.reason}: ${consentOutPath}`);
+        process.exit(1);
+      }
+      console.log(JSON.stringify({
+        ok: true,
+        out_path: consentOutPath,
+        preview_hash: consentEnv.envelope.preview_hash,
+        nonce: consentEnv.envelope.nonce,
+        expires_at: consentEnv.envelope.expires_at,
+      }, null, 2));
+      process.exit(0);
     }
     if (genesisAction === "execute") {
       const preview = readCliJson(argValue(argv, "--preview"));
@@ -171,7 +244,7 @@ export async function cmd_genesis(ctx) {
       console.log(JSON.stringify(result, null, 2));
       process.exit(result.migrated ? 0 : 1);
     }
-    console.error("Usage: dema genesis migrate-key preview --node-id <id> --nonce <n> --expires-at <iso> | execute --preview <f> --consent-envelope <f>");
+    console.error("Usage: dema genesis migrate-key preview --node-id <id> --nonce <n> --expires-at <iso> [--out <preview.json>] | consent --preview <preview.json> --consent \"<PHRASE>\" --out <envelope.json> | execute --preview <preview.json> --consent-envelope <envelope.json>");
     process.exit(1);
   }
 
