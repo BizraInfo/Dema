@@ -2088,6 +2088,28 @@ export async function rotateAuthorshipKey({
       );
     }
 
+    // TASK-029 R2 — bind the sovereign's INTENDED target to the live key before
+    // any mutation. Consent to "ROTATE AUTHORSHIP KEY" is consent to the
+    // operation class; it does not identify WHICH key the sovereign meant to
+    // retire. When the envelope names an expected_old_fingerprint it must equal
+    // the key actually about to be quarantined — re-derived here under the lease
+    // (the recheck above), evidence the caller does not control. A mismatch
+    // refuses before stageQuarantine, so nothing is written and the nonce is not
+    // consumed: a corrected retry with the same nonce proceeds. The whole
+    // envelope is already folded into consentBindingSha256 below, so a bound
+    // fingerprint is recorded in the succession intent without a second hash.
+    // ENFORCE-WHEN-PRESENT: an omitted field keeps prior behavior; making it
+    // mandatory + no-downgrade is the governed rotation-ceremony follow-up,
+    // exactly as the migration primitive/executor split.
+    if (envelope?.expected_old_fingerprint !== undefined) {
+      if (!SHA256_HEX.test(envelope.expected_old_fingerprint)) {
+        return rotateFailClosed("consent_envelope_expected_fingerprint_malformed");
+      }
+      if (envelope.expected_old_fingerprint !== oldFingerprint) {
+        return rotateFailClosed("expected_old_fingerprint_mismatch");
+      }
+    }
+
     const stage = await stageQuarantine(
       paths,
       oldFingerprint,
