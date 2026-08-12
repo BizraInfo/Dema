@@ -20,6 +20,7 @@ import {
 } from "../packages/receipts/src/authorship-key-store.js";
 import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
 import { inspectConsentNonce } from "../packages/receipts/src/consent-nonce-claim.js";
+import { captureDirectoryIdentity } from "../packages/mission/src/corridor-closure-gatherer.js";
 
 /**
  * GENESIS-MIGRATION-CLI-ROUNDTRIP-1A
@@ -352,6 +353,7 @@ test("RT-11: a repository mismatch still wins before migration on the canonical 
         commit: "a".repeat(40), tree: "c".repeat(40),
       }),
       now: new Date().toISOString(),
+      targetEstate: captureDirectoryIdentity(h),
     });
     assert.equal(forged.ok, true);
     const previewPath = join(h, "preview.json");

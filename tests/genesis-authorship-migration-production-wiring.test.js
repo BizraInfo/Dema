@@ -23,6 +23,7 @@ import {
 } from "../packages/receipts/src/authorship-key-store.js";
 import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
 import { inspectConsentNonce } from "../packages/receipts/src/consent-nonce-claim.js";
+import { captureDirectoryIdentity } from "../packages/mission/src/corridor-closure-gatherer.js";
 
 /**
  * GENESIS-AUTHORSHIP-MIGRATION-PRODUCTION-WIRING-1A
@@ -107,7 +108,8 @@ function writeLegacyPair(h, kp) {
 async function sealed(h, extra = {}) {
   const pv = await buildAuthorshipMigrationPreview({
     demaHome: h, nodeId: NODE, nonce: freshNonce(),
-    expiresAt: EXPIRES, repository: REPO, now: AT, ...extra,
+    expiresAt: EXPIRES, repository: REPO, now: AT,
+    targetEstate: captureDirectoryIdentity(h), ...extra,
   });
   assert.equal(pv.ok, true, pv.reason ?? "");
   return pv.preview;
@@ -122,7 +124,8 @@ function envelopeFor(preview, extra = {}) {
 function run(preview, envelope, h, extra = {}) {
   return executeGenesisAuthorshipMigration({
     preview, consentEnvelope: envelope, demaHome: h, now: LATER,
-    executingRepository: REPO, subjectNodeId: NODE, ...extra,
+    executingRepository: REPO, subjectNodeId: NODE,
+    observeTargetEstate: () => captureDirectoryIdentity(h), ...extra,
   });
 }
 
@@ -238,6 +241,7 @@ test("PW-05B: real CLI does not accept caller-supplied repository identity as ex
       expiresAt,
       repository: REPO,
       now: new Date().toISOString(),
+      targetEstate: captureDirectoryIdentity(h),
     });
     assert.equal(pv.ok, true, pv.reason ?? "");
     const env = buildAuthorshipMigrationConsentEnvelope({
@@ -394,6 +398,7 @@ test("PW-05E: same-commit tree drift refuses before the nonce authority is claim
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
       repository: forged,
       now: new Date().toISOString(),
+      targetEstate: captureDirectoryIdentity(h),
     });
     assert.equal(pv.ok, true, pv.reason ?? "");
     const env = buildAuthorshipMigrationConsentEnvelope({
@@ -447,6 +452,7 @@ test("PW-05F: unavailable git measurement refuses as unverifiable, with zero eff
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
       repository: REPO,
       now: new Date().toISOString(),
+      targetEstate: captureDirectoryIdentity(h),
     });
     assert.equal(pv.ok, true, pv.reason ?? "");
     const env = buildAuthorshipMigrationConsentEnvelope({

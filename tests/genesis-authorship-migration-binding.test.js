@@ -20,6 +20,7 @@ import {
   KEY_MIGRATE_CONSENT_PHRASE,
 } from "../packages/receipts/src/authorship-key-store.js";
 import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
+import { captureDirectoryIdentity } from "../packages/mission/src/corridor-closure-gatherer.js";
 
 /**
  * GENESIS-AUTHORSHIP-MIGRATION-CONSENT-BINDING-1A
@@ -94,7 +95,8 @@ function snapshotGoverned(h, { excludeConsent = false } = {}) {
 function preview(h, extra = {}) {
   return buildAuthorshipMigrationPreview({
     demaHome: h, nodeId: NODE, nonce: freshNonce(),
-    expiresAt: EXPIRES, repository: REPO, now: AT, ...extra,
+    expiresAt: EXPIRES, repository: REPO, now: AT,
+    targetEstate: captureDirectoryIdentity(h), ...extra,
   });
 }
 
@@ -114,6 +116,7 @@ function execTarget(previewObj, h, over = {}) {
     demaHome: h, now: LATER,
     executingRepository: REPO,
     subjectNodeId: previewObj?.node_id,
+    observeTargetEstate: () => captureDirectoryIdentity(h),
     ...over,
   });
 }

@@ -293,7 +293,7 @@ function pathRefusal(code, detail = code) {
   return err;
 }
 
-function captureDirectoryIdentity(path) {
+export function captureDirectoryIdentity(path) {
   const info = lstatSync(path);
   if (info.isSymbolicLink() || !info.isDirectory()) {
     throw pathRefusal("rename_scope_root_unsafe", "rename scope root must be a real directory");
@@ -305,7 +305,7 @@ function captureDirectoryIdentity(path) {
   });
 }
 
-function sameDirectoryIdentity(left, right) {
+export function sameDirectoryIdentity(left, right) {
   return left?.realpath === right?.realpath
     && left?.dev === right?.dev
     && left?.ino === right?.ino;

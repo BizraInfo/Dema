@@ -43,8 +43,12 @@ import {
 import { fingerprintPublicKeyPem } from "../../receipts/src/authorship-signature.js";
 import { claimConsentNonce } from "../../receipts/src/consent-nonce-claim.js";
 
+// v0.2: the preview now seals the independently observed TARGET ESTATE
+// (canonical realpath + device + inode of the governed home). An older v0.1
+// preview remains parseable history but can never authorize this executor —
+// NEW_STRONGER_GENESIS_PROFILE CANNOT_EXECUTE_OLD_WEAKER_PREVIEW.
 export const AUTHORSHIP_MIGRATION_PREVIEW_SCHEMA =
-  "bizra.dema.genesis_authorship_migration_preview.v0.1";
+  "bizra.dema.genesis_authorship_migration_preview.v0.2";
 export const AUTHORSHIP_MIGRATION_RESULT_SCHEMA =
   "bizra.dema.genesis_authorship_migration_result.v0.1";
 export const AUTHORSHIP_MIGRATION_CONSENT_SCHEMA =
@@ -75,7 +79,19 @@ const PREVIEW_HASH_DOMAIN = "BIZRA:GENESIS_AUTHORSHIP_MIGRATION_PREVIEW:v1\0";
 const isStr = (v) => typeof v === "string" && v.length > 0;
 const sha256 = (s) => createHash("sha256").update(s).digest("hex");
 
+/** The target-estate triple must be three non-empty strings — the exact
+ *  frozen shape captureDirectoryIdentity produces. Anything else is not
+ *  evidence. DIRECTORY_IDENTITY != NODE_IDENTITY: this names a directory
+ *  object on this host, never the sovereign's node. */
+function isTargetEstate(t) {
+  return !!t && typeof t === "object" && !Array.isArray(t)
+    && isStr(t.realpath) && isStr(t.dev) && isStr(t.ino);
+}
+
 function previewHash(f) {
+  // Eleven fixed fields since v0.2: the original eight plus the sealed
+  // target-estate triple. The domain prefix stays v1 — the version lives in
+  // the hashed schema field, never inside the domain separator.
   return sha256(
     PREVIEW_HASH_DOMAIN +
       [
@@ -87,6 +103,9 @@ function previewHash(f) {
         f.nonce,
         f.expires_at,
         f.repository,
+        f.target_estate.realpath,
+        f.target_estate.dev,
+        f.target_estate.ino,
       ].join("\n"),
   );
 }
@@ -118,9 +137,16 @@ export async function buildAuthorshipMigrationPreview({
   expiresAt,
   repository,
   now,
+  // Independently observed at the boundary (captureDirectoryIdentity), never
+  // caller-composed prose. node_id stays SOVEREIGN_DECLARED; this triple is
+  // the OBSERVED substrate the authority will spend into.
+  targetEstate,
 } = {}) {
   for (const [k, v] of Object.entries({ demaHome, nodeId, nonce, expiresAt, repository, now })) {
     if (!isStr(v)) return Object.freeze({ ok: false, reason: `preview_input_missing:${k}` });
+  }
+  if (!isTargetEstate(targetEstate)) {
+    return Object.freeze({ ok: false, reason: "preview_input_missing:target_estate" });
   }
   if (Number.isNaN(Date.parse(expiresAt)) || Number.isNaN(Date.parse(now))) {
     return Object.freeze({ ok: false, reason: "preview_time_malformed" });
@@ -175,6 +201,11 @@ export async function buildAuthorshipMigrationPreview({
     nonce,
     expires_at: expiresAt,
     repository,
+    target_estate: Object.freeze({
+      realpath: targetEstate.realpath,
+      dev: targetEstate.dev,
+      ino: targetEstate.ino,
+    }),
   };
   return Object.freeze({
     ok: true,
@@ -235,6 +266,10 @@ export async function executeGenesisAuthorshipMigration({
   now,
   executingRepository,
   subjectNodeId,
+  // Injected estate observer (the CLI supplies captureDirectoryIdentity over
+  // the resolved DEMA_HOME). A function, not a value, so the measurement is
+  // taken at the gate itself — the executor never accepts estate prose.
+  observeTargetEstate,
   // Accepted and deliberately IGNORED in favor of the sealed preview's
   // target — see MC-04. Present in the signature so a confused caller's
   // value cannot silently reach the binding through any merge order.
@@ -277,6 +312,12 @@ export async function executeGenesisAuthorshipMigration({
   for (const k of ["node_id", "nonce", "expires_at", "repository", "preview_hash"]) {
     if (!isStr(preview[k])) return refuse(`preview_malformed:${k}`);
   }
+  // No downgrade: a preview that does not seal the target estate cannot
+  // authorize this executor, however coherent its other fields are —
+  // NEW_STRONGER_GENESIS_PROFILE CANNOT_EXECUTE_OLD_WEAKER_PREVIEW.
+  if (!isTargetEstate(preview.target_estate)) {
+    return refuse("target_estate_binding_required");
+  }
   const derivedHash = previewHash(preview);
   if (derivedHash !== preview.preview_hash) {
     return refuse("preview_hash_mismatch");
@@ -314,13 +355,43 @@ export async function executeGenesisAuthorshipMigration({
   if (executingRepository !== preview.repository) {
     return refuse("repository_binding_mismatch");
   }
-  // Subject binding: the human re-asserts the subject at execution; the
-  // sealed preview's node_id must be the same one.
-  if (!isStr(subjectNodeId)) {
-    return refuse("subject_binding_unverifiable");
+  // Target-estate binding: the estate is RE-OBSERVED at execution through
+  // the injected observer. The preview names the estate; it is never the
+  // source that proves it — PREVIEW_CARRIED_SUBJECT !=
+  // EXECUTION_OBSERVED_SUBJECT, and SELF_CONSISTENCY !=
+  // INDEPENDENT_VERIFICATION. Refused before the nonce claim.
+  if (typeof observeTargetEstate !== "function") {
+    return refuse("target_estate_unverifiable");
   }
-  if (subjectNodeId !== preview.node_id) {
-    return refuse("subject_binding_mismatch");
+  let observedEstate;
+  try {
+    observedEstate = observeTargetEstate();
+  } catch {
+    return refuse("target_estate_unverifiable");
+  }
+  if (!isTargetEstate(observedEstate)) {
+    return refuse("target_estate_unverifiable");
+  }
+  if (
+    observedEstate.realpath !== preview.target_estate.realpath ||
+    observedEstate.dev !== preview.target_estate.dev ||
+    observedEstate.ino !== preview.target_estate.ino
+  ) {
+    return refuse("target_estate_mismatch");
+  }
+  // The sovereign-declared label has no independent pre-Genesis source
+  // (IDENTITY IS SUPPLIED, NEVER DERIVED), so it is enforce-when-present:
+  // a caller that re-asserts it is held to it; its binding authority is the
+  // consent envelope, and the estate above is what execution proves. The
+  // old mandatory form was fed the preview's own node_id by the CLI — x == x
+  // certified nothing, and that route is closed at the CLI boundary.
+  if (subjectNodeId !== undefined && subjectNodeId !== null) {
+    if (!isStr(subjectNodeId)) {
+      return refuse("subject_binding_unverifiable");
+    }
+    if (subjectNodeId !== preview.node_id) {
+      return refuse("subject_binding_mismatch");
+    }
   }
 
   const claim = await claimConsentNonce({ nonce: preview.nonce, demaHome });

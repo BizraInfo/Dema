@@ -43,6 +43,7 @@ import {
   REPO_ROOT as BINDING_REPO_ROOT,
 } from "../../../../packages/mission/src/executing-repository-binding.js";
 import { KEY_MIGRATE_CONSENT_PHRASE } from "../../../../packages/receipts/src/authorship-key-store.js";
+import { captureDirectoryIdentity } from "../../../../packages/mission/src/corridor-closure-gatherer.js";
 
 const execFileAsyncGit = promisify(execFileCb);
 const realGitRunner = async (args, { cwd } = {}) => {
@@ -81,8 +82,9 @@ function readCliJson(path) {
 // Write a canonical authority artifact exactly once. The estate's exclusive-
 // create idiom (`wx` — root marker, nonce claim): an existing target refuses,
 // so a stale ceremony artifact can never be silently replaced. This is an
-// operator_requested_artifact_write at a caller-named path — never a
-// DEMA_HOME authority mutation.
+// operator_requested_artifact_write at a caller-named path — not an
+// authority-state write by design; the path placement itself is
+// unconstrained here (no containment rule is enforced on --out).
 function writeArtifactExclusive(path, artifact) {
   try {
     writeFileSync(path, JSON.stringify(artifact, null, 2) + "\n", { flag: "wx" });
@@ -158,7 +160,18 @@ export async function cmd_genesis(ctx) {
       runGit: realGitRunner,
     });
     const executingRepository = repositoryIdentityFromBinding(executingBinding);
+    // The target estate is OBSERVED at this boundary — realpath/dev/ino of
+    // the resolved governed home — never accepted from a caller flag.
+    // DIRECTORY_IDENTITY != NODE_IDENTITY: node_id stays sovereign-declared.
+    const observeTargetEstate = () => captureDirectoryIdentity(demaHome);
     if (genesisAction === "preview") {
+      let targetEstate;
+      try {
+        targetEstate = observeTargetEstate();
+      } catch {
+        console.error("Refused: target_estate_unverifiable — the governed home's directory identity could not be independently observed");
+        process.exit(1);
+      }
       const pv = await buildAuthorshipMigrationPreview({
         demaHome,
         nodeId: argValue(argv, "--node-id") ?? "",
@@ -166,6 +179,7 @@ export async function cmd_genesis(ctx) {
         expiresAt: argValue(argv, "--expires-at") ?? "",
         repository: executingRepository ?? "",
         now: new Date().toISOString(),
+        targetEstate,
       });
       const previewOutPath = argValue(argv, "--out");
       if (pv.ok && previewOutPath) {
@@ -239,7 +253,11 @@ export async function cmd_genesis(ctx) {
         demaHome,
         now: new Date().toISOString(),
         executingRepository,
-        subjectNodeId: preview.parsed?.node_id,
+        // The estate is re-observed INSIDE the executor's gate via this
+        // injected observer — the preview names the estate, execution proves
+        // it. The old self-feed (subjectNodeId from the preview itself) is
+        // closed: x == x certified nothing.
+        observeTargetEstate,
       });
       console.log(JSON.stringify(result, null, 2));
       process.exit(result.migrated ? 0 : 1);
