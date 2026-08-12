@@ -485,15 +485,20 @@ test("PW-05F: unavailable git measurement refuses as unverifiable, with zero eff
     } catch (e) {
       out = String(e.stdout ?? "");
       code = e.status ?? 1;
+      var stderrText = String(e.stderr ?? "");
     }
-    const r = JSON.parse(out);
-    assert.equal(r.migrated, false,
-      "an unmeasurable repository must never migrate");
-    assert.equal(r.error, "repository_binding_unverifiable");
+    // GENESIS-ACT1-COMPOSED-READINESS-1A moved this refusal EARLIER: with git
+    // unmeasurable, the worktree-posture gate refuses working_tree_unverifiable
+    // at the CLI boundary before the executor's repository_binding_unverifiable
+    // could fire. The properties this control proves are unchanged: no
+    // migration, no nonce claim, byte-identical home — only the earliest
+    // correct gate moved.
     assert.notEqual(code, 0);
+    assert.equal(out.trim(), "", "no result document — refused before the executor");
+    assert.match(stderrText ?? "", /working_tree_unverifiable/);
     assert.equal((await loadActiveKeyPair(h)).ok, false);
     assert.equal((await inspectConsentNonce({ nonce, demaHome: h })).used, false,
-      "unverifiable-repository refusal must precede the nonce claim");
+      "unverifiable-context refusal must precede the nonce claim");
     assert.equal(snapshotHome(h), before,
       "governed fixture home must be byte-identical after the refusal");
   } finally {

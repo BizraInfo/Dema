@@ -356,7 +356,7 @@ test("C-13: replaying the consumed ceremony refuses at the nonce authority", asy
     assert.equal(JSON.parse(dema(h, executeArgs(previewPath, envelopePath)).stdout).migrated, true);
     const replay = dema(h, executeArgs(previewPath, envelopePath));
     assert.notEqual(replay.code, 0);
-    assert.equal(parsedError(replay), "consent_nonce_already_used",
+    assert.equal(parsedError(replay), "consent_nonce_already_claimed",
       "replay dies at the ONE nonce authority, before already_migrated could mask it");
   } finally { cleanup(h); }
 });
