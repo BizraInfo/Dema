@@ -1,9 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync,
+  readdirSync, statSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 import {
   buildAuthorshipMigrationPreview,
@@ -74,6 +78,24 @@ function measuredRepository(cwd = REPO_ROOT) {
     cwd, env, encoding: "utf8",
   }).trim();
   return repositoryIdentityFromBinding({ commit, tree });
+}
+/** Byte-level snapshot of the WHOLE fixture home, consent ledger included —
+ *  PW-05E/PW-05F refuse before the nonce claim, so nothing may move at all. */
+function snapshotHome(h) {
+  const sha = (b) => createHash("sha256").update(b).digest("hex");
+  const out = [];
+  const walk = (d) => {
+    let entries;
+    try { entries = readdirSync(d); } catch { return; }
+    for (const e of entries.sort()) {
+      const p = join(d, e);
+      const st = statSync(p);
+      if (st.isDirectory()) walk(p);
+      else out.push(`${relative(h, p)}:${sha(readFileSync(p))}`);
+    }
+  };
+  walk(h);
+  return out.join("\n");
 }
 function writeLegacyPair(h, kp) {
   const p = keyPaths(h);
@@ -350,6 +372,127 @@ test("PW-05D: ambient GIT_DIR cannot redirect the measured repository", async ()
   } finally {
     cleanup(h);
     cleanup(alternate);
+  }
+});
+
+test("PW-05E: same-commit tree drift refuses before the nonce authority is claimed", async () => {
+  const h = home();
+  try {
+    writeLegacyPair(h, generateEd25519Keypair());
+    const commit = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: REPO_ROOT, env: cleanGitEnv(), encoding: "utf8",
+    }).trim();
+    const forged = repositoryIdentityFromBinding({ commit, tree: "d".repeat(40) });
+    assert.notEqual(forged, measuredRepository(),
+      "the control must actually drift the tree under the measured commit");
+
+    const nonce = freshNonce();
+    const pv = await buildAuthorshipMigrationPreview({
+      demaHome: h,
+      nodeId: NODE,
+      nonce,
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      repository: forged,
+      now: new Date().toISOString(),
+    });
+    assert.equal(pv.ok, true, pv.reason ?? "");
+    const env = buildAuthorshipMigrationConsentEnvelope({
+      preview: pv.preview,
+      consent: KEY_MIGRATE_CONSENT_PHRASE,
+      now: new Date().toISOString(),
+    });
+    assert.equal(env.ok, true, env.reason ?? "");
+    const previewPath = join(h, "preview.json");
+    const envelopePath = join(h, "consent.json");
+    writeFileSync(previewPath, JSON.stringify(pv.preview));
+    writeFileSync(envelopePath, JSON.stringify(env.envelope));
+
+    const before = snapshotHome(h);
+    let out;
+    let code = 0;
+    try {
+      out = execFileSync(process.execPath, [
+        new URL("../bin/dema", import.meta.url).pathname,
+        "genesis", "migrate-key", "execute",
+        "--preview", previewPath,
+        "--consent-envelope", envelopePath,
+      ], { encoding: "utf8", cwd: tmpdir(), env: { ...process.env, DEMA_HOME: h } });
+    } catch (e) {
+      out = String(e.stdout ?? "");
+      code = e.status ?? 1;
+    }
+    const r = JSON.parse(out);
+    assert.equal(r.migrated, false,
+      "a drifted tree under the same commit must not migrate");
+    assert.equal(r.error, "repository_binding_mismatch");
+    assert.notEqual(code, 0);
+    assert.equal((await loadActiveKeyPair(h)).ok, false);
+    assert.equal((await inspectConsentNonce({ nonce, demaHome: h })).used, false,
+      "tree-drift refusal must precede the nonce claim");
+    assert.equal(snapshotHome(h), before,
+      "governed fixture home must be byte-identical after the refusal");
+  } finally { cleanup(h); }
+});
+
+test("PW-05F: unavailable git measurement refuses as unverifiable, with zero effect", async () => {
+  const h = home();
+  const gitlessBin = mkdtempSync(join(tmpdir(), "pw-nogit-"));
+  try {
+    writeLegacyPair(h, generateEd25519Keypair());
+    const nonce = freshNonce();
+    const pv = await buildAuthorshipMigrationPreview({
+      demaHome: h,
+      nodeId: NODE,
+      nonce,
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      repository: REPO,
+      now: new Date().toISOString(),
+    });
+    assert.equal(pv.ok, true, pv.reason ?? "");
+    const env = buildAuthorshipMigrationConsentEnvelope({
+      preview: pv.preview,
+      consent: KEY_MIGRATE_CONSENT_PHRASE,
+      now: new Date().toISOString(),
+    });
+    assert.equal(env.ok, true, env.reason ?? "");
+    const previewPath = join(h, "preview.json");
+    const envelopePath = join(h, "consent.json");
+    writeFileSync(previewPath, JSON.stringify(pv.preview));
+    writeFileSync(envelopePath, JSON.stringify(env.envelope));
+
+    const before = snapshotHome(h);
+    let out;
+    let code = 0;
+    try {
+      out = execFileSync(process.execPath, [
+        new URL("../bin/dema", import.meta.url).pathname,
+        "genesis", "migrate-key", "execute",
+        "--preview", previewPath,
+        "--consent-envelope", envelopePath,
+      ], {
+        encoding: "utf8",
+        cwd: tmpdir(),
+        // A PATH with no git on it: the observer's measurement fails, and the
+        // executor must refuse as unverifiable — never fall back to any claim.
+        env: { ...cleanGitEnv(), DEMA_HOME: h, PATH: gitlessBin },
+      });
+    } catch (e) {
+      out = String(e.stdout ?? "");
+      code = e.status ?? 1;
+    }
+    const r = JSON.parse(out);
+    assert.equal(r.migrated, false,
+      "an unmeasurable repository must never migrate");
+    assert.equal(r.error, "repository_binding_unverifiable");
+    assert.notEqual(code, 0);
+    assert.equal((await loadActiveKeyPair(h)).ok, false);
+    assert.equal((await inspectConsentNonce({ nonce, demaHome: h })).used, false,
+      "unverifiable-repository refusal must precede the nonce claim");
+    assert.equal(snapshotHome(h), before,
+      "governed fixture home must be byte-identical after the refusal");
+  } finally {
+    cleanup(h);
+    cleanup(gitlessBin);
   }
 });
 
