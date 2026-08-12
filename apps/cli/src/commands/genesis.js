@@ -1,7 +1,9 @@
 // `dema genesis` command handler — extracted from index.js (④).
 import { readFileSync, existsSync } from "node:fs";
+import { execFile as execFileCb } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
 import {
   buildGenesisCompositionBlueprintPreview,
@@ -34,8 +36,25 @@ import {
   buildAuthorshipMigrationPreview,
   buildAuthorshipMigrationConsentEnvelope,
   executeGenesisAuthorshipMigration,
-  repositoryIdentityFromCommit,
+  repositoryIdentityFromBinding,
 } from "../../../../packages/genesis/src/genesis-authorship-migration-binding.js";
+import {
+  readExecutingRepositoryBinding,
+  REPO_ROOT as BINDING_REPO_ROOT,
+} from "../../../../packages/mission/src/executing-repository-binding.js";
+
+const execFileAsyncGit = promisify(execFileCb);
+const realGitRunner = async (args, { cwd } = {}) => {
+  const env = { ...process.env };
+  for (const name of Object.keys(env)) {
+    if (name.startsWith("GIT_")) delete env[name];
+  }
+  const { stdout } = await execFileAsyncGit("git", args, {
+    cwd: cwd ?? BINDING_REPO_ROOT,
+    env,
+  });
+  return stdout;
+};
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -117,13 +136,10 @@ export async function cmd_genesis(ctx) {
   // any write. The generic phrase-only writer is unreachable from here.
   if (genesisSub === "migrate-key") {
     const demaHome = resolveDemaHome();
-    // Repository identity via the estate's OWN pattern (season's --repo-commit),
-    // derived through the one shared repositoryIdentityFromCommit — not a
-    // bespoke git subprocess. The operator states the commit; the executor
-    // verifies it against the sealed preview, so a caller string is never
-    // silently accepted.
-    const executingRepository =
-      repositoryIdentityFromCommit(argValue(argv, "--repo-commit") ?? "");
+    const executingBinding = await readExecutingRepositoryBinding({
+      runGit: realGitRunner,
+    });
+    const executingRepository = repositoryIdentityFromBinding(executingBinding);
     if (genesisAction === "preview") {
       const pv = await buildAuthorshipMigrationPreview({
         demaHome,
@@ -155,7 +171,7 @@ export async function cmd_genesis(ctx) {
       console.log(JSON.stringify(result, null, 2));
       process.exit(result.migrated ? 0 : 1);
     }
-    console.error("Usage: dema genesis migrate-key preview --repo-commit <sha40> | execute --preview <f> --consent-envelope <f> --repo-commit <sha40>");
+    console.error("Usage: dema genesis migrate-key preview --node-id <id> --nonce <n> --expires-at <iso> | execute --preview <f> --consent-envelope <f>");
     process.exit(1);
   }
 

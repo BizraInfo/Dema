@@ -53,13 +53,17 @@ export const AUTHORSHIP_MIGRATION_OPERATION = "MIGRATE_AUTHORSHIP_KEY";
 
 /**
  * The one repository-identity derivation, used by BOTH the sealing side and
- * the executing side, so the comparison is exact-string over values derived
- * the same way — never a caller-composed display string.
+ * the executing side, so the comparison is exact-string over independently
+ * measured commit + tree values — never a caller-composed display string.
  * CALLER_SUPPLIED_REPOSITORY != EXECUTING_REPOSITORY_IDENTITY.
  */
-export function repositoryIdentityFromCommit(commit) {
-  if (typeof commit !== "string" || !/^[0-9a-f]{40}$/.test(commit)) return null;
-  return `git:${commit}`;
+export function repositoryIdentityFromBinding(binding) {
+  const commit = binding?.commit;
+  const tree = binding?.tree;
+  if (!/^[0-9a-f]{40}$/.test(commit ?? "") || !/^[0-9a-f]{40}$/.test(tree ?? "")) {
+    return null;
+  }
+  return `git:${commit}:${tree}`;
 }
 
 // Domain-separated so this digest can never collide with any other sha256 in
@@ -302,7 +306,7 @@ export async function executeGenesisAuthorshipMigration({
     return refuse("consent_envelope_future");
   }
   // Repository binding: the executing identity is derived by the boundary
-  // through repositoryIdentityFromCommit, never composed from caller args.
+  // through repositoryIdentityFromBinding, never composed from caller args.
   // Unknown is refused, not assumed — REFUSE/UNKNOWN, never silent accept.
   if (!isStr(executingRepository)) {
     return refuse("repository_binding_unverifiable");

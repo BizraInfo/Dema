@@ -9,7 +9,7 @@ import {
   buildAuthorshipMigrationPreview,
   buildAuthorshipMigrationConsentEnvelope,
   executeGenesisAuthorshipMigration,
-  repositoryIdentityFromCommit,
+  repositoryIdentityFromBinding,
   AUTHORSHIP_MIGRATION_CONSENT_SCHEMA,
 } from "../packages/genesis/src/genesis-authorship-migration-binding.js";
 import {
@@ -18,6 +18,7 @@ import {
   KEY_MIGRATE_CONSENT_PHRASE,
 } from "../packages/receipts/src/authorship-key-store.js";
 import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
+import { inspectConsentNonce } from "../packages/receipts/src/consent-nonce-claim.js";
 
 /**
  * GENESIS-AUTHORSHIP-MIGRATION-PRODUCTION-WIRING-1A
@@ -48,13 +49,32 @@ const LATER = "2026-08-12T01:00:00.000Z";
 const EXPIRES = "2026-08-12T02:00:00.000Z";
 const NODE = "node0-pw-fixture";
 const REPO_COMMIT = "a".repeat(40);
-const REPO = repositoryIdentityFromCommit(REPO_COMMIT);
+const REPO_TREE = "c".repeat(40);
+const REPO = repositoryIdentityFromBinding({ commit: REPO_COMMIT, tree: REPO_TREE });
+const REPO_ROOT = new URL("../", import.meta.url);
 
 let nonceCounter = 0;
 const freshNonce = () => `pw-nonce-${++nonceCounter}-${process.pid}`;
 
 const home = () => mkdtempSync(join(tmpdir(), "pw-home-"));
 const cleanup = (h) => rmSync(h, { recursive: true, force: true });
+function cleanGitEnv(extra = {}) {
+  const env = { ...process.env };
+  for (const name of Object.keys(env)) {
+    if (name.startsWith("GIT_")) delete env[name];
+  }
+  return { ...env, ...extra };
+}
+function measuredRepository(cwd = REPO_ROOT) {
+  const env = cleanGitEnv();
+  const commit = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd, env, encoding: "utf8",
+  }).trim();
+  const tree = execFileSync("git", ["rev-parse", "HEAD^{tree}"], {
+    cwd, env, encoding: "utf8",
+  }).trim();
+  return repositoryIdentityFromBinding({ commit, tree });
+}
 function writeLegacyPair(h, kp) {
   const p = keyPaths(h);
   mkdirSync(p.dir, { recursive: true });
@@ -169,7 +189,9 @@ test("PW-05: repository drift refuses; unverifiable executing identity refuses",
     const pv = await sealed(h); // sealed against REPO (commit aaaa…)
     const env = envelopeFor(pv);
     const r2 = await run(pv, env, h, {
-      executingRepository: repositoryIdentityFromCommit("b".repeat(40)),
+      executingRepository: repositoryIdentityFromBinding({
+        commit: "b".repeat(40), tree: REPO_TREE,
+      }),
     });
     assert.equal(r2.migrated, false);
     assert.equal(r2.error, "repository_binding_mismatch");
@@ -179,6 +201,156 @@ test("PW-05: repository drift refuses; unverifiable executing identity refuses",
     assert.equal(r3.error, "repository_binding_unverifiable",
       "an unknown executing repository is never silently accepted");
   } finally { cleanup(h); }
+});
+
+test("PW-05B: real CLI does not accept caller-supplied repository identity as execution truth", async () => {
+  const h = home();
+  try {
+    writeLegacyPair(h, generateEd25519Keypair());
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const nonce = freshNonce();
+    const pv = await buildAuthorshipMigrationPreview({
+      demaHome: h,
+      nodeId: NODE,
+      nonce,
+      expiresAt,
+      repository: REPO,
+      now: new Date().toISOString(),
+    });
+    assert.equal(pv.ok, true, pv.reason ?? "");
+    const env = buildAuthorshipMigrationConsentEnvelope({
+      preview: pv.preview,
+      consent: KEY_MIGRATE_CONSENT_PHRASE,
+      now: new Date().toISOString(),
+    });
+    assert.equal(env.ok, true, env.reason ?? "");
+
+    const previewPath = join(h, "preview.json");
+    const envelopePath = join(h, "consent.json");
+    writeFileSync(previewPath, JSON.stringify(pv.preview));
+    writeFileSync(envelopePath, JSON.stringify(env.envelope));
+
+    let out;
+    let code = 0;
+    try {
+      out = execFileSync(process.execPath, [
+        new URL("../bin/dema", import.meta.url).pathname,
+        "genesis", "migrate-key", "execute",
+        "--preview", previewPath,
+        "--consent-envelope", envelopePath,
+        "--repo-commit", REPO_COMMIT,
+      ], { encoding: "utf8", env: { ...process.env, DEMA_HOME: h } });
+    } catch (e) {
+      out = String(e.stdout ?? "");
+      code = e.status ?? 1;
+    }
+    const r = JSON.parse(out);
+    assert.equal(r.migrated, false,
+      "a caller-supplied commit must not become executing-repository evidence");
+    assert.equal(r.error, "repository_binding_mismatch");
+    assert.notEqual(code, 0);
+    assert.equal((await loadActiveKeyPair(h)).ok, false);
+    assert.equal((await inspectConsentNonce({ nonce, demaHome: h })).used, false,
+      "repository refusal must happen before the nonce authority is claimed");
+  } finally { cleanup(h); }
+});
+
+test("PW-05C: real CLI preview and execute bind the measured repository", async () => {
+  const h = home();
+  try {
+    writeLegacyPair(h, generateEd25519Keypair());
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const previewOut = execFileSync(process.execPath, [
+      new URL("../bin/dema", import.meta.url).pathname,
+      "genesis", "migrate-key", "preview",
+      "--node-id", NODE,
+      "--nonce", freshNonce(),
+      "--expires-at", expiresAt,
+    ], { encoding: "utf8", cwd: tmpdir(), env: { ...process.env, DEMA_HOME: h } });
+    const previewResult = JSON.parse(previewOut);
+    assert.equal(previewResult.ok, true, previewResult.reason ?? "");
+    assert.equal(previewResult.preview.repository, measuredRepository(),
+      "the positive control must bind this checkout's measured HEAD and tree");
+
+    const env = buildAuthorshipMigrationConsentEnvelope({
+      preview: previewResult.preview,
+      consent: KEY_MIGRATE_CONSENT_PHRASE,
+      now: new Date().toISOString(),
+    });
+    assert.equal(env.ok, true, env.reason ?? "");
+    const previewPath = join(h, "preview.json");
+    const envelopePath = join(h, "consent.json");
+    writeFileSync(previewPath, JSON.stringify(previewResult.preview));
+    writeFileSync(envelopePath, JSON.stringify(env.envelope));
+
+    const executeOut = execFileSync(process.execPath, [
+      new URL("../bin/dema", import.meta.url).pathname,
+      "genesis", "migrate-key", "execute",
+      "--preview", previewPath,
+      "--consent-envelope", envelopePath,
+    ], { encoding: "utf8", cwd: tmpdir(), env: { ...process.env, DEMA_HOME: h } });
+    const result = JSON.parse(executeOut);
+    assert.equal(result.migrated, true, result.error ?? "");
+  } finally { cleanup(h); }
+});
+
+test("PW-05D: ambient GIT_DIR cannot redirect the measured repository", async () => {
+  const h = home();
+  const alternate = mkdtempSync(join(tmpdir(), "pw-repo-"));
+  try {
+    writeLegacyPair(h, generateEd25519Keypair());
+    const gitEnv = cleanGitEnv();
+    execFileSync("git", ["init", "-q"], { cwd: alternate, env: gitEnv });
+    writeFileSync(join(alternate, "fixture.txt"), "alternate repository\n");
+    execFileSync("git", ["add", "fixture.txt"], { cwd: alternate, env: gitEnv });
+    execFileSync("git", [
+      "-c", "core.hooksPath=/dev/null",
+      "-c", "commit.gpgsign=false",
+      "-c", "user.name=Dema fixture",
+      "-c", "user.email=fixture@example.invalid",
+      "commit", "-qm", "fixture",
+    ], { cwd: alternate, env: gitEnv });
+    assert.notEqual(measuredRepository(alternate), measuredRepository());
+
+    const hostileEnv = {
+      ...process.env,
+      DEMA_HOME: h,
+      GIT_DIR: join(alternate, ".git"),
+    };
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const previewOut = execFileSync(process.execPath, [
+      new URL("../bin/dema", import.meta.url).pathname,
+      "genesis", "migrate-key", "preview",
+      "--node-id", NODE,
+      "--nonce", freshNonce(),
+      "--expires-at", expiresAt,
+    ], { encoding: "utf8", cwd: tmpdir(), env: hostileEnv });
+    const previewResult = JSON.parse(previewOut);
+    assert.equal(previewResult.preview.repository, measuredRepository(),
+      "ambient repository selectors must not redirect the CLI observer");
+
+    const envelope = buildAuthorshipMigrationConsentEnvelope({
+      preview: previewResult.preview,
+      consent: KEY_MIGRATE_CONSENT_PHRASE,
+      now: new Date().toISOString(),
+    });
+    assert.equal(envelope.ok, true, envelope.reason ?? "");
+    const previewPath = join(h, "preview.json");
+    const envelopePath = join(h, "consent.json");
+    writeFileSync(previewPath, JSON.stringify(previewResult.preview));
+    writeFileSync(envelopePath, JSON.stringify(envelope.envelope));
+
+    const executeOut = execFileSync(process.execPath, [
+      new URL("../bin/dema", import.meta.url).pathname,
+      "genesis", "migrate-key", "execute",
+      "--preview", previewPath,
+      "--consent-envelope", envelopePath,
+    ], { encoding: "utf8", cwd: tmpdir(), env: hostileEnv });
+    assert.equal(JSON.parse(executeOut).migrated, true);
+  } finally {
+    cleanup(h);
+    cleanup(alternate);
+  }
 });
 
 // ── PW-06 ── node subject drift refuses
