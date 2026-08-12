@@ -111,6 +111,48 @@ async function mountSurface(demaHome) {
   });
 }
 
+/** A loopback bind is reachable only from this host, so it is not a NETWORK
+ *  write vector — the owning process's authority is judged by the filesystem
+ *  and synchronization surfaces, not here. Loopback = 127/8, ::1, or a %lo
+ *  zone-scoped address. Everything else (wildcards AND address-specific binds
+ *  such as a tailnet IP) is NON-LOOPBACK BOUND. That is all the socket table
+ *  proves: a non-loopback bind is NOT proven externally reachable — firewall,
+ *  NAT, routing, and interface ACLs are not measured here. NON_LOOPBACK_BIND !=
+ *  PROVEN_EXTERNAL_REACHABILITY; the conservative fail-closed rule holds it
+ *  UNRESOLVED either way. */
+export function isLoopbackAddress(address) {
+  if (!address) return false;
+  const bare = address.replace(/%.*$/, "");
+  return bare === "::1" || /^127\./.test(bare) || address.endsWith("%lo");
+}
+
+/** LISTENER -> PROCESS -> HANDLER/CAPABILITY -> DEMA_HOME. This read-only
+ *  instrument can reach step two (owner PID/name) but CANNOT prove step three —
+ *  what an identified listener's network handler is authorized to write. So
+ *  every non-loopback-bound listener stays UNRESOLVED: an unidentified owner
+ *  breaks the chain at step two (listener_process_unidentified), and an
+ *  identified owner still leaves the handler capability unproven
+ *  (listener_handler_capability_unverified). PROCESS_IDENTITY != HANDLER_CAPABILITY:
+ *  a visible PID never converts to CLEAR. Proving a listener incapable
+ *  (principal without DEMA_HOME write authority) is a separate, larger negative
+ *  proof — deliberately not attempted here; until it exists, external listeners
+ *  are resolved by the sovereign stopping them for the ceremony, not by this probe.
+ *  Pure: array in, reasons out. */
+export function classifyListenerWriteVector(listeners) {
+  const unresolved = [];
+  for (const l of listeners) {
+    if (isLoopbackAddress(l.address)) continue;
+    if (l.process === null) {
+      unresolved.push(`listener_process_unidentified:${l.address}:${l.port}`);
+    } else {
+      unresolved.push(
+        `listener_handler_capability_unverified:${l.process.name}:${l.process.pid}:${l.address}:${l.port}`,
+      );
+    }
+  }
+  return unresolved;
+}
+
 /** Is any bound socket causally connected to sovereign state. */
 async function listenerSurface() {
   return probe(async () => {
@@ -127,19 +169,11 @@ async function listenerSurface() {
       const proc = line.match(/users:\(\("([^"]+)",pid=(\d+)/);
       listeners.push({
         address, port: Number(m[2]),
-        externally_bound: address === "*" || address === "0.0.0.0" || address === "::",
+        non_loopback_bound: !isLoopbackAddress(address),
         process: proc ? { name: proc[1], pid: Number(proc[2]) } : null,
       });
     }
-    const unresolved = [];
-    // A LISTENER IS NOT A WRITE PATH until its process is known. An externally
-    // bound socket whose owner cannot be identified leaves the causal chain
-    // broken at step two, so the surface is unresolved rather than clear.
-    for (const l of listeners) {
-      if (l.externally_bound && l.process === null) {
-        unresolved.push(`listener_process_unidentified:${l.address}:${l.port}`);
-      }
-    }
+    const unresolved = classifyListenerWriteVector(listeners);
     return {
       measured: true,
       // No listener is asserted as a writer without a proven handler path to
