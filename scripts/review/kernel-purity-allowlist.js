@@ -13,6 +13,8 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "mkdir/writeFile/rename/unlink scoped to DEMA_HOME||~/.dema receipts dir; writes flywheel-<id>.json via wx atomic tmp+rename; localhost-only, no net/child_process.",
   "packages/flywheel/src/flywheel-xp-state.js":
     "mkdir/readFile/writeFile/rename/unlink scoped to DEMA_HOME||~/.dema; appends agents/flywheel-xp-state.ndjson via atomic tmp+rename; network_used:false.",
+  "packages/genesis/src/genesis-authorship-migration-binding.js":
+    "GENESIS-AUTHORSHIP-MIGRATION-CONSENT-BINDING-1A. readFile of the two legacy key files under DEMA_HOME||~/.dema, READ-ONLY in this module: the preview derives the candidate public-key fingerprint the sovereign will bind, and execution delegates every durable write to migrateLegacyAuthorshipKey (the single migration writer) plus claimConsentNonce (the single nonce authority). sha256 over eight fixed identity fields under a dedicated domain prefix; Date.parse of caller-supplied ISO strings only — no clock of its own, no network/child_process, never a private key byte in any output.",
   "packages/genesis/src/node0-genesis-root-ceremony.js":
     "NODE0-GENESIS-ROOT-BOOTSTRAP-CEREMONY-1A. readdir/readFile scoped to DEMA_HOME||~/.dema — counts key generations and retirements to prove the Node is at its own beginning before delegating the write. READ-ONLY here: it performs no write of its own and holds no second copy of the provisioning logic; node-root-trust.js remains the single writer. Unreadable state refuses rather than reading as fresh. No network/child_process, no clock (the caller supplies it), never a private key byte.",
   "packages/genesis/src/node0-genesis-witness.js":
