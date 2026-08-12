@@ -109,6 +109,43 @@ test("draftCodeChangePlan refuses path outside declared scope root", () => {
   assert.match(plan.refusal_reason, /outside_declared_scope/);
 });
 
+test("draftCodeChangePlan refuses sibling path whose name extends scope root", () => {
+  const scope = "/home/u/scope";
+  for (const path of [
+    "/home/u/scope-evil/file.js",
+    "/home/u/scopeX/file.js",
+    "/home/u/scope.bak/file.js",
+  ]) {
+    const plan = draftCodeChangePlan({
+      change_intent: "containment adversarial probe",
+      paths_to_edit: [path],
+      declared_scope_root: scope,
+    });
+    assert.equal(plan.valid, false, `${path} must be refused`);
+    assert.equal(plan.path_analysis[0].outside_declared_scope, true);
+    assert.equal(plan.path_analysis[0].allowed_for_change, false);
+    assert.match(plan.refusal_reason, /outside_declared_scope/);
+  }
+});
+
+test("draftCodeChangePlan keeps scope root and true descendants allowed", () => {
+  const scope = "/home/u/scope";
+  for (const path of [
+    "/home/u/scope",
+    "/home/u/scope/file.js",
+    "/home/u/scope/nested/file.js",
+  ]) {
+    const plan = draftCodeChangePlan({
+      change_intent: "containment positive control",
+      paths_to_edit: [path],
+      declared_scope_root: scope,
+    });
+    assert.equal(plan.path_analysis[0].outside_declared_scope, false);
+    assert.equal(plan.path_analysis[0].allowed_for_change, true);
+    assert.equal(plan.valid, true);
+  }
+});
+
 test("draftCodeChangePlan refuses missing declared_scope_root", () => {
   const plan = draftCodeChangePlan({
     change_intent: "edit something",
