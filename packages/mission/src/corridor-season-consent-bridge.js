@@ -16,21 +16,33 @@
 //
 // and they are compared against each other BEFORE eligibility is evaluated.
 //
-// ── WHAT THIS IS NOT ──
-// It is NOT a FATE policy decision. `packages/fate/src/fate.js` is an
-// exact-phrase consent helper; invoking it here would only add a second phrase
-// comparison in front of one that already binds payload, scope, roots, action
-// class, nonce and expiry. This module therefore does not import it, and claims
-// no independent FATE policy contract. The root-bound corridor consent evaluator
-// remains the canonical consent owner.
+// ── THE FOUR QUESTIONS THIS BRIDGE SEQUENCES ──
+//   1. Season authority — may this action be REQUESTED?      (evaluateSeasonActionAuthority)
+//   2. FATE policy      — is this EFFECT permissible?        (evaluateFatePolicy, Mind Three)
+//   3. Root-bound consent — did the human authorize THIS?    (evaluateCorridorWriteConsent)
+//   4. Nonce claim      — is this the single use?            (NOT reached here; the
+//                                                             bridge stops before it)
 //
-// `PERMIT_PREVIEW` here means EXACT CONTEXT-BOUND CONSENT VERIFIED. It does not
-// mean FATE permitted, execution authorized, a transaction may run, a nonce was
-// claimed, or an effect occurred.
+// `packages/fate/src/fate.js` is question 3's exact-phrase helper, NOT question 2.
+// This module still does not import it. A superseded attempt (research commit
+// ea003519, refused and quarantined) called it here and labelled the result a
+// FATE decision; that produced two phrase comparisons and zero policy. Question 2
+// is now owned by packages/core/src/node0-fate-contract.js, which takes no phrase
+// at all — which is precisely why it can run BEFORE consent.
+//
+// `PERMIT_PREVIEW` here means EXACT CONTEXT-BOUND CONSENT VERIFIED, reached only
+// after FATE permitted the effect. It does not mean execution authorized, a
+// transaction may run, a nonce was claimed, or an effect occurred.
 
 import {
   evaluateSeasonActionAuthority as defaultEvaluateAuthority,
 } from "../../core/src/node0-minimum-season-save-resume.js";
+// NODE0-FATE-CONTRACT-1A — the independent constitutional policy decision.
+// It takes NO phrase, so it can legitimately run BEFORE consent: we must not
+// ask a human to authorize an effect that is constitutionally impermissible.
+// This is question 2 of four; packages/fate/src/fate.js (question 3) is still
+// not imported here.
+import { evaluateFatePolicy as defaultEvaluateFate } from "../../core/src/node0-fate-contract.js";
 import {
   buildCorridorConsentContext as defaultBuildConsentContext,
   evaluateCorridorWriteConsent as defaultEvaluateConsent,
@@ -43,6 +55,7 @@ export const BRIDGE_STAGES = Object.freeze([
   "SEASON_LOAD",
   "REPOSITORY_BINDING",
   "SEASON_AUTHORITY",
+  "FATE_POLICY",
   "CONSENT_CONTEXT",
   "CONSENT_REQUIRED",
   "CONSENT_EVALUATION",
@@ -81,6 +94,13 @@ function result(over = {}) {
     repository_binding_valid: false,
     season_authority_verdict: null,
     canonical_action: null,
+    // Mind Three (canon): the constitutional policy decision. Independent of
+    // the human phrase — it judges whether the EFFECT is permissible at all.
+    fate_checked: false,
+    fate_verdict: null,
+    fate_reason: null,
+    effect_reversible: false,
+    effect_scope_bounded: false,
     consent_context_hash: null,
     required_phrase: null,
     consent_presented: false,
@@ -110,11 +130,13 @@ export function evaluateCorridorSeasonConsentBridge({
   executingRepository,
   actionId,
   corridorContext,
+  effect,
   presentedPhrase,
   presentedConsentContextHash,
   now,
   usedNonces = [],
   evaluateAuthority = defaultEvaluateAuthority,
+  evaluateFate = defaultEvaluateFate,
   buildConsentContext = defaultBuildConsentContext,
   evaluateConsentFn = defaultEvaluateConsent,
 } = {}) {
@@ -199,9 +221,38 @@ export function evaluateCorridorSeasonConsentBridge({
     canonical_action: authority.canonical_action,
   };
 
+  // ── 3b. FATE — Mind Three. The constitutional policy decision. ──
+  //
+  // This runs BEFORE consent deliberately: we must not ask a human to authorize
+  // an effect that is constitutionally impermissible. It is answerable without a
+  // phrase precisely because it judges the EFFECT, not the operator — which is
+  // why the superseded attempt (which called the exact-phrase consent helper
+  // here) could never work: that function has nothing to say until a human has
+  // already typed something.
+  const fate = evaluateFate({ seasonAuthority: authority, effect });
+  if (!fate || typeof fate !== "object" || !["PERMIT", "REFUSE"].includes(fate.verdict)) {
+    return result({ ...eligible, stage: "FATE_POLICY", fate_checked: true, reason: "fate_result_malformed" });
+  }
+  const judged = {
+    ...eligible,
+    fate_checked: true,
+    fate_verdict: fate.verdict,
+    fate_reason: fate.reason ?? null,
+    effect_reversible: fate.reversible === true,
+    effect_scope_bounded: fate.scope_bounded === true,
+  };
+  if (fate.ok !== true) {
+    return result({
+      ...judged,
+      stage: "FATE_POLICY",
+      reason: `fate_refused:${fate.reason ?? "unknown"}`,
+      blocked_by: Object.freeze([...(fate.blocked_by ?? [])]),
+    });
+  }
+
   // ── 4. The EXISTING corridor consent context ──
   if (!corridorContext || typeof corridorContext !== "object") {
-    return result({ ...eligible, stage: "CONSENT_CONTEXT", reason: "corridor_context_missing" });
+    return result({ ...judged, stage: "CONSENT_CONTEXT", reason: "corridor_context_missing" });
   }
   const ctx = buildConsentContext({
     kind: corridorContext.kind,
@@ -216,14 +267,14 @@ export function evaluateCorridorSeasonConsentBridge({
   });
   if (!ctx || ctx.ok !== true) {
     return result({
-      ...eligible,
+      ...judged,
       stage: "CONSENT_CONTEXT",
       reason: "consent_context_blocked",
       blocked_by: Object.freeze([...(ctx?.blocked_by ?? [])]),
     });
   }
   const withCtx = {
-    ...eligible,
+    ...judged,
     consent_context_hash: ctx.envelope.consent_context_hash,
     required_phrase: ctx.envelope.required_phrase,
   };

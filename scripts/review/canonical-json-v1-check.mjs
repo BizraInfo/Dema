@@ -80,6 +80,17 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/core/src/dema-reversible-file-steward.js",
   "packages/core/src/dema-reversible-file-steward-execution.js",
   "packages/core/src/node0-minimum-season-save-resume.js",
+  // NODE0-ENDURANCE-CHAIN-1A — the endurance record's tamper-evidence. Every
+  // record hash and every `prev_hash` link is a canonical hash of a record body,
+  // and the chain is verified by RE-DERIVING those hashes in a different process
+  // from the one that wrote them. Key-order stability is therefore the entire
+  // contract: without it a record would fail to verify against itself and a
+  // truncation would be indistinguishable from a serialisation difference. The
+  // runner is registered alongside the kernel because it derives the same
+  // binding over its own executed bytes (`runner_code_hash`). Registration is
+  // adoption review only; it promotes no Node0 surface and closes no DoD gate.
+  "packages/core/src/node0-endurance-chain.js",
+  "apps/cli/src/commands/node0-run.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

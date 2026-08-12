@@ -1,0 +1,574 @@
+// NODE0-RUN-1A — the node runner and endurance recorder.
+//
+// This is the surface the whole closure program exists to make possible: start
+// it once, leave it running, come back to a record that can be JUDGED rather
+// than believed.
+//
+// ── BOUNDARIES, STATED PLAINLY ──
+// - NO DAEMON. This is an explicit foreground process the operator starts and
+//   stops. It does not fork, detach, install a service, or survive its own
+//   terminal. Nothing starts it automatically.
+// - NO MODEL, NO NETWORK, NO EFFECT. It observes and records. It executes no
+//   mission, claims no nonce, prepares no transaction and renames nothing.
+// - NO AUTHORITY. `authority_delta` is 0 in every artefact it writes.
+//
+// ── WHY SAMPLES ARE APPEND-ONLY JSONL ──
+// A run that dies must leave everything it already observed intact and
+// judgeable. Rewriting one aggregate file would put the whole record at risk of
+// the very crash the endurance proof is meant to survive. Each line is fsynced
+// so a kill between samples loses at most the sample in flight — and the
+// endurance kernel reads that loss as a GAP, never as health.
+
+import { mkdir, open, readFile, writeFile, rename } from "node:fs/promises";
+import { join, basename } from "node:path";
+import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
+
+import { buildHealthSnapshot } from "../../../../packages/mission/src/health-snapshot.js";
+import {
+  evaluateEndurance,
+  ENDURANCE_TARGETS,
+  NODE0_ENDURANCE_SCHEMA,
+} from "../../../../packages/core/src/node0-endurance.js";
+import {
+  chainEnduranceRecord,
+  buildEnduranceAnchor,
+  verifyEnduranceChain,
+  ENDURANCE_HEADER_KIND,
+  ENDURANCE_SAMPLE_KIND,
+  ENDURANCE_EVIDENCE_CLASSES,
+} from "../../../../packages/core/src/node0-endurance-chain.js";
+import { sha256CanonicalJsonV1 } from "../../../../packages/canon/src/sha256-canonical-json-v1.js";
+
+export const NODE0_RUN_SCHEMA = "bizra.dema.node0_run_receipt.v0.1";
+export const ENDURANCE_RELDIR = join("node0", "endurance");
+export const ENDURANCE_ANCHOR_FILE = "anchor.json";
+
+/**
+ * The files whose bytes decide what a sample MEANS.
+ *
+ * ── WHY BYTES, NOT A GIT REVISION ──
+ * The obvious binding is the commit and tree the runner was started from. It is
+ * the weaker fact: a dirty working tree at a clean commit reports the clean
+ * commit, so the record would name code that is not the code that ran. Hashing
+ * the executed files binds the record to what actually produced it.
+ *
+ * It also costs no new capability. Measuring git needs `node:child_process`,
+ * which R5 forbids the runner outright — and moving that spawn into a
+ * neighbouring module to slip past a source scan would be evasion, not
+ * compliance. The git revision remains a real but separate fact; this record
+ * does not claim it.
+ */
+const RUNNER_CODE_FILES = Object.freeze([
+  new URL("./node0-run.js", import.meta.url),
+  new URL("../../../../packages/core/src/node0-endurance.js", import.meta.url),
+  new URL("../../../../packages/core/src/node0-endurance-chain.js", import.meta.url),
+  new URL("../../../../packages/mission/src/health-snapshot.js", import.meta.url),
+]);
+
+export async function measureRunnerCodeHash() {
+  const parts = {};
+  for (const url of RUNNER_CODE_FILES) {
+    const path = fileURLToPath(url);
+    parts[basename(path)] = sha256CanonicalJsonV1(await readFile(path, "utf8"));
+  }
+  return sha256CanonicalJsonV1(parts);
+}
+
+const DEFAULT_INTERVAL_MS = 5 * 60 * 1000;
+// Continuity allowance: a sample may be late, but not absent. Three missed
+// intervals is a blackout, not jitter.
+const GAP_MULTIPLIER = 3;
+
+function argValue(argv, name) {
+  const i = argv.indexOf(name);
+  return i >= 0 ? argv[i + 1] : undefined;
+}
+
+function resolveHome(argv) {
+  return argValue(argv, "--dema-home") || process.env.DEMA_HOME || join(homedir(), ".dema");
+}
+
+// PROMOTION-CORRECTION-1C item 5. `runId` was interpolated straight into a
+// path, so `../..` walked writes out of the endurance subtree. The operator
+// being the caller is not confinement — a run id arrives from argv and ends up
+// naming a directory that gets created, written and fsynced.
+//
+// One safe path segment, allow-listed rather than deny-listed: anything that is
+// not [A-Za-z0-9._-] is refused, which excludes `/`, `\`, NUL and every `..`
+// spelling without trying to enumerate traversal tricks. A bare `.` or `..` is
+// refused explicitly because both match the character class.
+const RUN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+
+export function assertSafeRunId(runId) {
+  if (typeof runId !== "string" || !RUN_ID_RE.test(runId) || runId === "." || runId === "..") {
+    throw new Error(
+      `unsafe_run_id: --run-id must be one path segment matching ${RUN_ID_RE} (got ${JSON.stringify(runId)})`,
+    );
+  }
+  return runId;
+}
+
+function runDir(home, runId) {
+  return join(home, ENDURANCE_RELDIR, assertSafeRunId(runId));
+}
+
+// The ONLY mission verdict that counts as a healthy endurance sample.
+// `ATTENTION` means the node is degraded but running; for an endurance claim
+// that is a failure, not a pass.
+export const HEALTHY_MISSION_VERDICT = "CLEAN";
+
+/**
+ * Take one observation.
+ *
+ * ── THE DEFECT THIS REPLACES ──
+ * The first implementation wrote `ok: snap?.ok !== false`. `buildHealthSnapshot`
+ * returns NO top-level `ok` — its result lives at `attests.mission_verdict` — so
+ * that expression was `undefined !== false`, which is ALWAYS true. Every sample
+ * was healthy by construction, including one attesting `mission_verdict: FAILED`.
+ * The test that "checked" it asserted `typeof s.ok === "boolean"` and passed
+ * vacuously, because `true` is a boolean.
+ *
+ * Health is now derived ONLY from the verdict the snapshot actually attests, the
+ * inspected home is recorded so a caller can prove WHAT was observed, and an
+ * unrecognised verdict fails closed.
+ */
+export async function takeSample({ at, demaHome, snapshotFn = buildHealthSnapshot }) {
+  try {
+    const snap = await snapshotFn({ now: new Date(at), demaHome });
+    const verdict = snap?.attests?.mission_verdict ?? null;
+    const inspected = snap?.attests?.results?.memory?.home ?? null;
+    return {
+      at_ms: at,
+      // Fail closed: only an explicit CLEAN is healthy. null, undefined,
+      // ATTENTION, FAILED and any future verdict are all false.
+      ok: verdict === HEALTHY_MISSION_VERDICT,
+      mission_verdict: verdict,
+      inspected_home: inspected,
+      // Binding the home the caller ASKED for alongside the one actually read
+      // makes a mismatch visible in the record instead of invisible.
+      requested_home: demaHome ?? null,
+      home_matches: inspected === (demaHome ?? null),
+      content_hash: snap?.content_hash ?? null,
+      // PROMOTION-CORRECTION-1C item 11. The snapshot knows whether observing
+      // the runtime spawned a child process or opened a local connection; this
+      // used to drop that on the floor, so the run receipt could later attest
+      // that none of it happened. Carried through per sample so the run-level
+      // disclosure can be DERIVED from observations instead of asserted.
+      boundary: snap?.attests?.boundary
+        ? {
+          network_used: snap.attests.boundary.network_used === true,
+          local_loopback_used: snap.attests.boundary.local_loopback_used === true,
+          child_process_invoked: snap.attests.boundary.child_process_invoked === true,
+          tool_executed: snap.attests.boundary.tool_executed === true,
+          runtime_execution_performed: snap.attests.boundary.runtime_execution_performed === true,
+          external_call_performed: snap.attests.boundary.external_call_performed === true,
+          node_connection_performed: snap.attests.boundary.node_connection_performed === true,
+        }
+        : null,
+    };
+  } catch (err) {
+    // An observation that FAILED is still an observation. Recording it is what
+    // separates DEGRADED (we watched it struggle) from BROKEN (we stopped watching).
+    return {
+      at_ms: at,
+      ok: false,
+      mission_verdict: null,
+      inspected_home: null,
+      requested_home: demaHome ?? null,
+      home_matches: false,
+      content_hash: null,
+      error: String(err?.message ?? err).slice(0, 200),
+    };
+  }
+}
+
+/** Append one line and fsync it, so a kill cannot lose an observation already made. */
+async function appendSampleLine(path, line) {
+  const fh = await open(path, "a");
+  try {
+    await fh.writeFile(`${line}\n`);
+    await fh.sync();
+  } finally {
+    await fh.close();
+  }
+}
+
+/** Every line of the record, header included. */
+export async function readRecords({ demaHome, runId }) {
+  const path = join(runDir(demaHome, runId), "samples.jsonl");
+  let raw;
+  try {
+    raw = await readFile(path, "utf8");
+  } catch (err) {
+    // PROMOTION-CORRECTION-1C item 7. A bare catch collapsed EACCES, EISDIR and
+    // I/O failure into the same answer as ENOENT: "the run never existed". That
+    // is the difference between absent evidence and UNREADABLE evidence, and
+    // only one of them is innocent. Absence stays absence; everything else is
+    // an integrity refusal that propagates.
+    if (err?.code === "ENOENT") return [];
+    throw new Error(`endurance_record_unreadable:${err?.code ?? "unknown"}: ${path}`);
+  }
+  const out = [];
+  for (const line of raw.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      out.push(JSON.parse(line));
+    } catch {
+      // A torn final line is a real observation loss. Record it as malformed so
+      // the kernel counts it rather than silently shrinking the evidence.
+      out.push({ at_ms: null, ok: false, malformed: true });
+    }
+  }
+  return out;
+}
+
+/** Observations only. The run header is chain metadata, not a health sample. */
+export async function readSamples({ demaHome, runId }) {
+  const records = await readRecords({ demaHome, runId });
+  return records.filter((r) => r?.kind !== ENDURANCE_HEADER_KIND);
+}
+
+/**
+ * PROMOTION-CORRECTION-1C items 7-9. Three outcomes, never two:
+ *   null                      — genuinely no anchor (ENOENT). The run may be legacy.
+ *   { malformed: true, ... }  — an anchor EXISTS and cannot be trusted. Reporting
+ *                               this as `null` told the verifier "unwitnessed",
+ *                               which is the innocent reading of a damaged file.
+ *   throws                    — unreadable (EACCES/EISDIR/IO): integrity refusal.
+ *
+ * A negative or non-integer `head_seq` is malformed, not a small number: it can
+ * only under-count the chain, and an anchor that under-counts makes truncation
+ * look like agreement.
+ */
+export async function readAnchor({ demaHome, runId }) {
+  const path = join(runDir(demaHome, runId), ENDURANCE_ANCHOR_FILE);
+  let raw;
+  try {
+    raw = await readFile(path, "utf8");
+  } catch (err) {
+    if (err?.code === "ENOENT") return null;
+    throw new Error(`endurance_anchor_unreadable:${err?.code ?? "unknown"}: ${path}`);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    return { malformed: true, reason: `anchor_json_invalid: ${String(err?.message ?? err).slice(0, 120)}` };
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return { malformed: true, reason: "anchor_not_an_object" };
+  }
+  if (!Number.isInteger(parsed.head_seq) || parsed.head_seq < 0) {
+    return { malformed: true, reason: `anchor_head_seq_invalid:${JSON.stringify(parsed.head_seq)}` };
+  }
+  return parsed;
+}
+
+/**
+ * Judge a run that already exists on disk. Read-only.
+ *
+ * ── WHY INTEGRITY GATES THE VERDICT ──
+ * Measured before this slice: deleting the last 10 of 26 samples left the
+ * verdict at `HEALTHY ok:true`, still reporting "continuously observed", with no
+ * field anywhere in the result that even mentioned integrity. Coverage was
+ * judged over whatever bytes happened to remain.
+ *
+ * A record whose chain does not verify, or which the anchor says is missing its
+ * tail, is not weak evidence — it is not evidence. It can never read HEALTHY.
+ * An UNWITNESSED record (`ABSENT`: written before this slice existed) is left
+ * judged as before but is explicitly marked not tamper-evident, because
+ * accusing it of tampering would be as dishonest as vouching for it.
+ */
+export async function judgeRun({ demaHome, runId, targetMs, intervalMs = DEFAULT_INTERVAL_MS }) {
+  const records = await readRecords({ demaHome, runId });
+  const chain = verifyEnduranceChain({
+    records,
+    anchor: await readAnchor({ demaHome, runId }),
+    runId,
+  });
+  const samples = records.filter((r) => r?.kind !== ENDURANCE_HEADER_KIND);
+  const verdict = evaluateEndurance({
+    samples,
+    targetMs,
+    maxGapMs: intervalMs * GAP_MULTIPLIER,
+  });
+
+  if (!chain.ok && chain.chain_state !== "ABSENT") {
+    return Object.freeze({
+      ...verdict,
+      ok: false,
+      verdict: "BROKEN",
+      reason: `endurance_record_integrity_failed:${chain.chain_state}:${chain.reason}`,
+      chain,
+    });
+  }
+  return Object.freeze({
+    ...verdict,
+    // An elapsed-run target claim needs BOTH a healthy judgment and a witnessed
+    // ELAPSED record. A CUSTOM_TEST chain proves the judgment works, never that
+    // a node endured anything.
+    target_met_by_elapsed_run: verdict.ok === true && chain.ok === true && chain.elapsed_evidence === true,
+    chain,
+  });
+}
+
+/**
+ * Rewrite the out-of-band anchor.
+ *
+ * ORDER IS LOAD-BEARING: the sample is appended and fsynced FIRST, then the
+ * anchor is replaced. That way the records may lead the anchor by exactly one
+ * (a crash in the window — recoverable, judged TORN_TAIL) but the anchor can
+ * never lead the records except by removal, which is what makes truncation
+ * detectable at all.
+ */
+/**
+ * PROMOTION-CORRECTION-1C item 10. `writeFile` + `rename` is atomic against a
+ * torn read; it is NOT durable against power loss. Samples are fsynced, so a
+ * power cut could drop several anchor updates while every observation survived
+ * — and the verifier reads an anchor trailing the chain by more than one append
+ * as TAMPERING. A crash must not be able to forge that signal.
+ *
+ * SIGKILL never tested this: the kernel flushes the page cache after a process
+ * dies. Only fsync of the file AND its containing directory (which is what
+ * makes the rename itself durable) closes it.
+ */
+async function writeAnchorAtomic({ dir, anchor }) {
+  const finalPath = join(dir, ENDURANCE_ANCHOR_FILE);
+  const temp = `${finalPath}.tmp`;
+  const fh = await open(temp, "w");
+  try {
+    await fh.writeFile(`${JSON.stringify(anchor, null, 2)}\n`);
+    await fh.sync();
+  } finally {
+    await fh.close();
+  }
+  await rename(temp, finalPath);
+  // Durability of the rename itself lives in the directory entry.
+  const dh = await open(dir, "r");
+  try {
+    await dh.sync();
+  } finally {
+    await dh.close();
+  }
+}
+
+async function writeReceiptAtomic({ demaHome, runId, receipt }) {
+  const dir = runDir(demaHome, runId);
+  const finalPath = join(dir, "endurance-receipt.json");
+  const temp = `${finalPath}.tmp`;
+  await writeFile(temp, `${JSON.stringify(receipt, null, 2)}\n`);
+  await rename(temp, finalPath);
+  return finalPath;
+}
+
+/**
+ * PROMOTION-CORRECTION-1C item 12. Union, never assertion: if ANY observation
+ * spawned a child process or opened a local connection, the run performed it.
+ * A sample that recorded no boundary (legacy record, or an observation that
+ * threw before disclosing) cannot lower the union — silence is not a denial.
+ */
+export function observedRunBoundary(samples) {
+  const keys = [
+    "network_used", "local_loopback_used", "child_process_invoked", "tool_executed",
+    "runtime_execution_performed", "external_call_performed", "node_connection_performed",
+  ];
+  const out = Object.fromEntries(keys.map((k) => [k, false]));
+  let disclosed = 0;
+  for (const s of Array.isArray(samples) ? samples : []) {
+    if (!s?.boundary || typeof s.boundary !== "object") continue;
+    disclosed += 1;
+    for (const k of keys) if (s.boundary[k] === true) out[k] = true;
+  }
+  return {
+    ...out,
+    // Public network is not reachable from this command's observation paths.
+    public_network_used: false,
+    samples_disclosing_boundary: disclosed,
+    boundary_derived_from_samples: true,
+  };
+}
+
+/**
+ * `dema node0 run` — start the node, observe it, record what happened.
+ *
+ * The loop is deliberately dull: snapshot, append, wait. Everything
+ * interesting lives in the kernel that judges the record afterwards.
+ */
+export async function cmdNode0Run(ctx) {
+  const argv = ctx?.argv ?? [];
+  const wantJson = argv.includes("--json");
+  const home = resolveHome(argv);
+  const runId = argValue(argv, "--run-id") || `run-${process.pid}`;
+  const intervalMs = Number(argValue(argv, "--interval-ms") ?? DEFAULT_INTERVAL_MS);
+  const targetKey = (argValue(argv, "--target") || "MINIMUM_OPERATIONAL").toUpperCase();
+  const targetMs = Number(argValue(argv, "--duration-ms") ?? ENDURANCE_TARGETS[targetKey] ?? ENDURANCE_TARGETS.MINIMUM_OPERATIONAL);
+
+  if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
+    console.error("Dema error: --interval-ms must be a positive number. Nothing was written.");
+    process.exitCode = 1;
+    return;
+  }
+  // PROMOTION-CORRECTION-1C item 4. `intervalMs` was validated and `targetMs`
+  // was not. `--duration-ms abc` gave NaN, and `elapsed >= NaN` is never true —
+  // an unbounded run. Worse, the header hashed NaN while JSON serialised it as
+  // null, so the persisted record could never re-derive its own hash: a run
+  // that could not stop AND could not be verified. Refused before any write.
+  if (!Number.isFinite(targetMs) || targetMs <= 0) {
+    console.error("Dema error: --duration-ms must be a positive number. Nothing was written.");
+    process.exitCode = 1;
+    return;
+  }
+  // Item 5: refuse a traversing run id before it can name a directory.
+  try {
+    assertSafeRunId(runId);
+  } catch (err) {
+    console.error(`Dema error: ${err.message}. Nothing was written.`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const dir = runDir(home, runId);
+
+  // ── judge-only mode: read an existing record, write nothing ──
+  // PROMOTION-CORRECTION-1C item 6. `mkdir` used to run BEFORE this branch, so
+  // judging a run that does not exist CREATED its directory while the command
+  // described itself as read-only. The early return now precedes every write.
+  if (argv.includes("--judge")) {
+    const verdict = await judgeRun({ demaHome: home, runId, targetMs, intervalMs });
+    if (wantJson) console.log(JSON.stringify({ preview_only: true, run_id: runId, ...verdict }, null, 2));
+    else {
+      console.log(`DEMA · node0 endurance judgment (read-only) · run ${runId}`);
+      console.log(`  verdict: ${verdict.verdict} · reason: ${verdict.reason}`);
+      console.log(`  observed span: ${verdict.observed_span_ms}ms of ${verdict.target_ms}ms target`);
+      console.log(`  samples: ${verdict.sample_count} · failures: ${verdict.failure_count} · gaps: ${verdict.gap_count}`);
+      console.log(`  continuously observed: ${verdict.continuously_observed}`);
+    }
+    process.exitCode = verdict.ok ? 0 : 1;
+    return;
+  }
+
+  // First write of the command, and it happens only on the recording path.
+  await mkdir(dir, { recursive: true });
+  const samplesPath = join(dir, "samples.jsonl");
+
+  let stopping = false;
+  const stop = () => { stopping = true; };
+  process.on("SIGINT", stop);
+  process.on("SIGTERM", stop);
+
+  console.log(`DEMA · node0 run · ${runId}`);
+  console.log(`  home: ${home}`);
+  console.log(`  interval: ${intervalMs}ms · target: ${targetMs}ms · samples: ${samplesPath}`);
+  console.log("  foreground process · no daemon, no model, no network, no effect. Ctrl-C to end and seal.");
+
+  // ── establish the chain head before observing anything ──
+  const existing = await readRecords({ demaHome: home, runId });
+  let prev = null;
+  if (existing.length === 0) {
+    // The header is seq 0, so every sample chains transitively to the code that
+    // produced it. Measured from the executing bytes, never asserted.
+    prev = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: runId,
+        runner_code_hash: await measureRunnerCodeHash(),
+        // Only an actual runner loop reaches this line. It is not settable from
+        // the CLI, so a synthesised record cannot mint ELAPSED through it.
+        evidence_class: ENDURANCE_EVIDENCE_CLASSES.ELAPSED,
+        interval_ms: intervalMs,
+        target_ms: targetMs,
+        started_at_ms: Date.now(),
+      },
+    });
+    await appendSampleLine(samplesPath, JSON.stringify(prev));
+    await writeAnchorAtomic({ dir, anchor: buildEnduranceAnchor({ head: prev, runId }) });
+  } else {
+    const resumed = verifyEnduranceChain({
+      records: existing,
+      anchor: await readAnchor({ demaHome: home, runId }),
+      runId,
+    });
+    if (!resumed.ok) {
+      // Appending to a record whose integrity cannot be established would launder
+      // the damage into an otherwise-clean tail. Refuse; a new --run-id is free.
+      console.error(
+        `Dema error: refusing to extend run '${runId}' — ${resumed.chain_state}: ${resumed.reason}. `
+        + "Nothing was written. Start a new --run-id.",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    prev = existing[existing.length - 1];
+  }
+
+  const startedAt = Date.now();
+  let taken = 0;
+
+  while (!stopping) {
+    const at = Date.now();
+    const sample = await takeSample({ at, demaHome: home });
+    const record = chainEnduranceRecord({
+      record: { kind: ENDURANCE_SAMPLE_KIND, run_id: runId, ...sample },
+      prev,
+    });
+    await appendSampleLine(samplesPath, JSON.stringify(record));
+    await writeAnchorAtomic({ dir, anchor: buildEnduranceAnchor({ head: record, runId }) });
+    prev = record;
+    taken += 1;
+    if (!wantJson) process.stdout.write(`  sample ${taken} · ok=${sample.ok} · ${new Date(at).toISOString()}\n`);
+
+    if (Date.now() - startedAt >= targetMs) break;
+    if (stopping) break;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+
+  const verdict = await judgeRun({ demaHome: home, runId, targetMs, intervalMs });
+  // Derived from the PERSISTED record, not from this process's loop: on a
+  // resumed run the receipt must disclose what the whole run did, including
+  // observations made before this process started.
+  const recordedSamples = await readSamples({ demaHome: home, runId });
+  const receipt = {
+    schema: NODE0_RUN_SCHEMA,
+    run_id: runId,
+    endurance_schema: NODE0_ENDURANCE_SCHEMA,
+    started_at_ms: startedAt,
+    ended_at_ms: Date.now(),
+    interval_ms: intervalMs,
+    target_ms: targetMs,
+    samples_taken: taken,
+    stopped_by_signal: stopping,
+    verdict,
+    // Surfaced at the top level so a reader never has to infer integrity from
+    // the absence of a complaint.
+    tamper_evident: verdict.chain?.tamper_evident === true,
+    chain_state: verdict.chain?.chain_state ?? null,
+    evidence_class: verdict.chain?.evidence_class ?? null,
+    runner_code_hash: verdict.chain?.runner_code_hash ?? null,
+    target_met_by_elapsed_run: verdict.target_met_by_elapsed_run === true,
+    // PROMOTION-CORRECTION-1C item 12. This block used to be a constant, so a
+    // run whose every sample spawned a child process still attested
+    // `network:false, effect_executed:false`. The health snapshot knew; the
+    // sample now carries it (item 11); and the run-level disclosure is DERIVED
+    // from the union of what was actually observed. Facts that this command
+    // genuinely never performs stay false and are labelled as such.
+    boundary: {
+      ...observedRunBoundary(recordedSamples),
+      // Structurally impossible for `node0 run`: it holds no effect, nonce or
+      // transaction capability, and loads no model.
+      daemon: false, model_invoked: false,
+      effect_executed: false, nonce_claimed: false, transaction_prepared: false,
+    },
+    authority_delta: 0,
+  };
+  const receiptPath = await writeReceiptAtomic({ demaHome: home, runId, receipt });
+
+  if (wantJson) console.log(JSON.stringify(receipt, null, 2));
+  else {
+    console.log(`\n  endurance verdict: ${verdict.verdict} — ${verdict.reason}`);
+    console.log(`  observed span: ${verdict.observed_span_ms}ms · samples: ${verdict.sample_count} · gaps: ${verdict.gap_count}`);
+    console.log(`  receipt: ${receiptPath}`);
+    console.log("  nothing was executed: no effect, no nonce, no transaction, authority_delta 0.");
+  }
+  process.exitCode = verdict.ok ? 0 : 1;
+}

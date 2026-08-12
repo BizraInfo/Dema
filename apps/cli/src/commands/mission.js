@@ -65,12 +65,32 @@ import {
 // repository before constructing root-bound consent. It verifies consent only:
 // it claims no independent FATE policy decision and executes no effect.
 import { loadSeasonHead } from "../../../../packages/receipts/src/season-state-store.js";
+// The Season predicate and the COMPLETE typed FATE contract, called directly by
+// the corridor rename effect gate (not transitively through the preflight bridge).
+import {
+  evaluateSeasonActionAuthority,
+} from "../../../../packages/core/src/node0-minimum-season-save-resume.js";
+import {
+  evaluateFatePolicy,
+  PERMITTED_EFFECT_KINDS,
+} from "../../../../packages/core/src/node0-fate-contract.js";
+
+// The canonical Season action this effect route performs. Bound to the effect
+// kind the FATE policy is competent to judge, so the two can never drift apart.
+const CORRIDOR_FATE_ACTION_ID = "CORRIDOR_RENAME_EXECUTE";
+const CORRIDOR_FATE_EFFECT_KIND = PERMITTED_EFFECT_KINDS[0];
 import {
   evaluateCorridorSeasonConsentBridge,
 } from "../../../../packages/mission/src/corridor-season-consent-bridge.js";
 import {
   readExecutingRepositoryBinding, REPO_ROOT as BINDING_REPO_ROOT,
 } from "../../../../packages/mission/src/executing-repository-binding.js";
+// NOTE: assessReversibility/assessBlastRadius were imported here to gate the
+// real effect. Defect D4 (b3e7942) replaced that pair with the complete typed
+// `evaluateFatePolicy`, reached through corridorRenameSeasonFateGate — calling
+// only those two predicates was never the FATE contract. The imports outlived
+// the call sites and are removed; keeping them suggested a gate that no longer
+// runs from here.
 import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -2200,15 +2220,43 @@ async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
   }
 
   const seasonLoad = await loadSeasonHead({ demaHome, seasonId });
+  // PROMOTION-CORRECTION-1C item 1. `state` was referenced below but never
+  // bound in this function — the only binding lived in
+  // corridorRenameSeasonFateGate — so `--season-preflight --effect-root`
+  // raised a ReferenceError and the caller got a stack trace instead of a
+  // structured refusal. Bound fail-closed: an unusable Season load yields
+  // `null` here and the bridge REFUSES on the evidence, rather than the
+  // preview crashing before it can report anything.
+  const state = seasonLoad?.ok === true ? (seasonLoad.state ?? null) : null;
   // The executing repository is measured independently of anything the Season
   // State claims. There is deliberately no fallback to state-supplied values.
   const executingRepository = await readExecutingRepositoryBinding({ runGit: realGitRunner });
+
+  // The effect DECLARATION that FATE (Mind Three) will judge. It is declared
+  // explicitly rather than inferred: the policy must see the operands it is
+  // being asked to permit. A missing or malformed declaration is REFUSED by the
+  // policy — the preflight never invents one to make itself pass.
+  const effectRoot = argValue(argv, "--effect-root");
+  const declaredEffect = effectRoot
+    ? {
+      kind: argValue(argv, "--effect-kind") ?? "bounded_local_rename",
+      root: effectRoot,
+      from: argValue(argv, "--effect-from"),
+      to: argValue(argv, "--effect-to"),
+      undoable: true,
+      inverse_kind: argValue(argv, "--effect-kind") ?? "bounded_local_rename",
+      before_hash: argValue(argv, "--effect-before-hash"),
+      before_manifest: state?.pending_effect ? [state.pending_effect] : null,
+      authority_delta: 0,
+    }
+    : undefined;
 
   const verdict = evaluateCorridorSeasonConsentBridge({
     seasonLoad,
     executingRepository,
     actionId: argValue(argv, "--action") ?? "CORRIDOR_RENAME_EXECUTE",
     corridorContext: ctxParams,
+    effect: declaredEffect,
     presentedPhrase: argValue(argv, "--consent"),
     presentedConsentContextHash: argValue(argv, "--consent-context"),
     now: ctxParams.now_iso,
@@ -2220,6 +2268,16 @@ async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
   } else {
     console.log("DEMA · corridor Season consent preflight (verification only · nothing written)");
     console.log(`  stage: ${verdict.stage} · verdict: ${verdict.verdict}`);
+    // PROMOTION-CORRECTION-1C item 3. This line used to print `fate: <verdict>`
+    // while the footer said no independent FATE policy decision was claimed —
+    // the same output asserting both. What the consent bridge produces is an
+    // effect SHAPE assessment (reversible / bounded), not the typed FATE policy
+    // contract, which runs only on the real effect route. Labelled for what it
+    // is, so the header and the footer can both be true.
+    console.log(`  effect shape: reversible ${verdict.effect_reversible} · bounded ${verdict.effect_scope_bounded}`);
+    if (verdict.fate_verdict !== undefined && verdict.fate_verdict !== null) {
+      console.log(`  shape_assessment: ${verdict.fate_verdict} — NOT an independent FATE policy decision`);
+    }
     console.log(`  season: ${verdict.season_id ?? "-"} · sequence: ${verdict.authoritative_sequence ?? "-"}`);
     console.log(`  claimed commit:   ${verdict.claimed_repository_commit ?? "-"}`);
     console.log(`  executing commit: ${verdict.executing_repository_commit ?? "-"}`);
@@ -2234,6 +2292,109 @@ async function corridorSeasonConsentPreflight(argv, ctxParams, wantJson) {
     );
   }
   return verdict;
+}
+
+// NODE0-CLOSURE-SPRINT-CORRECTION-1A — the Season + full FATE gate on the REAL
+// corridor rename effect path.
+//
+// ── ORDER IS THE WHOLE POINT ──
+// This runs after the prepared intent is known (so FATE sees the ACTUAL
+// before-state and operands) but BEFORE consent, the nonce claim and the
+// closure locks. A refusal here therefore writes nothing, and can say so
+// truthfully.
+//
+// ── SCOPE ──
+// It gates the corridor RENAME effect specifically, which is what makes
+// CORRIDOR_RENAME_SEASON_GATE_LIVE and
+// MUST_NOT_REPEAT_EFFECT_GATE_ENFORCED_FOR_CORRIDOR_RENAME true.
+// It does NOT gate every DEMA effect; global enforcement stays false.
+async function corridorRenameSeasonFateGate(argv, {
+  missionId, scopeRoot, fromName, toName, prepared,
+}) {
+  const seasonId = argValue(argv, "--season");
+  const demaHome = argValue(argv, "--dema-home");
+  if (!seasonId) {
+    corridorFail(
+      "season_required_for_corridor_rename: the corridor rename effect is Season-gated — supply --season <id> "
+      + "(and --dema-home <path>). No consent was requested, no nonce claimed, no lock taken; nothing was written.",
+    );
+  }
+  if (!demaHome) {
+    corridorFail(
+      "dema_home_required: --season requires --dema-home <isolated-path> so the authoritative Season HEAD is loaded "
+      + "from an explicit store. Nothing was written.",
+    );
+  }
+
+  // 1. authoritative Season load
+  const seasonLoad = await loadSeasonHead({ demaHome, seasonId });
+  if (!seasonLoad.ok || seasonLoad.outcome !== "OK") {
+    corridorFail(
+      `season_state_unusable:${seasonLoad.reason ?? seasonLoad.outcome} — nothing was written.`,
+    );
+  }
+  const state = seasonLoad.state;
+
+  // 2. independent repository binding — measured, never taken from the state
+  const executing = await readExecutingRepositoryBinding({ runGit: realGitRunner });
+  if (!executing.ok) {
+    corridorFail(`executing_repository_unresolved:${executing.reason} — nothing was written.`);
+  }
+  if (state.repository_commit !== executing.commit) {
+    corridorFail("repository_commit_mismatch — the Season State claims a different commit than the executing repository; nothing was written.");
+  }
+  if (state.repository_tree !== executing.tree) {
+    corridorFail("repository_tree_mismatch — the Season State claims a different tree than the executing repository; nothing was written.");
+  }
+
+  // 3. Season action eligibility against the EXECUTING repository
+  const authority = evaluateSeasonActionAuthority({
+    actionId: CORRIDOR_FATE_ACTION_ID,
+    seasonState: state,
+    repositoryCommit: executing.commit,
+    repositoryTree: executing.tree,
+  });
+  if (!authority.ok) {
+    corridorFail(
+      `season_action_refused:${authority.reason} — no consent context was constructed, no FATE decision was reached, `
+      + "no nonce claimed, no lock taken; nothing was written.",
+    );
+  }
+
+  // 4+5. the COMPLETE typed FATE contract, on the ACTUAL effect facts
+  const fate = evaluateFatePolicy({
+    seasonAuthority: authority,
+    effect: {
+      kind: CORRIDOR_FATE_EFFECT_KIND,
+      root: scopeRoot,
+      from: fromName,
+      to: toName,
+      undoable: true,
+      inverse_kind: CORRIDOR_FATE_EFFECT_KIND,
+      before_hash: prepared.intent.before_hash,
+      before_manifest: prepared.intent.before_manifest,
+      authority_delta: 0,
+    },
+  });
+  if (!fate.ok) {
+    corridorFail(
+      `fate_policy_refused:${fate.reason} (${(fate.blocked_by ?? []).join(", ")}) — no consent was requested, `
+      + "no nonce claimed, no lock taken, no transaction prepared, no rename performed; nothing was written.",
+    );
+  }
+
+  return Object.freeze({
+    season_id: seasonId,
+    authoritative_sequence: state.state_sequence,
+    executing_repository_commit: executing.commit,
+    executing_repository_tree: executing.tree,
+    season_authority_verdict: authority.verdict,
+    canonical_action: authority.canonical_action,
+    fate_verdict: fate.verdict,
+    fate_means: fate.means,
+    mission_id: missionId,
+    authority_delta: 0,
+  });
 }
 
 async function corridorConsentGate(argv, {
@@ -2756,6 +2917,30 @@ async function cmdMissionCorridor(argv) {
         corridorFail(`terminal C2 recovery verification failed closed (${resolvedArtifacts.reason}).`);
       }
 
+      // PROMOTION-CORRECTION-1C item 15, recovery half.
+      //
+      // The primary path records WHICH Season and FATE decision permitted the
+      // closure. This path replays a closure that already happened, and it must
+      // NOT re-authorize: re-running the gate here would mint a fresh
+      // permission during recovery, which is the opposite of what recovery
+      // means. So the recorded authorization is carried forward from the
+      // closure record already on disk.
+      //
+      // Both builders must also emit byte-identical JSON — the EEXIST branch
+      // below compares bytes to detect semantic drift, so a field present in
+      // one builder and absent in the other turns every ordinary recovery into
+      // a false "closure record conflict". Measured: CCB-15 and CCB-20 went red
+      // exactly that way when only the primary builder carried this field.
+      let recordedSeasonAuthority = null;
+      try {
+        recordedSeasonAuthority =
+          JSON.parse(await readFileFs(join(dir, "closure.json"), "utf8")).season_authority ?? null;
+      } catch {
+        // No prior record (or unreadable): the closure is being written for the
+        // first time on this path, and there is no authorization to carry.
+        recordedSeasonAuthority = null;
+      }
+
       const closureRecord = {
         schema: "bizra.dema.mission_corridor_closure_record.v0.1",
         mission_id: id,
@@ -2770,6 +2955,7 @@ async function cmdMissionCorridor(argv) {
         consent_claim_hash: last.consent_claim_hash,
         prepared_intent_hash: last.prepared_intent_hash,
         omega0_card: sealedRef.omega0_card,
+        season_authority: recordedSeasonAuthority,
         at_iso: last.at_iso,
         verify_with: `dema mission corridor status ${id}`,
       };
@@ -2849,6 +3035,48 @@ async function cmdMissionCorridor(argv) {
     if (!prepared.ok) {
       corridorFail(`closure effect intent blocked: ${prepared.reason} — nothing was written.`);
     }
+
+    // ── SEASON + FULL FATE CONTRACT, BEFORE CONSENT, NONCE AND LOCKS ──
+    //
+    // ── THE DEFECT THIS REPLACES ──
+    // The first implementation placed a FATE check AFTER corridorConsentGate
+    // (which claims the single-use nonce) and AFTER acquireClosureLock. Its
+    // refusal message said "nothing was written" — which was FALSE: a nonce
+    // file and a lock file already existed. It also called only
+    // assessReversibility/assessBlastRadius, skipping Season eligibility,
+    // repository binding, policy version and effect-kind entirely, so it was
+    // not the FATE contract at all — only two of its predicates.
+    //
+    // The gate now sits where the prepared intent is known but NOTHING has been
+    // claimed, and it calls the complete typed contract.
+    // `seasonGate` IS read: item 15 made it the source of the durable
+    // `season_authority` evidence persisted into the closure record below (see
+    // the season_authority block). It is not a dead binding and must stay.
+    //
+    // PROMOTION-CORRECTION-1C item 16. The comment that stood here claimed the
+    // binding was "INTENTIONALLY unread" and had to survive only because
+    // `tests/node0-closure-sprint-correction.test.js` D3b anchored on the literal
+    // source text `const seasonGate = await corridorRenameSeasonFateGate` to
+    // prove ordering. Both halves had rotted: item 15 had already made the
+    // binding load-bearing, and a source-text index comparison proves layout, not
+    // execution order. D3b is replaced by FO-01..FO-03, which prove the same
+    // ordering by DIFFERENTIAL REFUSAL — break two gates at once and the one that
+    // speaks is the earlier one. Measured: with this call moved after
+    // corridorConsentGate, FO-01, FO-02, FO-03, D3 and D4b all turn red.
+    //
+    // Measured the same session: inlining this call to satisfy the unused-variable
+    // reading left `seasonGate` undefined at the season_authority block, and all
+    // 12 tests in node0-closure-sprint-correction.test.js still passed — none of
+    // them reaches a SUCCESSFUL closure. Success-path coverage lives elsewhere
+    // (node0-corridor-season-consent-bridge, node0-fate-contract). A file passing
+    // is not evidence that a path was executed.
+    const seasonGate = await corridorRenameSeasonFateGate(argv, {
+      missionId: id,
+      scopeRoot: estate,
+      fromName,
+      toName,
+      prepared,
+    });
 
     let recoveryPhase = null;
     if (recoveryClaim) {
@@ -3111,6 +3339,31 @@ async function cmdMissionCorridor(argv) {
         consent_claim_hash: consentClaim.claim_hash,
         prepared_intent_hash: prepared.prepared_intent_hash,
         omega0_card: result.omega0_card ?? null,
+        // PROMOTION-CORRECTION-1C item 15. The Season/FATE gate computed a full
+        // authorization record and the closure threw it away, so a SUCCESSFUL
+        // closure could not say which Season and which FATE decision permitted
+        // it — only that something had refused nothing. The refusal path was
+        // loud; the permission path was silent, which is the wrong way round
+        // for evidence. Persisted verbatim from the gate's own frozen return.
+        //
+        // This also retires the "unused variable" reading of `seasonGate`: it
+        // was never dead, and now it is visibly load-bearing.
+        season_authority: seasonGate
+          ? {
+            season_id: seasonGate.season_id,
+            authoritative_sequence: seasonGate.authoritative_sequence,
+            executing_repository_commit: seasonGate.executing_repository_commit,
+            executing_repository_tree: seasonGate.executing_repository_tree,
+            season_authority_verdict: seasonGate.season_authority_verdict,
+            canonical_action: seasonGate.canonical_action,
+            fate_verdict: seasonGate.fate_verdict,
+            fate_means: seasonGate.fate_means,
+          }
+          // Absent only when the corridor rename route ran without --season,
+          // which the gate itself already refuses for the effect path. Recorded
+          // as an explicit null so a reader can tell "not applicable" from
+          // "forgotten".
+          : null,
         at_iso: nowIso,
         verify_with: `dema mission corridor status ${id}`,
     };
