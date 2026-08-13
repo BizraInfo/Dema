@@ -139,8 +139,16 @@ const REPO = fileURLToPath(new URL("../..", import.meta.url));
 function runTests(cwd, files) {
   let out = "";
   try {
+    // NODE_TEST_CONTEXT must not be inherited. When this gate is itself invoked
+    // from inside `node --test`, the child sees the parent's context, switches
+    // reporter behaviour, and never emits the `# tests N` trailer — so every
+    // control reported `baseline_did_not_run` and the gate silently measured
+    // nothing. The harness leaking into the measurement, in the instrument built
+    // to catch exactly that.
+    const { NODE_TEST_CONTEXT: _drop, ...env } = process.env;
     out = execFileSync("node", ["--test", "--test-reporter=tap", ...files], {
       cwd,
+      env,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
       maxBuffer: 64 * 1024 * 1024,
@@ -190,7 +198,14 @@ export function runMutationControls({ extractionRoot, controls = MUTATION_CONTRO
     writeFileSync(path, original);
 
     // 3. A parse failure reddens everything and would read as success.
-    if (mutated.ran === 0) {
+    //
+    // `ran === 0` alone does NOT detect it: when an imported module fails to
+    // parse, node reports the FILE as a single failing test and still prints
+    // `# tests 1`. Measured by MC-04 against this very check — the first version
+    // of this guard let a broken module through as `did_not_redden`. A failure
+    // whose name is a test FILE is a load failure, not a caught defect.
+    const loadFailed = [...mutated.failed].some((f) => f.endsWith(".test.js"));
+    if (mutated.ran === 0 || loadFailed) {
       results.push({ id: c.id, ok: false, reason: "mutation_broke_the_module" });
       continue;
     }
