@@ -210,7 +210,12 @@ export function buildDisclosedStewardPreview(input) {
 //
 // RECOVERY != REAUTHORIZATION. Resuming a partially executed capsule continues its
 // state machine; it never restarts the graph under the same consent.
-export const MISSION_EFFECT_CAPSULE_SCHEMA = "bizra.mission.mission_effect_capsule.v0.1";
+// v0.2: the body may now carry `source_content`, the exact bytes the sovereign
+// approved. v0.1 could not express that, so one id across both shapes would be
+// SAME_SCHEMA_ID != SAME_SEMANTICS. No compatibility shim: a v0.1 capsule simply
+// is not a v0.2 capsule.
+export const MISSION_EFFECT_CAPSULE_SCHEMA = "bizra.mission.mission_effect_capsule.v0.2";
+export const MISSION_EFFECT_CAPSULE_SCHEMA_LEGACY_V0_1 = "bizra.mission.mission_effect_capsule.v0.1";
 
 // The ordered graph the sovereign agrees to in one act.
 export const CAPSULE_PHASE_GRAPH = Object.freeze([
@@ -234,11 +239,38 @@ export function buildMissionEffectCapsule({
   repository_tree,
   nonce,
   expires_at,
+  // WHAT THE SOVEREIGN ACTUALLY LOOKED AT. Supplied by the caller because this
+  // kernel reads no disk — the same dependency-injection contract as `fs`
+  // everywhere else in this tier. Omitted -> PATHNAME_ONLY, the older and
+  // visibly weaker mode, preserved rather than silently retired.
+  sourceContent,
 } = {}) {
   const required = { effect, mission_id, contract_hash, purpose_id, repository_commit, repository_tree, nonce, expires_at };
   for (const [k, v] of Object.entries(required)) {
     if (v === undefined || v === null || (typeof v === "string" && v.length === 0)) {
       return Object.freeze({ ok: false, reason: `capsule_field_missing:${k}` });
+    }
+  }
+  // A malformed commitment must refuse, never quietly downgrade to PATHNAME_ONLY:
+  // a caller that meant to bind content and silently got pathname semantics would
+  // believe it held a guarantee it never received.
+  const atomNames = Array.isArray(effect?.atoms) ? effect.atoms.map((a) => a?.from) : [];
+  if (sourceContent !== undefined) {
+    if (!sourceContent || typeof sourceContent !== 'object' || Array.isArray(sourceContent)) {
+      return Object.freeze({ ok: false, reason: 'source_content_not_object' });
+    }
+    for (const [name, hash] of Object.entries(sourceContent)) {
+      if (!atomNames.includes(name)) {
+        return Object.freeze({ ok: false, reason: 'source_content_unknown_atom:' + name });
+      }
+      if (typeof hash !== 'string' || !/^sha256:[0-9a-f]{64}$/.test(hash)) {
+        return Object.freeze({ ok: false, reason: 'source_content_malformed_hash:' + name });
+      }
+    }
+    for (const n of atomNames) {
+      if (!(n in sourceContent)) {
+        return Object.freeze({ ok: false, reason: 'source_content_missing_atom:' + n });
+      }
     }
   }
   let preview;
@@ -307,7 +339,8 @@ export function buildMissionEffectCapsule({
     // committed content. Upgrading consent to bind source bytes would change
     // what a phrase authorizes, which is a sovereign contract change and not
     // something an implementation may perform on its own.
-    source_content_binding: "PATHNAME_ONLY",
+    source_content_binding: sourceContent === undefined ? "PATHNAME_ONLY" : "CONTENT_BOUND",
+    source_content: sourceContent === undefined ? null : Object.freeze({ ...sourceContent }),
     expected_states: Object.freeze({
       genesis: "the source path present with its before-hash",
       after_provisional: "the target path present, content hash unchanged",
@@ -525,6 +558,20 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [], fs } =
  * VERIFIED history — never of what a caller asked for. Recovery from a partial run
  * resumes at the truthful frontier; it does not restart the graph.
  */
+/**
+ * The content a mutating phase must find. p1 inherits what the sovereign
+ * approved (CONTENT_BOUND capsules only); p5 inherits what p1 actually moved.
+ * A PATHNAME_ONLY capsule yields null for p1 — it never committed to content,
+ * and inventing an expectation would fake a guarantee consent never gave.
+ */
+function expectedBeforeHashFor(capsule, evidence, phaseName) {
+  if (phaseName === capsule.phases[0]?.name) {
+    return capsule.source_content?.[capsule.effect_preview.atoms[0]?.from] ?? null;
+  }
+  if (phaseName === "p5-final-apply") return provisionalOf(capsule, evidence)?.before_hash ?? null;
+  return null;
+}
+
 /** The p1 receipt from the supplied evidence, or null. Read-only, no fs. */
 function provisionalOf(capsule, evidence) {
   const rows = Array.isArray(evidence) ? evidence : [];
@@ -564,10 +611,7 @@ export function nextCapsulePhase(capsule, evidence = [], fs) {
     // pathname. p1 has no committed expectation because the capsule's preview
     // binds pathnames, not content — STATED, not faked: closing that requires
     // consent to commit to source content, which is a separate act.
-    expected_before_hash:
-      phase.name === "p5-final-apply" && provisionalOf(capsule, evidence)
-        ? provisionalOf(capsule, evidence).before_hash
-        : null,
+    expected_before_hash: expectedBeforeHashFor(capsule, evidence, phase.name),
     verified_completed: done,
     stopped_at: derived.stopped_at,
   });
