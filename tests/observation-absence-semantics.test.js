@@ -43,6 +43,8 @@ import {
   executeReversibleRename,
   NODE0_REVERSIBLE_EXECUTE_GO_PHRASE,
   NODE0_REVERSIBLE_EXECUTE_ACTION_TYPE,
+  NODE0_REVERSIBLE_OBSERVATION_SCHEMA,
+  NODE0_REVERSIBLE_OBSERVATION_SCHEMA_LEGACY_V0_1,
 } from "../packages/core/src/node0-reversible-execute-gate.js";
 import {
   buildMissionEffectCapsule,
@@ -203,6 +205,48 @@ test("OA-04: PRESENT with the wrong hash does not satisfy a presence predicate",
   assert.equal(o.observed[TO].state, OBSERVED_PRESENT);
   assert.notEqual(o.observed[TO].hash, `sha256:${"0".repeat(64)}`);
   assert.equal(o.observed[FROM].state, OBSERVED_ABSENT);
+});
+
+// ── OA-06 · a legacy v0.1 observation is not silently normalised ────────────
+test("OA-06: a v0.1-shaped observation cannot satisfy an absence predicate", () => {
+  const root = sandbox(false);
+  writeFileSync(join(root, TO), BODY);
+  const current = observe(root, [FROM, TO]);
+
+  // Exactly what v0.1 sealed: bare `hash | null` per name, under the old id.
+  // A compatibility shim mapping that null to ABSENT would reintroduce the whole
+  // vulnerability, so the schema is versioned and the old shape simply fails.
+  const legacy = {
+    ...current,
+    schema: NODE0_REVERSIBLE_OBSERVATION_SCHEMA_LEGACY_V0_1,
+    observed: { [FROM]: null, [TO]: current.observed[TO].hash },
+  };
+  assert.notEqual(
+    NODE0_REVERSIBLE_OBSERVATION_SCHEMA,
+    NODE0_REVERSIBLE_OBSERVATION_SCHEMA_LEGACY_V0_1,
+    "the wire meaning changed, so the schema id must change with it",
+  );
+  assert.equal(legacy.observed[FROM], null, "control: this really is the old shape");
+
+  // Asserted through the real predicate, not by inspecting the object. A v0.1
+  // artifact must credit nothing: it fails on the schema id, and would fail on
+  // the bare null even if the id matched.
+  const built = buildMissionEffectCapsule({
+    effect: { sandbox_root: root, atoms: [{ from: FROM, to: TO }] },
+    mission_id: "genesis-mission-001",
+    contract_hash: `sha256:${"c".repeat(64)}`,
+    purpose_id: "normalize",
+    repository_commit: "1".repeat(40),
+    repository_tree: "2".repeat(40),
+    nonce: "gm001-oa-0000000000000006",
+    expires_at: "2026-08-14T20:00:00Z",
+  });
+  const r = nextCapsulePhase(
+    built.capsule,
+    [{ phase: CAPSULE_PHASE_GRAPH[1], observation: legacy }],
+    fs,
+  );
+  assert.equal(r.verified_completed.includes(CAPSULE_PHASE_GRAPH[1]), false, "a v0.1 null credited absence");
 });
 
 // ── OA-05 · the sealed body carries the state, so it is bound by the hash ───

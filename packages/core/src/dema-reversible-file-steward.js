@@ -512,6 +512,14 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [], fs } =
  * VERIFIED history — never of what a caller asked for. Recovery from a partial run
  * resumes at the truthful frontier; it does not restart the graph.
  */
+/** The p1 receipt from the supplied evidence, or null. Read-only, no fs. */
+function provisionalOf(capsule, evidence) {
+  const rows = Array.isArray(evidence) ? evidence : [];
+  const row = rows.find((r) => r && r.phase === capsule.phases[0]?.name);
+  const r = row?.receipt;
+  return r && typeof r.before_hash === "string" ? r : null;
+}
+
 export function nextCapsulePhase(capsule, evidence = [], fs) {
   if (!capsule || capsule.schema !== MISSION_EFFECT_CAPSULE_SCHEMA) {
     return Object.freeze({ ok: false, reason: "capsule_required" });
@@ -537,6 +545,16 @@ export function nextCapsulePhase(capsule, evidence = [], fs) {
     mutating: phase.mutating,
     // Exactly what the gate must be handed — derived, not chosen.
     action_id: capsule.action_id,
+    // EFFECT-TIME PRECONDITION, handed over rather than left to the caller to
+    // remember. The final apply must move the SAME bytes the provisional apply
+    // moved; anything else is someone else's content wearing the consented
+    // pathname. p1 has no committed expectation because the capsule's preview
+    // binds pathnames, not content — STATED, not faked: closing that requires
+    // consent to commit to source content, which is a separate act.
+    expected_before_hash:
+      phase.name === "p5-final-apply" && provisionalOf(capsule, evidence)
+        ? provisionalOf(capsule, evidence).before_hash
+        : null,
     verified_completed: done,
     stopped_at: derived.stopped_at,
   });

@@ -169,6 +169,18 @@ export function planReversibleRename({
   // every backup remains create-once. Omitted → legacy path shape, byte-identical.
   actionId,
   phase,
+  // EFFECT-TIME PRECONDITION. A sealed observation is a fact about a past
+  // moment, not a lease over future reality. Measured: after a valid p4 was
+  // sealed, an external write changed the governed file and the final apply
+  // renamed THAT content, sealing a receipt for bytes nobody consented to —
+  // existence and type were re-derived at effect time, content was not.
+  //
+  //     PAST TRUTH != CURRENT PRECONDITION
+  //
+  // When supplied, the actuator compares it to the bytes it is about to move,
+  // inside the same call that moves them, so the check cannot be stale.
+  // Omitted → legacy behaviour, byte-identical for every existing caller.
+  expectedBeforeHash,
 } = {}) {
   const blocked_by = [];
   if (goPhrase !== NODE0_REVERSIBLE_EXECUTE_GO_PHRASE) {
@@ -188,6 +200,9 @@ export function planReversibleRename({
   if (actionId !== undefined && !isSafeName(actionId)) blocked_by.push("unsafe_action_id");
   if (phase !== undefined && !isSafeName(phase)) blocked_by.push("unsafe_phase");
   if (phase !== undefined && actionId === undefined) blocked_by.push("phase_without_action_id");
+  if (expectedBeforeHash !== undefined && !/^sha256:[0-9a-f]{64}$/.test(expectedBeforeHash)) {
+    blocked_by.push("unsafe_expected_before_hash");
+  }
 
   const eligible = blocked_by.length === 0;
   return Object.freeze({
@@ -199,6 +214,10 @@ export function planReversibleRename({
     to: isSafeName(newName) ? newName : null,
     action_id: actionId !== undefined && isSafeName(actionId) ? actionId : null,
     phase: phase !== undefined && isSafeName(phase) ? phase : null,
+    expected_before_hash:
+      typeof expectedBeforeHash === "string" && /^sha256:[0-9a-f]{64}$/.test(expectedBeforeHash)
+        ? expectedBeforeHash
+        : null,
     consent_ok: !blocked_by.includes("consent_phrase_mismatch"),
     eligible,
     blocked_by: Object.freeze(blocked_by),
@@ -397,6 +416,11 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
     return blockedReceipt(plan, ["source_not_a_file"]);
   }
   const before_hash = `sha256:${sha256Hex(beforeBytes)}`;
+  // The world may have drifted since the phase became eligible. Refuse rather
+  // than move whatever happens to be there now.
+  if (plan.expected_before_hash && plan.expected_before_hash !== before_hash) {
+    return blockedReceipt(plan, ["before_hash_drifted"]);
+  }
 
   // Backup BEFORE the action — exclusive create, never clobber.
   //
@@ -635,7 +659,16 @@ export function undoReversibleRename({ receipt, fs, actionId } = {}) {
 
 export const NODE0_REVERSIBLE_UNDO_RECEIPT_SCHEMA =
   "bizra.node0.node0_reversible_undo_receipt.v0.1";
+// v0.2, and the version bump is the point. v0.1 encoded each name as
+// `hash | null`; v0.2 encodes `{state, hash?, reason?}`. Same ID with different
+// wire meaning would be SCHEMA NAME != SCHEMA CONTRACT — the same disease as
+// every other representation defect this line of work has closed. A v0.1
+// artifact now fails the schema check outright, and there is deliberately NO
+// compatibility shim: normalising a legacy bare `null` into ABSENT would
+// reintroduce the exact vulnerability through the back door.
 export const NODE0_REVERSIBLE_OBSERVATION_SCHEMA =
+  "bizra.node0.node0_reversible_state_observation.v0.2";
+export const NODE0_REVERSIBLE_OBSERVATION_SCHEMA_LEGACY_V0_1 =
   "bizra.node0.node0_reversible_state_observation.v0.1";
 
 // OBSERVATION-ABSENCE-SEMANTICS-1A. An observation used to write `null` from a
