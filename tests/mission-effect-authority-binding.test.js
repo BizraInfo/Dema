@@ -28,6 +28,7 @@ import assert from "node:assert/strict";
 
 import { buildDemaReversibleFileStewardPayload } from "../packages/core/src/dema-reversible-file-steward.js";
 import {
+  buildDisclosedStewardPreview,
   buildMissionEffectAuthorityEnvelope,
   executeMissionBoundEffect,
   MISSION_EFFECT_AUTHORITY_CONSENT_SCHEMA,
@@ -49,7 +50,10 @@ const EFFECT = Object.freeze({
   atoms: [{ from: "a.json", to: "a-2026-08-12.json" }],
 });
 
-const previewHashOf = (effect) => buildDemaReversibleFileStewardPayload(effect).content_hash;
+// The mission profile previews the control-plane artifacts too (CR-01), so the
+// binding's anchor is the DISCLOSING hash. Using the undisclosed builder here
+// would make every test agree with a preview that lies about the footprint.
+const previewHashOf = (effect) => buildDisclosedStewardPreview(effect).content_hash;
 
 function spineResult(over = {}) {
   return Object.freeze({
@@ -243,6 +247,25 @@ test("MXB-09b: a Stage-5 verdict that is not PERMIT_PREVIEW can never execute", 
   assert.equal(r.ok, false);
   assert.equal(r.reason, "stage5_not_permit_preview");
   assert.deepEqual(calls, []);
+});
+
+// ── MXB-09c · NO DOWNGRADE — an undisclosed preview is not executable ────────
+test("MXB-09c: a mission previewed WITHOUT control-plane disclosure cannot execute", async () => {
+  // Exactly Attempt-1's shape: consent captured against the undisclosed preview,
+  // which promised the directory was otherwise untouched.
+  const undisclosed = buildDemaReversibleFileStewardPayload(EFFECT).content_hash;
+  const legacySpine = spineResult({ preview_hash: undisclosed });
+  const built = buildMissionEffectAuthorityEnvelope({
+    spineResult: legacySpine,
+    corridorContext: corridorContext(),
+    effect: EFFECT,
+    repositoryBinding: repoBinding(),
+    now: NOW,
+  });
+  const { r, calls } = await run({ envelope: built.envelope, spineResult: legacySpine });
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, "preview_binding_mismatch");
+  assert.deepEqual(calls, [], "an undisclosed footprint must not reach the ledger or executor");
 });
 
 // ── MXB-10 · refusal mutates nothing ────────────────────────────────────────

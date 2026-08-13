@@ -65,6 +65,16 @@ const BACKUP_DIR = ".node0-backups";
 const RECEIPT_LOG = ".node0-receipts.ndjson";
 const RESERVED_NAMES = new Set([BACKUP_DIR, RECEIPT_LOG]);
 
+// The artifacts this gate writes into the sandbox root besides the rename itself.
+// Exported so a preview can DISCLOSE them to the human before consent instead of
+// promising "directory otherwise untouched" and then creating them — the CR-01
+// defect measured on Mission-001 Run-1 Attempt-1. Names only; no behaviour here.
+export const NODE0_REVERSIBLE_EXECUTE_CONTROL_PLANE = Object.freeze({
+  backup_dir: BACKUP_DIR,
+  receipt_log: RECEIPT_LOG,
+  backup_suffix: ".bak",
+});
+
 // ── deterministic content addressing ────────────────────────────────────────
 function stableStringify(value) {
   if (Array.isArray(value)) {
