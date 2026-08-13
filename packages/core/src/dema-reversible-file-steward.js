@@ -19,6 +19,9 @@ import {
   NODE0_REVERSIBLE_EXECUTE_GO_PHRASE,
   NODE0_REVERSIBLE_EXECUTE_ACTION_TYPE,
   NODE0_REVERSIBLE_EXECUTE_CONTROL_PLANE,
+  // Phase completion is derived from receipts whose content hash re-derives, so a
+  // fabricated history cannot advance the capsule's state machine.
+  recomputeReceiptContentHash,
 } from "./node0-reversible-execute-gate.js";
 import { scanUntrustedText } from "./untrusted-corpus-sanitizer-preview.js";
 
@@ -298,23 +301,114 @@ export function buildMissionEffectCapsule({
 }
 
 /**
- * The phase state machine. The next phase is a FUNCTION of the verified capsule
- * and what has actually completed — never of what a caller asked for. Recovery
- * from a partial run continues here; it does not restart the graph.
+ * Re-derive which phases ACTUALLY completed, from evidence rather than names.
+ *
+ * PHASE_NAME != PHASE_COMPLETION. An earlier version of this kernel took a list of
+ * completed phase NAMES and checked they formed a legal prefix. That proves the
+ * reported order is legal; it proves nothing about whether those phases happened.
+ * A caller could hand over the four earlier names and be told the next legal
+ * mutation was the final apply — the same family as `ok:true != evidence exists`
+ * and `actor claim != authority`.
+ *
+ * So advancement consumes evidence that verifies against the sealed capsule and
+ * against itself: a mutating phase needs an execute receipt whose content hash
+ * re-derives and whose action_id/phase match the capsule; a verification phase
+ * needs an observed state hash equal to what the preceding receipt recorded; the
+ * undo phase needs a restoration proven back to the provisional receipt's
+ * before_hash. Derivation stops at the first phase that does not verify, so a gap
+ * cannot be stepped over.
+ *
+ * Still pure: the receipts and observations are injected. `verifyExecuteReceipt`
+ * with an fs adapter remains the stronger authenticity anchor for callers that
+ * have one — this kernel refuses forged HISTORY, not a forged disk.
  */
-export function nextCapsulePhase(capsule, completedPhases = []) {
+export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [] } = {}) {
+  if (!capsule || capsule.schema !== MISSION_EFFECT_CAPSULE_SCHEMA) {
+    return Object.freeze({ ok: false, reason: "capsule_required", completed: Object.freeze([]) });
+  }
+  const rows = Array.isArray(evidence) ? evidence : [];
+  const byPhase = new Map(rows.filter((r) => r && typeof r.phase === "string").map((r) => [r.phase, r]));
+  const completed = [];
+  let provisional = null;
+  let finalReceipt = null;
+  let stopped = null;
+
+  const receiptOk = (r, phaseName) =>
+    !!r &&
+    r.executed === true &&
+    r.action_id === capsule.action_id &&
+    r.phase === phaseName &&
+    typeof r.content_hash === "string" &&
+    recomputeReceiptContentHash(r) === r.content_hash;
+
+  for (const phase of capsule.phases) {
+    const row = byPhase.get(phase.name);
+    if (!row) {
+      stopped = { phase: phase.name, reason: "no_evidence" };
+      break;
+    }
+    let ok = false;
+    switch (phase.name) {
+      case "p1-provisional-apply":
+        ok = receiptOk(row.receipt, phase.name);
+        if (ok) provisional = row.receipt;
+        break;
+      case "p2-verify-apply":
+        ok = !!provisional && row.observed_hash === provisional.after_hash;
+        break;
+      case "p3-exact-undo":
+        ok =
+          !!provisional &&
+          row.undo?.undone === true &&
+          row.undo?.proven === true &&
+          row.undo?.restored_hash === provisional.before_hash;
+        break;
+      case "p4-verify-restored":
+        ok = !!provisional && row.observed_hash === provisional.before_hash;
+        break;
+      case "p5-final-apply":
+        ok = receiptOk(row.receipt, phase.name);
+        if (ok) finalReceipt = row.receipt;
+        break;
+      case "p6-verify-final":
+        ok = !!finalReceipt && row.observed_hash === finalReceipt.after_hash;
+        break;
+      default:
+        ok = false;
+    }
+    if (!ok) {
+      stopped = { phase: phase.name, reason: "evidence_did_not_verify" };
+      break;
+    }
+    completed.push(phase.name);
+  }
+  return Object.freeze({
+    ok: true,
+    completed: Object.freeze(completed),
+    stopped_at: stopped ? Object.freeze(stopped) : null,
+  });
+}
+
+/**
+ * The phase state machine. The next phase is a function of the sealed capsule and
+ * VERIFIED history — never of what a caller asked for. Recovery from a partial run
+ * resumes at the truthful frontier; it does not restart the graph.
+ */
+export function nextCapsulePhase(capsule, evidence = []) {
   if (!capsule || capsule.schema !== MISSION_EFFECT_CAPSULE_SCHEMA) {
     return Object.freeze({ ok: false, reason: "capsule_required" });
   }
-  const done = Array.isArray(completedPhases) ? completedPhases : [];
-  // Completion must be a prefix of the graph: a gap means a phase was skipped.
-  for (let i = 0; i < done.length; i++) {
-    if (done[i] !== capsule.phases[i]?.name) {
-      return Object.freeze({ ok: false, reason: "phase_order_violation" });
-    }
-  }
+  const derived = deriveVerifiedCapsuleCompletion({ capsule, evidence });
+  if (derived.ok !== true) return derived;
+  const done = derived.completed;
   if (done.length >= capsule.phases.length) {
-    return Object.freeze({ ok: true, complete: true, phase: null, action_id: capsule.action_id });
+    return Object.freeze({
+      ok: true,
+      complete: true,
+      phase: null,
+      action_id: capsule.action_id,
+      verified_completed: done,
+    });
   }
   const phase = capsule.phases[done.length];
   return Object.freeze({
@@ -325,6 +419,8 @@ export function nextCapsulePhase(capsule, completedPhases = []) {
     mutating: phase.mutating,
     // Exactly what the gate must be handed — derived, not chosen.
     action_id: capsule.action_id,
+    verified_completed: done,
+    stopped_at: derived.stopped_at,
   });
 }
 

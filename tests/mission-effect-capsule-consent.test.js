@@ -125,26 +125,30 @@ test("CC-04: the capsule discloses the action-scoped backup path of every mutati
 });
 
 // ── CC-05 · CALLER_PHASE != AUTHORITY ───────────────────────────────────────
-test("CC-05: the next phase is derived from what completed, and skipping refuses", () => {
+// Strengthened after review found the original defect: this used to pass
+// completed phase NAMES, which proved only that the reported order was legal.
+// Advancement now consumes evidence, so a name alone completes nothing. The
+// forged-history control lives in tests/capsule-phase-evidence-binding.test.js.
+test("CC-05: phase names alone advance nothing — evidence is required", () => {
   const c = build();
   assert.equal(nextCapsulePhase(c, []).phase, "p1-provisional-apply");
-  assert.equal(nextCapsulePhase(c, ["p1-provisional-apply"]).phase, "p2-verify-apply");
-  // Jumping straight to the final apply is not derivable.
-  const skipped = nextCapsulePhase(c, ["p1-provisional-apply", "p5-final-apply"]);
-  assert.equal(skipped.ok, false);
-  assert.equal(skipped.reason, "phase_order_violation");
+  const named = nextCapsulePhase(c, [
+    { phase: "p1-provisional-apply" },
+    { phase: "p2-verify-apply" },
+  ]);
+  assert.equal(named.phase, "p1-provisional-apply", "a bare name completed a phase");
+  assert.deepEqual(named.verified_completed, []);
 });
 
 // ── CC-06 · RECOVERY != REAUTHORIZATION ─────────────────────────────────────
-test("CC-06: resuming a partial capsule continues the graph rather than restarting it", () => {
+test("CC-06: an unverified claim of progress does not move the frontier", () => {
   const c = build();
-  const done = ["p1-provisional-apply", "p2-verify-apply", "p3-exact-undo"];
-  const next = nextCapsulePhase(c, done);
-  assert.equal(next.phase, "p4-verify-restored");
-  assert.notEqual(next.phase, CAPSULE_PHASE_GRAPH[0], "recovery restarted the graph");
-  const finished = nextCapsulePhase(c, [...CAPSULE_PHASE_GRAPH]);
-  assert.equal(finished.complete, true);
-  assert.equal(finished.phase, null);
+  // Claiming the whole graph completed, with no evidence, must not report done.
+  const claimed = nextCapsulePhase(c, CAPSULE_PHASE_GRAPH.map((phase) => ({ phase })));
+  assert.notEqual(claimed.complete, true, "an evidence-free claim completed the capsule");
+  assert.equal(claimed.phase, CAPSULE_PHASE_GRAPH[0]);
+  // Resumption from a genuinely verified frontier is proven end-to-end in
+  // tests/capsule-phase-evidence-binding.test.js (PE-02).
 });
 
 // ── CC-07 · NON-VACUITY — a valid capsule really completes on a real fs ─────
@@ -176,27 +180,27 @@ test("CC-07: the sealed capsule drives a full apply→undo→restore→final lif
   assert.equal(step().phase, "p1-provisional-apply");
   const prov = applyPhase("p1-provisional-apply");
   assert.equal(prov.executed, true, `provisional blocked: ${prov.blocked_by}`);
-  completed.push("p1-provisional-apply");
+  completed.push({ phase: "p1-provisional-apply", receipt: prov });
 
   assert.equal(sha(readFileSync(join(root, "a-2026-08-12.json"))), genesis);
-  completed.push("p2-verify-apply");
+  completed.push({ phase: "p2-verify-apply", observed_hash: prov.after_hash });
 
   assert.equal(step().phase, "p3-exact-undo");
   const undo = undoReversibleRename({ receipt: prov, fs, actionId: c.action_id });
   assert.equal(undo.proven, true, `undo not proven: ${undo.reason}`);
-  completed.push("p3-exact-undo");
+  completed.push({ phase: "p3-exact-undo", undo });
 
   assert.equal(sha(readFileSync(join(root, "a.json"))), genesis, "restoration diverged");
-  completed.push("p4-verify-restored");
+  completed.push({ phase: "p4-verify-restored", observed_hash: prov.before_hash });
 
   assert.equal(step().phase, "p5-final-apply");
   const final = applyPhase("p5-final-apply");
   assert.equal(final.executed, true, `final blocked: ${final.blocked_by}`);
-  completed.push("p5-final-apply");
+  completed.push({ phase: "p5-final-apply", receipt: final });
 
   assert.equal(sha(readFileSync(join(root, "a-2026-08-12.json"))), genesis);
   assert.ok(!existsSync(join(root, "a.json")));
-  completed.push("p6-verify-final");
+  completed.push({ phase: "p6-verify-final", observed_hash: final.after_hash });
 
   assert.equal(step().complete, true);
   // The disclosed footprint is the footprint that happened, and it survived undo.
