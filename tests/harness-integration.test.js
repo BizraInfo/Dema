@@ -320,10 +320,20 @@ describe("harness-integration", () => {
       assert.equal(hook.type, "formatting");
     });
 
-    it("all hooks have wired=true", () => {
+    // DEMA-HARNESS-INDEPENDENCE-1A replaced this assertion. It used to require
+    // `wired === true`, which was a hardcoded literal about `~/.claude/hooks/*.sh`
+    // files the module never checked — a constant impersonating a measurement,
+    // and provider state feeding Dema's CLEAN verdict line. The old expectation
+    // pinned that falsehood, so it was the test that had to move, not a shipped
+    // measurement that had to be weakened. There was no measurement.
+    it("all hooks declare the harness plane and disclaim Dema liveness", () => {
       const result = buildHarnessIntegration({ now: FIXED_NOW });
+      assert.ok(result.hook_inventory.length > 0, "control: inventory must be non-empty");
       for (const hook of result.hook_inventory) {
-        assert.equal(hook.wired, true);
+        assert.equal(hook.plane, "harness");
+        assert.equal(hook.measured, false);
+        assert.equal(hook.dema_liveness_evidence, false);
+        assert.equal(Object.prototype.hasOwnProperty.call(hook, "wired"), false);
       }
     });
 
