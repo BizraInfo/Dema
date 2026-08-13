@@ -26,6 +26,10 @@ import {
   // The authenticity bind: with an fs adapter this requires the receipt to be
   // present in the executor sealed on-disk log, which a caller cannot fabricate.
   verifyExecuteReceipt,
+  // The two artifact classes an alternating phase graph needs: a TRANSITION the
+  // executor sealed, and an OBSERVATION the gate sealed when it was made.
+  NODE0_REVERSIBLE_UNDO_RECEIPT_SCHEMA,
+  NODE0_REVERSIBLE_OBSERVATION_SCHEMA,
 } from "./node0-reversible-execute-gate.js";
 import { scanUntrustedText } from "./untrusted-corpus-sanitizer-preview.js";
 
@@ -352,15 +356,37 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [], fs } =
 
   const root = capsule.effect_preview.sandbox_root;
   const atom = capsule.effect_preview.atoms[0];
-  const hashOnDisk = (name) => {
-    try {
-      const p = `${root}/${name}`;
-      if (!fs.existsSync(p)) return null;
-      return `sha256:${createHash("sha256").update(fs.readFileSync(p)).digest("hex")}`;
-    } catch {
-      return null;
+  /**
+   * An even phase is proven by an OBSERVATION the gate sealed at the time, not by
+   * a re-read now. A capsule's intermediate states are gone by the time the next
+   * phase is authorized — that is precisely why the previous implementation
+   * reached for a later receipt as a substitute and credited post-hoc inference
+   * as authority. The observation must be log-anchored and scoped to this
+   * capsule's action and this exact phase; a caller-authored `observed_hash`
+   * field is no longer read anywhere.
+   */
+  const observationShows = (row, expected, phaseName) => {
+    const o = row?.observation;
+    if (
+      !o ||
+      o.schema !== NODE0_REVERSIBLE_OBSERVATION_SCHEMA ||
+      o.action_id !== capsule.action_id ||
+      o.phase !== phaseName ||
+      typeof o.content_hash !== "string" ||
+      !sealedLogContains(o)
+    ) {
+      return false;
     }
+    return Object.entries(expected).every(([name, want]) => (o.observed?.[name] ?? null) === want);
   };
+
+  /** An odd phase is proven by a TRANSITION the executor sealed. */
+  const undoReceiptAdmissible = (r) =>
+    !!r &&
+    r.schema === NODE0_REVERSIBLE_UNDO_RECEIPT_SCHEMA &&
+    r.action_id === capsule.action_id &&
+    typeof r.content_hash === "string" &&
+    sealedLogContains(r);
 
   // A receipt is admissible only when it is INTEGRITY-sound, PROVENANCE-bound
   // (present in the executor's sealed on-disk log — `verifyExecuteReceipt` with an
@@ -411,45 +437,40 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [], fs } =
         if (ok) provisional = row.receipt;
         break;
       case "p2-verify-apply":
-        // Attested by the log-anchored executor receipt itself — content preserved
-        // across the rename — not by a caller-supplied observed_hash field.
-        ok = !!provisional && provisional.after_hash === provisional.before_hash;
+        // Was `provisional.after_hash === provisional.before_hash` — trivially
+        // true for a rename, so p1 silently granted p2 and no independent
+        // verification ever happened. Now an observation the GATE sealed must
+        // show the world actually in S1.
+        ok = !!provisional && observationShows(row, { [atom.to]: provisional.after_hash, [atom.from]: null }, phase.name);
+        if (!ok) why = "apply_state_not_observed";
         break;
       case "p3-exact-undo":
-      case "p4-verify-restored": {
-        // THE REALITY CHECK. Do not trust `undo.proven`. Re-read the world: the
-        // source must be back with the provisional receipt's before_hash bytes and
-        // the provisional target must be gone. This is checkable at any later time,
-        // which is what makes it evidence rather than a claim.
-        if (!provisional) break;
-        const restored = hashOnDisk(atom.from);
-        ok = restored !== null && restored === provisional.before_hash && !fs.existsSync(`${root}/${atom.to}`);
-        if (!ok) {
-          // A completed capsule has moved past restoration — the source is gone
-          // again because the FINAL apply consumed it. Demanding today's disk still
-          // show yesterday's intermediate state would make a finished capsule
-          // un-derivable. The final receipt is the admissible substitute: the
-          // executor could only rename the source if the source was there with
-          // exactly the restored bytes, and that receipt is log-anchored.
-          const later = byPhase.get("p5-final-apply")?.receipt;
-          ok =
-            receiptAdmissible(later, "p5-final-apply") &&
-            later.before_hash === provisional.before_hash;
-          if (!ok) why = "restoration_not_observed";
-        }
+        // TRANSITION, not postcondition. A restored world is producible by a
+        // recovery script, a human, or any other actor; only the governed undo
+        // seals a log-anchored receipt naming the apply it reverses.
+        ok =
+          !!provisional &&
+          undoReceiptAdmissible(row.receipt) &&
+          row.receipt.of_receipt_hash === provisional.content_hash &&
+          row.receipt.proven === true;
+        if (!ok) why = "undo_transition_not_proven";
         break;
-      }
+      case "p4-verify-restored":
+        // POSTCONDITION, independently. Separate from p3 on purpose: a genuine
+        // undo whose world later diverges must stop here, and a restored world
+        // with no governed undo must stop at p3.
+        ok = !!provisional && observationShows(row, { [atom.from]: provisional.before_hash, [atom.to]: null }, phase.name);
+        if (!ok) why = "restoration_not_observed";
+        break;
       case "p5-final-apply":
         ok = receiptAdmissible(row.receipt, phase.name);
         if (!ok) why = "receipt_not_authentic";
         if (ok) finalReceipt = row.receipt;
         break;
-      case "p6-verify-final": {
-        const now = hashOnDisk(atom.to);
-        ok = !!finalReceipt && now !== null && now === finalReceipt.after_hash;
+      case "p6-verify-final":
+        ok = !!finalReceipt && observationShows(row, { [atom.to]: finalReceipt.after_hash }, phase.name);
         if (!ok) why = "final_state_not_observed";
         break;
-      }
       default:
         ok = false;
     }

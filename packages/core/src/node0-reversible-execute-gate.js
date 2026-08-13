@@ -599,10 +599,113 @@ export function undoReversibleRename({ receipt, fs, actionId } = {}) {
       Buffer.isBuffer(backupBytes) &&
       restoredBytes.equals(backupBytes) &&
       restored_hash === receipt.backup.hash;
-    return { undone: true, proven, restored_hash };
+
+    // CAPSULE-PHASE-CAUSAL-PROVENANCE-1A. Until now this returned a plain object
+    // and sealed nothing, so no artifact existed to prove the undo TRANSITION
+    // ran — which is why a downstream verifier had to infer it from the restored
+    // world, and a restored world is producible by anything. The undo now seals
+    // its own log-anchored receipt naming the apply it reverses.
+    const undoReceipt = sealUndoReceipt({
+      fs,
+      realRoot,
+      of: receipt,
+      restored_hash,
+      proven,
+      now: typeof receipt.now === "string" ? receipt.now : null,
+    });
+    return { undone: true, proven, restored_hash, receipt: undoReceipt };
   } catch {
     return { undone: false, proven: false, reason: "undo_execution_failed" };
   }
+}
+
+export const NODE0_REVERSIBLE_UNDO_RECEIPT_SCHEMA =
+  "bizra.node0.node0_reversible_undo_receipt.v0.1";
+export const NODE0_REVERSIBLE_OBSERVATION_SCHEMA =
+  "bizra.node0.node0_reversible_state_observation.v0.1";
+
+/** Seal the undo transition into the same append-only log the apply is sealed in. */
+function sealUndoReceipt({ fs, realRoot, of, restored_hash, proven, now }) {
+  const body = {
+    schema: NODE0_REVERSIBLE_UNDO_RECEIPT_SCHEMA,
+    action_id: of.action_id ?? null,
+    phase: of.phase ?? null,
+    // The apply this undo reverses, bound by that receipt's own content hash.
+    of_receipt_hash: of.content_hash,
+    of_from: of.from,
+    of_to: of.to,
+    restored_hash,
+    proven,
+    now: now ?? null,
+  };
+  const receipt = Object.freeze({ ...body, content_hash: contentHash(body) });
+  const logPath = resolveReceiptLogPath(realRoot);
+  if (logPath && ensureRegularReceiptLog(fs, logPath)) {
+    try {
+      fs.appendFileSync(logPath, `${JSON.stringify(receipt)}\n`);
+    } catch {
+      /* an unwritable log must not undo the undo — the caller still holds the receipt */
+    }
+  }
+  return receipt;
+}
+
+/**
+ * Seal an OBSERVATION of the sandbox into the same log.
+ *
+ * A multi-step capsule's intermediate states are gone by the time the next phase
+ * is authorized, so an observation must be recorded WHEN MADE — re-reading the
+ * disk later answers a different question, and reaching for a later receipt as a
+ * substitute credits post-hoc inference as authority.
+ *
+ * Reads through `readRegularFile`, the same O_NOFOLLOW regular-file reader the
+ * actuator uses: a verifier must never have a weaker path policy than the thing
+ * it judges. An unreadable or non-regular name observes as `null` — absent, never
+ * a hash borrowed from wherever a symlink pointed.
+ */
+export function sealStateObservation({ sandboxRoot, actionId, phase, names, fs, now = null } = {}) {
+  if (!fs || !fsHasSafeRead(fs) || typeof fs.realpathSync !== "function") {
+    return { sealed: false, reason: "fs_adapter_missing" };
+  }
+  if (!isSafeName(actionId) || !isSafeName(phase) || !Array.isArray(names)) {
+    return { sealed: false, reason: "unsafe_observation_scope" };
+  }
+  let realRoot;
+  try {
+    realRoot = fs.realpathSync(sandboxRoot);
+  } catch {
+    return { sealed: false, reason: "sandbox_root_missing" };
+  }
+
+  const observed = {};
+  for (const name of names) {
+    if (!isSafeName(name)) return { sealed: false, reason: "unsafe_observed_name" };
+    const path = joinInside(realRoot, name);
+    if (!pathInsideRoot(fs, realRoot, path)) return { sealed: false, reason: "sandbox_escape_blocked" };
+    try {
+      observed[name] = `sha256:${sha256Hex(readRegularFile(fs, path))}`;
+    } catch {
+      observed[name] = null;
+    }
+  }
+
+  const body = {
+    schema: NODE0_REVERSIBLE_OBSERVATION_SCHEMA,
+    action_id: actionId,
+    phase,
+    observed,
+    now,
+  };
+  const observation = Object.freeze({ ...body, content_hash: contentHash(body) });
+  const logPath = resolveReceiptLogPath(realRoot);
+  if (logPath && ensureRegularReceiptLog(fs, logPath)) {
+    try {
+      fs.appendFileSync(logPath, `${JSON.stringify(observation)}\n`);
+    } catch {
+      return { sealed: false, reason: "observation_log_unwritable", observation };
+    }
+  }
+  return { sealed: true, observation };
 }
 
 /**

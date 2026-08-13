@@ -38,6 +38,7 @@ import {
   planReversibleRename,
   executeReversibleRename,
   undoReversibleRename,
+  sealStateObservation,
   NODE0_REVERSIBLE_EXECUTE_GO_PHRASE,
   NODE0_REVERSIBLE_EXECUTE_ACTION_TYPE,
 } from "../packages/core/src/node0-reversible-execute-gate.js";
@@ -161,6 +162,17 @@ test("CC-07: the sealed capsule drives a full apply→undo→restore→final lif
 
   const completed = [];
   const step = () => nextCapsulePhase(c, completed, fs);
+  // Even phases are proven by an observation the GATE sealed when it was made,
+  // through its own O_NOFOLLOW reader — not by a hash the caller hands over.
+  const seal = (phase) =>
+    sealStateObservation({
+      sandboxRoot: root,
+      actionId: c.action_id,
+      phase,
+      names: ["a.json", "a-2026-08-12.json"],
+      fs,
+      now: "2026-08-13T17:00:00Z",
+    }).observation;
   const applyPhase = (phaseName) =>
     executeReversibleRename({
       plan: planReversibleRename({
@@ -183,15 +195,15 @@ test("CC-07: the sealed capsule drives a full apply→undo→restore→final lif
   completed.push({ phase: "p1-provisional-apply", receipt: prov });
 
   assert.equal(sha(readFileSync(join(root, "a-2026-08-12.json"))), genesis);
-  completed.push({ phase: "p2-verify-apply", observed_hash: prov.after_hash });
+  completed.push({ phase: "p2-verify-apply", observation: seal("p2-verify-apply") });
 
   assert.equal(step().phase, "p3-exact-undo");
   const undo = undoReversibleRename({ receipt: prov, fs, actionId: c.action_id });
   assert.equal(undo.proven, true, `undo not proven: ${undo.reason}`);
-  completed.push({ phase: "p3-exact-undo", undo });
+  completed.push({ phase: "p3-exact-undo", receipt: undo.receipt });
 
   assert.equal(sha(readFileSync(join(root, "a.json"))), genesis, "restoration diverged");
-  completed.push({ phase: "p4-verify-restored", observed_hash: prov.before_hash });
+  completed.push({ phase: "p4-verify-restored", observation: seal("p4-verify-restored") });
 
   assert.equal(step().phase, "p5-final-apply");
   const final = applyPhase("p5-final-apply");
@@ -200,7 +212,7 @@ test("CC-07: the sealed capsule drives a full apply→undo→restore→final lif
 
   assert.equal(sha(readFileSync(join(root, "a-2026-08-12.json"))), genesis);
   assert.ok(!existsSync(join(root, "a.json")));
-  completed.push({ phase: "p6-verify-final", observed_hash: final.after_hash });
+  completed.push({ phase: "p6-verify-final", observation: seal("p6-verify-final") });
 
   assert.equal(step().complete, true);
   // The disclosed footprint is the footprint that happened, and it survived undo.

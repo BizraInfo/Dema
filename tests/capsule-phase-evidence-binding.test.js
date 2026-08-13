@@ -38,6 +38,7 @@ import {
   planReversibleRename,
   executeReversibleRename,
   undoReversibleRename,
+  sealStateObservation,
   NODE0_REVERSIBLE_EXECUTE_GO_PHRASE,
   NODE0_REVERSIBLE_EXECUTE_ACTION_TYPE,
 } from "../packages/core/src/node0-reversible-execute-gate.js";
@@ -79,21 +80,35 @@ const applyPhase = (root, capsule, phase) =>
     now: "2026-08-13T18:00:00Z",
   });
 
+/** An observation sealed by the gate, through its own O_NOFOLLOW reader. */
+const sealHere = (root, capsule, phase) =>
+  sealStateObservation({
+    sandboxRoot: root,
+    actionId: capsule.action_id,
+    phase,
+    names: ["a.json", "a-2026-08-12.json"],
+    fs,
+    now: "2026-08-13T18:00:00Z",
+  }).observation;
+
 /** The real chain, up to and including proven restoration. */
 function realEvidenceThroughRestoration() {
   const { root, capsule } = liveCapsule();
   const genesis = sha(readFileSync(join(root, "a.json")));
   const prov = applyPhase(root, capsule, "p1-provisional-apply");
   assert.equal(prov.executed, true, `provisional blocked: ${prov.blocked_by}`);
-  const afterApply = sha(readFileSync(join(root, "a-2026-08-12.json")));
+  // CAPSULE-PHASE-CAUSAL-PROVENANCE-1A moved these from caller-authored fields to
+  // gate-sealed artifacts: an even phase needs an OBSERVATION sealed when it was
+  // made, an odd phase needs the TRANSITION receipt the executor sealed.
+  const o2 = sealHere(root, capsule, "p2-verify-apply");
   const undo = undoReversibleRename({ receipt: prov, fs, actionId: capsule.action_id });
   assert.equal(undo.proven, true, `undo not proven: ${undo.reason}`);
-  const afterUndo = sha(readFileSync(join(root, "a.json")));
+  const o4 = sealHere(root, capsule, "p4-verify-restored");
   const evidence = [
     { phase: "p1-provisional-apply", receipt: prov },
-    { phase: "p2-verify-apply", observed_hash: `sha256:${afterApply}` },
-    { phase: "p3-exact-undo", undo },
-    { phase: "p4-verify-restored", observed_hash: `sha256:${afterUndo}` },
+    { phase: "p2-verify-apply", observation: o2 },
+    { phase: "p3-exact-undo", receipt: undo.receipt },
+    { phase: "p4-verify-restored", observation: o4 },
   ];
   return { root, capsule, evidence, prov, genesis };
 }
@@ -163,14 +178,17 @@ test("PE-06: a proven:true undo claim cannot advance when the disk was never res
   // NO undo is performed. The world still shows the provisional state.
   const lying = [
     { phase: "p1-provisional-apply", receipt: prov },
-    { phase: "p2-verify-apply", observed_hash: prov.after_hash },
+    // Honest, so the LYING UNDO is what stops the walk. Without a real p2 the
+    // test would stop for want of an observation and pass for the wrong reason.
+    { phase: "p2-verify-apply", observation: sealHere(root, capsule, "p2-verify-apply") },
     { phase: "p3-exact-undo", undo: { undone: true, proven: true, restored_hash: prov.before_hash } },
-    { phase: "p4-verify-restored", observed_hash: prov.before_hash },
+    { phase: "p4-verify-restored", observation: sealHere(root, capsule, "p4-verify-restored") },
   ];
   const next = nextCapsulePhase(capsule, lying, fs);
   assert.notEqual(next.phase, "p5-final-apply", "a lying undo claim reached a real mutation");
   assert.equal(next.phase, "p3-exact-undo");
-  assert.equal(next.stopped_at.reason, "restoration_not_observed");
+  // The claim is no longer even consulted: the transition has no sealed receipt.
+  assert.equal(next.stopped_at.reason, "undo_transition_not_proven");
 });
 
 // ── PE-07 · duplicate history is ambiguous history ──────────────────────────
