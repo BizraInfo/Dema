@@ -30,6 +30,8 @@ import {
   // executor sealed, and an OBSERVATION the gate sealed when it was made.
   NODE0_REVERSIBLE_UNDO_RECEIPT_SCHEMA,
   NODE0_REVERSIBLE_OBSERVATION_SCHEMA,
+  OBSERVED_PRESENT,
+  OBSERVED_ABSENT,
 } from "./node0-reversible-execute-gate.js";
 import { scanUntrustedText } from "./untrusted-corpus-sanitizer-preview.js";
 
@@ -378,7 +380,18 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [], fs } =
     ) {
       return false;
     }
-    return Object.entries(expected).every(([name, want]) => (o.observed?.[name] ?? null) === want);
+    // OBSERVATION-ABSENCE-SEMANTICS-1A. `want === null` means THE PATH MUST BE
+    // ABSENT, and only a positive ABSENT reading satisfies it. UNSAFE and
+    // UNREADABLE are failures to observe, and a failure to observe can never
+    // satisfy a predicate requiring the fact to be false — otherwise a symlink
+    // planted where a file must be gone would credit the phase.
+    return Object.entries(expected).every(([name, want]) => {
+      const seen = o.observed?.[name];
+      if (!seen || typeof seen !== "object") return false;
+      return want === null
+        ? seen.state === OBSERVED_ABSENT
+        : seen.state === OBSERVED_PRESENT && seen.hash === want;
+    });
   };
 
   /** An odd phase is proven by a TRANSITION the executor sealed. */

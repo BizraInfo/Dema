@@ -49,6 +49,8 @@ import {
   executeReversibleRename,
   undoReversibleRename,
   sealStateObservation,
+  OBSERVED_UNSAFE,
+  OBSERVED_ABSENT,
   NODE0_REVERSIBLE_EXECUTE_GO_PHRASE,
   NODE0_REVERSIBLE_EXECUTE_ACTION_TYPE,
 } from "../packages/core/src/node0-reversible-execute-gate.js";
@@ -276,7 +278,14 @@ test("CP-08: an observation refuses a symlink where the actuator would refuse it
   fs.symlinkSync("/etc/hostname", join(root, FROM));
 
   const o = observe(root, capsule, CAPSULE_PHASE_GRAPH[1]);
-  // Not a crash and not a followed read: the name observes as unreadable, so no
-  // hash from outside the sandbox can ever satisfy a phase.
-  assert.equal(o.observation.observed[FROM], null, "the verifier followed a symlink the actuator refuses");
+  // This assertion used to read `observed[FROM] === null` and call that proof of
+  // safety. It was half a proof. Refusing to follow the link is correct; encoding
+  // the refusal as the same value used for "absent" handed a predicate that
+  // demands absence a reason to be satisfied by blindness. OBSERVATION-ABSENCE-
+  // SEMANTICS-1A splits them, so the claim is now the whole claim: the link is
+  // not followed AND the refusal is not mistaken for nothing being there.
+  assert.equal(o.observation.observed[FROM].state, OBSERVED_UNSAFE, "the verifier followed a symlink");
+  assert.equal(o.observation.observed[FROM].reason, "symlink");
+  assert.notEqual(o.observation.observed[FROM].state, OBSERVED_ABSENT, "a refusal read as an absence");
+  assert.equal(o.observation.observed[FROM].hash, undefined, "a hash escaped from outside the sandbox");
 });

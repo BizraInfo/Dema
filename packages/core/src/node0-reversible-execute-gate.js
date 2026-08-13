@@ -605,15 +605,29 @@ export function undoReversibleRename({ receipt, fs, actionId } = {}) {
     // ran — which is why a downstream verifier had to infer it from the restored
     // world, and a restored world is producible by anything. The undo now seals
     // its own log-anchored receipt naming the apply it reverses.
-    const undoReceipt = sealUndoReceipt({
+    const sealed = sealUndoReceipt({
       fs,
       realRoot,
       of: receipt,
       restored_hash,
       proven,
+      // DIAGNOSTIC ONLY, and inherited from the apply so the pair reads together.
+      // No expiry, ordering, freshness or validity decision may read it: that
+      // would make a caller-supplied field into causal time. Ordering is carried
+      // by of_receipt_hash and by position in the append-only log.
       now: typeof receipt.now === "string" ? receipt.now : null,
     });
-    return { undone: true, proven, restored_hash, receipt: undoReceipt };
+    // RECEIPT_OBJECT_EXISTS != RECEIPT_WAS_SEALED. The append can fail, and a
+    // receipt-shaped object in hand is not provenance. The capsule already
+    // requires log membership, but a consumer must not have to know that to be
+    // safe, so the outcome is named here rather than inferred from a truthy field.
+    return {
+      undone: true,
+      proven,
+      restored_hash,
+      receipt: sealed.receipt,
+      receipt_sealed: sealed.sealed,
+    };
   } catch {
     return { undone: false, proven: false, reason: "undo_execution_failed" };
   }
@@ -623,6 +637,46 @@ export const NODE0_REVERSIBLE_UNDO_RECEIPT_SCHEMA =
   "bizra.node0.node0_reversible_undo_receipt.v0.1";
 export const NODE0_REVERSIBLE_OBSERVATION_SCHEMA =
   "bizra.node0.node0_reversible_state_observation.v0.1";
+
+// OBSERVATION-ABSENCE-SEMANTICS-1A. An observation used to write `null` from a
+// bare catch, so a genuine absence, an O_NOFOLLOW refusal, a directory and an
+// io error were one value — and the phase predicates read `null` as "absent".
+// Planting a symlink where a file must be gone therefore satisfied the
+// predicate: blindness masquerading as absence. These four states keep the
+// refusal and its meaning separate.
+//
+//   UNKNOWN != FALSE   ·   UNREADABLE != ABSENT   ·   UNSAFE != ABSENT
+export const OBSERVED_PRESENT = "PRESENT";
+export const OBSERVED_ABSENT = "ABSENT";
+export const OBSERVED_UNSAFE = "UNSAFE";
+export const OBSERVED_UNREADABLE = "UNREADABLE";
+
+/**
+ * Observe ONE pathname and say which of the four realities it is.
+ *
+ * `lstat` first, so a symlink is identified as a symlink rather than inferred
+ * from a read failure — the refusal is deliberate, and naming it is what stops a
+ * downstream predicate from reading it as nothing-is-there.
+ */
+function observeOne(fs, path) {
+  let lst;
+  try {
+    lst = fs.lstatSync(path);
+  } catch (err) {
+    // ENOENT is the ONLY error that means absent. Anything else is a failure to
+    // observe, which is not evidence about what is there.
+    return err && err.code === "ENOENT"
+      ? Object.freeze({ state: OBSERVED_ABSENT })
+      : Object.freeze({ state: OBSERVED_UNREADABLE, reason: err?.code ?? "lstat_failed" });
+  }
+  if (lst.isSymbolicLink()) return Object.freeze({ state: OBSERVED_UNSAFE, reason: "symlink" });
+  if (!lst.isFile()) return Object.freeze({ state: OBSERVED_UNSAFE, reason: "non_regular" });
+  try {
+    return Object.freeze({ state: OBSERVED_PRESENT, hash: `sha256:${sha256Hex(readRegularFile(fs, path))}` });
+  } catch (err) {
+    return Object.freeze({ state: OBSERVED_UNREADABLE, reason: err?.code ?? "read_failed" });
+  }
+}
 
 /** Seal the undo transition into the same append-only log the apply is sealed in. */
 function sealUndoReceipt({ fs, realRoot, of, restored_hash, proven, now }) {
@@ -640,14 +694,16 @@ function sealUndoReceipt({ fs, realRoot, of, restored_hash, proven, now }) {
   };
   const receipt = Object.freeze({ ...body, content_hash: contentHash(body) });
   const logPath = resolveReceiptLogPath(realRoot);
-  if (logPath && ensureRegularReceiptLog(fs, logPath)) {
-    try {
-      fs.appendFileSync(logPath, `${JSON.stringify(receipt)}\n`);
-    } catch {
-      /* an unwritable log must not undo the undo — the caller still holds the receipt */
-    }
+  if (!logPath || !ensureRegularReceiptLog(fs, logPath)) return { receipt, sealed: false };
+  try {
+    fs.appendFileSync(logPath, `${JSON.stringify(receipt)}\n`);
+  } catch {
+    // An unwritable log must not undo the undo — the restoration already
+    // happened and the caller still holds the receipt. But it is NOT sealed,
+    // and saying so is the whole point: unsealed provenance is no provenance.
+    return { receipt, sealed: false };
   }
-  return receipt;
+  return { receipt, sealed: true };
 }
 
 /**
@@ -682,11 +738,7 @@ export function sealStateObservation({ sandboxRoot, actionId, phase, names, fs, 
     if (!isSafeName(name)) return { sealed: false, reason: "unsafe_observed_name" };
     const path = joinInside(realRoot, name);
     if (!pathInsideRoot(fs, realRoot, path)) return { sealed: false, reason: "sandbox_escape_blocked" };
-    try {
-      observed[name] = `sha256:${sha256Hex(readRegularFile(fs, path))}`;
-    } catch {
-      observed[name] = null;
-    }
+    observed[name] = observeOne(fs, path);
   }
 
   const body = {
