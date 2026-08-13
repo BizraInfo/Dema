@@ -18,6 +18,7 @@ import {
   planReversibleRename,
   NODE0_REVERSIBLE_EXECUTE_GO_PHRASE,
   NODE0_REVERSIBLE_EXECUTE_ACTION_TYPE,
+  NODE0_REVERSIBLE_EXECUTE_CONTROL_PLANE,
 } from "./node0-reversible-execute-gate.js";
 import { scanUntrustedText } from "./untrusted-corpus-sanitizer-preview.js";
 
@@ -130,6 +131,44 @@ export function buildDemaReversibleFileStewardPayload(input) {
   };
   const content_hash = sha256CanonicalJsonV1(body);
   return Object.freeze({ ...body, content_hash });
+}
+
+/**
+ * The MISSION preview profile: the payload above PLUS a truthful account of the
+ * control-plane artifacts the executor will write into the sandbox root.
+ *
+ * CR-01, measured on Mission-001 Run-1 Attempt-1: the consent packet promised
+ * "directory otherwise untouched", then execution created `.node0-backups/` and
+ * `.node0-receipts.ndjson`. Those artifacts are the machinery the undo clause
+ * depends on, so they belong INSIDE the thing the human agrees to — not inside a
+ * definition of "user-visible" the executor applies to itself afterwards.
+ *
+ * The exact backup filename embeds a content-hash prefix known only at execution
+ * time, so the disclosure names the directory, the per-atom pattern and the
+ * append count: everything derivable without reading a byte. Stays pure.
+ *
+ * ADDITIVE BY OMISSION: `buildDemaReversibleFileStewardPayload` is untouched, so
+ * every preview hash already recorded in the estate remains byte-identical. This
+ * lives beside that builder because both hash a steward body with the same
+ * canonical hasher — and because the mission tier may not import that hasher
+ * directly (canonical-json-v1 adoption freeze).
+ */
+export function buildDisclosedStewardPreview(input) {
+  const { content_hash: _undisclosed, ...body } = buildDemaReversibleFileStewardPayload(input);
+  const cp = NODE0_REVERSIBLE_EXECUTE_CONTROL_PLANE;
+  const disclosed = {
+    ...body,
+    control_plane_effects: {
+      disclosed: true,
+      backup_dir: cp.backup_dir,
+      backup_files: body.atoms.map(
+        (a) => `${cp.backup_dir}/${a.from}.<sha256-12>${cp.backup_suffix}`,
+      ),
+      receipt_log: cp.receipt_log,
+      receipt_log_appends: body.atom_count,
+    },
+  };
+  return Object.freeze({ ...disclosed, content_hash: sha256CanonicalJsonV1(disclosed) });
 }
 
 // Body-bound verifier: recompute the hash over the WHOLE body minus its hash

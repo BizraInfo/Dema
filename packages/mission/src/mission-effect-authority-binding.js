@@ -33,15 +33,21 @@
 // PURE. Every effect is injected (`claimNonce`, `executeJob`). This module reads
 // no disk, no clock, no network — `now` is injected too.
 //
-// WHAT SUCCESS DOES NOT PROVE. That the preview truthfully enumerated the
-// executor's control-plane artifacts (.node0-backups/, .node0-receipts.ndjson);
-// that the effect's own undo was exercised; that the resulting receipt is signed
-// per contract §7. Those are CR-01, CR-03 and CR-05 and remain open.
+// NO DOWNGRADE ON THE FOOTPRINT. The anchor is re-derived with the DISCLOSING
+// preview profile, so a mission whose preview hid the executor's control-plane
+// artifacts has no execution path at all (CR-01).
+//
+// WHAT SUCCESS DOES NOT PROVE. That the effect's own undo was exercised, or that
+// the resulting receipt is signed per contract §7. Those are CR-03 and CR-05 and
+// remain open.
 
-import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
-import { buildDemaReversibleFileStewardPayload } from "../../core/src/dema-reversible-file-steward.js";
+// The disclosing preview profile lives beside the payload builder it extends —
+// the mission tier is not a registered consumer of the canonical hasher
+// (canonical-json-v1 adoption freeze), and hashing belongs with the body anyway.
+import { buildDisclosedStewardPreview } from "../../core/src/dema-reversible-file-steward.js";
 import { DEMA_REVERSIBLE_FILE_STEWARD_EXECUTE_GO_PHRASE } from "../../core/src/dema-reversible-file-steward-execution.js";
-import { NODE0_REVERSIBLE_EXECUTE_CONTROL_PLANE } from "../../core/src/node0-reversible-execute-gate.js";
+
+export { buildDisclosedStewardPreview };
 
 export const MISSION_EFFECT_AUTHORITY_CONSENT_SCHEMA =
   "bizra.mission.mission_effect_authority_binding.v0.1";
@@ -49,43 +55,6 @@ export const MISSION_EFFECT_AUTHORITY_OPERATION = "EXECUTE_MISSION_BOUND_REVERSI
 
 const isStr = (v) => typeof v === "string" && v.length > 0;
 const refuse = (reason, extra = {}) => Object.freeze({ ok: false, reason, authority_delta: 0, ...extra });
-
-/**
- * The mission preview profile: the steward payload PLUS a truthful account of the
- * control-plane artifacts the executor will write into the mission root.
- *
- * CR-01. Attempt-1's packet said "directory otherwise untouched" and execution
- * then created `.node0-backups/` and `.node0-receipts.ndjson`. Those artifacts are
- * the machinery the undo clause depends on, so they belong INSIDE the thing the
- * human agrees to, not inside a definition of "user-visible" the executor applies
- * to itself afterwards.
- *
- * The exact backup filename embeds a content-hash prefix only known at execution
- * time, so the disclosure names the directory, the per-atom file pattern and the
- * append count — everything derivable without reading a byte from disk. This
- * stays pure.
- *
- * ADDITIVE BY OMISSION: `buildDemaReversibleFileStewardPayload` is untouched, so
- * every preview hash already recorded in the estate is byte-identical.
- */
-export function buildDisclosedStewardPreview(input) {
-  const base = buildDemaReversibleFileStewardPayload(input);
-  const { content_hash: _ignored, ...body } = base;
-  const cp = NODE0_REVERSIBLE_EXECUTE_CONTROL_PLANE;
-  const disclosed = {
-    ...body,
-    control_plane_effects: {
-      disclosed: true,
-      backup_dir: cp.backup_dir,
-      backup_files: body.atoms.map(
-        (a) => `${cp.backup_dir}/${a.from}.<sha256-12>${cp.backup_suffix}`,
-      ),
-      receipt_log: cp.receipt_log,
-      receipt_log_appends: body.atom_count,
-    },
-  };
-  return Object.freeze({ ...disclosed, content_hash: sha256CanonicalJsonV1(disclosed) });
-}
 
 /** Stage-5 is usable as authority only when it verified consent and granted nothing. */
 function stage5Verified(s) {
