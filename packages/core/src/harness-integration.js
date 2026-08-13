@@ -70,42 +70,36 @@ const BEHAVIORAL_PROBES = Object.freeze([
 const HOOK_CHECKS = [
   {
     id: "bash_blacklist",
-    path: "~/.claude/hooks/bash-blacklist.sh",
     event: "PreToolUse",
     matcher: "Bash",
     type: "security",
   },
   {
     id: "consent_enforcer",
-    path: "~/.claude/hooks/consent-enforcer.sh",
     event: "PreToolUse",
     matcher: "Edit|Write|MultiEdit",
     type: "consent",
   },
   {
     id: "tool_call_envelope",
-    path: "~/.claude/hooks/tool-call-envelope.sh",
     event: "PreToolUse",
     matcher: "Bash|Edit|Write|MultiEdit",
     type: "provenance",
   },
   {
     id: "output_critique",
-    path: "~/.claude/hooks/output-critique.sh",
     event: "Stop",
     matcher: null,
     type: "quality",
   },
   {
     id: "output_drift_lint",
-    path: "~/.claude/hooks/output-drift-lint.sh",
     event: "Stop",
     matcher: null,
     type: "quality",
   },
   {
     id: "prettier_autoformat",
-    path: null,
     event: "PostToolUse",
     matcher: "Write|Edit",
     type: "formatting",
@@ -204,6 +198,19 @@ function aggregateProactiveHarness(diagnosticsPlan) {
   });
 }
 
+// DEMA-HARNESS-INDEPENDENCE-1A. These entries describe Claude Code hooks —
+// DEVELOPMENT/HARNESS PLANE, not Dema. This previously emitted `wired: true` as a
+// hardcoded literal: the `~/.claude/hooks/*.sh` path was dropped and never
+// checked, so a constant wore the costume of a measurement and would have kept
+// reporting wired with every hook file deleted. That count reaches Dema's own
+// CLEAN verdict line and mission closeout, which made provider state read as Dema
+// status.
+//
+// The fix is NOT to existsSync the hook files. That would make Dema's status a
+// function of provider files — the same plane violation, merely made accurate.
+// Dema must be able to report CLEAN with no provider installed at all. So the
+// inventory declares what it is, states that it measured nothing, and disclaims
+// itself as evidence of Dema liveness. The provider path never leaves this module.
 function buildHookInventory() {
   return Object.freeze(
     HOOK_CHECKS.map((h) =>
@@ -212,7 +219,10 @@ function buildHookInventory() {
         event: h.event,
         matcher: h.matcher,
         type: h.type,
-        wired: true,
+        plane: "harness",
+        declared: true,
+        measured: false,
+        dema_liveness_evidence: false,
       }),
     ),
   );
@@ -407,4 +417,7 @@ export function formatHarnessIntegrationSummary(summary) {
 }
 
 export const HARNESS_HOOK_CHECKS = HOOK_CHECKS;
+// Exported so the harness-independence gate can assert the plane labelling
+// directly rather than inferring it from a rendered summary string.
+export const buildHarnessHookInventory = buildHookInventory;
 export const HARNESS_BEHAVIORAL_PROBES = BEHAVIORAL_PROBES;

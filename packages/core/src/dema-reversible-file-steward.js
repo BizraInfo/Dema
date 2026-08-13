@@ -373,6 +373,7 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [], fs } =
       o.action_id !== capsule.action_id ||
       o.phase !== phaseName ||
       typeof o.content_hash !== "string" ||
+      recomputeReceiptContentHash(o) !== o.content_hash ||
       !sealedLogContains(o)
     ) {
       return false;
@@ -386,6 +387,12 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [], fs } =
     r.schema === NODE0_REVERSIBLE_UNDO_RECEIPT_SCHEMA &&
     r.action_id === capsule.action_id &&
     typeof r.content_hash === "string" &&
+    // INTEGRITY, not only membership. `sealedLogContains` matches the content
+    // hash STRING, so without this a caller could take a genuinely sealed
+    // artifact, rewrite its fields, keep the old hash, and still pass. The
+    // execute-receipt path already re-derived; these two newer artifact classes
+    // did not. Found by a mutation control that refused to go red.
+    recomputeReceiptContentHash(r) === r.content_hash &&
     sealedLogContains(r);
 
   // A receipt is admissible only when it is INTEGRITY-sound, PROVENANCE-bound
