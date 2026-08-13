@@ -50,6 +50,8 @@ import {
   sealStateObservation,
   NODE0_REVERSIBLE_EXECUTE_GO_PHRASE,
   NODE0_REVERSIBLE_EXECUTE_ACTION_TYPE,
+  OBSERVED_PRESENT,
+  OBSERVED_ABSENT,
 } from "../packages/core/src/node0-reversible-execute-gate.js";
 import {
   buildMissionEffectAuthorityEnvelope,
@@ -266,7 +268,15 @@ test("PRC-04c: an observation re-labelled to a later phase is refused", () => {
   const forged = {
     ...a.o2,
     phase: CAPSULE_PHASE_GRAPH[3],
-    observed: { [FROM]: a.p1.before_hash, [TO]: null },
+    // Must forge a well-formed v0.2 observation. The first version used the old
+    // flat `{name: hash|null}` shape, which `observationShows` now rejects on
+    // SHAPE — so this test passed without ever reaching the integrity check it
+    // claims to prove. Caught by the mutation-control registry: deleting the
+    // integrity guard left this green.
+    observed: {
+      [FROM]: { state: OBSERVED_PRESENT, hash: a.p1.before_hash },
+      [TO]: { state: OBSERVED_ABSENT },
+    },
   };
   assert.equal(forged.content_hash, a.o2.content_hash, "control: the sealed hash is unchanged");
   assert.notDeepEqual(a.o2.observed, forged.observed, "control: the claim really was rewritten");
