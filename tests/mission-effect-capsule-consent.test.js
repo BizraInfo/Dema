@@ -131,11 +131,11 @@ test("CC-04: the capsule discloses the action-scoped backup path of every mutati
 // forged-history control lives in tests/capsule-phase-evidence-binding.test.js.
 test("CC-05: phase names alone advance nothing — evidence is required", () => {
   const c = build();
-  assert.equal(nextCapsulePhase(c, []).phase, "p1-provisional-apply");
+  assert.equal(nextCapsulePhase(c, [], fs).phase, "p1-provisional-apply");
   const named = nextCapsulePhase(c, [
     { phase: "p1-provisional-apply" },
     { phase: "p2-verify-apply" },
-  ]);
+  ], fs);
   assert.equal(named.phase, "p1-provisional-apply", "a bare name completed a phase");
   assert.deepEqual(named.verified_completed, []);
 });
@@ -144,7 +144,7 @@ test("CC-05: phase names alone advance nothing — evidence is required", () => 
 test("CC-06: an unverified claim of progress does not move the frontier", () => {
   const c = build();
   // Claiming the whole graph completed, with no evidence, must not report done.
-  const claimed = nextCapsulePhase(c, CAPSULE_PHASE_GRAPH.map((phase) => ({ phase })));
+  const claimed = nextCapsulePhase(c, CAPSULE_PHASE_GRAPH.map((phase) => ({ phase })), fs);
   assert.notEqual(claimed.complete, true, "an evidence-free claim completed the capsule");
   assert.equal(claimed.phase, CAPSULE_PHASE_GRAPH[0]);
   // Resumption from a genuinely verified frontier is proven end-to-end in
@@ -160,7 +160,7 @@ test("CC-07: the sealed capsule drives a full apply→undo→restore→final lif
   const c = build({ effect: { sandbox_root: root, atoms: [{ from: "a.json", to: "a-2026-08-12.json" }] } });
 
   const completed = [];
-  const step = () => nextCapsulePhase(c, completed);
+  const step = () => nextCapsulePhase(c, completed, fs);
   const applyPhase = (phaseName) =>
     executeReversibleRename({
       plan: planReversibleRename({

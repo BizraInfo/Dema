@@ -108,7 +108,7 @@ test("PE-01: correct phase names with no evidence cannot advance to the final ap
     { phase: "p3-exact-undo" },
     { phase: "p4-verify-restored" },
   ];
-  const next = nextCapsulePhase(capsule, forged);
+  const next = nextCapsulePhase(capsule, forged, fs);
   assert.equal(next.ok, true);
   assert.notEqual(next.phase, "p5-final-apply", "FABRICATED HISTORY REACHED A REAL MUTATION");
   assert.equal(next.phase, "p1-provisional-apply", "a claim with no evidence completed nothing");
@@ -118,7 +118,7 @@ test("PE-01: correct phase names with no evidence cannot advance to the final ap
 // ── PE-02 · NON-VACUITY — a real verified chain DOES advance ────────────────
 test("PE-02: a genuinely executed and proven chain advances to the final apply", () => {
   const { capsule, evidence } = realEvidenceThroughRestoration();
-  const next = nextCapsulePhase(capsule, evidence);
+  const next = nextCapsulePhase(capsule, evidence, fs);
   assert.equal(next.phase, "p5-final-apply", `stopped at ${JSON.stringify(next.stopped_at)}`);
   assert.equal(next.mutating, true);
   assert.equal(next.action_id, capsule.action_id);
@@ -150,31 +150,42 @@ test("PE-05: editing a receipt without re-deriving its content hash is rejected"
   assert.deepEqual(next.verified_completed, []);
 });
 
-// ── PE-06 · an unproven undo blocks the final apply ─────────────────────────
-test("PE-06: restoration that did not prove cannot be followed by the final apply", () => {
-  const { capsule, evidence } = realEvidenceThroughRestoration();
-  const unproven = evidence.map((e) =>
-    e.phase === "p3-exact-undo" ? { ...e, undo: { ...e.undo, proven: false } } : e,
-  );
-  const next = nextCapsulePhase(capsule, unproven);
-  assert.notEqual(next.phase, "p5-final-apply");
-  assert.equal(next.phase, "p3-exact-undo", "the graph advanced past an unproven restoration");
-  assert.equal(next.stopped_at.phase, "p3-exact-undo");
+// ── PE-06 · REALITY OUTRANKS THE CLAIM ──────────────────────────────────────
+// Rewritten after the world-truth binding landed. These used to assert that a
+// `proven:false` flag blocked the final apply — which made the FLAG the control.
+// The kernel now ignores undo.proven entirely and re-reads the disk, so the
+// honest test is the opposite: a perfect {undone:true, proven:true} claim must
+// NOT advance the graph when the world does not agree.
+test("PE-06: a proven:true undo claim cannot advance when the disk was never restored", () => {
+  const { root, capsule } = liveCapsule();
+  const prov = applyPhase(root, capsule, "p1-provisional-apply");
+  assert.equal(prov.executed, true);
+  // NO undo is performed. The world still shows the provisional state.
+  const lying = [
+    { phase: "p1-provisional-apply", receipt: prov },
+    { phase: "p2-verify-apply", observed_hash: prov.after_hash },
+    { phase: "p3-exact-undo", undo: { undone: true, proven: true, restored_hash: prov.before_hash } },
+    { phase: "p4-verify-restored", observed_hash: prov.before_hash },
+  ];
+  const next = nextCapsulePhase(capsule, lying, fs);
+  assert.notEqual(next.phase, "p5-final-apply", "a lying undo claim reached a real mutation");
+  assert.equal(next.phase, "p3-exact-undo");
+  assert.equal(next.stopped_at.reason, "restoration_not_observed");
 });
 
-// ── PE-07 · a restoration to the wrong bytes blocks the final apply ─────────
-test("PE-07: an undo that restored different bytes than the receipt recorded is rejected", () => {
+// ── PE-07 · duplicate history is ambiguous history ──────────────────────────
+test("PE-07: duplicate evidence for one phase is refused rather than last-write-wins", () => {
+  const { capsule, evidence, prov } = realEvidenceThroughRestoration();
+  const duped = [...evidence, { phase: "p1-provisional-apply", receipt: prov }];
+  const next = nextCapsulePhase(capsule, duped, fs);
+  assert.deepEqual(next.verified_completed, []);
+  assert.equal(next.stopped_at.reason, "ambiguous_phase_evidence");
+});
+
+// ── PE-08 · no world observer, no authority ─────────────────────────────────
+test("PE-08: without an fs adapter nothing completes — it never assumes execution", () => {
   const { capsule, evidence } = realEvidenceThroughRestoration();
-  const wrongBytes = evidence.map((e) =>
-    e.phase === "p3-exact-undo"
-      ? { ...e, undo: { ...e.undo, restored_hash: `sha256:${"f".repeat(64)}` } }
-      : e,
-  );
-  assert.equal(nextCapsulePhase(capsule, wrongBytes).phase, "p3-exact-undo");
-  // and a gap cannot be stepped over: p4 evidence alone completes nothing
-  const gapOnly = deriveVerifiedCapsuleCompletion({
-    capsule,
-    evidence: [{ phase: "p4-verify-restored", observed_hash: `sha256:${"a".repeat(64)}` }],
-  });
-  assert.deepEqual(gapOnly.completed, []);
+  const next = nextCapsulePhase(capsule, evidence);
+  assert.deepEqual(next.verified_completed, []);
+  assert.equal(next.stopped_at.reason, "world_observer_required");
 });

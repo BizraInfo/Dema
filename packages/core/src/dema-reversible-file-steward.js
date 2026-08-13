@@ -12,6 +12,7 @@
 // Pure kernel: no fs / network / process / clock / random. The two reused
 // primitives (planReversibleRename, scanUntrustedText) are themselves pure.
 
+import { createHash } from "node:crypto";
 import { CANONICAL_JSON_V1_ALGORITHM } from "../../canon/src/canonical-json-v1.js";
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
 import {
@@ -22,6 +23,9 @@ import {
   // Phase completion is derived from receipts whose content hash re-derives, so a
   // fabricated history cannot advance the capsule's state machine.
   recomputeReceiptContentHash,
+  // The authenticity bind: with an fs adapter this requires the receipt to be
+  // present in the executor sealed on-disk log, which a caller cannot fabricate.
+  verifyExecuteReceipt,
 } from "./node0-reversible-execute-gate.js";
 import { scanUntrustedText } from "./untrusted-corpus-sanitizer-preview.js";
 
@@ -322,24 +326,75 @@ export function buildMissionEffectCapsule({
  * with an fs adapter remains the stronger authenticity anchor for callers that
  * have one — this kernel refuses forged HISTORY, not a forged disk.
  */
-export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [] } = {}) {
+export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [], fs } = {}) {
   if (!capsule || capsule.schema !== MISSION_EFFECT_CAPSULE_SCHEMA) {
     return Object.freeze({ ok: false, reason: "capsule_required", completed: Object.freeze([]) });
   }
-  const rows = Array.isArray(evidence) ? evidence : [];
-  const byPhase = new Map(rows.filter((r) => r && typeof r.phase === "string").map((r) => [r.phase, r]));
-  const completed = [];
-  let provisional = null;
-  let finalReceipt = null;
-  let stopped = null;
+  const empty = (reason) =>
+    Object.freeze({ ok: true, completed: Object.freeze([]), stopped_at: Object.freeze({ phase: capsule.phases[0].name, reason }) });
 
-  const receiptOk = (r, phaseName) =>
+  // WORLD TRUTH OR NOTHING. Without a filesystem adapter no phase can be
+  // established, because every remaining check re-derives reality rather than
+  // reading a caller's assertion about it. Fail closed, never "assume executed".
+  if (!fs || typeof fs.readFileSync !== "function" || typeof fs.existsSync !== "function") {
+    return empty("world_observer_required");
+  }
+
+  const rows = Array.isArray(evidence) ? evidence : [];
+  // AMBIGUOUS HISTORY IS REFUSED HISTORY. A Map would silently take the last
+  // writer; authority must not pick whichever duplicate arrived last.
+  const byPhase = new Map();
+  for (const r of rows) {
+    if (!r || typeof r.phase !== "string") continue;
+    if (byPhase.has(r.phase)) return empty("ambiguous_phase_evidence");
+    byPhase.set(r.phase, r);
+  }
+
+  const root = capsule.effect_preview.sandbox_root;
+  const atom = capsule.effect_preview.atoms[0];
+  const hashOnDisk = (name) => {
+    try {
+      const p = `${root}/${name}`;
+      if (!fs.existsSync(p)) return null;
+      return `sha256:${createHash("sha256").update(fs.readFileSync(p)).digest("hex")}`;
+    } catch {
+      return null;
+    }
+  };
+
+  // A receipt is admissible only when it is INTEGRITY-sound, PROVENANCE-bound
+  // (present in the executor's sealed on-disk log — `verifyExecuteReceipt` with an
+  // fs adapter is the authenticity bind) and scoped to this capsule. `action_id`
+  // is itself derived from the capsule's identity seed, so matching it binds the
+  // receipt to this capsule and not merely to a look-alike effect.
+  const receiptAdmissible = (r, phaseName) =>
     !!r &&
     r.executed === true &&
     r.action_id === capsule.action_id &&
     r.phase === phaseName &&
     typeof r.content_hash === "string" &&
-    recomputeReceiptContentHash(r) === r.content_hash;
+    recomputeReceiptContentHash(r) === r.content_hash &&
+    sealedLogContains(r);
+
+  // PROVENANCE, separated from current reality. `verifyExecuteReceipt(_, {fs})`
+  // also re-measures present state, which is right for a live receipt and WRONG
+  // for a historical one: after the provisional apply is undone its target is
+  // intentionally gone. What survives is the executor sealed append-only log, and
+  // a caller cannot fabricate an entry in it. So authenticity here is log
+  // inclusion; present reality is checked separately, per phase.
+  function sealedLogContains(r) {
+    try {
+      const log = fs.readFileSync(`${root}/${capsule.control_plane_footprint.receipt_log}`, "utf8");
+      return log.includes(r.content_hash);
+    } catch {
+      return false;
+    }
+  }
+
+  const completed = [];
+  let provisional = null;
+  let finalReceipt = null;
+  let stopped = null;
 
   for (const phase of capsule.phases) {
     const row = byPhase.get(phase.name);
@@ -348,36 +403,58 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [] } = {})
       break;
     }
     let ok = false;
+    let why = "evidence_did_not_verify";
     switch (phase.name) {
       case "p1-provisional-apply":
-        ok = receiptOk(row.receipt, phase.name);
+        ok = receiptAdmissible(row.receipt, phase.name);
+        if (!ok) why = "receipt_not_authentic";
         if (ok) provisional = row.receipt;
         break;
       case "p2-verify-apply":
-        ok = !!provisional && row.observed_hash === provisional.after_hash;
+        // Attested by the log-anchored executor receipt itself — content preserved
+        // across the rename — not by a caller-supplied observed_hash field.
+        ok = !!provisional && provisional.after_hash === provisional.before_hash;
         break;
       case "p3-exact-undo":
-        ok =
-          !!provisional &&
-          row.undo?.undone === true &&
-          row.undo?.proven === true &&
-          row.undo?.restored_hash === provisional.before_hash;
+      case "p4-verify-restored": {
+        // THE REALITY CHECK. Do not trust `undo.proven`. Re-read the world: the
+        // source must be back with the provisional receipt's before_hash bytes and
+        // the provisional target must be gone. This is checkable at any later time,
+        // which is what makes it evidence rather than a claim.
+        if (!provisional) break;
+        const restored = hashOnDisk(atom.from);
+        ok = restored !== null && restored === provisional.before_hash && !fs.existsSync(`${root}/${atom.to}`);
+        if (!ok) {
+          // A completed capsule has moved past restoration — the source is gone
+          // again because the FINAL apply consumed it. Demanding today's disk still
+          // show yesterday's intermediate state would make a finished capsule
+          // un-derivable. The final receipt is the admissible substitute: the
+          // executor could only rename the source if the source was there with
+          // exactly the restored bytes, and that receipt is log-anchored.
+          const later = byPhase.get("p5-final-apply")?.receipt;
+          ok =
+            receiptAdmissible(later, "p5-final-apply") &&
+            later.before_hash === provisional.before_hash;
+          if (!ok) why = "restoration_not_observed";
+        }
         break;
-      case "p4-verify-restored":
-        ok = !!provisional && row.observed_hash === provisional.before_hash;
-        break;
+      }
       case "p5-final-apply":
-        ok = receiptOk(row.receipt, phase.name);
+        ok = receiptAdmissible(row.receipt, phase.name);
+        if (!ok) why = "receipt_not_authentic";
         if (ok) finalReceipt = row.receipt;
         break;
-      case "p6-verify-final":
-        ok = !!finalReceipt && row.observed_hash === finalReceipt.after_hash;
+      case "p6-verify-final": {
+        const now = hashOnDisk(atom.to);
+        ok = !!finalReceipt && now !== null && now === finalReceipt.after_hash;
+        if (!ok) why = "final_state_not_observed";
         break;
+      }
       default:
         ok = false;
     }
     if (!ok) {
-      stopped = { phase: phase.name, reason: "evidence_did_not_verify" };
+      stopped = { phase: phase.name, reason: why };
       break;
     }
     completed.push(phase.name);
@@ -394,11 +471,11 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [] } = {})
  * VERIFIED history — never of what a caller asked for. Recovery from a partial run
  * resumes at the truthful frontier; it does not restart the graph.
  */
-export function nextCapsulePhase(capsule, evidence = []) {
+export function nextCapsulePhase(capsule, evidence = [], fs) {
   if (!capsule || capsule.schema !== MISSION_EFFECT_CAPSULE_SCHEMA) {
     return Object.freeze({ ok: false, reason: "capsule_required" });
   }
-  const derived = deriveVerifiedCapsuleCompletion({ capsule, evidence });
+  const derived = deriveVerifiedCapsuleCompletion({ capsule, evidence, fs });
   if (derived.ok !== true) return derived;
   const done = derived.completed;
   if (done.length >= capsule.phases.length) {
