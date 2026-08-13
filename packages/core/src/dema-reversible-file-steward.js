@@ -171,6 +171,163 @@ export function buildDisclosedStewardPreview(input) {
   return Object.freeze({ ...disclosed, content_hash: sha256CanonicalJsonV1(disclosed) });
 }
 
+// ── MISSION-001-CAPSULE-CONSENT-CONTRACT-1A ─────────────────────────────────
+//
+// §5.9 requires Mission-001's undo to be "executable and tested". CR-03 made the
+// mechanism possible; this makes it CONSENTABLE. The danger in fixing §5.9 is
+// quietly breaking §5.5: the human approves "rename once" while the executor
+// performs apply → undo → reapply. So the human must see and agree to the WHOLE
+// reversible experiment, not its final rename.
+//
+// ACTION_ID AND PHASE ARE NOT METADATA. They determine the on-disk footprint
+// (`.node0-backups/<action_id>/<phase>/…`), so a caller who could choose them
+// after consent could move the control plane the human agreed to — reopening
+// CR-01 through the door CR-03 just built. They are therefore DERIVED from the
+// sealed capsule, never accepted.
+//
+// Derivation is deliberately two-stage to stay acyclic: an identity seed is taken
+// over the effect and its bindings (no phases), the action id comes from that
+// seed, and only then are the phase ids and backup paths derived — after which
+// the whole body is hashed. A one-stage hash would need the action id to hash the
+// phases and the phases to hash the action id.
+//
+// CALLER_PHASE != AUTHORITY. `nextCapsulePhase` derives the next legal phase from
+// the verified capsule and what has actually completed, so "final" happens because
+// restoration was proven — not because somebody passed the string "final".
+//
+// RECOVERY != REAUTHORIZATION. Resuming a partially executed capsule continues its
+// state machine; it never restarts the graph under the same consent.
+export const MISSION_EFFECT_CAPSULE_SCHEMA = "bizra.mission.mission_effect_capsule.v0.1";
+
+// The ordered graph the sovereign agrees to in one act.
+export const CAPSULE_PHASE_GRAPH = Object.freeze([
+  "p1-provisional-apply",
+  "p2-verify-apply",
+  "p3-exact-undo",
+  "p4-verify-restored",
+  "p5-final-apply",
+  "p6-verify-final",
+]);
+
+// Phases that actually touch the filesystem, and therefore need a backup slot.
+const MUTATING_PHASES = Object.freeze(["p1-provisional-apply", "p5-final-apply"]);
+
+export function buildMissionEffectCapsule({
+  effect,
+  mission_id,
+  contract_hash,
+  purpose_id,
+  repository_commit,
+  repository_tree,
+  nonce,
+  expires_at,
+} = {}) {
+  const required = { effect, mission_id, contract_hash, purpose_id, repository_commit, repository_tree, nonce, expires_at };
+  for (const [k, v] of Object.entries(required)) {
+    if (v === undefined || v === null || (typeof v === "string" && v.length === 0)) {
+      return Object.freeze({ ok: false, reason: `capsule_field_missing:${k}` });
+    }
+  }
+  let preview;
+  try {
+    preview = buildDisclosedStewardPreview(effect);
+  } catch {
+    return Object.freeze({ ok: false, reason: "effect_not_previewable" });
+  }
+
+  // Stage 1 — identity seed over the effect and its bindings only.
+  const seed = sha256CanonicalJsonV1({
+    schema: MISSION_EFFECT_CAPSULE_SCHEMA,
+    mission_id,
+    contract_hash,
+    purpose_id,
+    preview_hash: preview.content_hash,
+    repository_commit,
+    repository_tree,
+    nonce,
+    expires_at,
+  });
+  // isSafeName-compatible: letters, digits, dot, dash, underscore only.
+  const action_id = `act-${seed.replace(/^sha256:/, "").slice(0, 24)}`;
+
+  // Stage 2 — the phase graph and the exact control-plane footprint it produces.
+  const cp = NODE0_REVERSIBLE_EXECUTE_CONTROL_PLANE;
+  const phases = CAPSULE_PHASE_GRAPH.map((name, i) =>
+    Object.freeze({
+      ordinal: i + 1,
+      name,
+      mutating: MUTATING_PHASES.includes(name),
+      backup_paths: MUTATING_PHASES.includes(name)
+        ? Object.freeze(
+            preview.atoms.map(
+              (a) => `${cp.backup_dir}/${action_id}/${name}/${a.from}.<sha256-12>${cp.backup_suffix}`,
+            ),
+          )
+        : Object.freeze([]),
+    }),
+  );
+
+  const body = {
+    schema: MISSION_EFFECT_CAPSULE_SCHEMA,
+    mission_id,
+    contract_hash,
+    purpose_id,
+    action_id,
+    effect_preview: preview,
+    phases: Object.freeze(phases),
+    control_plane_footprint: Object.freeze({
+      backup_dir: cp.backup_dir,
+      receipt_log: cp.receipt_log,
+      // Two mutating phases, so the log is appended once per phase per atom.
+      receipt_log_appends: MUTATING_PHASES.length * preview.atom_count,
+      preserved_after_undo: true,
+    }),
+    expected_states: Object.freeze({
+      genesis: "the source path present with its before-hash",
+      after_provisional: "the target path present, content hash unchanged",
+      after_undo: "byte-identical return to genesis, proven against the backup",
+      final: "the target path present, content hash unchanged, source absent",
+    }),
+    repository_commit,
+    repository_tree,
+    nonce,
+    expires_at,
+    authority_delta: 0,
+  };
+  return Object.freeze({ ok: true, capsule: Object.freeze({ ...body, capsule_hash: sha256CanonicalJsonV1(body) }) });
+}
+
+/**
+ * The phase state machine. The next phase is a FUNCTION of the verified capsule
+ * and what has actually completed — never of what a caller asked for. Recovery
+ * from a partial run continues here; it does not restart the graph.
+ */
+export function nextCapsulePhase(capsule, completedPhases = []) {
+  if (!capsule || capsule.schema !== MISSION_EFFECT_CAPSULE_SCHEMA) {
+    return Object.freeze({ ok: false, reason: "capsule_required" });
+  }
+  const done = Array.isArray(completedPhases) ? completedPhases : [];
+  // Completion must be a prefix of the graph: a gap means a phase was skipped.
+  for (let i = 0; i < done.length; i++) {
+    if (done[i] !== capsule.phases[i]?.name) {
+      return Object.freeze({ ok: false, reason: "phase_order_violation" });
+    }
+  }
+  if (done.length >= capsule.phases.length) {
+    return Object.freeze({ ok: true, complete: true, phase: null, action_id: capsule.action_id });
+  }
+  const phase = capsule.phases[done.length];
+  return Object.freeze({
+    ok: true,
+    complete: false,
+    phase: phase.name,
+    ordinal: phase.ordinal,
+    mutating: phase.mutating,
+    // Exactly what the gate must be handed — derived, not chosen.
+    action_id: capsule.action_id,
+  });
+}
+
 // Body-bound verifier: recompute the hash over the WHOLE body minus its hash
 // field and reject any mismatch, plus schema / label / all-false-boundary checks.
 // A field change that does not update content_hash fails (recompute differs).

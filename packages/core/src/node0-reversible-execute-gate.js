@@ -511,9 +511,12 @@ export function undoReversibleRename({ receipt, fs, actionId } = {}) {
   if (!receipt || receipt.executed !== true) {
     return { undone: false, proven: false, reason: "not_an_executed_receipt" };
   }
-  // CR-03: an undo must name the exact action it reverses. A scoped receipt may
-  // only be undone by a caller that names its action; a legacy receipt (action_id
-  // null) keeps the previous behaviour so already-sealed receipts stay undoable.
+  // CR-03: an undo must name the exact action it reverses. This is CROSS-ACTION
+  // BINDING PROTECTION, NOT AUTHORIZATION — action_id is recorded in the receipt,
+  // so a receipt holder can read it. It stops an undo being pointed at the wrong
+  // action; it is not a credential. Real undo authority comes from the capsule.
+  // A legacy receipt (action_id null) keeps the previous behaviour so already-
+  // sealed receipts stay undoable.
   if (receipt.action_id != null && actionId !== receipt.action_id) {
     return { undone: false, proven: false, reason: "undo_action_mismatch" };
   }
