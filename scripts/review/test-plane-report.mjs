@@ -95,7 +95,12 @@ const totalsOf = (tap) => {
     return m ? Number(m[1]) : null;
   };
   const [tests, pass, fail] = [n("tests"), n("pass"), n("fail")];
-  return tests === null || pass === null || fail === null ? null : { tests, pass, fail };
+  if (tests === null || pass === null || fail === null) return null;
+  // A SKIP is not a PASS. Measured: under a scrubbed HOME the suite reports
+  // `pass 9594 / fail 0` out of 9597 because three tests opted out — a lane
+  // report that showed only failures would render that as complete. These keys
+  // are optional in TAP, so absent means zero, never unknown-as-clean.
+  return { tests, pass, fail, skipped: n("skipped") ?? 0, todo: n("todo") ?? 0, cancelled: n("cancelled") ?? 0 };
 };
 
 export function buildTestPlaneReport({ entries, tap }) {
@@ -162,7 +167,13 @@ function main() {
     console.log(`test-plane: NO REPORT — ${report.reason}`);
   } else {
     const { global: g, planes: p, unattributed: u, violations: v, file_counts: fc } = report;
+    const unrun = g.skipped + g.todo + g.cancelled;
     console.log(`GLOBAL (authoritative, verbatim from the run): ${g.pass}/${g.tests} pass, ${g.fail} fail`);
+    console.log(
+      unrun
+        ? `  NOT RUN: ${unrun} (skipped ${g.skipped}, todo ${g.todo}, cancelled ${g.cancelled}) — a skip is not a pass`
+        : "  NOT RUN: 0 — every test in the population reported a result",
+    );
     for (const [lane, { failures }] of Object.entries(p)) {
       console.log(`  lane ${lane.padEnd(8)} files=${fc[lane] ?? 0} failures=${failures.length}`);
       for (const f of failures) console.log(`      - ${f}`);

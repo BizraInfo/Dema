@@ -154,13 +154,45 @@ test("TPC-06: the report carries the run's own totals verbatim and emits no verd
     entries,
     tap: tap(["not ok 1 - alpha fails"], { tests: 9582, pass: 9577, fail: 5 }),
   });
-  assert.deepEqual(r.global, { tests: 9582, pass: 9577, fail: 5 });
+  assert.deepEqual(r.global, { tests: 9582, pass: 9577, fail: 5, skipped: 0, todo: 0, cancelled: 0 });
   assert.equal(r.qualification_verdict, null);
   assert.equal(r.boundary.decides_qualification, false);
   assert.equal(r.boundary.mutates_test_execution, false);
   // Structural, not stylistic: no key anywhere may carry a pass/fail judgment.
   const keys = JSON.stringify(Object.keys(r));
   assert.ok(!/qualified|bar_met|promote/i.test(keys), keys);
+});
+
+// ── TPC-08 · a skip is not a pass ────────────────────────────────────────────
+test("TPC-08: tests that opted out are surfaced, not folded into a clean run", () => {
+  const entries = [{ file: "tests/a.test.js", source: 'test("alpha", () => {});\n' }];
+  // The exact shape measured under a scrubbed HOME: zero failures, but three
+  // tests never ran. Showing only failures would render that as complete.
+  const r = buildTestPlaneReport({
+    entries,
+    tap: [
+      "TAP version 13",
+      "ok 1 - alpha # SKIP",
+      "# tests 9597",
+      "# pass 9594",
+      "# fail 0",
+      "# skipped 3",
+      "# todo 0",
+      "# cancelled 0",
+    ].join("\n"),
+  });
+  assert.equal(r.global.skipped, 3);
+  assert.notEqual(r.global.pass, r.global.tests, "control: this run is NOT fully accounted");
+
+  // Absent keys mean zero, never unknown-silently-read-as-clean.
+  const legacy = buildTestPlaneReport({
+    entries,
+    tap: tap(["ok 1 - alpha"], { tests: 1, pass: 1, fail: 0 }),
+  });
+  assert.deepEqual(
+    { skipped: legacy.global.skipped, todo: legacy.global.todo, cancelled: legacy.global.cancelled },
+    { skipped: 0, todo: 0, cancelled: 0 },
+  );
 });
 
 // ── TPC-07 · a blind report fails closed ─────────────────────────────────────
