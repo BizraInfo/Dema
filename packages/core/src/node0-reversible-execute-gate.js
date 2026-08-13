@@ -157,6 +157,18 @@ export function planReversibleRename({
   newName,
   goPhrase,
   actionType,
+  // CR-03. Backup identity was `<from>.<content-hash-12>.bak`, so the same bytes
+  // in the same file were the same backup no matter which authorized action
+  // produced them. Since undo never removes a backup, a re-apply hit the `wx`
+  // exclusive create and refused — making §5.9's "undo MUST be executable and
+  // tested" impossible to satisfy on the atom actually being landed.
+  //
+  // The repair is IDENTITY, not exclusivity. `wx` is doing real security work; it
+  // is what stops a backup being silently clobbered. Scoping the identity by the
+  // authorized action and its phase lets a capsule apply → undo → re-apply while
+  // every backup remains create-once. Omitted → legacy path shape, byte-identical.
+  actionId,
+  phase,
 } = {}) {
   const blocked_by = [];
   if (goPhrase !== NODE0_REVERSIBLE_EXECUTE_GO_PHRASE) {
@@ -171,6 +183,12 @@ export function planReversibleRename({
     blocked_by.push("sandbox_root_missing");
   }
 
+  // Scoping is opt-in, but a MALFORMED scope is never silently ignored — that
+  // would downgrade a scoped caller to the legacy identity without saying so.
+  if (actionId !== undefined && !isSafeName(actionId)) blocked_by.push("unsafe_action_id");
+  if (phase !== undefined && !isSafeName(phase)) blocked_by.push("unsafe_phase");
+  if (phase !== undefined && actionId === undefined) blocked_by.push("phase_without_action_id");
+
   const eligible = blocked_by.length === 0;
   return Object.freeze({
     schema: NODE0_REVERSIBLE_EXECUTE_GATE_SCHEMA,
@@ -179,6 +197,8 @@ export function planReversibleRename({
     sandbox_root: typeof sandboxRoot === "string" ? sandboxRoot : null,
     from: isSafeName(fileName) ? fileName : null,
     to: isSafeName(newName) ? newName : null,
+    action_id: actionId !== undefined && isSafeName(actionId) ? actionId : null,
+    phase: phase !== undefined && isSafeName(phase) ? phase : null,
     consent_ok: !blocked_by.includes("consent_phrase_mismatch"),
     eligible,
     blocked_by: Object.freeze(blocked_by),
@@ -379,9 +399,25 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
   const before_hash = `sha256:${sha256Hex(beforeBytes)}`;
 
   // Backup BEFORE the action — exclusive create, never clobber.
-  const backupPath = `${backupDir}/${plan.from}.${sha256Hex(beforeBytes).slice(0, 12)}.bak`;
-  if (!pathInsideRoot(fs, realRoot, backupPath)) {
+  //
+  // CR-03: the identity is action- and phase-scoped when the caller supplies one,
+  // so two authorized actions over the same bytes are two backups rather than one
+  // collision. `wx` is unchanged — exclusivity is what makes a backup trustworthy,
+  // and the Attempt-1 collision was a weak identity wearing exclusivity's failure.
+  const backupLeaf = `${plan.from}.${sha256Hex(beforeBytes).slice(0, 12)}.bak`;
+  const scopedDir = plan.action_id
+    ? `${backupDir}/${plan.action_id}${plan.phase ? `/${plan.phase}` : ""}`
+    : backupDir;
+  const backupPath = `${scopedDir}/${backupLeaf}`;
+  if (!pathInsideRoot(fs, realRoot, scopedDir) || !pathInsideRoot(fs, realRoot, backupPath)) {
     return blockedReceipt(plan, ["backup_dir_unsafe"]);
+  }
+  if (scopedDir !== backupDir) {
+    try {
+      fs.mkdirSync(scopedDir, { recursive: true });
+    } catch {
+      return blockedReceipt(plan, ["backup_dir_unsafe"]);
+    }
   }
   try {
     fs.writeFileSync(backupPath, beforeBytes, { flag: "wx" });
@@ -431,6 +467,11 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
       sandbox_root: plan.sandbox_root,
       from: plan.from,
       to: plan.to,
+      // CR-03: the receipt names the authorized action and phase that produced it,
+      // so an undo can be required to name the exact action it reverses instead of
+      // reversing whatever receipt it is handed.
+      action_id: plan.action_id ?? null,
+      phase: plan.phase ?? null,
       before_hash,
       after_hash,
       measured_state,
@@ -466,9 +507,15 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
  * on-disk backup (not the receipt's self-declared before_hash). Refuses unless the
  * receipt passes verifyExecuteReceipt first.
  */
-export function undoReversibleRename({ receipt, fs } = {}) {
+export function undoReversibleRename({ receipt, fs, actionId } = {}) {
   if (!receipt || receipt.executed !== true) {
     return { undone: false, proven: false, reason: "not_an_executed_receipt" };
+  }
+  // CR-03: an undo must name the exact action it reverses. A scoped receipt may
+  // only be undone by a caller that names its action; a legacy receipt (action_id
+  // null) keeps the previous behaviour so already-sealed receipts stay undoable.
+  if (receipt.action_id != null && actionId !== receipt.action_id) {
+    return { undone: false, proven: false, reason: "undo_action_mismatch" };
   }
   if (
     !fs ||
