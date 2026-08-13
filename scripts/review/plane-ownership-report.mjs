@@ -29,7 +29,7 @@
  * spells the token out. Measured twice on this file: once in the code, once in
  * the sentence explaining the code.
  *
- *   node scripts/review/test-plane-report.mjs <full-run.tap> [--json]
+ *   node scripts/review/plane-ownership-report.mjs <full-run.tap> [--json]
  */
 
 import { execFileSync } from "node:child_process";
@@ -151,7 +151,7 @@ export function buildTestPlaneReport({ entries, tap }) {
 function main() {
   const [logPath, ...flags] = process.argv.slice(2);
   if (!logPath) {
-    console.error("usage: test-plane-report.mjs <full-run.tap> [--json]");
+    console.error("usage: plane-ownership-report.mjs <full-run.tap> [--json]");
     process.exit(2);
   }
   const repo = fileURLToPath(new URL("../..", import.meta.url));

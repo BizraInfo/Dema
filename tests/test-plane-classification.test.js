@@ -39,7 +39,7 @@ import {
   HARNESS_PLANE,
   classifyFiles,
   buildTestPlaneReport,
-} from "../scripts/review/test-plane-report.mjs";
+} from "../scripts/review/plane-ownership-report.mjs";
 
 const REPO = fileURLToPath(new URL("..", import.meta.url));
 
