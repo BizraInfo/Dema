@@ -251,3 +251,33 @@ test("CB-09: omitting the commitment yields PATHNAME_ONLY, and it is visibly wea
   assert.notEqual(legacy.capsule_hash, bound.capsule_hash);
   assert.equal(nextCapsulePhase(legacy, [], fs).expected_before_hash ?? null, null);
 });
+
+// ── CB-10 · INFORMED, not merely bound ──────────────────────────────────────
+test("CB-10: the consent surface states the binding mode and the exact bytes", async () => {
+  const { describeCapsuleForConsent } = await import(
+    "../packages/core/src/dema-reversible-file-steward.js"
+  );
+  const root = sandbox();
+  const cap = capsule(root, { sourceContent: observeSource(root) });
+  const shown = describeCapsuleForConsent(cap);
+
+  // A human must be able to READ what they are binding. The gate hands over a
+  // required_phrase and a consent_context_hash — both opaque — so a person could
+  // otherwise bind themselves to bytes they were never shown. Cryptographic
+  // binding without disclosure is binding someone to something unreadable.
+  assert.match(shown.human_readable, /CONTENT_BOUND/);
+  assert.ok(shown.human_readable.includes(h(APPROVED)), "the approved hash is not shown to the human");
+  assert.match(shown.human_readable, /a\.json -> b\.json/);
+  assert.ok(shown.human_readable.includes(cap.capsule_hash));
+
+  // DERIVED, NEVER PARALLEL: the rendering must come from the enforced fields,
+  // so it cannot drift into describing a binding the executor does not apply.
+  assert.equal(shown.binding, cap.source_content_binding);
+  assert.deepEqual(shown.source_content, cap.source_content);
+
+  // And the weaker mode must SAY it is weaker, in words, not by omission.
+  const weak = describeCapsuleForConsent(capsule(root, { nonce: "gm001-cb-0000000000000010" }));
+  assert.match(weak.human_readable, /PATHNAME_ONLY/);
+  assert.match(weak.human_readable, /WHATEVER occupies the path/);
+  assert.ok(!weak.human_readable.includes(h(APPROVED)), "a pathname-only capsule showed a content commitment");
+});

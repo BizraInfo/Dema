@@ -554,6 +554,47 @@ export function deriveVerifiedCapsuleCompletion({ capsule, evidence = [], fs } =
 }
 
 /**
+ * Render, in plain language, what a capsule actually binds — for the surface a
+ * human reads before typing the phrase.
+ *
+ * THE GAP THIS CLOSES. The consent gate hands the operator a `required_phrase`
+ * and a `consent_context_hash`. Both are hashes. The capsule commits the source
+ * content cryptographically, but nothing rendered it, so a person could bind
+ * themselves to bytes they were never shown. Cryptographic binding without
+ * disclosure is binding someone to something they could not read — the same
+ * defect CR-01 fixed for the control-plane footprint, one level deeper.
+ *
+ * DERIVED, NEVER PARALLEL. Every line is computed from the same fields the
+ * executor enforces. A hand-written summary beside the enforced values is a
+ * second source of truth, and it drifts.
+ */
+export function describeCapsuleForConsent(capsule) {
+  if (!capsule || typeof capsule !== "object") return null;
+  const atoms = capsule.effect_preview?.atoms ?? [];
+  const bound = capsule.source_content_binding === "CONTENT_BOUND";
+  const lines = [
+    `mission: ${capsule.mission_id}`,
+    `purpose: ${capsule.purpose_id}`,
+    ...atoms.map((a) => `rename: ${a.from} -> ${a.to}`),
+    bound
+      ? "binding: CONTENT_BOUND - this authorizes the EXACT bytes below, and nothing else"
+      : "binding: PATHNAME_ONLY - this authorizes WHATEVER occupies the path when it runs",
+    ...atoms.map(
+      (a) =>
+        `  ${a.from}: ${bound ? (capsule.source_content?.[a.from] ?? "(MISSING COMMITMENT)") : "(no content commitment)"}`,
+    ),
+    `control plane: ${capsule.control_plane_footprint?.backup_dir}, ${capsule.control_plane_footprint?.receipt_log}`,
+    `expires: ${capsule.expires_at}`,
+    `capsule: ${capsule.capsule_hash}`,
+  ];
+  return Object.freeze({
+    binding: capsule.source_content_binding,
+    source_content: capsule.source_content ?? null,
+    capsule_hash: capsule.capsule_hash,
+    human_readable: lines.join("\n"),
+  });
+}
+/**
  * The phase state machine. The next phase is a function of the sealed capsule and
  * VERIFIED history — never of what a caller asked for. Recovery from a partial run
  * resumes at the truthful frontier; it does not restart the graph.
