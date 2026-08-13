@@ -58,6 +58,8 @@ export const NODE0_REVERSIBLE_EXECUTE_BLOCK_REASONS = Object.freeze([
   "sandbox_escape_blocked",
   "backup_dir_unsafe",
   "backup_write_failed",
+  "post_move_identity_mismatch",
+  "backup_identity_mismatch",
 ]);
 
 const SAFE_NAME = /^[A-Za-z0-9._-]+$/;
@@ -466,8 +468,23 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
     fs.renameSync(fromPath, toPath);
     renamed = true;
     const after_hash = `sha256:${sha256Hex(readRegularFile(fs, toPath))}`;
-    if (backup_hash !== before_hash || after_hash !== before_hash) {
-      throw new Error("reversible_invariant_failed");
+
+    // POST-MOVE IDENTITY. `renameSync` moves a PATHNAME, and the verified read
+    // happened earlier — so between them the source pathname can be repointed at
+    // other content. Measured with a deterministic interleaving through the
+    // injected fs: with this comparison removed, attacker bytes land at the
+    // target and carry an authoritative success receipt (`executed: true`).
+    //
+    //     VERIFIED OBJECT != MOVED OBJECT
+    //
+    // The comparison already existed to police the reversible invariant, and it
+    // happens to close this too — but an unnamed safeguard is one refactor from
+    // deletion, so the reason is now distinct and the attack has a test.
+    if (after_hash !== before_hash) {
+      throw new Error("post_move_identity_mismatch");
+    }
+    if (backup_hash !== before_hash) {
+      throw new Error("backup_identity_mismatch");
     }
 
     const measured_state = measureSandboxState(fs, realRoot, plan.to);
@@ -514,7 +531,7 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
 
     fs.appendFileSync(logPath, `${JSON.stringify(receipt)}\n`);
     return Object.freeze({ ...receipt, receipt_log_path: logPath });
-  } catch {
+  } catch (err) {
     if (renamed) {
       try {
         fs.renameSync(toPath, fromPath);
@@ -522,7 +539,11 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
         /* best-effort rollback */
       }
     }
-    return blockedReceipt(plan, ["execute_failed"]);
+    // A security-relevant refusal must not read like a disk error. Anything
+    // else stays "execute_failed" so an unexpected fault is never dressed up as
+    // a known, handled condition.
+    const known = err?.message === "post_move_identity_mismatch" || err?.message === "backup_identity_mismatch";
+    return blockedReceipt(plan, [known ? err.message : "execute_failed"]);
   }
 }
 

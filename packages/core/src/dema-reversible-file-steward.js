@@ -295,6 +295,19 @@ export function buildMissionEffectCapsule({
       receipt_log_appends: MUTATING_PHASES.length * preview.atom_count,
       preserved_after_undo: true,
     }),
+    // WHAT THE SOVEREIGN IS ACTUALLY AGREEING TO, said out loud. Determined
+    // mechanically, not from comments: an atom is {from, to, reversible,
+    // sanitizer_verdict, executable}, `content_hash` hashes the PREVIEW BODY,
+    // and the original Mission-001 packet carried no source-content field
+    // either. So consent binds PATHNAMES — "move whatever occupies a.json" —
+    // while a human reading it naturally pictures the bytes they looked at.
+    //
+    // Declaring it does not change it. p5 is content-bound because p1's receipt
+    // supplies the expectation; p1 has no prior receipt and therefore no
+    // committed content. Upgrading consent to bind source bytes would change
+    // what a phrase authorizes, which is a sovereign contract change and not
+    // something an implementation may perform on its own.
+    source_content_binding: "PATHNAME_ONLY",
     expected_states: Object.freeze({
       genesis: "the source path present with its before-hash",
       after_provisional: "the target path present, content hash unchanged",
