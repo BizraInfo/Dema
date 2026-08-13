@@ -532,9 +532,11 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
     fs.appendFileSync(logPath, `${JSON.stringify(receipt)}\n`);
     return Object.freeze({ ...receipt, receipt_log_path: logPath });
   } catch (err) {
+    let compensation_completed = false;
     if (renamed) {
       try {
         fs.renameSync(toPath, fromPath);
+        compensation_completed = true;
       } catch {
         /* best-effort rollback */
       }
@@ -543,7 +545,44 @@ export function executeReversibleRename({ plan, fs, now = null } = {}) {
     // else stays "execute_failed" so an unexpected fault is never dressed up as
     // a known, handled condition.
     const known = err?.message === "post_move_identity_mismatch" || err?.message === "backup_identity_mismatch";
-    return blockedReceipt(plan, [known ? err.message : "execute_failed"]);
+    const reason = known ? err.message : "execute_failed";
+
+    // A COMPENSATED TRANSITION IS STILL A TRANSITION.
+    //
+    //     executed:false        != no physical transition occurred
+    //     rolled back           != never happened
+    //     no success receipt    != no history
+    //
+    // Measured: under the TOCTOU interleaving a real rename ran, was detected,
+    // and was reversed — and the receipt log did not even EXIST afterwards. An
+    // adversary could attack repeatedly and leave no trace, which is detection
+    // nobody can audit. Only the path where the filesystem actually moved seals
+    // this; a refusal before any mutation has nothing to record.
+    const compensation = renamed
+      ? sealCompensationReceipt({
+          fs,
+          realRoot,
+          plan,
+          reason,
+          authorized_before_hash: plan.expected_before_hash ?? null,
+          compensation_completed,
+          // Observed after compensation, not asserted from the attempt.
+          restored_source: observeOne(fs, fromPath),
+          target_after: observeOne(fs, toPath),
+          now: typeof now === "string" ? now : null,
+        })
+      : null;
+    const blocked = blockedReceipt(plan, [reason]);
+    return compensation
+      ? Object.freeze({
+          ...blocked,
+          mutation_attempted: true,
+          mutation_committed: false,
+          compensation_completed,
+          compensation_receipt: compensation.receipt,
+          compensation_sealed: compensation.sealed,
+        })
+      : blocked;
   }
 }
 
@@ -678,6 +717,10 @@ export function undoReversibleRename({ receipt, fs, actionId } = {}) {
   }
 }
 
+// A compensated transition is still a transition. This receipt exists so a
+// physical move that was detected and reversed cannot vanish from history.
+export const NODE0_REVERSIBLE_COMPENSATION_RECEIPT_SCHEMA =
+  "bizra.node0.node0_reversible_compensation_receipt.v0.1";
 export const NODE0_REVERSIBLE_UNDO_RECEIPT_SCHEMA =
   "bizra.node0.node0_reversible_undo_receipt.v0.1";
 // v0.2, and the version bump is the point. v0.1 encoded each name as
@@ -730,6 +773,59 @@ function observeOne(fs, path) {
   } catch (err) {
     return Object.freeze({ state: OBSERVED_UNREADABLE, reason: err?.code ?? "read_failed" });
   }
+}
+
+/**
+ * Seal a FAILURE + COMPENSATION record for a transition that physically
+ * happened and was reversed.
+ *
+ * `executed: false` is the authority answer. It is not the history answer —
+ * the filesystem did move, and a record that omits that is a record of a
+ * world that never existed. This is deliberately NOT shaped like a success
+ * receipt: it carries `executed: false` and `mutation_committed: false`, so
+ * the capsule's admissibility check (which requires `executed === true`)
+ * can never credit a phase from it.
+ */
+function sealCompensationReceipt({
+  fs,
+  realRoot,
+  plan,
+  reason,
+  authorized_before_hash,
+  compensation_completed,
+  restored_source,
+  target_after,
+  now,
+}) {
+  const body = {
+    schema: NODE0_REVERSIBLE_COMPENSATION_RECEIPT_SCHEMA,
+    executed: false,
+    mutation_attempted: true,
+    mutation_committed: false,
+    action_id: plan.action_id ?? null,
+    phase: plan.phase ?? null,
+    from: plan.from,
+    to: plan.to,
+    failure_reason: reason,
+    authorized_before_hash,
+    compensation_attempted: true,
+    compensation_completed,
+    // Observed after compensation, never asserted from the attempt.
+    restored_source,
+    target_after,
+    now,
+  };
+  const receipt = Object.freeze({ ...body, content_hash: contentHash(body) });
+  const logPath = resolveReceiptLogPath(realRoot);
+  if (!logPath || !ensureRegularReceiptLog(fs, logPath)) return { receipt, sealed: false };
+  try {
+    fs.appendFileSync(logPath, `${JSON.stringify(receipt)}\n`);
+  } catch {
+    // Same law as the undo receipt: an unwritable log does not make the
+    // incident un-happen, and it must not be reported as sealed.
+    return { receipt, sealed: false };
+  }
+  return { receipt, sealed: true };
 }
 
 /** Seal the undo transition into the same append-only log the apply is sealed in. */

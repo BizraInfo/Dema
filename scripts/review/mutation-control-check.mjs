@@ -123,6 +123,15 @@ export const MUTATION_CONTROLS = Object.freeze([
     why: "p1 must inherit the bytes the sovereign approved, not whatever occupies the path",
   },
   {
+    id: "compensation-provenance",
+    file: "packages/core/src/node0-reversible-execute-gate.js",
+    find: "    const compensation = renamed",
+    replace: "    const compensation = false && renamed",
+    tests: ["tests/effect-time-toctou-identity.test.js"],
+    must_fail: ["TOC-06"],
+    why: "a physical move that was detected and reversed must not vanish from constitutional history",
+  },
+  {
     id: "earned-harness-plane",
     file: "scripts/review/plane-ownership-report.mjs",
     find: "    if (declared === HARNESS_PLANE && !PROVIDER_SURFACE.test(source)) {",

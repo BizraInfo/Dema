@@ -190,3 +190,67 @@ test("TOC-05: the capsule declares that consent binds pathnames, not content", a
   assert.equal(step.phase, CAPSULE_PHASE_GRAPH[0]);
   assert.equal(step.expected_before_hash ?? null, null, "p1 must not claim a content expectation it never had");
 });
+
+// ── TOC-06 · A COMPENSATED TRANSITION IS STILL A TRANSITION ─────────────────
+test("TOC-06: a move that happened and was reversed is recorded, not erased", async () => {
+  const { NODE0_REVERSIBLE_COMPENSATION_RECEIPT_SCHEMA, OBSERVED_PRESENT, OBSERVED_ABSENT } =
+    await import("../packages/core/src/node0-reversible-execute-gate.js");
+  const root = sandbox();
+  const { adapter } = interleavingFs(ATTACKER);
+  const r = run(root, adapter, h(AUTHORIZED));
+
+  //     executed:false     != no physical transition occurred
+  //     rolled back        != never happened
+  //     no success receipt != no history
+  //
+  // Measured before this existed: the receipt log did not even EXIST after the
+  // attack. An adversary could probe repeatedly and leave no trace — detection
+  // nobody can audit.
+  assert.equal(r.executed, false);
+  assert.equal(r.mutation_attempted, true, "the rename really did run; history must say so");
+  assert.equal(r.mutation_committed, false);
+  assert.equal(r.compensation_completed, true);
+  assert.equal(r.compensation_sealed, true, "the incident was not persisted");
+
+  const c = r.compensation_receipt;
+  assert.equal(c.schema, NODE0_REVERSIBLE_COMPENSATION_RECEIPT_SCHEMA);
+  assert.equal(c.failure_reason, "post_move_identity_mismatch");
+  assert.equal(c.authorized_before_hash, h(AUTHORIZED), "it must name what WAS authorized");
+  // Observed after compensation, never asserted from the attempt.
+  assert.equal(c.restored_source.state, OBSERVED_PRESENT);
+  assert.equal(c.target_after.state, OBSERVED_ABSENT);
+
+  // And it is durable: present in the append-only log, on disk.
+  const log = readFileSync(join(root, ".node0-receipts.ndjson"), "utf8");
+  assert.ok(log.includes(c.content_hash), "the compensation record is not in the sealed log");
+});
+
+// ── TOC-07 · a failure receipt can never be mistaken for a success ──────────
+test("TOC-07: the compensation record cannot credit a capsule phase", async () => {
+  const { buildMissionEffectCapsule, nextCapsulePhase, CAPSULE_PHASE_GRAPH } = await import(
+    "../packages/core/src/dema-reversible-file-steward.js"
+  );
+  const root = sandbox();
+  const { adapter } = interleavingFs(ATTACKER);
+  const r = run(root, adapter, h(AUTHORIZED));
+  assert.ok(r.compensation_receipt, "control: there must be a record to misuse");
+
+  // Offering the incident record where a transition receipt belongs must credit
+  // nothing: it carries executed:false, and admissibility requires executed:true.
+  const built = buildMissionEffectCapsule({
+    effect: { sandbox_root: root, atoms: [{ from: "a.json", to: "b.json" }] },
+    mission_id: "genesis-mission-001",
+    contract_hash: `sha256:${"c".repeat(64)}`,
+    purpose_id: "normalize",
+    repository_commit: "1".repeat(40),
+    repository_tree: "2".repeat(40),
+    nonce: "gm001-toc-00000000000007",
+    expires_at: "2026-08-15T00:00:00Z",
+  });
+  const next = nextCapsulePhase(
+    built.capsule,
+    [{ phase: CAPSULE_PHASE_GRAPH[0], receipt: r.compensation_receipt }],
+    realFs,
+  );
+  assert.deepEqual([...next.verified_completed], [], "a failure record credited a phase");
+});
