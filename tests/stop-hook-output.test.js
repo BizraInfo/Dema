@@ -1,3 +1,7 @@
+// plane: harness — this suite EXECUTES the .codex/ and .claude/ Stop hook
+// scripts, so its result is a property of the development harness, not of
+// Dema. It stays in `npm test` and in the global total; the lane report
+// only says whose failure it is.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
