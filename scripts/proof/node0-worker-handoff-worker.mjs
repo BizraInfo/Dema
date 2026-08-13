@@ -10,7 +10,7 @@
 // exit on its own: a worker that exits cleanly proves an orderly shutdown, and the
 // invariant asks what survives a death the worker did not choose.
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, renameSync } from "node:fs";
 
 import { saveSeasonState, loadSeasonHead } from "../../packages/receipts/src/season-state-store.js";
 import {
@@ -38,7 +38,13 @@ const state = (over = {}) => ({
   ...over,
 });
 
-const emit = (facts) => writeFileSync(factsPath, JSON.stringify(facts));
+// ATOMIC, for the same reason as the runtime-mission worker: a poller that
+// checks existsSync and then parses must never be able to see a prefix.
+const emit = (facts) => {
+  const tmp = `${factsPath}.partial`;
+  writeFileSync(tmp, JSON.stringify(facts));
+  renameSync(tmp, factsPath);
+};
 const fail = (error, detail) => { emit({ error, detail }); process.exit(2); };
 
 const acquired = await acquireClosureOwnership({ demaHome, transactionId, transactionHash });

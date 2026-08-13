@@ -66,7 +66,19 @@ async function until(predicate, label, ms = 30_000) {
 function spawnWorker(role, home, factsPath) {
   return spawn(process.execPath, [WORKER, role, home, factsPath], { stdio: "ignore" });
 }
-const readFacts = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null);
+// Defence in depth behind the atomic write. A poller that treats "the file
+// exists" as "the file is complete" turns a race into a SyntaxError instead of
+// another wait; unparseable means NOT YET READY, so `until()` keeps waiting and,
+// if the file really is corrupt, times out with a message that names what it was
+// waiting for rather than a bare JSON parse error.
+const readFacts = (p) => {
+  if (!existsSync(p)) return null;
+  try {
+    return JSON.parse(readFileSync(p, "utf8"));
+  } catch {
+    return null;
+  }
+};
 
 /// One kill-and-replace measurement. `persistHome` is the home the predecessor
 /// may write to; the control passes a role that writes nothing.

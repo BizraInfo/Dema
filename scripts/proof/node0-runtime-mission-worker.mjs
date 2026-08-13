@@ -9,7 +9,7 @@
 // home path and a facts path. No mission id, no contract, no stage, no sequence.
 // If it can continue the mission, it can only have got that from the home.
 
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { sha256CanonicalJsonV1 } from "../../packages/canon/src/sha256-canonical-json-v1.js";
@@ -51,7 +51,17 @@ const BAD_OUTPUT = Object.freeze({ patch: "TODO: not really done" });
 const GOOD_OUTPUT = Object.freeze({ patch: "diff --git a b" });
 const EXEC_RELPATH = join("node0", "runtime-mission", "execution.json");
 
-const emit = (facts) => writeFileSync(factsPath, JSON.stringify(facts));
+// ATOMIC. The proof driver polls with existsSync and then JSON.parse, so a
+// partially written file reads as torn JSON and throws. Measured under load:
+// one of two parallel fresh-extraction qualifications failed RMA-08 with
+// "Unexpected end of JSON input" while the same file passed 5/5 in isolation.
+// rename(2) inside one directory is atomic, so a reader sees the old file or the
+// complete new one, never a prefix of it.
+const emit = (facts) => {
+  const tmp = `${factsPath}.partial`;
+  writeFileSync(tmp, JSON.stringify(facts));
+  renameSync(tmp, factsPath);
+};
 
 /// The authority envelope as it exists ON DISK. Measured, never carried.
 const authorityHash = (fields) =>
