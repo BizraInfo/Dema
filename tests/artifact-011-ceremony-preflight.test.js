@@ -70,6 +70,13 @@ test("isolated preflight CLI clears preview ceremony on fresh home", async () =>
     {
       cwd: fileURLToPath(new URL("..", import.meta.url)),
       timeout: 60000,
+      // `--isolated` builds its scratch home under `homedir()`, so this test
+      // silently depended on the AMBIENT home being writable and failed EROFS
+      // wherever it is not. That is an isolation defect in the test, not a
+      // property of the code under test: nothing here asserts anything about
+      // the real home. Give the child a writable one and the assertions below
+      // are untouched.
+      env: { ...process.env, HOME: await mkdtemp(join(tmpdir(), "a011-home-")) },
     },
   );
   const report = JSON.parse(stdout);

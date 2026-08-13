@@ -137,8 +137,13 @@ test("key-store signing path blocks when the store is unavailable", async () => 
   const blocked = await signPreviewReceiptWithKeyStore({
     preview: FIXTURE_PREVIEW,
     consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
-    loadPrivateKeyFn: async () => null,
-    loadPublicKeyFn: async () => null,
+    // The shipped parameter is `loadActiveKeyPairFn`. These were named
+    // `loadPrivateKeyFn`/`loadPublicKeyFn`, which exist nowhere in packages/, so
+    // NOTHING was injected and the call fell through to the ambient ~/.dema. It
+    // passed only while that store happened to be empty; Act-1 put a real key
+    // there and the precondition became false. Injecting for real is the fix --
+    // the assertions below are unchanged.
+    loadActiveKeyPairFn: async () => null,
   });
   assert.equal(blocked.signed, false);
   assert.ok(blocked.blocked_by.includes("key_store_unavailable"));
