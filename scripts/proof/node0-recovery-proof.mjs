@@ -25,7 +25,8 @@
 // DEMA_HOME unless --dema-home names one. authority_delta 0.
 
 import { spawn } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { writeFactsAtomic, readFactsWhenComplete } from "./atomic-facts-io.mjs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,7 +47,7 @@ const DEMA_HOME = KEEP ? argv[homeArg + 1] : mkdtempSync(join(tmpdir(), "node0-r
 const scratch = mkdtempSync(join(tmpdir(), "node0-recovery-scratch-"));
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const rd = (f) => (existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : null);
+const rd = (f) => readFactsWhenComplete(f);
 const recovery = (home, n) => join(home, "node0", "recovery", n);
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 
@@ -140,7 +141,7 @@ try {
 
   const artefact = join(DEMA_HOME, RECOVERY_ARTEFACT_RELPATH);
   mkdirSync(dirname(artefact), { recursive: true });
-  writeFileSync(artefact, `${JSON.stringify(observation, null, 2)}\n`);
+  writeFactsAtomic(artefact, observation);
 
   // ── the governed boundary, exercised against the real shipped adapter ──────
   const bridged = await createNode0Adapter({

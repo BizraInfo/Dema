@@ -6,7 +6,8 @@
 // BOUNDARY: no network, no model, no daemon, no listener. Reads and writes only
 // under the DEMA_HOME it is handed.
 
-import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { writeFactsAtomic, readFactsWhenComplete } from "./atomic-facts-io.mjs";
 import { dirname, join } from "node:path";
 
 import { sha256CanonicalJsonV1 } from "../../packages/canon/src/sha256-canonical-json-v1.js";
@@ -18,7 +19,7 @@ import { NODE0_RECOVERY_TRANSACTION_ID } from "../../packages/core/src/node0-rec
 const [role, DEMA_HOME] = process.argv.slice(2);
 export const RECOVERY_DIR = join("node0", "recovery");
 const p = (n) => join(DEMA_HOME, RECOVERY_DIR, n);
-const write = (n, o) => { mkdirSync(dirname(p(n)), { recursive: true }); writeFileSync(p(n), JSON.stringify(o, null, 2)); };
+const write = (n, o) => { mkdirSync(dirname(p(n)), { recursive: true }); writeFactsAtomic(p(n), o); };
 
 const TX = NODE0_RECOVERY_TRANSACTION_ID;
 const TX_HASH = `sha256:${"5".repeat(64)}`;
@@ -70,7 +71,8 @@ if (role === "a") {
   // No signal handler: the supervisor's kill, when it comes, is a real death.
   setInterval(() => {}, 1 << 30);
 } else if (role === "b") {
-  const held = JSON.parse(readFileSync(p("state.json"), "utf8"));
+  const held = readFactsWhenComplete(p("state.json"));
+  if (held === null) { throw new Error("state.json not readable as complete JSON"); }
   // Re-derive rather than trust the stored hash.
   const rc = createMissionContract({ fields: held.contract_fields, consent: MISSION_CONTRACT_GO_PHRASE });
   const advanced = step(

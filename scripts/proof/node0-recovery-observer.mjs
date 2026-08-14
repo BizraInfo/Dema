@@ -11,7 +11,8 @@
 //
 //   node scripts/proof/node0-recovery-observer.mjs <DEMA_HOME> <out.json>
 
-import { writeFileSync, readFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { writeFactsAtomic, readFactsWhenComplete } from "./atomic-facts-io.mjs";
 import { join } from "node:path";
 
 import { sha256CanonicalJsonV1 } from "../../packages/canon/src/sha256-canonical-json-v1.js";
@@ -23,7 +24,7 @@ import { NODE0_RECOVERY_TRANSACTION_ID as TX } from "../../packages/core/src/nod
 const DEMA_HOME = process.argv[2];
 const OUT = process.argv[3];
 const p = (n) => join(DEMA_HOME, "node0", "recovery", n);
-const read = (n) => (existsSync(p(n)) ? JSON.parse(readFileSync(p(n), "utf8")) : null);
+const read = (n) => readFactsWhenComplete(p(n));
 
 const state = read("state.json");
 const a = read("worker-a.json");
@@ -53,7 +54,7 @@ const manual_recovery_marker_present = ["MANUAL_RECOVERY", "RESUME_NOW", "operat
 
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 
-writeFileSync(OUT, JSON.stringify({
+writeFactsAtomic(OUT, {
   observer_pid: process.pid,
   supervisor: {
     pid: j?.supervisor_pid ?? null,
@@ -89,4 +90,4 @@ writeFileSync(OUT, JSON.stringify({
   human: { commands_between_death_and_resume: 0, manual_recovery_marker_present },
   authority: { before_hash: state?.authority_before_hash ?? null, after_hash: state?.authority_after_hash ?? null },
   attribution: { certified_by: "independent_observer" },
-}, null, 2));
+});

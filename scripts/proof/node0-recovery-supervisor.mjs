@@ -27,7 +27,8 @@
 // mission and exits. authority_delta 0.
 
 import { spawn } from "node:child_process";
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { writeFactsAtomic, readFactsWhenComplete } from "./atomic-facts-io.mjs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -40,8 +41,8 @@ const REQUIRE_DEAD = !process.argv.includes("--recover-while-alive"); // control
 
 const dir = join(DEMA_HOME, "node0", "recovery");
 const p = (n) => join(dir, n);
-const write = (n, o) => { mkdirSync(dirname(p(n)), { recursive: true }); writeFileSync(p(n), JSON.stringify(o, null, 2)); };
-const read = (n) => (existsSync(p(n)) ? JSON.parse(readFileSync(p(n), "utf8")) : null);
+const write = (n, o) => { mkdirSync(dirname(p(n)), { recursive: true }); writeFactsAtomic(p(n), o); };
+const read = (n) => readFactsWhenComplete(p(n));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── status mode: the ONLY thing the Dema face can see, via the governed adapter

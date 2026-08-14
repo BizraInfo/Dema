@@ -149,6 +149,15 @@ export const MUTATION_CONTROLS = Object.freeze([
     must_fail: ["PPN-01"],
     why: "restoring the empty-string seed makes a throwing git status indistinguishable from an empty porcelain — a failed measurement must never serialize as CLEAN",
   },
+  {
+    id: "recovery-atomic-publication",
+    file: "scripts/proof/node0-recovery-worker.mjs",
+    find: "writeFactsAtomic(p(n), o); };",
+    replace: 'writeFileSync(p(n), JSON.stringify(o, null, 2)); };',
+    tests: ["tests/node0-recovery-torn-read.test.js"],
+    must_fail: ["RTR-06"],
+    why: "a direct writeFileSync at the final pathname truncates it to zero first, so a polling reader sees an empty file and throws — the recovery family must publish through rename(2) like its runtime-mission and worker-handoff siblings",
+  },
 ]);
 
 const REPO = fileURLToPath(new URL("../..", import.meta.url));
