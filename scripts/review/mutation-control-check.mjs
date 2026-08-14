@@ -140,6 +140,15 @@ export const MUTATION_CONTROLS = Object.freeze([
     must_fail: ["TPC-02"],
     why: "a harness label must be earned; relabelling a Dema test would move it out of the strict lane",
   },
+  {
+    id: "pre-push-posture-nullity",
+    file: "packages/core/src/pre-push-proof-seal.js",
+    find: "  let porcelain = null;\n",
+    replace: '  let porcelain = "";\n',
+    tests: ["tests/pre-push-proof-seal.test.js"],
+    must_fail: ["PPN-01"],
+    why: "restoring the empty-string seed makes a throwing git status indistinguishable from an empty porcelain — a failed measurement must never serialize as CLEAN",
+  },
 ]);
 
 const REPO = fileURLToPath(new URL("../..", import.meta.url));

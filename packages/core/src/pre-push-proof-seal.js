@@ -9,7 +9,12 @@ import {
   runProofRoomGate,
 } from "./proof-room-bundle.js";
 
-export const PRE_PUSH_PROOF_SEAL_SCHEMA = "bizra.dema.pre_push_proof_seal.v0.1";
+// v0.2 — git posture carries an explicit ternary observation state
+// (CLEAN | DIRTY | UNMEASURED) and `working_tree_clean` is true only when the
+// measurement ran and found the tree clean. Under v0.1 a failed `git status`
+// could serialize as clean, so a v0.1 artifact does not carry the v0.2
+// guarantee and must not be read as though it did.
+export const PRE_PUSH_PROOF_SEAL_SCHEMA = "bizra.dema.pre_push_proof_seal.v0.2";
 
 export const PRE_PUSH_VERDICT = Object.freeze({
   PUSH_READY: "PUSH_READY",
@@ -110,7 +115,9 @@ export async function inspectGitPublishPosture({
     }
   }
 
-  let porcelain = "";
+  // null means the measurement never happened. Seeding this with "" made a
+  // throwing `git status` indistinguishable from an empty porcelain.
+  let porcelain = null;
   try {
     const { stdout } = await runGit("git", ["status", "--porcelain"]);
     porcelain = stdout.trim();
@@ -161,9 +168,18 @@ export async function inspectGitPublishPosture({
     });
   }
 
-  const working_tree_clean = porcelain.length === 0;
+  // CLEAN is claimable only from a measurement that actually ran. UNMEASURED is
+  // not reported as dirty either — git_status_failed already blocks, and
+  // asserting uncommitted changes we never observed is its own invented fact.
+  const working_tree_status =
+    porcelain === null
+      ? "UNMEASURED"
+      : porcelain.length === 0
+        ? "CLEAN"
+        : "DIRTY";
+  const working_tree_clean = working_tree_status === "CLEAN";
 
-  if (!working_tree_clean) {
+  if (working_tree_status === "DIRTY") {
     blockers.push({
       code: "working_tree_dirty",
       message: "Working tree has uncommitted changes.",
@@ -172,6 +188,7 @@ export async function inspectGitPublishPosture({
 
   return deepFreeze({
     working_tree_clean,
+    working_tree_status,
     head,
     upstream,
     upstream_counts: upstreamCounts,
