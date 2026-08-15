@@ -16,6 +16,11 @@ import {
   composeTalkPromptWithFirstLesson,
 } from "../../../../packages/core/src/dema-first-lesson-canon.js";
 import { readFirstLessonMarkdown } from "./first-lesson-gatherer.js";
+import {
+  buildDemaIdentityRootCanon,
+  composeTalkPromptWithIdentity,
+} from "../../../../packages/core/src/dema-identity-root-canon.js";
+import { readIdentityRoots } from "./identity-root-gatherer.js";
 import { collectLocalLlmFleetReadiness } from "./fleet-readiness-gatherer.js";
 import { buildDemaTalkProfilePreview } from "../../../../packages/core/src/dema-talk-profile.js";
 import {
@@ -83,6 +88,31 @@ function resolveTalkPrompt({ argv, prompt }) {
   };
 }
 
+// TALK-IDENTITY-1A — opt-in (--as-dema flag or DEMA_TALK_IDENTITY=1 env).
+// Without it, talk is byte-identical to before. With it, the identity canon is
+// built root-bound: any drifted/unreadable root refuses identity fail-closed —
+// drifted roots never speak as Dema.
+function resolveIdentityComposition({ argv, env, prompt }) {
+  const wanted = argv.includes("--as-dema") || env.DEMA_TALK_IDENTITY === "1";
+  if (!wanted) return { ok: true, prompt };
+  const roots = readIdentityRoots({ env });
+  if (!roots.ok) {
+    return { ok: false, error: `identity_refused · ${roots.error}` };
+  }
+  const canon = buildDemaIdentityRootCanon({ root_files: roots.root_files });
+  if (canon.rejected) {
+    return {
+      ok: false,
+      error: `identity_refused · ${canon.reason_code} — drifted roots never speak as Dema`,
+    };
+  }
+  return {
+    ok: true,
+    prompt: composeTalkPromptWithIdentity(prompt, canon.identity_prompt),
+    identity_hash: canon.canon_hash,
+  };
+}
+
 function argValue(argv, name) {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : undefined;
@@ -118,7 +148,21 @@ export async function cmd_talk(ctx) {
     process.exitCode = 1;
     return;
   }
-  const effectivePrompt = resolved.prompt;
+  const withIdentity = resolveIdentityComposition({
+    argv,
+    env: process.env,
+    prompt: resolved.prompt,
+  });
+  if (!withIdentity.ok) {
+    if (wantsJson(argv)) {
+      console.log(JSON.stringify({ error: withIdentity.error }, null, 2));
+    } else {
+      console.error(withIdentity.error);
+    }
+    process.exitCode = 1;
+    return;
+  }
+  const effectivePrompt = withIdentity.prompt;
 
   let profilePreview = null;
   if (typeof profileName === "string" && profileName.length > 0) {
@@ -174,6 +218,9 @@ export async function cmd_talk(ctx) {
       lines.push(`  Provider: ${result.provider} · model: ${result.model} @ ${result.target_endpoint}`);
       if (resolved.first_lesson_hash) {
         lines.push(`  First-lesson canon injected (retrieval only): ${resolved.first_lesson_hash.slice(0, 16)}…`);
+      }
+      if (withIdentity.identity_hash) {
+        lines.push(`  Identity canon injected (root-bound, suggestion only): ${withIdentity.identity_hash.slice(0, 16)}…`);
       }
       lines.push("");
       lines.push("  Dema (a SUGGESTION — not an authority, nothing was executed):");
