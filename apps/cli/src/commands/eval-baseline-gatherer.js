@@ -28,7 +28,7 @@ function elide(s) {
     .slice(0, MAX_SAMPLE);
 }
 
-async function postJson(fetcher, url, payload, timeoutMs) {
+async function postJson(fetcher, url, payload, timeoutMs, key = "") {
   if (!isLocalUrl(url)) return { reachable: false, http_status: null, json: null, error_class: "non_local_url_refused" };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -36,7 +36,9 @@ async function postJson(fetcher, url, payload, timeoutMs) {
     const res = await fetcher(url, {
       method: "POST",
       redirect: "manual",
-      headers: { "Content-Type": "application/json" },
+      headers: key
+        ? { "Content-Type": "application/json", Authorization: `Bearer ${key}` }
+        : { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: ctrl.signal,
     });
@@ -54,12 +56,17 @@ async function postJson(fetcher, url, payload, timeoutMs) {
   }
 }
 
-async function getJson(fetcher, url, timeoutMs) {
+async function getJson(fetcher, url, timeoutMs, key = "") {
   if (!isLocalUrl(url)) return { ok: false, json: null };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetcher(url, { method: "GET", redirect: "manual", signal: ctrl.signal });
+    const res = await fetcher(url, {
+      method: "GET",
+      redirect: "manual",
+      signal: ctrl.signal,
+      ...(key ? { headers: { Authorization: `Bearer ${key}` } } : {}),
+    });
     if (!res.ok) return { ok: false, json: null };
     let json = null;
     try { json = await res.json(); } catch { json = null; }
@@ -84,6 +91,11 @@ function descriptors(entries, idKey) {
 }
 
 // Provider adapters: { listUrl, ids(json), genUrl(base), genBody(model, prompt), genOut(json) }
+// MODEL-PROVIDER-AUTH-1A: lm_studio/llamacpp lanes accept an OPTIONAL loopback
+// bearer key from env (LMSTUDIO_KEY / LLAMACPP_KEY). The key is attached to the
+// request only — never logged, persisted, or included in any report. Keyless
+// providers (ollama) are untouched; the URL guard (isLocalUrl) still applies
+// first, so a key can never cause a non-local call.
 function providers(env) {
   return {
     ollama: {
@@ -97,6 +109,7 @@ function providers(env) {
     },
     lm_studio: {
       base: env.LMSTUDIO_URL || "http://127.0.0.1:1234",
+      key: env.LMSTUDIO_KEY || "",
       list: (b) => `${b}/v1/models`,
       ids: (j) => descriptors(j?.data, "id"),
       gen: (b) => `${b}/v1/chat/completions`,
@@ -106,6 +119,7 @@ function providers(env) {
     },
     llamacpp: {
       base: env.LLAMACPP_URL || "http://127.0.0.1:8080",
+      key: env.LLAMACPP_KEY || "",
       list: (b) => `${b}/v1/models`,
       ids: (j) => descriptors(j?.data, "id"),
       gen: (b) => `${b}/v1/chat/completions`,
@@ -127,7 +141,7 @@ export async function discoverLocalModels({ fetchImpl, env = process.env, includ
       provider_discovery[name] = { reachable: false, model_count: 0 };
       continue;
     }
-    const r = await getJson(fetcher, p.list(p.base), timeoutMs);
+    const r = await getJson(fetcher, p.list(p.base), timeoutMs, p.key || "");
     const ids = r.ok ? p.ids(r.json) : [];
     provider_discovery[name] = { reachable: r.ok, model_count: ids.length };
     for (const { id, identity } of ids) {
@@ -226,7 +240,7 @@ export async function gatherModelEvalBaseline({
     // Warm-up pass FIRST, with a generous timeout, so the cold-load cost is paid
     // before the suite is timed. A model that never loads is recorded unreachable
     // across the suite without spending the full 6-task budget on it.
-    const warm = await postJson(fetcher, p.gen(p.base), p.warm(model), warmupTimeoutMs);
+    const warm = await postJson(fetcher, p.gen(p.base), p.warm(model), warmupTimeoutMs, p.key || "");
     if (!warm.reachable) {
       for (const task of BIZRA_LOCAL_SMALL_SUITE) {
         tasks[task.id] = { reachable: false, latency_ms: null, output: "", usage: null };
@@ -236,7 +250,7 @@ export async function gatherModelEvalBaseline({
     }
     for (const task of BIZRA_LOCAL_SMALL_SUITE) {
       const t0 = time().getTime();
-      const probe = await postJson(fetcher, p.gen(p.base), p.body(model, task.prompt), timeoutMs);
+      const probe = await postJson(fetcher, p.gen(p.base), p.body(model, task.prompt), timeoutMs, p.key || "");
       const t1 = time().getTime();
       tasks[task.id] = {
         reachable: probe.reachable,
