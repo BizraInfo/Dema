@@ -59,6 +59,11 @@ import {
   transitionCoverageDiagnostic,
   TRANSITION_COVERAGE_INVARIANT_ID,
 } from "../../packages/core/src/node0-transition-coverage-adapter.js";
+import {
+  fullHistoryReplayableObservation,
+  historyReplayDiagnostic,
+  HISTORY_REPLAY_INVARIANT_ID,
+} from "../../packages/core/src/node0-history-replay-adapter.js";
 
 /// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
 /// its own `task_id`, which the attestation's content hash covers — so anyone
@@ -157,6 +162,17 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
     invariant_id: TRANSITION_COVERAGE_INVARIANT_ID,
     observe: () => transitionCoverageObservation(),
     diagnose: () => transitionCoverageDiagnostic(),
+  }),
+  // NODE0-HISTORY-REPLAY-1A. Reads a recorded artefact, like the handoff and
+  // recovery adapters: the producer walked every season store on the machine and
+  // this only re-reads its verdict. It settles the row ONLY when every season
+  // reconstructed exactly — a node whose past is partly unreadable has not
+  // demonstrated that its past is replayable, and one store answering for all of
+  // them would be a narrow instrument routed to a broad question.
+  Object.freeze({
+    invariant_id: HISTORY_REPLAY_INVARIANT_ID,
+    observe: () => fullHistoryReplayableObservation(),
+    diagnose: () => historyReplayDiagnostic(),
   }),
 ]);
 
