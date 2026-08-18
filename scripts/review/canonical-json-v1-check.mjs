@@ -174,6 +174,14 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // digest; key-order instability would let an edited artefact keep its hash.
   "packages/core/src/node0-transition-coverage-adapter.js",
   "scripts/proof/node0-transition-coverage-proof.mjs",
+  // NODE0-HISTORY-REPLAY-1A. The producer walks a season history written by
+  // processes long dead and re-derives whether it reconstructs; the adapter, in a
+  // third process, re-derives the artefact digest before letting it settle a
+  // closure row. Every comparison is between bytes one process wrote and another
+  // read, so key-order stability is what stops an edited artefact keeping its
+  // hash — and this row can carry an INCOMPLETE that blocks closure.
+  "packages/core/src/node0-history-replay-adapter.js",
+  "scripts/proof/node0-history-replay-proof.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
