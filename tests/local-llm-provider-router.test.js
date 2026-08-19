@@ -280,3 +280,39 @@ test("a provider WITHOUT an exact-id list (ollama) keeps the publisher-stripping
   assert.equal(r.model_allowed, true);
   assert.equal(r.model_allow_reason, "family");
 });
+
+// --- LLAMACPP-EXACT-ID-ALLOWLIST-1A ---
+// The always-on llama.cpp service (systemd llama-gemma4-12b, 127.0.0.1:8080)
+// serves exactly one chat id, verified against /v1/models on 2026-08-19:
+// `gemma4-12b`. Registering it flips llamacpp into its OWN exact-id world
+// (masquerade fix, w5mc6928b): the publisher-strip family fallback turns OFF
+// for llamacpp — a stronger artifact buys stronger checking, never weaker.
+
+test("llamacpp exact id gemma4-12b is allowed via the exact-id path", () => {
+  const r = buildLocalLlmProviderRoute({ provider: "llamacpp", model: "gemma4-12b" });
+  assert.equal(r.model_allowed, true);
+  assert.equal(r.model_allow_reason, "exact_id");
+  assert.equal(r.consent_phrase, "GO: invoke local LLM via llamacpp at gemma4-12b");
+});
+
+test("llamacpp is now an exact-id world — publisher-prefixed names no longer strip-match", () => {
+  // BEFORE this slice `unsloth/gemma4` passed via publisher-strip → family.
+  // Declaring an exact id closes that masquerade door for llamacpp too.
+  const r = buildLocalLlmProviderRoute({ provider: "llamacpp", model: "unsloth/gemma4" });
+  assert.equal(r.model_allowed, false);
+  assert.equal(r.model_allow_reason, null);
+});
+
+test("llamacpp bare family tokens still pass (family fallback intact for bare ids)", () => {
+  for (const id of ["gemma4", "qwen2.5", "llama3.1:8b"]) {
+    const r = buildLocalLlmProviderRoute({ provider: "llamacpp", model: id });
+    assert.equal(r.model_allowed, true, `${id} should still be family-allowed`);
+    assert.equal(r.model_allow_reason, "family");
+  }
+});
+
+test("ollama keeps the publisher-strip fallback — unaffected by llamacpp's exact-id world", () => {
+  const r = buildLocalLlmProviderRoute({ provider: "ollama", model: "publisher/qwen2.5" });
+  assert.equal(r.model_allowed, true);
+  assert.equal(r.model_allow_reason, "family");
+});

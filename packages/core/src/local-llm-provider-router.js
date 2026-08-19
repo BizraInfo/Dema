@@ -114,7 +114,12 @@ export const PROVIDER_EXACT_ID_ALLOWLIST = Object.freeze({
     "qwen/qwen3.5-9b": true,
     "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive": true,
   }),
-  llamacpp: Object.freeze({}),
+  // llama.cpp id verified against 127.0.0.1:8080/v1/models on 2026-08-19 —
+  // the systemd unit (llama-gemma4-12b) serves exactly this alias. Declaring it
+  // flips llamacpp into its own exact-id world: publisher-strip fallback OFF.
+  llamacpp: Object.freeze({
+    "gemma4-12b": true,
+  }),
   ollama: Object.freeze({}),
 });
 
