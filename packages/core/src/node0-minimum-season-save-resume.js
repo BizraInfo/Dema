@@ -603,22 +603,130 @@ export function buildSeasonReceipt(args) {
   return Object.freeze({ ...body, receipt_hash: sha256CanonicalJsonV1(body) });
 }
 
+// ── v0.2 · the same receipt, bound to a world anchor ────────────────────────
+//
+// Found in the wild before it was ever written here: a save receipt at v0.2 in
+// a season store on the operator's machine, which the v0.1 verifier could only
+// answer with `unknown_schema`. No writer for it exists anywhere in this tree,
+// so its contract was established from the artefact itself and stated here
+// rather than guessed:
+//
+//   v0.2 = v0.1 + `world_anchor_ref`, and the ref is INSIDE the hashed body.
+//
+// Both facts are measured, not assumed. Recomputing the carried receipt_hash
+// matches only when `world_anchor_ref` is part of the body, and the ref equals
+// the canonical hash of the anchor record filed beside it. So the anchor
+// reference is integrity-bearing: it cannot be swapped, added, or dropped
+// without breaking the receipt's own hash.
+//
+// The domain did NOT change between versions, and v0.1 is untouched — a v0.1
+// receipt carrying this field is still refused, because widening the older
+// contract is how a version bump quietly becomes a way to smuggle fields.
+export const SEASON_RECEIPT_SCHEMA_V0_2 =
+  "bizra.dema.node0_season_save_receipt.v0.2";
+
+export const RECEIPT_FIELDS_V0_2 = Object.freeze([
+  ...RECEIPT_FIELDS,
+  "world_anchor_ref",
+]);
+
+export function receiptBodyV0_2({
+  season_id,
+  state_hash,
+  state_sequence,
+  previous_state_hash,
+  saved_at,
+  world_anchor_ref,
+}) {
+  return {
+    schema: SEASON_RECEIPT_SCHEMA_V0_2,
+    domain: SEASON_RECEIPT_DOMAIN,
+    season_id,
+    state_hash,
+    state_sequence,
+    previous_state_hash: previous_state_hash ?? null,
+    saved_at,
+    world_anchor_ref,
+  };
+}
+
+export function buildSeasonReceiptV0_2(args) {
+  const body = receiptBodyV0_2(args);
+  return Object.freeze({ ...body, receipt_hash: sha256CanonicalJsonV1(body) });
+}
+
+/**
+ * Resolve a `world_anchor_ref` against the anchor record it names.
+ *
+ * Deliberately SEPARATE from receipt verification. A v0.2 receipt verifies on
+ * its own bytes; resolving the anchor is a stronger, optional check for a caller
+ * that actually holds the anchor. Folding it in would make every reader that
+ * lacks the anchor file unable to verify a receipt that is perfectly intact —
+ * and an unresolved anchor would then be indistinguishable from a broken one.
+ *
+ * An absent anchor is UNRESOLVED, never verified. Zero evidence is not proof.
+ */
+export function verifyWorldAnchorRef(ref, anchor) {
+  if (typeof ref !== "string" || !TAGGED_SHA256_RE.test(ref)) {
+    return Object.freeze({ ok: false, reason: "world_anchor_ref_malformed" });
+  }
+  if (!anchor || typeof anchor !== "object" || Array.isArray(anchor)) {
+    return Object.freeze({ ok: false, reason: "world_anchor_unresolved" });
+  }
+  if (anchor.anchor_hash !== ref) {
+    return Object.freeze({ ok: false, reason: "world_anchor_ref_mismatch" });
+  }
+  let address;
+  try {
+    address = verifyWorldAnchorRef.addressOf(anchor);
+  } catch {
+    return Object.freeze({ ok: false, reason: "world_anchor_content_mismatch" });
+  }
+  if (address !== ref) {
+    return Object.freeze({
+      ok: false,
+      reason: "world_anchor_content_mismatch",
+      recomputed_hash: address,
+    });
+  }
+  return Object.freeze({ ok: true, world_anchor_ref: ref });
+}
+
+/** The addressing rule, exposed so a checker cannot drift from a writer. */
+verifyWorldAnchorRef.addressOf = function addressOf(anchor) {
+  const { anchor_hash: _carried, ...body } = anchor ?? {};
+  return sha256CanonicalJsonV1(body);
+};
+
 /** Verify a receipt against itself AND against the state it claims to attest. */
 export function verifySeasonReceipt(receipt, state) {
   if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) {
     return Object.freeze({ ok: false, reason: "receipt_not_object" });
   }
-  if (receipt.schema !== SEASON_RECEIPT_SCHEMA || receipt.domain !== SEASON_RECEIPT_DOMAIN) {
+  const isV0_2 = receipt.schema === SEASON_RECEIPT_SCHEMA_V0_2;
+  if (
+    (receipt.schema !== SEASON_RECEIPT_SCHEMA && !isV0_2) ||
+    receipt.domain !== SEASON_RECEIPT_DOMAIN
+  ) {
     return Object.freeze({ ok: false, reason: "unknown_schema" });
   }
   const present = Object.keys(receipt).sort();
-  const expected = [...RECEIPT_FIELDS].sort();
+  const expected = [...(isV0_2 ? RECEIPT_FIELDS_V0_2 : RECEIPT_FIELDS)].sort();
   if (present.length !== expected.length || present.some((k, i) => k !== expected[i])) {
     return Object.freeze({ ok: false, reason: "receipt_fields_unexpected" });
   }
+  // Field set first, so an ABSENT ref reads as the field-set problem it is.
+  // Only a ref that is present-but-wrong is a shape problem, and it is refused
+  // before the hash gets a say — otherwise a malformed ref reports as an opaque
+  // digest mismatch and says nothing about what is actually wrong.
+  if (isV0_2 && !TAGGED_SHA256_RE.test(String(receipt.world_anchor_ref))) {
+    return Object.freeze({ ok: false, reason: "world_anchor_ref_malformed" });
+  }
   let recomputed;
   try {
-    recomputed = sha256CanonicalJsonV1(receiptBody(receipt));
+    recomputed = sha256CanonicalJsonV1(
+      isV0_2 ? receiptBodyV0_2(receipt) : receiptBody(receipt),
+    );
   } catch {
     return Object.freeze({ ok: false, reason: "receipt_hash_mismatch" });
   }
