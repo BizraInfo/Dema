@@ -43,6 +43,15 @@ const REGISTRY = Object.freeze({
   "corpus.gate": { subject_effect: "read_only", control_plane_effect: "none", resolve: () => ({ file: "node", argv: ["scripts/claims/claim-corpus-gate.mjs"] }) },
   "integration.check": { subject_effect: "read_only", control_plane_effect: "none", resolve: () => ({ file: "node", argv: ["scripts/review/integration-check.mjs"] }) },
   "disk.inspect": { subject_effect: "read_only", control_plane_effect: "none", resolve: () => ({ file: "df", argv: ["-h", "/data"] }) },
+  // Added because a real failure had no instrument. 160 qualified branches sat
+  // unmerged not because anything refused them but because nothing surfaced
+  // them — the operator's own answer was "nothing blocked me, I just didn't see
+  // it". A report handed over once goes invisible again; a registered op does
+  // not. Read-only: it lists, it never merges.
+  "git.unmerged_branches": {
+    subject_effect: "read_only", control_plane_effect: "none",
+    resolve: () => ({ file: "git", argv: ["branch", "-r", "--no-merged", "origin/main"] }),
+  },
 });
 
 export function listCapabilities() {

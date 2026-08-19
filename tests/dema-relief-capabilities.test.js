@@ -53,3 +53,20 @@ test("CAP-05: every capability declares subject_effect AND control_plane_effect"
     assert.ok(typeof r.control_plane_effect === "string", op);
   }
 });
+
+// ── CAP-06 the op added for a measured blind spot ─────────────────────────────
+// 160 branches sat unmerged because nothing reported them, not because anything
+// refused them. The op exists so that failure cannot recur silently.
+test("CAP-06: git.unmerged_branches is registered, read-only, and lists rather than merges", () => {
+  const r = resolveOperation("git.unmerged_branches");
+  assert.equal(r.error, undefined, "must be registered");
+  assert.equal(r.subject_effect, "read_only");
+  assert.equal(r.control_plane_effect, "none");
+  assert.equal(r.file, "git");
+  assert.deepEqual([...r.argv], ["branch", "-r", "--no-merged", "origin/main"]);
+  // it must never be able to become a mutating git verb
+  for (const forbidden of ["merge", "push", "rebase", "reset", "checkout"]) {
+    assert.ok(!r.argv.includes(forbidden), `argv must not contain ${forbidden}`);
+  }
+  assert.ok(listCapabilities().includes("git.unmerged_branches"));
+});
