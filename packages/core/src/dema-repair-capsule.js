@@ -54,7 +54,9 @@ export function runRepairCapsule({
 
   if (!execOk) {
     t = advanceTask(t, "COMPLETE_FAIL", { now });
-    return Object.freeze({ schema: REPAIR_CAPSULE_SCHEMA, proceeded: true, verdict, executed: true, verified: false, execute_receipt, task: t, authority_delta: 0 });
+    // The act did not complete. Distinct from "it completed and did not verify"
+    // below, and a reader must be able to tell those apart without guessing.
+    return Object.freeze({ schema: REPAIR_CAPSULE_SCHEMA, proceeded: true, verdict, executed: true, verified: false, reason: "execute_failed", execute_receipt, task: t, authority_delta: 0 });
   }
 
   t = advanceTask(t, "COMPLETE_OK", { now });
@@ -63,7 +65,9 @@ export function runRepairCapsule({
 
   if (!verified) {
     t = advanceTask(t, "VERIFY_FAIL", { now });
-    return Object.freeze({ schema: REPAIR_CAPSULE_SCHEMA, proceeded: true, verdict, executed: true, verified: false, execute_receipt, task: t, authority_delta: 0 });
+    // The act DID complete and its verification refused it. The undo path still
+    // matters here in a way it does not above, which is why the reason differs.
+    return Object.freeze({ schema: REPAIR_CAPSULE_SCHEMA, proceeded: true, verdict, executed: true, verified: false, reason: "verify_failed", execute_receipt, task: t, authority_delta: 0 });
   }
 
   t = advanceTask(t, "VERIFY_OK", { now, result_hash: (execute_receipt && execute_receipt.content_hash) || null });
