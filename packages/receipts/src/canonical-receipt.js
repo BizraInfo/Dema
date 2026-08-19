@@ -21,6 +21,7 @@ import { createPublicKey } from "node:crypto";
 import { signPayload, verifyPayload } from "./authorship-signature.js";
 import { loadActiveKeyPair } from "./authorship-key-store.js";
 import { sha256, stableStringify } from "../../consent/src/consent-common.js";
+import { evaluateSignaturePolicy, QSAFE_REASON_CODES } from "./crypto-policy.js";
 import {
   classifySuccessionBody,
   validateSuccessionIntentBody,
@@ -30,6 +31,60 @@ import {
 
 export const CANONICAL_RECEIPT_SCHEMA = "bizra.dema.canonical_receipt.v0.1";
 export const CANONICAL_RECEIPT_CONSENT_PHRASE = "APPEND CANONICAL RECEIPT";
+
+// ── CRYPTO-AGILITY-1A · v0.2 · a receipt says which algorithm signed it ──────
+//
+// v0.1 emits `receipt_signature_b64` with ed25519 IMPLICIT. Shor breaks ed25519
+// outright; Grover only halves hash strength, so the sha256 content addressing,
+// the prev_hash chain and the Bitcoin anchors survive it. The integrity layer is
+// already post-quantum — only the authority layer is not.
+//
+// The expensive mistake is therefore not signing with ed25519 today. It is
+// accumulating receipts that cannot say WHICH algorithm signed them, because a
+// future verifier then cannot tell a legacy signature from a forged downgrade.
+//
+//   v0.2 = v0.1 + `sig_alg`, INSIDE the signed body.
+//
+// Inside, not beside: `receipt_id` and the signature both commit to it, so the
+// declaration cannot be stripped, added, or swapped without breaking the
+// receipt's own hash. A field a tamperer can edit freely declares nothing.
+//
+// This is a versioned schema with dispatch, never a retrofit. Adding `sig_alg`
+// to existing bodies would change every receipt_id and break the chain the
+// spine exists to protect, so v0.1 stays byte-identical and keeps its rules —
+// and a v0.1 receipt CARRYING `sig_alg` is refused, because widening the older
+// contract is how a version bump quietly becomes a way to smuggle fields.
+export const CANONICAL_RECEIPT_SCHEMA_V0_2 = "bizra.dema.canonical_receipt.v0.2";
+
+/**
+ * The only signature algorithm this build can actually verify (`verifyPayload`).
+ *
+ * A declaration nobody checks is decoration, so v0.2 refuses any `sig_alg` this
+ * build cannot verify. That is a statement about THIS BUILD'S capability, not
+ * about the signature — which is why it holds without a cutover date and
+ * without knowing yet whether the signature is valid.
+ */
+export const RECEIPT_SIGNATURE_ALG = "ed25519";
+
+/**
+ * When hybrid classical+PQ signing becomes REQUIRED. `null` means no cutover
+ * has been declared.
+ *
+ * Deliberately not defaulted to a date. Picking one is an operator decision
+ * with a real blast radius — after it, `evaluateSignaturePolicy` refuses every
+ * ed25519-only receipt, and hybrid signing is not implemented yet (it would be
+ * this repo's first external dependency in a kernel package that has zero).
+ * While it is null the policy's cutover branch is unreachable and only the
+ * declaration checks bind, which is exactly the intended scope of 1A.
+ *
+ * OPEN EDGE, stated rather than hidden: the policy is consulted from
+ * `checkEntryStructure`, which runs BEFORE the signature is verified, so
+ * `classicalValid` is not passed. That is sound only while the cutover is null,
+ * since `CRYPTO_ALGORITHM_UNDECLARED` depends solely on the declared algorithm.
+ * Setting a cutover REQUIRES moving the call to after `signatureHolds` in both
+ * verifiers so the validity the policy reads is measured, not assumed.
+ */
+export const QSAFE_CUTOVER_AT = null;
 
 // Truth ladder (master checklist §1 + §7). A receipt MUST self-label.
 export const VALID_TRUTH_LABELS = Object.freeze([
@@ -89,7 +144,24 @@ function fingerprintFromPem(pubkeyPem) {
  *
  * @returns {{built:true, receipt, signer_public_key_pem} | {built:false, error}}
  */
-export async function buildCanonicalReceipt({
+export async function buildCanonicalReceipt(args = {}) {
+  return buildReceiptAtSchema(args, CANONICAL_RECEIPT_SCHEMA);
+}
+
+/**
+ * Build one canonical receipt at v0.2 — identical to v0.1 except that the
+ * signed body declares `sig_alg`.
+ *
+ * Additive on purpose. `buildCanonicalReceipt` still emits v0.1, so no existing
+ * producer changes version underneath its callers; a producer opts in by
+ * calling this instead. Mixed chains are fine: `prev_hash` links by
+ * `receipt_id`, which is schema-agnostic, and the verifier dispatches per entry.
+ */
+export async function buildCanonicalReceiptV0_2(args = {}) {
+  return buildReceiptAtSchema(args, CANONICAL_RECEIPT_SCHEMA_V0_2);
+}
+
+async function buildReceiptAtSchema({
   canonicalBody,
   prevHash = null,
   truthLabel,
@@ -98,7 +170,7 @@ export async function buildCanonicalReceipt({
   consent,
   demaHome,
   now,
-} = {}) {
+} = {}, schema) {
   if (consent !== CANONICAL_RECEIPT_CONSENT_PHRASE) {
     return fail("consent_required");
   }
@@ -155,7 +227,12 @@ export async function buildCanonicalReceipt({
   try {
     // body is exactly what the signature + receipt_id commit to.
     const body = {
-      schema: CANONICAL_RECEIPT_SCHEMA,
+      schema,
+      // INSIDE the signed body, so receipt_id and the signature both commit to
+      // it. v0.1 must not carry it at all.
+      ...(schema === CANONICAL_RECEIPT_SCHEMA_V0_2
+        ? { sig_alg: RECEIPT_SIGNATURE_ALG }
+        : {}),
       prev_hash: prevHash,
       body_hash: sha256(stableStringify(canonicalBody)),
       canonical_body: canonicalBody,
@@ -197,7 +274,11 @@ function reject(reason, at_index) {
  */
 function checkEntryStructure(entries, i) {
   const entry = entries[i];
-  if (!isPlainObject(entry) || entry.schema !== CANONICAL_RECEIPT_SCHEMA) {
+  const isV0_2 = isPlainObject(entry) && entry.schema === CANONICAL_RECEIPT_SCHEMA_V0_2;
+  if (
+    !isPlainObject(entry) ||
+    (entry.schema !== CANONICAL_RECEIPT_SCHEMA && !isV0_2)
+  ) {
     return reject("receipt_schema_mismatch", i);
   }
   if (
@@ -241,6 +322,44 @@ function checkEntryStructure(entries, i) {
   } catch {
     return reject("receipt_id_mismatch", i); // unserializable → reject
   }
+
+  // ── CRYPTO-AGILITY-1A · the algorithm declaration, dispatched by version ───
+  //
+  // Placed here rather than in each verifier because this function is already
+  // the single definition of structural validity that both verifiers share —
+  // two copies would drift, and the drift would show up as one verifier
+  // accepting a chain the other refuses.
+  if (!isV0_2) {
+    // v0.1 keeps its exact contract. A v0.1 receipt carrying `sig_alg` is a
+    // widened old contract, which is how a version bump becomes a way to
+    // smuggle fields; it is refused rather than quietly honoured.
+    if ("sig_alg" in body) return reject("sig_alg_not_valid_in_v0_1", i);
+  } else {
+    // THE production caller of the quantum policy gate on the verification
+    // path. While QSAFE_CUTOVER_AT is null the reachable rule is exactly
+    // CRYPTO_ALGORITHM_UNDECLARED, which depends only on the declared
+    // algorithm — see the constant's note before setting a cutover.
+    const policy = evaluateSignaturePolicy({
+      artifactType: "canonical_receipt",
+      createdAt: body.created_at_iso,
+      cutoverAt: QSAFE_CUTOVER_AT,
+      classicalAlg: typeof body.sig_alg === "string" ? body.sig_alg : undefined,
+    });
+    if (!policy.allowed) {
+      return reject(`crypto_policy:${policy.reasonCodes.join(",")}`, i);
+    }
+    // A declaration nobody checks is decoration. The signature about to be
+    // verified is verified with ed25519 and nothing else, so a body declaring
+    // any other algorithm is describing a signature this build did not check —
+    // exactly the legacy-vs-forged-downgrade confusion `sig_alg` exists to end.
+    if (body.sig_alg !== RECEIPT_SIGNATURE_ALG) {
+      return reject(
+        `crypto_policy:${QSAFE_REASON_CODES.DOWNGRADE_ATTACK_DETECTED}`,
+        i,
+      );
+    }
+  }
+
   return { ok: true, body, signature: receipt_signature_b64 };
 }
 

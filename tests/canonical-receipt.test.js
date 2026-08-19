@@ -23,10 +23,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   buildCanonicalReceipt,
+  buildCanonicalReceiptV0_2,
   verifyCanonicalChain,
+  verifyCanonicalAuthorityChain,
   CANONICAL_RECEIPT_SCHEMA,
+  CANONICAL_RECEIPT_SCHEMA_V0_2,
   CANONICAL_RECEIPT_CONSENT_PHRASE,
+  RECEIPT_SIGNATURE_ALG,
+  QSAFE_CUTOVER_AT,
 } from "../packages/receipts/src/canonical-receipt.js";
+import { QSAFE_REASON_CODES } from "../packages/receipts/src/crypto-policy.js";
 import {
   initAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
@@ -415,5 +421,175 @@ describe("RECEIPT-CHAIN-1A · build + verify canonical chain", () => {
     } finally {
       await rm(home, { recursive: true, force: true });
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CRYPTO-AGILITY-1A · every receipt declares the algorithm that signed it.
+//
+// The rejections below all fire from checkEntryStructure, which runs BEFORE the
+// signature is verified — so a resealed receipt (receipt_id recomputed, original
+// signature kept) is enough to prove WHICH rule refused it. Each test asserts
+// the exact reason, so a refusal for the wrong cause cannot pass as the right one.
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("CRYPTO-AGILITY-1A · sig_alg under the v0.2 schema", () => {
+  it("CA-01: v0.2 declares sig_alg INSIDE the signed body — stripping it breaks receipt_id", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const g = await buildCanonicalReceiptV0_2(commonArgs(home));
+      assert.equal(g.built, true, `build: ${g.error}`);
+      assert.equal(g.receipt.schema, CANONICAL_RECEIPT_SCHEMA_V0_2);
+      assert.equal(g.receipt.sig_alg, RECEIPT_SIGNATURE_ALG);
+
+      // hash-bound, not merely present: the id the builder sealed is the id of
+      // a body that CONTAINS sig_alg
+      const { receipt_id, receipt_signature_b64, ...body } = g.receipt;
+      assert.equal(sha256(stableStringify(body)), receipt_id);
+      const { sig_alg, ...without } = body;
+      assert.notEqual(
+        sha256(stableStringify(without)),
+        receipt_id,
+        "sig_alg must be committed to by receipt_id, not carried beside it",
+      );
+
+      const v = verifyCanonicalChain({
+        entries: [g.receipt],
+        pubkeyPem: await loadPublicKey(home),
+      });
+      assert.equal(v.verified, true, `verify: ${v.reason}`);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("CA-02: v0.1 still verifies under v0.1 rules and carries no sig_alg", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const g = await buildCanonicalReceipt(commonArgs(home));
+      assert.equal(g.receipt.schema, CANONICAL_RECEIPT_SCHEMA);
+      assert.ok(!("sig_alg" in g.receipt), "v0.1 must not gain a field");
+      const v = verifyCanonicalChain({
+        entries: [g.receipt],
+        pubkeyPem: await loadPublicKey(home),
+      });
+      assert.equal(v.verified, true, `verify: ${v.reason}`);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("CA-03: NEGATIVE CONTROL — a v0.2 receipt with no declared algorithm is refused CRYPTO_ALGORITHM_UNDECLARED", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const g = await buildCanonicalReceiptV0_2(commonArgs(home));
+      const { sig_alg, ...stripped } = g.receipt;
+      const undeclared = reseal(stripped); // otherwise perfect: id recomputed
+      const v = verifyCanonicalChain({
+        entries: [undeclared],
+        pubkeyPem: await loadPublicKey(home),
+      });
+      assert.equal(v.verified, false);
+      assert.equal(
+        v.reason,
+        `crypto_policy:${QSAFE_REASON_CODES.CRYPTO_ALGORITHM_UNDECLARED}`,
+      );
+      assert.equal(v.at_index, 0);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("CA-04: a declared algorithm this build cannot verify is refused DOWNGRADE_ATTACK_DETECTED", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const g = await buildCanonicalReceiptV0_2(commonArgs(home));
+      // the signature below was produced by ed25519; the body now claims it was
+      // not. A declaration nobody checks is decoration.
+      const lying = reseal({ ...g.receipt, sig_alg: "ML-DSA-65" });
+      const v = verifyCanonicalChain({
+        entries: [lying],
+        pubkeyPem: await loadPublicKey(home),
+      });
+      assert.equal(v.verified, false);
+      assert.equal(
+        v.reason,
+        `crypto_policy:${QSAFE_REASON_CODES.DOWNGRADE_ATTACK_DETECTED}`,
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("CA-05: a v0.1 receipt carrying sig_alg is refused — the old contract cannot be widened", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const g = await buildCanonicalReceipt(commonArgs(home));
+      const smuggled = reseal({ ...g.receipt, sig_alg: RECEIPT_SIGNATURE_ALG });
+      const v = verifyCanonicalChain({
+        entries: [smuggled],
+        pubkeyPem: await loadPublicKey(home),
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "sig_alg_not_valid_in_v0_1");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("CA-06: dispatch is per entry — a v0.1 genesis chains to a v0.2 child", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const g = await buildCanonicalReceipt(commonArgs(home));
+      const c = await buildCanonicalReceiptV0_2(
+        commonArgs(home, {
+          canonicalBody: { kind: "demo", value: 2 },
+          prevHash: g.receipt.receipt_id,
+        }),
+      );
+      assert.equal(c.built, true, `child: ${c.error}`);
+      const v = verifyCanonicalChain({
+        entries: [g.receipt, c.receipt],
+        pubkeyPem: await loadPublicKey(home),
+      });
+      assert.equal(v.verified, true, `verify: ${v.reason}`);
+      assert.equal(v.total_entries, 2);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("CA-07: the authority-chain verifier enforces the identical rule — one definition, no drift", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const g = await buildCanonicalReceiptV0_2(commonArgs(home));
+      const pubkey = await loadPublicKey(home);
+      const ok = verifyCanonicalAuthorityChain({
+        entries: [g.receipt],
+        genesisPubkeyPem: pubkey,
+      });
+      assert.equal(ok.verified, true, `verify: ${ok.reason}`);
+
+      const { sig_alg, ...stripped } = g.receipt;
+      const bad = verifyCanonicalAuthorityChain({
+        entries: [reseal(stripped)],
+        genesisPubkeyPem: pubkey,
+      });
+      assert.equal(bad.verified, false);
+      assert.equal(
+        bad.reason,
+        `crypto_policy:${QSAFE_REASON_CODES.CRYPTO_ALGORITHM_UNDECLARED}`,
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("CA-08: no cutover is declared, so the hybrid branch is unreachable and 1A changes nothing at the cutover", () => {
+    // Pinned deliberately. If someone sets a date, this test turns red and sends
+    // them to the constant's note: the policy call must first move to after the
+    // signature check, or it will read an assumed classicalValid instead of a
+    // measured one.
+    assert.equal(QSAFE_CUTOVER_AT, null);
   });
 });
