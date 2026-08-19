@@ -182,6 +182,16 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // hash — and this row can carry an INCOMPLETE that blocks closure.
   "packages/core/src/node0-history-replay-adapter.js",
   "scripts/proof/node0-history-replay-proof.mjs",
+  // NODE0-DEPLOYMENT-REMOTE-WRITE-1A. The producer measures the host's exposure
+  // surface and seals the verdict; the adapter, in a later process on a possibly
+  // changed machine, re-derives that digest before letting it settle the one
+  // closure row that governs external writes. The artefact is the ONLY thing
+  // standing between "this host carries no silent write path" and someone
+  // editing a findings array to say so, and the root-file hashes it carries are
+  // compared against a Bitcoin-anchored manifest — so key-order stability is
+  // what stops an edited artefact keeping its hash.
+  "packages/core/src/node0-deployment-remote-write-adapter.js",
+  "scripts/proof/node0-deployment-remote-write-proof.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

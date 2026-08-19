@@ -64,6 +64,11 @@ import {
   historyReplayDiagnostic,
   HISTORY_REPLAY_INVARIANT_ID,
 } from "../../packages/core/src/node0-history-replay-adapter.js";
+import {
+  remoteWriteDeploymentObservation,
+  remoteWriteDeploymentDiagnostic,
+  REMOTE_WRITE_INVARIANT_ID,
+} from "../../packages/core/src/node0-deployment-remote-write-adapter.js";
 
 /// The probe task the acceptance adapter judges. It is a FIXTURE and says so in
 /// its own `task_id`, which the attestation's content hash covers — so anyone
@@ -91,11 +96,14 @@ const ACCEPTANCE_PROBE = Object.freeze({
   transport: Object.freeze({ carry_contract: true, carry_outputs: true }),
 });
 
-/// Every adapter the tree currently ships for a closure invariant. Eight of the
-/// ten are absent because no instrument exists: five of those describe a RUNNING
-/// LOOP observed across a worker exit, and `remote_write` has an instrument whose
-/// scope review demoted it to `null`. An adapter registers here and the ledger
-/// moves; nothing else does.
+/// Every adapter the tree currently ships for a closure invariant. An adapter
+/// registers here and the ledger moves; nothing else does.
+///
+/// `remote_write` was for a long time the row nothing could answer: the source
+/// scan in node0-remote-write-guard.js returns `null` because no amount of
+/// reading code can see a mount, a listener, or a sync daemon. The question is
+/// about the DEPLOYMENT, so the instrument had to become one — measured on the
+/// host, recorded, and re-read here.
 ///
 /// The two registered adapters answer in different ways, and the difference is
 /// the point. `acceptance_is_model_blind` MEASURES here, because it is a pure
@@ -174,6 +182,17 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
     observe: () => fullHistoryReplayableObservation(),
     diagnose: () => historyReplayDiagnostic(),
   }),
+  // NODE0-DEPLOYMENT-REMOTE-WRITE-1A. The strictest reader in this list, because
+  // it answers the only row that governs whether an outside party can write into
+  // the node. It settles ONLY on an artefact produced where the numbers are true:
+  // an observer inside a PID namespace sees a nearly empty machine, and a clean
+  // report from there would be the most dangerous false GREEN available. Such an
+  // artefact records INCOMPLETE and this adapter returns null.
+  Object.freeze({
+    invariant_id: REMOTE_WRITE_INVARIANT_ID,
+    observe: () => remoteWriteDeploymentObservation(),
+    diagnose: () => remoteWriteDeploymentDiagnostic(),
+  }),
 ]);
 
 /// Gathers whatever the registered adapters can honestly observe. An adapter
@@ -192,7 +211,7 @@ export function gatherClosureEvidence(adapters = CLOSURE_EVIDENCE_ADAPTERS) {
 
 /// Why each registered adapter fell silent.
 ///
-/// An adapter returning null is correct behaviour, but seven different refusals
+/// An adapter returning null is correct behaviour, but many different refusals
 /// used to produce one identical silence — so "nobody ran the producer" and
 /// "someone edited the artefact" rendered the same. This asks each adapter that
 /// offers a `diagnose()` for its reason.
