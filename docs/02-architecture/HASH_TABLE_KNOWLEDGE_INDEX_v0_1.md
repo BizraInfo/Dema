@@ -1,6 +1,6 @@
 # Hash-Table Knowledge Index v0.1
 
-Status: live imported kernel, deterministic index only.  
+Status: live imported kernel, deterministic index only.
 Schema: `bizra.dema.hash_table_knowledge_index.v0.1`.
 
 ## Purpose

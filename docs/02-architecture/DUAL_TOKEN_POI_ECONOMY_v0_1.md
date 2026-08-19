@@ -1,7 +1,7 @@
 # Dual Token Proof-of-Impact Economy v0.1
 
-**Slice:** `DUAL-TOKEN-POI-ECONOMY-CANON-1A`  
-**Status:** `DESIGNED_NOT_LIVE`  
+**Slice:** `DUAL-TOKEN-POI-ECONOMY-CANON-1A`
+**Status:** `DESIGNED_NOT_LIVE`
 **Implementation:** docs plus pure local preview kernel only
 
 This document defines the Dema-side canon for the BIZRA dual-token economy. It does not activate a token economy, wallet, public sale, exchange, chain deployment, live Proof-of-Impact runtime, or validator network.
