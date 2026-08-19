@@ -26,11 +26,13 @@ import { fileURLToPath } from "node:url";
 import { listCapabilities } from "../packages/core/src/dema-relief-capabilities.js";
 import { runReliefShift } from "../packages/core/src/dema-relief-runner.js";
 import { formatReliefBriefing } from "../packages/core/src/dema-founder-relief-loop.js";
+import { surfaceCandidateRepairs } from "../packages/core/src/dema-candidate-repair.js";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const argv = process.argv.slice(2);
 const wantJson = argv.includes("--json");
 const includeTests = argv.includes("--include-tests");
+const MAX_CANDIDATES = 5;   // bounded: a briefing is a decision aid, not a dump
 
 /**
  * shell:false, fixed cwd, bounded time and output. The runner hands over an
@@ -100,14 +102,51 @@ for (const r of shift.refused) {
 if (!shift.refused.length) {
   p("    (none) — WARNING: the controls did not fire, so this tick proved nothing");
 }
+// ── A0 observation -> A1 candidate ────────────────────────────────────────────
+// The registry's A1 tier is NOT a spawned command: `repo.patch_bounded` runs
+// through the injected reversible executor, gated by an authority verdict. So
+// the A1 queue is populated here, by turning real findings into candidates and
+// driving each through the capsule with NO standing lease. The capsule's
+// executor throws if reached, which is what proves a lease-less candidate never
+// executes — the queue is a proposal, not a pending action.
+const findings = [];
+{
+  const grep = spawnSync("git", ["grep", "-lI", "-e", "[ \t]$", "--", "*.md"], {
+    cwd: REPO, encoding: "utf8", shell: false, maxBuffer: 8 * 1024 * 1024,
+  });
+  const files = (grep.stdout || "").split("\n").filter(Boolean).slice(0, MAX_CANDIDATES);
+  for (const f of files) findings.push({ kind: "whitespace", scope: f, blast: { files: 1 } });
+}
+const bridge = surfaceCandidateRepairs({ findings, now });
+
+p("");
+p("  A1 CANDIDATES (observed, proposed, NOT executed)");
+if (!bridge.candidates.length) {
+  p("    (none) — no finding of a repairable kind was observed this tick");
+} else {
+  for (const c of bridge.candidates) {
+    p(`    ${String(c.state).padEnd(20)} ${c.capability_id}  ${c.scope}`);
+  }
+  p("");
+  p(`    ${bridge.needs_lease_count} candidate(s) wait on ONE lease:`);
+  const l = bridge.candidates[0].needed_lease;
+  p(`      capability_id: ${l.capability_id}`);
+  p(`      effect_class:  ${l.effect_class}`);
+  p(`      scope:         (per-candidate, listed above)`);
+  p("    The executor was never called. A lease-less candidate cannot execute.");
+}
+if (bridge.refused.length) {
+  p(`    refused findings: ${bridge.refused.map((r) => r.reason).join(", ")}`);
+}
+
 p("");
 p("  QUEUED FOR SOVEREIGN (what a lease would release)");
 for (const r of shift.sovereign_queue) {
   p(`    queue   ${String(r.op).padEnd(20)} ${r.authority}  ${r.reason}`);
 }
 if (!shift.sovereign_queue.length) {
-  p("    (none) — no capability declaring a stronger effect is registered yet,");
-  p("    so there is nothing an A1 lease would currently unlock.");
+  p("    (none from the spawn registry — every registered op is read_only.)");
+  p("    The A1 tier does not run through this registry; see A1 CANDIDATES above.");
 }
 p("");
 p("  BRIEFING");
