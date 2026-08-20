@@ -27,7 +27,7 @@
 // mission and exits. authority_delta 0.
 
 import { spawn } from "node:child_process";
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -40,7 +40,16 @@ const REQUIRE_DEAD = !process.argv.includes("--recover-while-alive"); // control
 
 const dir = join(DEMA_HOME, "node0", "recovery");
 const p = (n) => join(dir, n);
-const write = (n, o) => { mkdirSync(dirname(p(n)), { recursive: true }); writeFileSync(p(n), JSON.stringify(o, null, 2)); };
+// Write via tmp+rename: workers and the supervisor die by SIGKILL in this proof,
+// and a kill landing mid-write must never leave a torn JSON file for a poller
+// (fired in CI as RCA-03 "Unexpected end of JSON input"). rename() is atomic
+// within the directory, so readers see the old bytes or the new — never partial.
+const write = (n, o) => {
+  mkdirSync(dirname(p(n)), { recursive: true });
+  const tmp = `${p(n)}.tmp-${process.pid}`;
+  writeFileSync(tmp, JSON.stringify(o, null, 2));
+  renameSync(tmp, p(n));
+};
 const read = (n) => (existsSync(p(n)) ? JSON.parse(readFileSync(p(n), "utf8")) : null);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
