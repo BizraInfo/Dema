@@ -72,6 +72,7 @@ import { cmd_diagnostics } from "./commands/diagnostics.js";
 import { cmd_consent } from "./commands/consent.js";
 import { cmd_receipts } from "./commands/receipts.js";
 import { cmd_models } from "./commands/models.js";
+import { cmd_web } from "./commands/web.js";
 import { cmd_monitors } from "./commands/monitors.js";
 import { cmd_report } from "./commands/report.js";
 import { cmd_network } from "./commands/network.js";
@@ -629,6 +630,15 @@ Local evidence:
   dema memory       List local memory entries (profile + ~/.dema/memory/*)
   dema memory show NAME
                     Show one memory entry by name (e.g. profile, bizra-context)
+  dema web witness <url> --consent "<phrase>" [--json]
+                    One consented, credential-free GET -> content-addressed
+                    witness (body sha256, title, bounded excerpt/links,
+                    executed boundary declared). No scripts run, nothing
+                    written, raw body not retained. Refuses without the
+                    exact phrase; nothing is fetched.
+  dema web diff <a.json> <b.json>
+                    Pure drift verdict between two saved witnesses of a
+                    page (same body? status changed? bytes delta). No network.
   dema models       Show local model inventory (read-only; no inference)
   dema models scan [--summary]
                     C1.5 · schema-tagged local model inventory scan (Ollama API · LM Studio API · GGUF files · HF cache · /data/bizra)
@@ -918,6 +928,7 @@ const REGISTERED_COMMANDS_LIST = [
       "list/show local memory entries · query BIZRA Omega AgentDB (MC-A)",
   },
   { command: "models", description: "show local model inventory" },
+  { command: "web", description: "consented one-page web witness (hash-pinned GET) + witness diff" },
   { command: "report", description: "preview safety report" },
   {
     command: "network",
@@ -1358,6 +1369,7 @@ const COMMAND_TABLE = {
   memory: cmd_memory,
   think: cmd_think,
   models: cmd_models,
+  web: cmd_web,
   report: cmd_report,
   network: cmd_network,
   amana: cmd_amana,

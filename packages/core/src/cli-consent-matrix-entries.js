@@ -338,6 +338,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
   preview("think", "tests/think-dry-run.test.js"),
   preview("voice", "tests/sovereign-voice-turn-preview-cli.test.js"),
   readOnly("models", "tests/model-catalog-cli.test.js"),
+  row(
+    "web",
+    ["read_only", "network"],
+    "subcommand_gated",
+    "web diff re-verifies two saved witness files read-only; web witness performs one credential-free GET and emits a content-addressed witness only after the exact `GO: dema web witness one page read-only` phrase",
+    ["tests/dema-web-witness-cli.test.js", "tests/dema-web-witness.test.js"],
+  ),
   readOnly("monitors", "tests/dema-monitors-cli.test.js", "Operator-invoked proof-health scan; read-only, no daemon, no autofix, no receipt write"),
   row(
     "report",
