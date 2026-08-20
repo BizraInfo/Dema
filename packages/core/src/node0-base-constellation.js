@@ -179,5 +179,24 @@ export function verifyBaseConstellation(envelope) {
   if (round(total - reachable) !== host.dark_capacity_gb) {
     return Object.freeze({ ok: false, reason: "dark_capacity_mismatch" });
   }
+  // Envelope-level summaries re-derive too (PR #458 review catch): the
+  // top-level dark_capacity_gb is the headline this kernel exists to surface,
+  // and checking only the host copy let a hand-edited envelope summary pass.
+  if (round(total - reachable) !== envelope.dark_capacity_gb) {
+    return Object.freeze({
+      ok: false,
+      reason: "envelope_dark_capacity_mismatch",
+    });
+  }
+  if (envelope.bases.length !== envelope.base_count) {
+    return Object.freeze({ ok: false, reason: "base_count_mismatch" });
+  }
+  const notEnrolled = envelope.bases.filter((b) => !b.enrolled).length;
+  if (notEnrolled !== envelope.attached_not_enrolled) {
+    return Object.freeze({
+      ok: false,
+      reason: "attached_not_enrolled_mismatch",
+    });
+  }
   return Object.freeze({ ok: true });
 }

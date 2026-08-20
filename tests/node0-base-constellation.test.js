@@ -130,6 +130,37 @@ test("NBC-06 no observations degrades honestly rather than throwing", () => {
   assert.deepEqual(verifyBaseConstellation(envelope), { ok: true });
 });
 
+test("NBC-08 envelope-level summary fields re-derive — a tampered headline cannot pass", () => {
+  // Review catch (PR #458): verify re-derived HOST totals but never the
+  // ENVELOPE-level dark_capacity_gb — the headline number this slice exists
+  // to surface — so a hand-edited top-level summary passed verification.
+  // Same class: base_count and attached_not_enrolled.
+  const envelope = buildBaseConstellation({
+    disks: [disk("nvme2n1", 1024, [part("nvme2n1p2", 2), part("nvme2n1p3", 1021)])],
+    mounts: [{ device: "/dev/nvme2n1p2", mountpoint: "/media/stick" }],
+    attached: [{ label: "mtp:host=X" }],
+  });
+  assert.deepEqual(verifyBaseConstellation(envelope), { ok: true });
+
+  const hideDark = { ...envelope, dark_capacity_gb: 0 };
+  assert.equal(verifyBaseConstellation(hideDark).ok, false);
+  assert.equal(
+    verifyBaseConstellation(hideDark).reason,
+    "envelope_dark_capacity_mismatch",
+  );
+
+  const inflateBases = { ...envelope, base_count: 5 };
+  assert.equal(verifyBaseConstellation(inflateBases).ok, false);
+  assert.equal(verifyBaseConstellation(inflateBases).reason, "base_count_mismatch");
+
+  const hideAttached = { ...envelope, attached_not_enrolled: 0 };
+  assert.equal(verifyBaseConstellation(hideAttached).ok, false);
+  assert.equal(
+    verifyBaseConstellation(hideAttached).reason,
+    "attached_not_enrolled_mismatch",
+  );
+});
+
 test("NBC-07 an unpartitioned disk is judged whole, not skipped", () => {
   const mounted = buildBaseConstellation({
     disks: [disk("sda", 500)],
