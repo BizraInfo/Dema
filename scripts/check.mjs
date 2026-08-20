@@ -69,6 +69,7 @@ export const commands = [
   ["node", ["scripts/review/dema-active-workloop-composer-preview-check.mjs"]],
   ["node", ["scripts/review/node0-consented-inventory-gatherer-preview-check.mjs"]],
   ["node", ["scripts/review/dema-self-eval-baseline-preview-check.mjs"]],
+  ["node", ["scripts/review/dema-self-eval-collect-check.mjs"]],
   ["node", ["scripts/review/dema-verified-answer-receipt-cache-preview-check.mjs"]],
   ["node", ["scripts/review/dema-isnad-modern-design-canon-check.mjs"]],
   ["node", ["scripts/review/dema-first-light-front-door-preview-check.mjs"]],

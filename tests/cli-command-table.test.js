@@ -117,6 +117,7 @@ const COMMAND_SURFACE = [
   "design",
   "task",
   "monetize",
+  "self",
   "sovereign",
   "help",
   "-h",
