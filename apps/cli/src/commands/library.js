@@ -37,6 +37,10 @@ function argValue(argv, name) {
 
 const gb = (b) => `${(b / 1000 ** 3).toFixed(1)} GB`;
 
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
 function renderSummary(c) {
   const lines = [
     "مكتبة نود0 · NODE0 LIBRARY CENSUS",
@@ -56,7 +60,7 @@ function renderSummary(c) {
     .sort((a, b) => b[1].bytes - a[1].bytes);
   for (const [name, v] of rows) {
     lines.push(
-      `  ${String(v.files).padStart(8)}  ${gb(v.bytes).padStart(10)}  ${name}${v.class === "node_space" ? "  ·node-space" : ""}`,
+      `  ${String(v.files).padStart(8)}  ${gb(v.bytes).padStart(10)}  ${escapeHtml(name)}${v.class === "node_space" ? "  ·node-space" : ""}`,
     );
   }
   lines.push("", "WHAT THIS DOES NOT PROVE");

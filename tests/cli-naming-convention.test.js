@@ -26,6 +26,10 @@ const KEBAB_ALLOWLIST = new Set([
   // per the ADR's own amendment-by-typed-GO rule. See ADR-012 §Decision.
   "master-craftsmanship",
   "setup-check",
+  // SELF-EVAL-COLLECT-1A: measured self-baseline command. Added as kebab
+  // because the surface is a single capability with two subcommands
+  // (baseline/compare), not a new top-level verb family.
+  "self-eval",
 ]);
 
 function classify(command) {
@@ -117,12 +121,12 @@ test("pattern distribution matches ADR-012 counts (drift guard)", () => {
     counts[classify(command)] += 1;
   }
   // ADR-012 documents: single-word=17→18, space-subcommand=13 (top-level tokens),
-  // kebab=16 (agent-loop added 2026-06-20), colon=2.
+  // kebab=17 (agent-loop added 2026-06-20, self-eval added 2026-08-21), colon=2.
   // If this test fails, update ADR-012 alongside.
   assert.equal(
     counts.kebab,
-    16,
-    `Kebab count changed (expected 16, got ${counts.kebab}). Update ADR-012 allowlist.`,
+    17,
+    `Kebab count changed (expected 17, got ${counts.kebab}). Update ADR-012 allowlist.`,
   );
   assert.equal(
     counts.colon,

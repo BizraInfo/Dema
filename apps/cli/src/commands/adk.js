@@ -1,6 +1,7 @@
 // `dema adk` — BIZRA-ADK-AGENT-CONTRACT-1A (define/validate/preview only).
 
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { validateAgentContract } from "../../../../packages/adk/src/agent-validator.js";
 import { buildAdkReceiptPreview } from "../../../../packages/adk/src/receipt-preview.js";
@@ -11,8 +12,13 @@ import {
   runAdkContractHarness,
 } from "../../../../packages/adk/src/test-harness.js";
 
-function loadJsonFile(path) {
-  const raw = readFileSync(path, "utf8");
+function loadJsonFile(filePath) {
+  const safe = resolve(filePath);
+  const cwd = resolve(".");
+  if (!safe.startsWith(cwd + "/") && safe !== cwd) {
+    throw new Error("path traversal denied");
+  }
+  const raw = readFileSync(safe, "utf8");
   return JSON.parse(raw);
 }
 

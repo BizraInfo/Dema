@@ -69,3 +69,21 @@ test("4. missing file returns clean refusal", () => {
   assert.equal(out.json.refused, true);
   assert.equal(out.json.reason_code, "file_not_found");
 });
+
+test("5. --lang ar speaks Arabic and still verifies bounded", async () => {
+  const f = await scratchFile("سؤال محلي واضح عن العمل القائم على الإثبات.");
+  const out = voiceTurn(f, ["--lang", "ar", "--json"]);
+  assert.equal(out.code, 0);
+  assert.equal(out.json.pulse_status, "sealed");
+  assert.match(out.json.spoken_response_text, /[؀-ۿ]/); // contains Arabic script
+  assert.equal(out.json.audio_generated, false);
+  assert.equal(out.json.microphone_used, false);
+  assert.deepEqual(out.json.blocked_by, []);
+});
+
+test("6. default (no --lang) response is unchanged English", async () => {
+  const f = await scratchFile("A clean local voice transcript about proof-first work.");
+  const out = voiceTurn(f, ["--json"]);
+  assert.equal(out.code, 0);
+  assert.match(out.json.spoken_response_text, /^Pulse sealed as preview:/);
+});

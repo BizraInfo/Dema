@@ -110,22 +110,63 @@ function pulseBlockedReasons(pulseResult) {
   return blocked;
 }
 
+// ── Bilingual response guards ───────────────────────────────────────────────
+// The mouth must be judged in the operator's own language, not only English.
+// Arabic is matched by substring on a diacritic-stripped copy, so proclitics
+// (و/ف/ال/ب/ل) and harakat cannot smuggle a claim past the guard. Latin `\b`
+// word boundaries do not apply to Arabic script, hence includes() not regex.
+// English matching is left byte-identical so no existing turn changes meaning.
+const AR_REFUSAL = Object.freeze([
+  "رفض", "مرفوض", "محظور", "ممنوع", "منع", "توقف", "اوقف", "حظر", "معطل",
+  "لا يسمح", "لا استطيع", "لا اجراء",
+]);
+const AR_STATUS = Object.freeze([
+  "مختوم", "ختم", "معاينة", "جاهز", "محدود", "بلغت", "محطات",
+]);
+const AR_DONE = Object.freeze([
+  "اكتمل", "مكتمل", "مختوم", "ختم", "نجح", "بنجاح", "انجز", "منجز",
+]);
+
+// Strip harakat (U+064B–U+0652), superscript alef (U+0670) and tatweel (U+0640)
+// so "نُفِّذ" and "نفذ" compare equal.
+function stripTashkeel(text) {
+  return String(text).replace(/[ً-ْٰـ]/g, "");
+}
+function includesAny(haystack, needles) {
+  return needles.some((n) => haystack.includes(n));
+}
+
 function sealedResponseRefusalOnly(text) {
   const lower = String(text).toLowerCase();
-  const hasRefusal = /\b(refusal|refused|blocked|aborted|cannot|can't|denied|not allowed)\b/.test(lower);
-  const hasSealedStatus = /\b(sealed|bounded|preview|ready|passed|complete|completed)\b/.test(lower);
+  const ar = stripTashkeel(text);
+  const hasRefusal =
+    /\b(refusal|refused|blocked|aborted|cannot|can't|denied|not allowed)\b/.test(lower) ||
+    includesAny(ar, AR_REFUSAL);
+  const hasSealedStatus =
+    /\b(sealed|bounded|preview|ready|passed|complete|completed)\b/.test(lower) ||
+    includesAny(ar, AR_STATUS);
   return hasRefusal && !hasSealedStatus;
 }
 
 function abortedResponseIsBounded(text) {
   const lower = String(text).toLowerCase();
-  return /\b(refusal|refused|blocked|aborted|cannot|halted|stopped|not allowed)\b/.test(lower);
+  return (
+    /\b(refusal|refused|blocked|aborted|cannot|halted|stopped|not allowed)\b/.test(lower) ||
+    includesAny(stripTashkeel(text), AR_REFUSAL)
+  );
 }
 
 function abortedResponseClaimsCompletion(text) {
   const lower = String(text).toLowerCase();
+  const ar = stripTashkeel(text);
   if (/\b(completed|sealed|succeeded|successfully|carried out)\b/.test(lower)) return true;
+  if (includesAny(ar, AR_DONE)) return true;
   if (/\bexecuted\b/.test(lower) && !/\b(no|not)\b[^.]{0,40}\bexecuted\b/.test(lower)) return true;
+  // Arabic "executed" (نفذ / تنفيذ) — a claim UNLESS negated (لم/لن/لا/بدون/غير/دون)
+  // near it, so an honest "no action was executed" refusal is not miscaught.
+  if (/نفذ|تنفيذ/.test(ar) && !/(لم|لن|لا|بدون|غير|دون)[^.]{0,20}(نفذ|تنفيذ)/.test(ar)) {
+    return true;
+  }
   return false;
 }
 

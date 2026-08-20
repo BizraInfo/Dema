@@ -10,13 +10,16 @@
 // so, and absence must not be reported as zero capacity without evidence.
 
 import { readFile, readdir } from "node:fs/promises";
+import { resolve } from "node:path";
 
 const SYS_BLOCK = "/sys/block";
 const PROC_MOUNTS = "/proc/mounts";
 
-async function readTrimmed(path) {
+async function readTrimmed(path, allowedRoot) {
   try {
-    return (await readFile(path, "utf8")).trim();
+    const safe = resolve(path);
+    if (allowedRoot && !safe.startsWith(resolve(allowedRoot) + "/") && safe !== resolve(allowedRoot)) return null;
+    return (await readFile(safe, "utf8")).trim();
   } catch {
     return null;
   }
@@ -34,19 +37,23 @@ async function gatherDisks() {
   const disks = [];
   for (const name of names.sort()) {
     if (/^(loop|ram|zram|dm-|sr)/.test(name)) continue;
-    const sizeRaw = await readTrimmed(`${SYS_BLOCK}/${name}/size`);
+    const diskDir = resolve(`${SYS_BLOCK}/${name}`);
+    if (!diskDir.startsWith(resolve(SYS_BLOCK) + "/")) continue;
+    const sizeRaw = await readTrimmed(`${diskDir}/size`, diskDir);
     const sectors = sizeRaw === null ? Number.NaN : Number.parseInt(sizeRaw, 10);
     if (!Number.isFinite(sectors) || sectors <= 0) continue;
-    const model = await readTrimmed(`${SYS_BLOCK}/${name}/device/model`);
+    const model = await readTrimmed(`${diskDir}/device/model`, diskDir);
     // Partitions, not just the disk. Reachability computed per disk would call
     // a 1 TB drive "reachable" because a 2 GB partition on it is mounted, and
     // silently hide the 950 GB partition that is not. Measured on this host.
     let partitions = [];
     try {
-      const children = await readdir(`${SYS_BLOCK}/${name}`);
+      const children = await readdir(diskDir);
       for (const child of children.sort()) {
         if (!child.startsWith(name)) continue;
-        const partRaw = await readTrimmed(`${SYS_BLOCK}/${name}/${child}/size`);
+        const partDir = resolve(`${diskDir}/${child}`);
+        if (!partDir.startsWith(diskDir + "/")) continue;
+        const partRaw = await readTrimmed(`${partDir}/size`, partDir);
         const partSectors = partRaw === null ? Number.NaN : Number.parseInt(partRaw, 10);
         if (!Number.isFinite(partSectors) || partSectors <= 0) continue;
         partitions.push({ name: child, sectors: partSectors });

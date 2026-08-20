@@ -67,19 +67,30 @@ function buildVoiceDemoMission(fileText, fileSource) {
   };
 }
 
-function spokenResponseForPulse(pulse) {
+// Dema speaks the operator's language. `lang` defaults to "en" so every existing
+// call site and test is byte-identical; "ar" gives the Arabic-first founder a
+// mouth in his own tongue. Both phrasings are shaped to satisfy the kernel's
+// bilingual response guards (sealed → status language, aborted → refusal only).
+function spokenResponseForPulse(pulse, lang = "en") {
+  const last = Array.isArray(pulse.ladder) ? pulse.ladder[pulse.ladder.length - 1] : null;
+  const station = last?.station ?? "unknown";
+  if (lang === "ar") {
+    if (pulse.pulse_status === "sealed") {
+      return `خُتمت النبضة كمعاينة: بلغت ${pulse.reached_station} من ${pulse.station_count} محطات. هذه خطة استجابة صوتية محدودة فقط.`;
+    }
+    return `رفض: توقّفت النبضة عند ${station}. هذا الدور الصوتي محظور، لا إجراء ولا صوت مُصرّح به.`;
+  }
   if (pulse.pulse_status === "sealed") {
     return `Pulse sealed as preview: reached ${pulse.reached_station} of ${pulse.station_count} stations. This is a bounded spoken-response plan only.`;
   }
-  const last = Array.isArray(pulse.ladder) ? pulse.ladder[pulse.ladder.length - 1] : null;
-  const station = last?.station ?? "unknown";
   return `Refusal: Pulse aborted at ${station}. This voice turn is blocked; no action or audio is authorized.`;
 }
 
-export async function runVoiceTurn({ filePath } = {}) {
+export async function runVoiceTurn({ filePath, lang = "en" } = {}) {
   if (!filePath || typeof filePath !== "string" || filePath.startsWith("--")) {
     return { ok: false, reason_code: "missing_file", file: filePath ?? null, result: null };
   }
+  const speakLang = lang === "ar" ? "ar" : "en";
   const abs = resolve(filePath);
   let transcript;
   try {
@@ -102,7 +113,7 @@ export async function runVoiceTurn({ filePath } = {}) {
     transcript_text: transcript,
     transcript_source: "local_transcript_file",
     pulse_result: pulse,
-    spoken_response_text: spokenResponseForPulse(pulse),
+    spoken_response_text: spokenResponseForPulse(pulse, speakLang),
     voice_profile: {
       id: "dema-sovereign-preview",
       mode: "planned_only",
@@ -163,7 +174,9 @@ export async function cmd_voice(ctx) {
   if (subcommand !== "turn") {
     throw new Error("Unknown voice command. Use `dema voice turn <file> [--json]`.");
   }
-  const out = await runVoiceTurn({ filePath: argv[2] });
+  const langIdx = argv.indexOf("--lang");
+  const lang = langIdx >= 0 ? argv[langIdx + 1] : "en";
+  const out = await runVoiceTurn({ filePath: argv[2], lang });
   if (wantsJson(argv)) {
     console.log(JSON.stringify(jsonView(out), null, 2));
   } else {

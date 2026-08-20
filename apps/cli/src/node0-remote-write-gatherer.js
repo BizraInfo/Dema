@@ -11,7 +11,7 @@
 // inventory into a noisy dependency census.
 
 import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 const EXCLUDED_DIRS = new Set([
   "node_modules",
@@ -34,7 +34,7 @@ export const DEFAULT_SOURCE_ROOTS = Object.freeze([
   "scripts",
 ]);
 
-async function walk(dir, out, coverageIssues) {
+async function walk(dir, out, coverageIssues, repoRoot) {
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -46,9 +46,10 @@ async function walk(dir, out, coverageIssues) {
   }
   for (const entry of entries) {
     if (EXCLUDED_DIRS.has(entry.name)) continue;
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) await walk(path, out, coverageIssues);
-    else if (SOURCE_EXTENSIONS.test(entry.name)) out.push(path);
+    const absPath = resolve(join(dir, entry.name));
+    if (!absPath.startsWith(repoRoot + "/") && absPath !== repoRoot) continue;
+    if (entry.isDirectory()) await walk(absPath, out, coverageIssues, repoRoot);
+    else if (SOURCE_EXTENSIONS.test(entry.name)) out.push(absPath);
   }
   return out;
 }
@@ -66,8 +67,9 @@ export async function gatherRemoteWriteEvidence({
 } = {}) {
   const paths = [];
   const coverageIssues = [];
+  const absRepoRoot = resolve(repoRoot);
   for (const root of roots) {
-    await walk(join(repoRoot, root), paths, coverageIssues);
+    await walk(join(absRepoRoot, root), paths, coverageIssues, absRepoRoot);
   }
   const files = await Promise.all(
     paths.map(async (path) => ({

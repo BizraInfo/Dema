@@ -125,7 +125,10 @@ describe("gatherDemaRealmState — checkpoint present", () => {
         "URP-4.1A Pure Choose Decision Kernel",
       );
       assert.equal(s.boot_steps[2].status, "FOUND");
-      assert.equal(s.boot_steps[4].status, "READY");
+      // Rebind (2026-08-14): the quest board step reads DEMA_HOME/missions,
+      // not checkpoint presence. A checkpoint with zero missions is EMPTY —
+      // the old READY here was a proxy that overclaimed.
+      assert.equal(s.boot_steps[4].status, "EMPTY");
     } finally {
       rmSync(home, { recursive: true, force: true });
     }
@@ -142,6 +145,165 @@ describe("gatherDemaRealmState — checkpoint present", () => {
       const s = await gatherDemaRealmState({ demaHome: home, now: FIXED_NOW });
       assert.equal(s.operator, "MuMu");
       assert.equal(s.role, "First Architect");
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  // The canonical profile written by setup lives at DEMA_HOME/profile.json —
+  // that is what operator-profile.js reads and what a real ~/.dema contains.
+  // This surface read only the legacy memory/ copy, so every real node fell
+  // through to the "Operator" default and the boot card never said the
+  // operator's name. dema-first-look-home.js already resolves both, canonical
+  // first; this pins the same order here.
+  it("operator name read from the canonical DEMA_HOME/profile.json", async () => {
+    const home = freshHome();
+    try {
+      writeFileSync(
+        join(home, "profile.json"),
+        JSON.stringify({
+          schema: "bizra.dema.profile.v0.1",
+          preferred_name: "Mumu",
+        }),
+      );
+      const s = await gatherDemaRealmState({ demaHome: home, now: FIXED_NOW });
+      assert.equal(s.operator, "Mumu");
+      assert.equal(s.role, "First Architect");
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  // Realm-card bindings (2026-08-14): the card printed "—"/EMPTY while a real
+  // ~/.dema held 18 receipts and 4 missions, and the closure ledger verdict
+  // never reached the surface. Same defect class as the profile path above:
+  // real data on disk, no binding to the card.
+  it("counts receipt json files from DEMA_HOME/receipts", async () => {
+    const home = freshHome();
+    try {
+      mkdirSync(join(home, "receipts"), { recursive: true });
+      writeFileSync(join(home, "receipts", "a.json"), "{}");
+      writeFileSync(join(home, "receipts", "b.json"), "{}");
+      writeFileSync(join(home, "receipts", "c.json"), "{}");
+      writeFileSync(join(home, "receipts", "notes.txt"), "not a receipt");
+      const s = await gatherDemaRealmState({ demaHome: home, now: FIXED_NOW });
+      assert.equal(s.receipts.count, 3);
+      const frame = renderHomeFrame(s, { useColor: false });
+      assert.match(frame, /Receipts: 3/);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("empty home reads receipts 0, missions 0, quest board EMPTY", async () => {
+    const home = freshHome();
+    try {
+      const s = await gatherDemaRealmState({ demaHome: home, now: FIXED_NOW });
+      assert.equal(s.receipts.count, 0);
+      assert.equal(s.missions.count, 0);
+      assert.equal(s.boot_steps[4].status, "EMPTY");
+      const frame = renderHomeFrame(s, { useColor: false });
+      assert.match(frame, /Receipts: 0/);
+      assert.match(frame, /Missions: 0/);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("quest board READY comes from missions on disk, not the checkpoint", async () => {
+    const home = freshHome();
+    try {
+      mkdirSync(join(home, "missions", "m-alpha"), { recursive: true });
+      mkdirSync(join(home, "missions", "m-beta"), { recursive: true });
+      writeFileSync(join(home, "missions", "m-alpha", "contract.json"), "{}");
+      // no checkpoint file on purpose — READY must not depend on it
+      const s = await gatherDemaRealmState({ demaHome: home, now: FIXED_NOW });
+      assert.equal(s.missions.count, 2);
+      assert.equal(s.last_checkpoint.present, false);
+      assert.equal(s.boot_steps[4].status, "READY");
+      const frame = renderHomeFrame(s, { useColor: false });
+      assert.match(frame, /Missions: 2/);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  // "Always remembers where it was" — measured 2026-08-14: the shipped
+  // `dema realm checkpoint save` has never been run on the real node, and
+  // nothing on the card teaches it. An absent checkpoint must carry the exact
+  // seal command; a present one must not nag.
+  it("absent checkpoint teaches the seal command; present checkpoint does not", async () => {
+    const home = freshHome();
+    try {
+      const bare = await gatherDemaRealmState({ demaHome: home, now: FIXED_NOW });
+      assert.match(
+        renderHomeFrame(bare, { useColor: false }),
+        /dema realm checkpoint save/,
+      );
+
+      mkdirSync(join(home, "realm"), { recursive: true });
+      writeFileSync(
+        join(home, "realm", "last-checkpoint.json"),
+        JSON.stringify({ label: "somewhere real" }),
+      );
+      const sealed = await gatherDemaRealmState({ demaHome: home, now: FIXED_NOW });
+      const frame = renderHomeFrame(sealed, { useColor: false });
+      assert.match(frame, /somewhere real/);
+      assert.doesNotMatch(frame, /checkpoint save/);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("an injected closure report reaches the card; absent stays an honest dash", async () => {
+    const home = freshHome();
+    try {
+      const withReport = await gatherDemaRealmState({
+        demaHome: home,
+        now: FIXED_NOW,
+        closureReport: {
+          verdict: "CLOSED",
+          satisfied_count: 10,
+          violated_count: 0,
+          unknown_count: 0,
+          total: 10,
+        },
+      });
+      assert.equal(withReport.closure.verdict, "CLOSED");
+      assert.equal(withReport.closure.satisfied_count, 10);
+      assert.match(
+        renderHomeFrame(withReport, { useColor: false }),
+        /Closure ledger: CLOSED · 10\/10/,
+      );
+
+      const without = await gatherDemaRealmState({
+        demaHome: home,
+        now: FIXED_NOW,
+      });
+      assert.equal(without.closure, null);
+      assert.match(
+        renderHomeFrame(without, { useColor: false }),
+        /Closure ledger: —/,
+      );
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("canonical profile.json wins over a stale legacy memory/profile.json", async () => {
+    const home = freshHome();
+    try {
+      writeFileSync(
+        join(home, "profile.json"),
+        JSON.stringify({ preferred_name: "Canonical" }),
+      );
+      mkdirSync(join(home, "memory"), { recursive: true });
+      writeFileSync(
+        join(home, "memory", "profile.json"),
+        JSON.stringify({ preferred_name: "Legacy" }),
+      );
+      const s = await gatherDemaRealmState({ demaHome: home, now: FIXED_NOW });
+      assert.equal(s.operator, "Canonical");
     } finally {
       rmSync(home, { recursive: true, force: true });
     }

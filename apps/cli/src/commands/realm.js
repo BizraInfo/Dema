@@ -223,7 +223,24 @@ export async function cmd_realm(ctx) {
     process.exit(process.exitCode ?? 0);
   }
 
-  const state = await gatherDemaRealmState();
+  // Derive the closure-ledger verdict for the home card (read-only, ~20ms,
+  // cwd-independent). Any failure is an honest "—" on the card, never a crash.
+  let closureReport = null;
+  try {
+    const check = await import(
+      "../../../../scripts/review/node0-closure-invariants-check.mjs"
+    );
+    const { evaluateNode0ClosureInvariants } = await import(
+      "../../../../packages/core/src/node0-closure-invariants.js"
+    );
+    closureReport = evaluateNode0ClosureInvariants(
+      check.gatherClosureEvidence(check.CLOSURE_EVIDENCE_ADAPTERS),
+    );
+  } catch {
+    closureReport = null;
+  }
+
+  const state = await gatherDemaRealmState({ closureReport });
   const debugMode = argv.includes("--debug");
   if (wantJsonR) {
     const { buildMumuJourney } =

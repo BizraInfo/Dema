@@ -233,3 +233,62 @@ test("26. kernel purity scan passes", () => {
   assert.match(source, /from\s+["']node:crypto["']/);
   assert.deepEqual(Object.values(sovereignVoiceTurnPreviewBoundary()).every((value) => value === false), true);
 });
+
+// ── BILINGUAL RESPONSE GUARDS (Arabic) ──────────────────────────────────────
+// The response-language guards must recognise the operator's own language, not
+// only English. Measured before this: an honest Arabic refusal on an aborted
+// pulse failed verification (Dema could not say "no" in Arabic), and a dishonest
+// Arabic completion claim laundered through the completion guard unseen.
+
+test("27. aborted pulse with honest Arabic refusal verifies bounded", () => {
+  const payload = buildSovereignVoiceTurnPreviewPayload({
+    ...exampleAbortedVoiceTurnInput(),
+    spoken_response_text: "رفض: توقّفت النبضة. هذا الدور الصوتي محظور، لا إجراء ولا صوت.",
+  });
+  const v = verifySovereignVoiceTurnPreview(payload);
+  assert.equal(v.ok, true, v.blocked_by.join(","));
+  assert.ok(!v.blocked_by.includes("aborted_response_not_refusal"));
+});
+
+test("28. aborted pulse with Arabic false-completion claim is caught", () => {
+  const payload = buildSovereignVoiceTurnPreviewPayload({
+    ...exampleAbortedVoiceTurnInput(),
+    spoken_response_text: "اكتمل الأمر بنجاح ونُفِّذ الإجراء.",
+  });
+  assert.ok(
+    verifySovereignVoiceTurnPreview(payload).blocked_by.includes("aborted_response_claims_completion"),
+  );
+});
+
+test("29. English refusal masking an Arabic completion claim is caught", () => {
+  const payload = buildSovereignVoiceTurnPreviewPayload({
+    ...exampleAbortedVoiceTurnInput(),
+    spoken_response_text: "Refusal noted, لكن اكتمل الأمر بنجاح ونُفِّذ الإجراء.",
+  });
+  assert.ok(
+    verifySovereignVoiceTurnPreview(payload).blocked_by.includes("aborted_response_claims_completion"),
+  );
+});
+
+test("30. sealed pulse with Arabic status is not flagged refusal-only", () => {
+  const payload = buildSovereignVoiceTurnPreviewPayload({
+    ...exampleSealedVoiceTurnInput(),
+    spoken_response_text: "خُتمت النبضة كمعاينة: بلغت 5 من 5 محطات. هذه خطة استجابة صوتية محدودة فقط.",
+  });
+  const v = verifySovereignVoiceTurnPreview(payload);
+  assert.equal(v.ok, true, v.blocked_by.join(","));
+  assert.ok(!v.blocked_by.includes("sealed_response_refusal_only"));
+});
+
+test("31. English guard behaviour is preserved byte-for-byte", () => {
+  const ok = buildSovereignVoiceTurnPreviewPayload({
+    ...exampleAbortedVoiceTurnInput(),
+    spoken_response_text: "Refusal: Pulse aborted. This voice turn is blocked; no action or audio.",
+  });
+  assert.equal(verifySovereignVoiceTurnPreview(ok).ok, true);
+  const bad = buildSovereignVoiceTurnPreviewPayload({
+    ...exampleAbortedVoiceTurnInput(),
+    spoken_response_text: "Completed and executed successfully.",
+  });
+  assert.ok(verifySovereignVoiceTurnPreview(bad).blocked_by.includes("aborted_response_claims_completion"));
+});

@@ -137,8 +137,7 @@ test("key-store signing path blocks when the store is unavailable", async () => 
   const blocked = await signPreviewReceiptWithKeyStore({
     preview: FIXTURE_PREVIEW,
     consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
-    loadPrivateKeyFn: async () => null,
-    loadPublicKeyFn: async () => null,
+    loadActiveKeyPairFn: async () => ({ ok: false }),
   });
   assert.equal(blocked.signed, false);
   assert.ok(blocked.blocked_by.includes("key_store_unavailable"));

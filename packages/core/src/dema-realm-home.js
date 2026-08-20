@@ -14,7 +14,7 @@
 //
 // NO file write. NO network. NO mutation. Pure read-and-render.
 
-import { readFile, access } from "node:fs/promises";
+import { readFile, access, readdir } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -107,22 +107,66 @@ async function readJsonOrNull(path) {
   }
 }
 
+// ENOENT is an honest 0 (a fresh home has none); any other read error is
+// blindness → null, never a fake zero.
+async function countDirEntries(path, filter) {
+  try {
+    return (await readdir(path)).filter(filter).length;
+  } catch (err) {
+    return err?.code === "ENOENT" ? 0 : null;
+  }
+}
+
 export async function gatherDemaRealmState({
   demaHome,
   now = new Date(),
+  // Pre-derived node0-closure-invariants report (or null). Derivation lives
+  // with the caller (CLI wrapper) — this gatherer stays DEMA_HOME-scoped.
+  closureReport = null,
 } = {}) {
   const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
 
-  const profilePath = join(home, "memory", "profile.json");
+  // Canonical first, legacy second — the same order dema-first-look-home.js
+  // resolves. setup and operator-profile.js both write/read DEMA_HOME/profile.json;
+  // reading only the legacy memory/ copy meant every real home fell through to
+  // the "Operator" default while the operator's name sat one directory up.
+  const profileCandidates = [
+    join(home, "profile.json"),
+    join(home, "memory", "profile.json"),
+  ];
   const checkpointPath = join(home, "realm", "last-checkpoint.json");
 
-  const profile = await readJsonOrNull(profilePath);
+  let profile = null;
+  for (const candidate of profileCandidates) {
+    profile = await readJsonOrNull(candidate);
+    if (profile) break;
+  }
   // Finding #3: VERIFIED requires a real loadActiveKeyPair() success — never
   // mere presence. A blocked (corrupt/retired/invalid-pointer) identity must
   // NOT read as VERIFIED.
   const identity = await inspectActiveIdentity(home);
   const keyVerified = identity.state === "VERIFIED";
   const checkpoint = await readJsonOrNull(checkpointPath);
+
+  // Realm-card bindings: real counts from DEMA_HOME, not proxies.
+  const receiptsCount = await countDirEntries(join(home, "receipts"), (n) =>
+    n.endsWith(".json"),
+  );
+  const missionsCount = await countDirEntries(
+    join(home, "missions"),
+    (n) => !n.startsWith("."),
+  );
+
+  const closure =
+    closureReport && typeof closureReport === "object"
+      ? Object.freeze({
+          verdict: String(closureReport.verdict ?? "UNKNOWN"),
+          satisfied_count: closureReport.satisfied_count ?? null,
+          violated_count: closureReport.violated_count ?? null,
+          unknown_count: closureReport.unknown_count ?? null,
+          total: closureReport.total ?? null,
+        })
+      : null;
 
   const operator =
     (profile && (profile.preferred_name || profile.name)) || "Operator";
@@ -167,7 +211,10 @@ export async function gatherDemaRealmState({
     { label: BOOT_STEP_LABELS[3], status: "DECLARED", ok: true },
     {
       label: BOOT_STEP_LABELS[4],
-      status: checkpoint ? "READY" : "EMPTY",
+      // Rebound 2026-08-14: quests come from DEMA_HOME/missions, not from
+      // checkpoint presence (old proxy overclaimed). Unreadable dir → NONE.
+      status:
+        missionsCount === null ? "NONE" : missionsCount > 0 ? "READY" : "EMPTY",
       ok: true,
     },
     { label: BOOT_STEP_LABELS[5], status: "OFF", ok: true },
@@ -200,6 +247,9 @@ export async function gatherDemaRealmState({
       text: lastCheckpointText,
       raw: checkpoint || null,
     }),
+    receipts: Object.freeze({ count: receiptsCount }),
+    missions: Object.freeze({ count: missionsCount }),
+    closure,
     boot_steps: Object.freeze(bootSteps.map((s) => Object.freeze(s))),
     seed_awake: seedAwake,
     awakened_line: awakenedLine,
@@ -288,9 +338,30 @@ export function renderHomeFrame(state, { useColor = true } = {}) {
     state.identity.status === "VERIFIED"
       ? `Identity: ${color(state.identity.label, ANSI.emerald, useColor)}`
       : `Identity: ${color(state.identity.label, ANSI.gold, useColor)}`;
+  // An absent checkpoint teaches the shipped seal command — measured
+  // 2026-08-14: it existed for months and was never once run, because no
+  // surface the operator actually sees ever named it.
   const cpText = state.last_checkpoint.present
     ? `Last checkpoint: ${color(state.last_checkpoint.text, ANSI.emerald, useColor)}`
-    : `Last checkpoint: ${color("—", ANSI.ash, useColor)}`;
+    : `Last checkpoint: ${color("—", ANSI.ash, useColor)} ${color("(dema realm checkpoint save)", ANSI.gold, useColor)}`;
+
+  // null count = unreadable dir (blindness), rendered as an honest dash.
+  const countGlyph = (n) =>
+    n === null
+      ? color("—", ANSI.ash, useColor)
+      : color(String(n), n > 0 ? ANSI.emerald : ANSI.ash, useColor);
+  const rxText = `Receipts: ${countGlyph(state.receipts.count)}`;
+  const msText = `Missions: ${countGlyph(state.missions.count)}`;
+  const cl = state.closure;
+  const clText = cl
+    ? `Closure ledger: ${color(
+        `${cl.verdict} · ${cl.satisfied_count}/${cl.total} satisfied` +
+          (cl.unknown_count ? ` · ${cl.unknown_count} unknown` : "") +
+          (cl.violated_count ? ` · ${cl.violated_count} violated` : ""),
+        cl.verdict === "CLOSED" ? ANSI.emerald : ANSI.gold,
+        useColor,
+      )}`
+    : `Closure ledger: ${color("—", ANSI.ash, useColor)}`;
 
   return [
     topBorder,
@@ -298,6 +369,9 @@ export function renderHomeFrame(state, { useColor = true } = {}) {
     frameLine(opText, innerWidth, useColor),
     frameLine(idText, innerWidth, useColor),
     frameLine(cpText, innerWidth, useColor),
+    frameLine(rxText, innerWidth, useColor),
+    frameLine(msText, innerWidth, useColor),
+    frameLine(clText, innerWidth, useColor),
     botBorder,
   ].join("\n");
 }

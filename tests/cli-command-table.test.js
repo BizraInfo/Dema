@@ -95,6 +95,7 @@ const COMMAND_SURFACE = [
   "consent",
   "mission",
   "season",
+  "self-eval",
   "recovery",
   "founder",
   "voice",

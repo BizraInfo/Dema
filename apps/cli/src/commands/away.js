@@ -106,10 +106,10 @@ function cmd_away_draft(argv) {
   if (!result.compiled) process.exitCode = 1;
 }
 
-function readJsonFile(path, label) {
+function readJsonFile(filePath, label) {
   let raw;
   try {
-    raw = readFileSync(path, "utf8");
+    raw = readFileSync(filePath, "utf8");
   } catch (e) {
     console.error(`Dema error: cannot read ${label} file (${e.code ?? e.message}).`);
     return null;

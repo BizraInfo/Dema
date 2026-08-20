@@ -65,3 +65,11 @@ Do not edit Backlog task, draft, document, decision, or milestone markdown files
 
 </CRITICAL_INSTRUCTION>
 <!-- BACKLOG.MD GUIDELINES END -->
+
+## Imported Claude Cowork project instructions
+
+The BIZRA APEX Cross-Pollination Engine doctrine is maintained in
+[docs/BIZRA_APEX_CROSS_POLLINATION_ENGINE_v2_0.md](docs/BIZRA_APEX_CROSS_POLLINATION_ENGINE_v2_0.md).
+Read that file for the chamber architecture, SNR engine, proof gates, and
+implementation sequence. This file remains the thin router; the doctrine
+document is the authoritative long-form source.

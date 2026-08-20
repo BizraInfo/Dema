@@ -326,6 +326,20 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "status/resume are read-only reconstruction (resume never grants pending consent); save writes one content-addressed checkpoint + receipt + HEAD strictly under DEMA_HOME",
     ["tests/node0-minimum-season-save-resume.test.js"],
   ),
+  row(
+    "self-eval",
+    ["read_only", "local_write"],
+    "subcommand_gated",
+    "compare is read-only re-derivation of a verdict from two on-disk baselines; baseline requires the exact phrase 'GO: dema self eval baseline preview' BEFORE any effect runs, executes repo child processes (full suite + gates, disclosed in provenance), and writes one content-addressed baseline strictly under DEMA_HOME/self-eval",
+    ["tests/dema-self-eval-cli.test.js", "tests/dema-self-eval-collect.test.js"],
+  ),
+  row(
+    "self-eval",
+    ["read_only", "local_write"],
+    "subcommand_gated",
+    "compare is read-only re-derivation; baseline requires the exact phrase BEFORE any effect, then runs repo-local node child processes (full suite w/ coverage, monitors, check gates, boot timing — no npm, no network, no model) and writes one content-addressed baseline strictly under DEMA_HOME/self-eval (tmp+rename 0600); an unmeasurable signal refuses, nothing fabricated",
+    ["tests/dema-self-eval-cli.test.js", "tests/dema-self-eval-collect.test.js"],
+  ),
   preview("recovery", "tests/dema-recovery-mission-gatherer.test.js"),
   readOnly("receipts", "tests/receipt-store-format.test.js"),
   row(

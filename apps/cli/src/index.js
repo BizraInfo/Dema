@@ -73,6 +73,7 @@ import { cmd_consent } from "./commands/consent.js";
 import { cmd_receipts } from "./commands/receipts.js";
 import { cmd_models } from "./commands/models.js";
 import { cmd_monitors } from "./commands/monitors.js";
+import { cmd_self_eval } from "./commands/self-eval.js";
 import { cmd_report } from "./commands/report.js";
 import { cmd_network } from "./commands/network.js";
 import { cmd_amana } from "./commands/amana.js";
@@ -670,10 +671,14 @@ Local evidence:
                       Deterministic before/after delta of two baseline reports; refuses a tampered input
   dema eval route <--baseline a.json> [--json]
                       MODEL-ROUTING-PREVIEW-1A · deterministic role→model PREVIEW from a verified baseline; refuses a tampered input; PREVIEW ONLY · routes no live traffic · no MoE/council/federation/runtime
+  dema self-eval baseline --consent "<exact phrase>" [--label <s>] [--json]
+                      SELF-EVAL-COLLECT-1A · gather REAL repo signals (coverage TAP · monitors · check gates · boot timing) and seal a content-addressed self-baseline under $DEMA_HOME/self-eval; fail-closed, fabricates nothing; HEAVY (runs full suite + gates)
+  dema self-eval compare --baseline <abs.json> --candidate <abs.json> [--json]
+                      Read-only per-dimension verdict improved/regressed/unchanged between two sealed self-baselines; re-derivable; PREVIEW ONLY · it never learns, it measures
   dema hardware profile [--json]
                       NODE0-HARDWARE-PROFILE-1A · read-only architecture profile (capacity bands + preview policies); PREVIEW ONLY · enforces nothing
-  dema voice turn <file> [--json]
-                      SOVEREIGN-VOICE-TURN-PREVIEW-1A · read transcript text, run Pulse E2E, plan bounded speech; PREVIEW ONLY · no mic/STT/TTS/audio/model/network/action/mint
+  dema voice turn <file> [--lang en|ar] [--json]
+                      SOVEREIGN-VOICE-TURN-PREVIEW-1A · read transcript text, run Pulse E2E, plan bounded speech (English default, --lang ar speaks Arabic); PREVIEW ONLY · no mic/STT/TTS/audio/model/network/action/mint
   dema evidence receipt preview [--json]
                       Preview receipt-shaped evidence; does not mint, sign, or write
   dema ihsan floor preview [--score N] [--json]
@@ -754,6 +759,11 @@ const REGISTERED_COMMANDS_LIST = [
     command: "season",
     description:
       "durable local season state: save / status / resume a bounded continuation checkpoint",
+  },
+  {
+    command: "self-eval",
+    description:
+      "measured self-baseline over real repo signals: baseline / compare (PREVIEW_ONLY · fail-closed)",
   },
   { command: "status", description: "show Node0 readiness" },
   { command: "status:json", description: "machine-readable status" },
@@ -1288,6 +1298,7 @@ const COMMAND_TABLE = {
   uninstall: cmd_uninstall,
   stand: cmd_stand,
   monitors: cmd_monitors,
+  "self-eval": cmd_self_eval,
   poi: cmd_poi,
   away: cmd_away,
   witness: cmd_witness,

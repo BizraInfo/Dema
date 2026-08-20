@@ -50,7 +50,7 @@ if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
         console.log(`  schema:  ${PRE_PUSH_PROOF_SEAL_SCHEMA}`);
         console.log(`  verdict: ${report.verdict}`);
         console.log(
-          `  git:     ${report.git.working_tree_clean ? "clean" : "dirty"} · ahead ${report.git.upstream_counts?.ahead ?? "?"} · behind ${report.git.upstream_counts?.behind ?? "?"}`,
+          `  git:     ${(report.git.working_tree_status ?? (report.git.working_tree_clean ? "CLEAN" : "DIRTY")).toLowerCase()} · ahead ${report.git.upstream_counts?.ahead ?? "?"} · behind ${report.git.upstream_counts?.behind ?? "?"}`,
         );
         if (report.gates.length) {
           console.log("  gates:");

@@ -38,6 +38,78 @@ test("inspectGitPublishPosture fails closed on dirty tree and behind upstream", 
   assert.ok(git.blockers.some((b) => b.code === "behind_upstream"));
 });
 
+// A failed measurement is not a clean tree. `porcelain` starts as "" and stays ""
+// when `git status` throws, so length===0 previously reported the tree as CLEAN off
+// the back of a measurement that never happened — the same nullity class already
+// closed in sealStateObservation (absence vs refusal vs io-error).
+test("inspectGitPublishPosture never reports a clean tree when git status fails", async () => {
+  const git = await inspectGitPublishPosture({
+    fetch: false,
+    execGit: async (cmd, args) => {
+      if (cmd === "git" && args[0] === "status") {
+        throw new Error("fatal: Unable to create '.git/index.lock': File exists.");
+      }
+      if (cmd === "git" && args[0] === "rev-parse") {
+        return { stdout: "abc123\n", stderr: "" };
+      }
+      if (cmd === "git" && args[0] === "rev-list") {
+        return { stdout: "0\t1\n", stderr: "" };
+      }
+      throw new Error(`unexpected git: ${cmd} ${args.join(" ")}`);
+    },
+  });
+
+  assert.notEqual(git.working_tree_clean, true);
+  assert.equal(git.working_tree_status, "UNMEASURED");
+  assert.ok(git.blockers.some((b) => b.code === "git_status_failed"));
+  assert.equal(git.ok, false);
+});
+
+// Negative control for the test above: without this, hard-coding working_tree_clean
+// to false would satisfy the failure case and prove nothing.
+test("inspectGitPublishPosture still reports CLEAN for a genuinely empty porcelain", async () => {
+  const git = await inspectGitPublishPosture({
+    fetch: false,
+    execGit: async (cmd, args) => {
+      if (cmd === "git" && args[0] === "status") return { stdout: "", stderr: "" };
+      if (cmd === "git" && args[0] === "rev-parse") {
+        return { stdout: "abc123\n", stderr: "" };
+      }
+      if (cmd === "git" && args[0] === "rev-list") {
+        return { stdout: "0\t1\n", stderr: "" };
+      }
+      throw new Error(`unexpected git: ${cmd} ${args.join(" ")}`);
+    },
+  });
+
+  assert.equal(git.working_tree_clean, true);
+  assert.equal(git.working_tree_status, "CLEAN");
+  assert.ok(!git.blockers.some((b) => b.code === "git_status_failed"));
+  assert.equal(git.ok, true);
+});
+
+test("inspectGitPublishPosture distinguishes DIRTY from UNMEASURED", async () => {
+  const git = await inspectGitPublishPosture({
+    fetch: false,
+    execGit: async (cmd, args) => {
+      if (cmd === "git" && args[0] === "status") {
+        return { stdout: "D  packages/core/src/mission-supervisor.js\n", stderr: "" };
+      }
+      if (cmd === "git" && args[0] === "rev-parse") {
+        return { stdout: "abc123\n", stderr: "" };
+      }
+      if (cmd === "git" && args[0] === "rev-list") {
+        return { stdout: "0\t1\n", stderr: "" };
+      }
+      throw new Error(`unexpected git: ${cmd} ${args.join(" ")}`);
+    },
+  });
+
+  assert.equal(git.working_tree_clean, false);
+  assert.equal(git.working_tree_status, "DIRTY");
+  assert.ok(git.blockers.some((b) => b.code === "working_tree_dirty"));
+});
+
 test("buildPrePushProofSealReport emits PUSH_READY when git and gates pass", async () => {
   const report = await buildPrePushProofSealReport({
     skip_gates: true,

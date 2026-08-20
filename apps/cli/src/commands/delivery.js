@@ -9,7 +9,7 @@
 
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, resolve } from "node:path";
 
 import {
   buildDeliveryOperatingSystem,
@@ -20,10 +20,8 @@ import { wantsJson } from "../../../../packages/core/src/output-mode.js";
 async function readScripts() {
   try {
     const here = dirname(fileURLToPath(import.meta.url));
-    const raw = await readFile(
-      join(here, "..", "..", "..", "..", "package.json"),
-      "utf8",
-    );
+    const repoRoot = resolve(here, "..", "..", "..", "..");
+    const raw = await readFile(resolve(repoRoot, "package.json"), "utf8");
     return JSON.parse(raw).scripts ?? {};
   } catch {
     return {};

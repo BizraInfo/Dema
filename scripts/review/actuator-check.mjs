@@ -57,7 +57,7 @@ export function analyzeActuatorSource(body, file = "(memory)") {
     ...collectRegexFindings(
       body,
       file,
-      /\bexec\s*\(/g,
+      /(?<![.\w])exec\s*\(/g,
       "child_process.exec_raw_shell",
     ),
     ...collectRegexFindings(
@@ -106,7 +106,7 @@ export function analyzeEffectCapInvariantSource(body, file = "(memory)") {
     ...collectRegexFindings(
       body,
       file,
-      /\b(eval|Function)\s*\(/g,
+      /(?<![.\w-])(?:eval|Function)\s*\(/g,
       "policy.executable_rule_code",
     ),
   ];
