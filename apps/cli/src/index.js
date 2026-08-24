@@ -1433,7 +1433,30 @@ async function dispatch(argv) {
     const { resolveFormatterOptsFromEnv } =
       await import("../../../packages/core/src/tui-formatter.js");
     const ctx = await gatherFirstLookContext({ demaHome });
-    const envelope = buildFirstLookHome(ctx);
+    let wiredCtx = ctx;
+    // Wire the eyes to the face: the constellation kernel already observes
+    // this host; the home card was built to show it but nothing fed it.
+    // Same emit-path verification as `dema node0 constellation` — an envelope
+    // that cannot re-derive its own totals is refused, and ANY failure
+    // degrades the card honestly to nulls rather than faking awareness.
+    try {
+      const { gatherBaseConstellationObservations } = await import(
+        "./node0-base-constellation-gatherer.js"
+      );
+      const { buildBaseConstellation, verifyBaseConstellation } = await import(
+        "../../../packages/core/src/node0-base-constellation.js"
+      );
+      const observations = await gatherBaseConstellationObservations({});
+      const constellation = buildBaseConstellation(observations);
+      const check = verifyBaseConstellation(constellation);
+      // gatherFirstLookContext freezes its context; compose rather than mutate.
+      if (check.ok) {
+        wiredCtx = { ...ctx, constellation };
+      }
+    } catch {
+      // No observation is a legal state; the home card reports nulls.
+    }
+    const envelope = buildFirstLookHome(wiredCtx);
     if (wantJson) {
       process.stdout.write(JSON.stringify(envelope, null, 2) + "\n");
       process.exit(process.exitCode ?? 0);

@@ -7,6 +7,11 @@ import {
   FIRST_LOOK_HOME_SCHEMA,
 } from "../packages/core/src/dema-first-look-home.js";
 import { evaluateUxFirstLookEnvelope } from "../packages/core/src/ux-quality-gate.js";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 test("first-look home schema and companion fields", async () => {
   const ctx = await gatherFirstLookContext();
@@ -184,5 +189,62 @@ test("first-look greeting uses profile preferred_name", async () => {
     assert.match(envelope.greeting.text, /Mumu/);
   } finally {
     await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("FLH-NODE-01 home card surfaces an injected constellation (injectable contract)", async () => {
+  const { buildBaseConstellation } = await import(
+    "../packages/core/src/node0-base-constellation.js"
+  );
+  const constellation = buildBaseConstellation({
+    disks: [
+      {
+        name: "nvme0n1",
+        model: "fixture-disk",
+        sectors: 2000409,
+        partitions: [
+          { name: "nvme0n1p1", sectors: 1000204 },
+          { name: "nvme0n1p2", sectors: 1000205 },
+        ],
+      },
+    ],
+    mounts: [{ device: "/dev/nvme0n1p1", mount_point: "/" }],
+    attached: [],
+  });
+  const scratch = mkdtempSync(join(tmpdir(), "flh-unit-"));
+  let envelope;
+  try {
+    const ctx = await gatherFirstLookContext({ demaHome: scratch });
+    envelope = buildFirstLookHome({ ...ctx, constellation });
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+  assert.equal(envelope.node.bases_known, 1);
+  assert.equal(typeof envelope.node.dark_capacity_gb, "number");
+});
+
+test("FLH-NODE-02 bare CLI shows the node's real bases — the eyes reach the face", () => {
+  // End-to-end against live /proc+/sys (same precedent as the constellation
+  // CLI tests): the home card must not report null bases on a host that has
+  // observable storage. Runs against a scratch DEMA_HOME, never operator state.
+  const BIN = fileURLToPath(new URL("../bin/dema", import.meta.url));
+  const scratch = mkdtempSync(join(tmpdir(), "flh-node-"));
+  try {
+    const out = execFileSync(
+      "node",
+      [BIN, "--json"],
+      {
+        env: { ...process.env, NO_COLOR: "1", DEMA_NO_TUI: "1", DEMA_HOME: scratch },
+        timeout: 30000,
+      },
+    ).toString();
+    const envelope = JSON.parse(out);
+    assert.equal(
+      typeof envelope.node.bases_known, "number",
+      `home card must carry observed base count, got ${JSON.stringify(envelope.node)}`,
+    );
+    assert.ok(envelope.node.bases_known >= 1, "a booted Linux host always observes at least its own base");
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
   }
 });
