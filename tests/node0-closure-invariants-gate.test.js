@@ -31,10 +31,23 @@ test("NCG-01 the gate passes while the ledger is OPEN", () => {
   assert.equal(r.ok, true);
   assert.equal(r.verdict, "OPEN");
   assert.deepEqual(r.blocked_by, []);
-  // One adapter exists, so exactly one row is settled. Nine is not a rounding
-  // error away from ten: six of the nine describe a running loop.
-  assert.equal(r.satisfied_count, 1);
-  assert.equal(r.unknown_count, 9);
+  // Counts are asserted structurally, never pinned: satisfied/unknown must
+  // equal the real row classification, and the ledger must account for every
+  // invariant. A pinned number here would go stale the day an adapter lands.
+  const satisfied = r.invariants.filter((row) => row.status === INVARIANT_STATUS.SATISFIED);
+  const unknown = r.invariants.filter((row) => row.status === INVARIANT_STATUS.UNKNOWN);
+  assert.equal(r.satisfied_count, satisfied.length);
+  assert.equal(r.unknown_count, unknown.length);
+  assert.equal(
+    r.satisfied_count + r.violated_count + r.unknown_count,
+    CLOSURE_INVARIANTS.length,
+  );
+  // Satisfaction must always be earned: at least the acceptance row — the
+  // first adapter ever registered — is settled today.
+  assert.ok(
+    satisfied.some((row) => row.id === "acceptance_is_model_blind"),
+    "acceptance_is_model_blind must remain settled",
+  );
 });
 
 test("NCG-02 the gate publishes the true settled count, not a hopeful one", () => {
@@ -46,19 +59,29 @@ test("NCG-02 the gate publishes the true settled count, not a hopeful one", () =
   );
   // Every settled row must name the adapter that settled it. If the count ever
   // rises, it must rise because an adapter landed — never because the gate
-  // started guessing. The one settled row today binds to an attestation hash.
+  // started guessing.
   assert.equal(r.adapters_registered, CLOSURE_EVIDENCE_ADAPTERS.length);
+  const registeredInvariants = new Set(
+    CLOSURE_EVIDENCE_ADAPTERS.map((adapter) => adapter.invariant_id),
+  );
   for (const row of r.invariants) {
     if (row.status !== INVARIANT_STATUS.UNKNOWN) {
       assert.ok(row.source, `${row.id} is settled and must name its source`);
       assert.match(row.source, /sha256:[0-9a-f]{64}/, `${row.id} source must bind to an artifact`);
+      if (row.status === INVARIANT_STATUS.SATISFIED) {
+        assert.ok(
+          registeredInvariants.has(row.id),
+          `${row.id} is satisfied but no registered adapter observes it`,
+        );
+      }
     }
   }
-  // The settled row is the acceptance one, and it is the only one.
+  // The acceptance row is the historically first-settled one and must stay so;
+  // the full settled roster grows only as adapters land.
   const settled = r.invariants.filter((row) => row.status === INVARIANT_STATUS.SATISFIED);
-  assert.deepEqual(
-    settled.map((row) => row.id),
-    ["acceptance_is_model_blind"],
+  assert.ok(
+    settled.some((row) => row.id === "acceptance_is_model_blind"),
+    "acceptance_is_model_blind must remain among the settled rows",
   );
 });
 
