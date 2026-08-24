@@ -143,6 +143,40 @@ test("key-store signing path blocks when the store is unavailable", async () => 
   assert.ok(blocked.blocked_by.includes("key_store_unavailable"));
 });
 
+test("key-store signing path signs through the injected loader — the injection point is live", async () => {
+  // Positive control for the test above. Measured 2026-08-20: this test's
+  // predecessor injected loader names the kernel never read (loadPrivateKeyFn /
+  // loadPublicKeyFn), so the nulls were silently discarded and the DEFAULT
+  // loader ran instead — green only on machines with no real key store, RED on
+  // the operator's machine, where it signed with the real active key. A blocked
+  // assertion alone cannot distinguish "injection worked" from "no key existed";
+  // signing through the same parameter proves the boundary is actually reached.
+  const signed = await signPreviewReceiptWithKeyStore({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    loadActiveKeyPairFn: async () => ({
+      ok: true,
+      private_key_pem: KEYS.private_key_pem,
+      public_key_pem: KEYS.public_key_pem,
+    }),
+  });
+  assert.equal(signed.signed, true);
+  assert.equal(signed.signature.algorithm, "ed25519");
+});
+
+test("key-store signing path refuses unknown options instead of silently ignoring them", async () => {
+  // The defect class this kills: a caller who believes they disabled key
+  // loading must get a refusal — never a real signature minted with the real
+  // operator key store behind their back.
+  const refused = await signPreviewReceiptWithKeyStore({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    loadPrivateKeyFn: async () => null,
+  });
+  assert.equal(refused.signed, false);
+  assert.ok(refused.blocked_by.includes("unrecognized_option:loadPrivateKeyFn"));
+});
+
 test("verify rejects a tampered content_hash", () => {
   const payload = buildPreviewReceiptSigningPayload(FIXTURE_PREVIEW);
   const tampered = { ...payload, content_hash: `sha256:${"0".repeat(64)}` };
