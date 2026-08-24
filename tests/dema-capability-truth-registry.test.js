@@ -27,8 +27,8 @@ test("builds deterministic frozen capability truth registry", () => {
   assert.equal(first.schema, DEMA_CAPABILITY_TRUTH_REGISTRY_SCHEMA);
   assert.equal(first.truth_label, DEMA_CAPABILITY_TRUTH_REGISTRY_TRUTH_LABEL);
   assert.deepEqual(first.supported_statuses, CAPABILITY_TRUTH_STATUSES);
-  assert.equal(first.capability_count, 78);
-  assert.equal(first.measured_repo_count, 78);
+  assert.equal(first.capability_count, 79);
+  assert.equal(first.measured_repo_count, 79);
   assert.match(first.registry_hash, /^sha256:[0-9a-f]{64}$/);
   assert.equal(first.registry_hash, second.registry_hash);
   assert.ok(Object.isFrozen(first));
@@ -107,6 +107,49 @@ test("#301 is MEASURED_REPO only with checked-out source, test, gate, receipt, a
   ]) {
     assert.ok(row.promotion_dependency.requires.includes(requirement));
   }
+  assert.equal(verifyDemaCapabilityTruthRegistry(registry, { pathExists }).ok, true);
+});
+
+test("NODE0_BASE_CONSTELLATION_1A binds to the shipped kernel, gatherer, CLI caller, tests, gate, and receipt on disk", () => {
+  const registry = buildDemaCapabilityTruthRegistry();
+  const row = capability(registry, "NODE0_BASE_CONSTELLATION_1A");
+
+  assert.ok(row, "constellation row must exist");
+  assert.ok(REQUIRED_CAPABILITY_IDS.includes("NODE0_BASE_CONSTELLATION_1A"));
+  assert.equal(row.status, "MEASURED_REPO");
+  assert.equal(row.runtime_status, "PREVIEW_ONLY");
+  assert.ok(
+    row.evidence.source_paths.includes(
+      "packages/core/src/node0-base-constellation.js",
+    ),
+  );
+  assert.ok(
+    row.evidence.source_paths.includes(
+      "apps/cli/src/node0-base-constellation-gatherer.js",
+    ),
+  );
+  assert.ok(
+    row.evidence.test_paths.includes("tests/node0-base-constellation.test.js"),
+  );
+  assert.ok(
+    row.evidence.test_paths.includes(
+      "tests/node0-base-constellation-cli.test.js",
+    ),
+  );
+  assert.ok(
+    row.evidence.review_gate_paths.includes(
+      "scripts/review/node0-base-constellation-check.mjs",
+    ),
+  );
+  assert.ok(
+    row.evidence.receipt_paths.includes(
+      "docs/receipts/NODE0_BASE_CONSTELLATION_1A.md",
+    ),
+  );
+  // Observation is not enrolment, and a registry row is not an actuator:
+  // the row must forbid exactly the promotions a cabled device tempts.
+  assert.ok(row.forbidden_claims.includes("device enrolment"));
+  assert.ok(row.forbidden_claims.includes("device pairing"));
   assert.equal(verifyDemaCapabilityTruthRegistry(registry, { pathExists }).ok, true);
 });
 
@@ -402,8 +445,8 @@ test("gate passes against the real merged repository files", () => {
   const gate = runDemaCapabilityTruthRegistryGate({ pathExists });
 
   assert.equal(gate.ok, true);
-  assert.equal(gate.capability_count, 78);
-  assert.equal(gate.measured_repo_count, 78);
+  assert.equal(gate.capability_count, 79);
+  assert.equal(gate.measured_repo_count, 79);
   assert.equal(gate.blocked_live_surface_count, 5);
   assert.match(gate.registry_hash, /^sha256:[0-9a-f]{64}$/);
   assert.deepEqual(gate.verified.blocked_by, []);

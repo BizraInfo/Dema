@@ -100,6 +100,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "MISSION_CONTRACT_STATE_0A",
   "MISSION_SUPERVISOR_0A",
   "MISSION_WORKER_ADAPTER_0A",
+  "NODE0_BASE_CONSTELLATION_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2602,6 +2603,43 @@ function defaultCapabilityRows() {
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [
         "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_BASE_CONSTELLATION_1A",
+      truth_label: "NODE0_BASE_CONSTELLATION_MEASURED_REPO",
+      summary:
+        "Node0 observes its own body: which bases (this host plus cabled companions) belong to it and how much of its own storage it cannot reach — partition-level reachability, dark capacity attributable to named partitions, verify inside the emit path.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/node0-base-constellation.js",
+          "apps/cli/src/node0-base-constellation-gatherer.js",
+          "apps/cli/src/commands/node0.js",
+        ],
+        test_paths: [
+          "tests/node0-base-constellation.test.js",
+          "tests/node0-base-constellation-cli.test.js",
+        ],
+        review_gate_paths: [
+          "scripts/review/node0-base-constellation-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_BASE_CONSTELLATION_1A.md"],
+        documentation_paths: [
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure kernel derives the node's base constellation from injected observations and REFUSES any envelope whose totals do not re-derive from its own rows: reachability is partition-level so a mounted 2 GB sliver can never report a 1 TB drive as reachable (the measured NBC-01 defect), dark capacity is attributable to named partitions and always stated, and a cabled companion device is surfaced with enrolled=false — presence is never enrolment. The read-only gatherer uses plain /proc, /sys and gvfs directory reads (no child process, no device content), and the `dema node0 constellation [--json]` caller computes the verdict INSIDE the emit path, exiting 1 rather than printing a forged envelope. The review gate re-proves the law on deterministic fixtures and plants three forged summaries that must each be refused with their exact named reason.",
+      what_this_does_not_prove:
+        "It does not prove enrolment, pairing, ownership, custody of any signing key, device willingness, mounting capability, operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "device enrolment",
+        "device pairing",
         "operator mutation",
         "unattended runtime",
       ],
