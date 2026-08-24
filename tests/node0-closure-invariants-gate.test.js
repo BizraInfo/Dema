@@ -31,10 +31,39 @@ test("NCG-01 the gate passes while the ledger is OPEN", () => {
   assert.equal(r.ok, true);
   assert.equal(r.verdict, "OPEN");
   assert.deepEqual(r.blocked_by, []);
-  // One adapter exists, so exactly one row is settled. Nine is not a rounding
-  // error away from ten: six of the nine describe a running loop.
-  assert.equal(r.satisfied_count, 1);
-  assert.equal(r.unknown_count, 9);
+  // CONTENT, never the machine's biography. Settled rows are honest evidence
+  // read from this machine's recorded artefacts, so the count varies by
+  // machine: 1 on an evidence-free extraction, 9 where the node has lived.
+  // Measured 2026-08-20: the old exact pin (satisfied_count === 1) was RED on
+  // the operator's own machine — the one place the node is most real — and had
+  // been mis-filed as environment noise. The machine-independent floor is the
+  // in-process acceptance adapter; the exact single-adapter count is pinned
+  // hermetically in NCG-01b.
+  assert.ok(r.satisfied_count >= 1, "the in-process acceptance adapter always settles");
+  assert.equal(
+    r.satisfied_count + r.violated_count + r.unknown_count,
+    r.total,
+  );
+});
+
+test("NCG-01b hermetic floor: only the acceptance adapter → exactly one settled row, on any machine", () => {
+  // The exact count the old NCG-01 wanted belongs to a CONTROLLED evidence
+  // set, deterministic everywhere — including a machine with a live node.
+  const acceptanceOnly = CLOSURE_EVIDENCE_ADAPTERS.filter(
+    (a) => a.invariant_id === "acceptance_is_model_blind",
+  );
+  assert.equal(acceptanceOnly.length, 1);
+  const report = evaluateNode0ClosureInvariants(
+    gatherClosureEvidence(acceptanceOnly),
+  );
+  assert.equal(report.satisfied_count, 1);
+  assert.equal(report.violated_count, 0);
+  assert.equal(report.unknown_count, CLOSURE_INVARIANTS.length - 1);
+  const settled = report.invariants.filter(
+    (row) => row.status === INVARIANT_STATUS.SATISFIED,
+  );
+  assert.deepEqual(settled.map((row) => row.id), ["acceptance_is_model_blind"]);
+
 });
 
 test("NCG-02 the gate publishes the true settled count, not a hopeful one", () => {
@@ -46,19 +75,33 @@ test("NCG-02 the gate publishes the true settled count, not a hopeful one", () =
   );
   // Every settled row must name the adapter that settled it. If the count ever
   // rises, it must rise because an adapter landed — never because the gate
-  // started guessing. The one settled row today binds to an attestation hash.
+  // started guessing.
   assert.equal(r.adapters_registered, CLOSURE_EVIDENCE_ADAPTERS.length);
+  const registeredInvariants = new Set(
+    CLOSURE_EVIDENCE_ADAPTERS.map((adapter) => adapter.invariant_id),
+  );
   for (const row of r.invariants) {
     if (row.status !== INVARIANT_STATUS.UNKNOWN) {
       assert.ok(row.source, `${row.id} is settled and must name its source`);
       assert.match(row.source, /sha256:[0-9a-f]{64}/, `${row.id} source must bind to an artifact`);
+      if (row.status === INVARIANT_STATUS.SATISFIED) {
+        assert.ok(
+          registeredInvariants.has(row.id),
+          `${row.id} is satisfied but no registered adapter observes it`,
+        );
+      }
     }
   }
-  // The settled row is the acceptance one, and it is the only one.
+  // The acceptance row is ALWAYS among the settled — the machine-independent
+  // floor. Which OTHER rows settle is the machine's recorded history: real
+  // artefacts honestly settle real rows, so an exact settled-list pin here
+  // would refuse to run on the one machine where the node actually lives
+  // (measured 2026-08-20). The exact list is pinned hermetically in NCG-01b.
   const settled = r.invariants.filter((row) => row.status === INVARIANT_STATUS.SATISFIED);
-  assert.deepEqual(
-    settled.map((row) => row.id),
-    ["acceptance_is_model_blind"],
+  assert.ok(
+    settled.some((row) => row.id === "acceptance_is_model_blind"),
+    "acceptance row must always settle",
+
   );
 });
 
