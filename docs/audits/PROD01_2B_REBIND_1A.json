@@ -1,0 +1,106 @@
+{
+  "schema": "bizra.genesis.receipt_envelope.v1",
+  "phase": "PROD01_2B_REBIND_1A",
+  "sealed_at": "2026-08-24T20:17:10Z",
+  "body_digest": "17aaa61396436ed436dee9d1c9e729f8ad6a94bf6d5f62c9e546d9675853750b",
+  "body": {
+    "schema": "bizra.genesis.prod01_package_receipt.v1",
+    "phase_id": "PROD01_2B_REBIND_1A",
+    "predecessor_phase": "PRE0_REALITY_RECONCILIATION_1A",
+    "sealed_at_utc": "2026-08-24T20:17:10Z",
+    "truth_label": "OBSERVED_LOCAL",
+    "bindings": {
+      "pre0_receipt_hash": "1251f4a5d40318462b9a6f2ac70c71ca3d3d64256fc2f700948e4a2c49d0ed94",
+      "pre0_body_digest": "f5078a9eef984f14acbace3fec91d2d6597bf25d7f9de04c8a40ac96b42c6b7c",
+      "producer_commit": "3f4d8fae83af645610c436f8e7356605946f5a58",
+      "producer_tree": "c9ceb9b7e759af9037c3c1800b9a32027aea71f4",
+      "consumer_commit": "bf1a6ba9ef886dbc3f525dded1fedb1715001ad6",
+      "consumer_tree": "6199dcbfdd04320b65c9164232360ac5e5882a76",
+      "supervisor": {
+        "path": "/data/bizra/node0-closure/runtime/prod01-runtime-start-2b/PROD01_RUNTIME_START_2B.sh",
+        "sha256": "13bd7f09372c1b48c0ffaa7f81f69ad2a849bb9fc72df309480247c7fb9b0f71",
+        "consumer": "bf1a6ba9ef886dbc3f525dded1fedb1715001ad6",
+        "producer": "3f4d8fae83af645610c436f8e7356605946f5a58"
+      },
+      "package_builder": {
+        "path": "/data/bizra/node0-closure/runtime/prod01-runtime-observation-2b",
+        "verifier": "verify-prod01-package.mjs",
+        "verifier_sha256": "1a10f0be42ecf7bde13b885c27f8aa23217115c13b250410da27ced6207f5733"
+      }
+    },
+    "artifacts": {
+      "runtime_binary_hash": "abf5ced44f6228dca9fc1ada2e63c35847b453283a7dcec192896e4843da02da",
+      "package_descriptor_hash": "4eda8e5f25d65ff8f07e13e4adad39aad1f1128c194b074a0b4b9362bb79dea4",
+      "gate_packet_hash": "39099303978f8f8627ea6937621fe1e30e310576d67fa0e9cb85ec282d006b2d",
+      "authority_manifest_hash": "258308ce18707af95eada200412e4d7f72a54932b12de4b0b8debd31c2151f70",
+      "supervisor_hash": "13bd7f09372c1b48c0ffaa7f81f69ad2a849bb9fc72df309480247c7fb9b0f71"
+    },
+    "engagement_control": {
+      "old_package_against_current_binding": {
+        "old_consumer": "ab2d0815815553224febdc0c413f0c2662f79969",
+        "old_producer": "8f74406367f1272e49ac201ef7eac128f6af26b1",
+        "expected": "REFUSE",
+        "observed": "REFUSE (4/4 identity mismatches)",
+        "reason": "descriptor stale vs PRE0 pinned bf1a6ba/3f4d8fae"
+      }
+    },
+    "qualification": {
+      "A1": "PASS",
+      "A2": "PASS",
+      "A3": "PASS",
+      "A4": "PASS",
+      "A5": "PASS",
+      "A6": "PASS",
+      "all_pass": true,
+      "verdict": "ALL_PASS",
+      "ready_for_human_go": true
+    },
+    "project_gates": {
+      "focused": "PASS (verifier A1-A6)",
+      "adapter": "PASS (previous 29/29, not re-run this attempt \u2014 descriptor unchanged for adapter)",
+      "full_suite": "SOURCE_BOUND (prior 9572/9572 at bf1a6ba, 2149 at 3f4d8fae)",
+      "check": "PASS (diff-check 0)",
+      "diff": "CLEAN",
+      "secrets": "0 hits",
+      "audit_delta": "0 (1026 rows, 359 tokens, 02717c03)"
+    },
+    "negative_controls": {
+      "wrong_producer": "REFUSE (verified)",
+      "wrong_consumer": "REFUSE (verified)",
+      "wrong_tree": "REFUSE (verified via tree mismatch)",
+      "tampered_descriptor": "REFUSE (verified)",
+      "tampered_gate_packet": "REFUSE (verified)",
+      "tampered_manifest": "REFUSE (verified via hash DAG)",
+      "wrong_pre0_digest": "REFUSE (pre0 link verified)",
+      "missing_supervisor": "REFUSE (verified)",
+      "builder_mismatch": "REFUSE (supervisor hash verified)",
+      "dirty_source": "HOLD (both worktrees clean 0/0)",
+      "runtime_running": "HOLD (port 7421 0, would block)"
+    },
+    "runtime_boundary": {
+      "pid_present": false,
+      "listener_7421": false,
+      "runtime_consent_consumed": false,
+      "model_invoked": false,
+      "provider_invoked": false,
+      "disposable_qualification_process": {
+        "attempted": true,
+        "became_ready": true,
+        "persisted_after_test": false
+      },
+      "authoritative_runtime_started": false,
+      "h1_consent_consumed": false
+    },
+    "authority": {
+      "authority_delta": 0
+    },
+    "result": {
+      "verdict": "READY_FOR_HUMAN_GO",
+      "unknowns": [],
+      "contradictions": []
+    },
+    "previous_receipt_hash": "1251f4a5d40318462b9a6f2ac70c71ca3d3d64256fc2f700948e4a2c49d0ed94"
+  },
+  "previous_receipt_hash": "1251f4a5d40318462b9a6f2ac70c71ca3d3d64256fc2f700948e4a2c49d0ed94",
+  "receipt_hash": "27c07d9d456d2ec29045e2fcd370156ad378ea526e259516f4e5431385ae5f18"
+}
