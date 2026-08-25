@@ -62,6 +62,9 @@ what is bash , why its the most important and most (1).md
 .codex/hooks/logs/
 .agents/skills/*-workspace/
 
+# Generated root-level Codex session captures can contain transient credentials.
+/codex-session-*.md
+
 # Root-level scratch screenshot from operator review; bind explicitly in docs
 # before tracking as evidence.
 /bizra-ai-screenshot.png
@@ -76,3 +79,8 @@ what is bash , why its the most important and most (1).md
 packages/dema-ui/node_modules/
 packages/dema-ui/.next/
 packages/dema-ui/dev.log
+
+# Agent-flow tool state directories (claude-flow, kiro) — machine-local tool
+# runtime data, never source.
+.claude-flow/
+.kiro/
