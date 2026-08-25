@@ -441,7 +441,6 @@ function main() {
       if (!add1.ok) console.error(`[tree-add-FAIL] ${(add1.stderr || "").slice(0, 300)}`);
       const wt1 = sh("git", ["-C", CAND, "write-tree"]);
       if (!wt1.ok) console.error(`[tree-write-FAIL] ${(wt1.stderr || "").slice(0, 300)}`);
-      console.error(`[tree-debug] dir=${CAND} add_ok=${add1.ok} wt_ok=${wt1.ok} out_len=${wt1.stdout.length}`);
       candidateTreeSha = wt1.stdout.trim();
       aggregate.gates.forEach((g) => (g.judged_on = "candidate_tree"));
       sh("git", ["-C", CAND, "add", "-A"]);
@@ -451,8 +450,8 @@ function main() {
           candidateTreeSha && postTree && postTree === candidateTreeSha
             ? "PASS"
             : candidateTreeSha || postTree ? "FAIL" : "FAIL",
-        candidate_tree_sha: `sha256:${candidateTreeSha}`,
-        post_verification_tree_sha: `sha256:${postTree}`,
+        candidate_tree_oid: candidateTreeSha,
+        post_verification_tree_oid: postTree,
       };
     } finally {
       if (!process.env.PROMO_KEEP) rmSync(reconstruction._tmp, { recursive: true, force: true });
@@ -498,10 +497,11 @@ function main() {
     sealed_at: new Date().toISOString(),
     base_commit_sha: scope.base_sha,
     dirty_tree_digest: `sha256:${scope.dirty_tree_digest}`,
-    candidate_tree_sha: candidateTreeSha ? `sha256:${candidateTreeSha}` : null,
+    candidate_tree_oid: candidateTreeSha || null,
+    object_format: git("rev-parse", "--show-object-format").stdout.trim() || "sha1",
     zero_post_verification_drift: drift?.status ?? "UNKNOWN",
     landing_law:
-      "On explicit human GO for commit: apply this exact delta to base, commit, and REFUSE unless HEAD^{tree} == candidate_tree_sha. Push remains a separate later GO.",
+      "On explicit human GO for commit: apply this exact delta to base, commit, and REFUSE unless HEAD^{tree} == candidate_tree_oid (Git tree OID in the repo object format). Push remains a separate later GO.",
     truth_status: ready ? "READY_FOR_COMMIT_GO" : "BLOCKED",
     blocked_by: blockers,
     next_authority_required: ready ? "commit (explicit human word; push stays separate)" : "none until blockers clear",

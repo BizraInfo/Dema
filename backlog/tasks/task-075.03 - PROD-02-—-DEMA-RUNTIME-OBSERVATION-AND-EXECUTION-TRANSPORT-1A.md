@@ -4,7 +4,7 @@ title: PROD-02 — DEMA-RUNTIME-OBSERVATION-AND-EXECUTION-TRANSPORT-1A
 status: To Do
 assignee: []
 created_date: '2026-08-21 21:20'
-updated_date: '2026-08-25 02:42'
+updated_date: '2026-08-25 18:52'
 labels:
   - production
   - dema
@@ -51,5 +51,5 @@ Normative spec: NODE0_DEMA_PRODUCTION_CLOSURE_SPEC_v1_0.md @ b01b4b32e9e978287a9
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-2026-08-25 G2 DEMA TRUTH BINDING: PROVEN. Three-cycle proof at bf1a6ba: LIVE(source=gateway-http-composed,truth=MEASURED_PARTIAL,missionExecuted=true) -> KILL -> DEAD(truth=DEGRADED,consoleReady=false,findings contain health-unreachable) -> RESTART -> RECOVERED(truth=MEASURED_PARTIAL restored,missionExecuted=true). No stale GREEN, no fabricated state, no config fallback. Receipt: G2-DEMA-TRUTH-BINDING-RECEIPT.json sha256 490ea2e0.
+2026-08-25 NODE0-REALM-SSE-COMPOSITION-1A landed (uncommitted): the JOIN proven — SSE envelope-stream transport law + DRS frame/wire law + presence reducer composed into one pipeline over real serialized SSE text; 10 join-law tests; layer-tagged refusals (sse:/sse-chain:/frame:/realm:) degrade render to UNKNOWN never stale-success; simulated survives end-to-end; join ceiling measured (chain owns non-object payloads before frame layer); gate wired into npm run check; registry row #88. Serves PROD-02 client contract + TASK-079.04 acceptance oracle.
 <!-- SECTION:NOTES:END -->
