@@ -1,9 +1,10 @@
 ---
 id: TASK-075.06
 title: PROD-05 — REAL-PAT-AND-INDEPENDENT-SAT-1A
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-21 21:21'
+updated_date: '2026-08-25 05:05'
 labels:
   - production
   - pat
@@ -43,3 +44,9 @@ Establish one real PAT and one independently invoked SAT as the production verif
 - [ ] #2 Executor self-certification fails under SAT
 - [ ] #3 authority_delta = 0
 <!-- DOD:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+PROD-05 DUAL-PLANE SEAM PROVEN (2026-08-25): PAT=gemma4-12b@:8080 proposes, SAT=deterministic evaluateAgainstContract() judges, advisory llama3.1:8b non-binding. KEY FINDING: LLM-judge unreliable — initial attempt had llama3.1:8b incorrectly pass 2/3 violations (missing required key + forbidden substring); corrected to deterministic code as authoritative. All 3 negative controls correctly REJECTED by deterministic SAT before positive path ran (missing_key, forbidden_substring, model_id mismatch). Positive path ACCEPT→DONE in 3980ms PAT latency. Receipt: /data/bizra/node0-first-user-closed-loop-1a/evidence/PROD05-DUAL-PLANE-SEAM.json sha256 049efbce8a1fde81. Contract sha256:1a44735e8f6ef91ecd52423b. authority_delta=0.
+<!-- SECTION:NOTES:END -->
