@@ -1,0 +1,14 @@
+schema: bizra.harness.transparency.v0.1
+rules:
+  no_invisible_material_defaults: true
+  record_harness_revision: true
+  record_model_revision: true
+  record_prompt_hashes: true
+  record_context_evidence_refs: true
+  record_sampling_values_and_sources: true
+  record_compaction: true
+  record_routing_and_fallback: true
+  record_tool_wrapper_digests: true
+  record_sandbox_identity: true
+  silent_provider_swap: false
+  checkpoint_is_authority: false

@@ -1,0 +1,56 @@
+{
+  "$id": "https://bizra.local/schemas/receipt.v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "artifact_digests": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "authority_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "claim": {
+      "type": "object"
+    },
+    "mission_id": {
+      "type": "string"
+    },
+    "observer_refs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "predecessor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "receipt_id": {
+      "type": "string"
+    },
+    "schema": {
+      "const": "bizra.receipt.v0.1"
+    },
+    "verdict": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema",
+    "receipt_id",
+    "mission_id",
+    "claim",
+    "verdict",
+    "artifact_digests",
+    "predecessor"
+  ],
+  "type": "object"
+}

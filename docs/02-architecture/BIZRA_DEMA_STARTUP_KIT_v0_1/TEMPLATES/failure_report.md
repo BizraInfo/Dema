@@ -1,0 +1,14 @@
+# BIZRA Failure Report
+- Mission:
+- Exact artifact identities:
+- Expected transition:
+- Observed transition:
+- First broken causal arrow:
+- Evidence:
+- Competing hypotheses:
+- Authority state:
+- Was authoritative state mutated?:
+- Verdict: UNKNOWN / CONTRADICTED / REFUSED / BLOCKED / FAILURE_CONFIRMED
+- Minimum falsifier:
+- Proposed bounded repair:
+- Required regression/mutation control:

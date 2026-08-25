@@ -1,0 +1,13 @@
+schema: bizra.claim.scope.v0.1
+claim_scopes:
+  COMPONENT: {required_rails: [F, K, E]}
+  ROUTE: {required_rails: [F, K, E]}
+  MISSION:
+    required_rails: [F, K, E]
+    economic: MEASUREMENT_PLAN_REQUIRED
+  RESPONSIBILITY_VRO:
+    required_rails: [F, K, E, "$"]
+    economic: MEASURED_REQUIRED
+principles:
+  receipt_is_witness_not_oracle: true
+  unknown_blocks_required_rail: true

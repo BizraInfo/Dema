@@ -1,0 +1,19 @@
+schema: bizra.fate.policy.v0.1
+default: REFUSE
+authority_delta_default: 0
+risk_classes:
+  READ_ONLY: {consent: mission_or_standing_lease}
+  REVERSIBLE_LOCAL: {consent: explicit_or_valid_lease, undo_required: true}
+  PRIVILEGED: {consent: explicit}
+  DESTRUCTIVE: {consent: exact_explicit, independent_verification: true}
+  NETWORK: {consent: explicit}
+  FINANCIAL: {consent: exact_explicit, delegation: prohibited_by_default}
+  IDENTITY: {consent: exact_explicit, delegation: prohibited_by_default}
+fail_closed_on:
+  - unknown_identity
+  - unknown_policy
+  - expired_authority
+  - nonce_reuse
+  - scope_mismatch
+  - missing_required_evidence
+  - authority_widening
