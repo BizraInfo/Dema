@@ -143,9 +143,13 @@ export async function cmd_memory(ctx) {
       if (memWantsJson) {
         console.log(JSON.stringify(env, null, 2));
       } else {
-        console.error(`dema memory query: wrapper not found at ${wrapperPath}`);
+        // Same degraded-verdict contract as the runtime-failure path: the
+        // human surface names the degradation class, never a bare path error.
+        console.error(`Dema memory query: MEMORY_DEGRADED`);
+        console.error(`  reason: wrapper not found at ${wrapperPath}`);
+        console.error(`  still works: dema memory list · dema memory show <name> · dema today`);
         console.error(
-          "  install ~/.dema/bin/agent-db-query or set DEMA_AGENT_DB_QUERY_PATH",
+          "  fix: install ~/.dema/bin/agent-db-query or set DEMA_AGENT_DB_QUERY_PATH",
         );
       }
       process.exitCode = 1;
@@ -192,6 +196,16 @@ export async function cmd_memory(ctx) {
     });
     if (memWantsJson) {
       console.log(JSON.stringify(env, null, 2));
+    } else if (env.error) {
+      // Degraded-verdict rendering: never leak raw substrate constructor
+      // errors at a human surface, never print a misleading "0 hit(s)"
+      // success line above a failure, and always name what STILL works.
+      console.error(`Dema memory query: MEMORY_DEGRADED`);
+      console.error(`  reason: ${env.error}`);
+      console.error(`  still works: dema memory list · dema memory show <name> · dema today`);
+      console.error(
+        `  fix: initialize/rebuild the Omega AgentDB index (~/.dema/bin/agent-db-query)`,
+      );
     } else {
       console.log(
         `Dema memory query: ${env.hits_count} hit(s) for "${env.query}" (top=${env.top})`,
@@ -201,7 +215,6 @@ export async function cmd_memory(ctx) {
           `  · ${h.id} [score ${h.score}] — ${h.snippet?.slice(0, 80) ?? ""}…`,
         );
       }
-      if (env.error) console.error(`error: ${env.error}`);
     }
     process.exitCode = env.error ? 1 : 0;
     process.exit(process.exitCode ?? 0);
