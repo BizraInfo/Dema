@@ -192,6 +192,15 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // what stops an edited artefact keeping its hash.
   "packages/core/src/node0-deployment-remote-write-adapter.js",
   "scripts/proof/node0-deployment-remote-write-proof.mjs",
+  "packages/core/src/dema-master-registry-effective-config.js",
+  "packages/core/src/openrouter-admission-policy-compiler.js",
+  "packages/core/src/pot-claim-scope.js",
+  // NODE0-ESTATE-MAP-0A — a later verifier re-derives the outcome from the
+  // caller-supplied registry and observations, so the decision identity must
+  // remain stable across key order. Registration proves canon adoption only;
+  // the component remains pure and does not observe or mutate any root.
+  "packages/core/src/node0-estate-map.js",
+  "packages/core/src/node0-sse-envelope-stream.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

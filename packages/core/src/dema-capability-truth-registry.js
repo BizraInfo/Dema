@@ -100,6 +100,10 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "MISSION_CONTRACT_STATE_0A",
   "MISSION_SUPERVISOR_0A",
   "MISSION_WORKER_ADAPTER_0A",
+  "DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_1A",
+  "OPENROUTER_ADMISSION_POLICY_COMPILER_1A",
+  "POT_CLAIM_SCOPE_0A",
+  "NODE0_SSE_ENVELOPE_STREAM_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2598,6 +2602,122 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "A new operating-system process, given only the repository checkout and an isolated DEMA_HOME, reconstructs the active mission id, phase, completed steps, must-not-repeat list, pending consent and the single next safe action from stored bytes alone \u2014 no chat transcript, no model memory, no shared in-memory object. Save is crash-atomic: state, receipt and a sequence fence are published no-replace and fsynced before the HEAD pointer is replaced by rename, so a real process death (proven by process.exit mid-transaction) leaves either the previous valid HEAD or the complete new one. Verification re-derives every hash and refuses tampered state, tampered HEAD, broken previous-state links, sequence regression, repository drift, secret-bearing state and stale concurrent writers with typed, bounded outcomes.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_1A",
+      truth_label: "DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_MEASURED_REPO",
+      summary:
+        "Purely resolves an MR desired revision and verified observation snapshot into one deterministic effective route or explicit refusal, with zero authority and no invocation.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-master-registry-effective-config.js"],
+        test_paths: ["tests/dema-master-registry-effective-config.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-master-registry-effective-config-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim a persistent MR, live provider observation, provider invocation, operator mutation, daemon runtime, network use, token, wallet, consent consumption, receipt minting, or federation.",
+      what_this_proves:
+        "A supplied MR desired revision plus supplied verified observation resolves deterministically to one declared primary route or explicit REFUSED/UNKNOWN, with re-derivation, disabled fallback, no raw secret output, and authority_delta zero.",
+      what_this_does_not_prove:
+        "It does not prove MR persistence, a live provider observation, provider qualification, invocation, consent, runtime activation, operator execution, daemon runtime, network use, wallet access, receipt minting, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "OPENROUTER_ADMISSION_POLICY_COMPILER_1A",
+      truth_label: "OPENROUTER_ADMISSION_POLICY_COMPILER_MEASURED_REPO",
+      summary:
+        "Purely compiles an explicitly constrained OpenRouter external proposal route into a non-executable plan or explicit refusal, with zero authority and no network.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/openrouter-admission-policy-compiler.js"],
+        test_paths: ["tests/openrouter-admission-policy-compiler.test.js"],
+        review_gate_paths: [
+          "scripts/review/openrouter-admission-policy-compiler-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/OPENROUTER_ADMISSION_POLICY_COMPILER_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/OPENROUTER_ADMISSION_POLICY_COMPILER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim a live OpenRouter provider, model, account, credential, prompt, route observation, invocation, consent, runtime, external effect, receipt minting, or federation.",
+      what_this_proves:
+        "A supplied, explicitly constrained external OpenRouter proposal route deterministically compiles to a content-addressed non-executable request plan or explicit refusal. The pure compiler requires an exact model ID, proposal-only authority, external locality, a nonempty underlying-provider allowlist, disabled fallback, denied data collection, required zero-data-retention and router metadata; it refuses raw secrets, openrouter/free, malformed controls, and self-supplied consent, and independently detects a rehashed authority escalation.",
+      what_this_does_not_prove:
+        "It does not prove live OpenRouter availability, an actual provider/model route, account entitlement, credential validity, privacy-provider compliance, prompt processing, provider invocation, MR external-route selection, exact human consent, runtime activation, an effect, receipt minting, or federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "POT_CLAIM_SCOPE_0A",
+      truth_label: "POT_CLAIM_SCOPE_MEASURED_REPO",
+      summary:
+        "Pure four-scope Proof-of-Truth claim evaluator with fail-closed promotion semantics.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/pot-claim-scope.js"],
+        test_paths: ["tests/pot-claim-scope.test.js"],
+        review_gate_paths: [
+          "scripts/review/pot-claim-scope-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/POT_CLAIM_SCOPE_0A.md"],
+        documentation_paths: [
+          "docs/02-architecture/POT_CLAIM_SCOPE_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim a live provider/model route, mission, responsibility, Node0 closure, operator mutation, daemon runtime, network use, token, wallet, or federation.",
+      what_this_proves:
+        "Caller-supplied claim descriptors are evaluated against fixed COMPONENT, ROUTE, MISSION, or RESPONSIBILITY structural rules. Required causal bindings, freshness, recovery, and scope promotion requirements deterministically yield PASS, FAIL, or HOLD; a claim cannot weaken its rules or promote itself above its scope.",
+      what_this_does_not_prove:
+        "It does not independently authenticate any digest, signature, release, observation, provider/model route, runtime, mission, receipt, recovery result, burden measurement, or Node0 closure. It does not execute, mutate operator state, consume consent, start a daemon, use a network, access a wallet, or federate.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_SSE_ENVELOPE_STREAM_1A",
+      truth_label: "NODE0_SSE_ENVELOPE_STREAM_MEASURED_REPO",
+      summary:
+        "Pure hash-chained SSE event-envelope stream contract: ordered, gap-detecting, tamper-evident, exactly-once terminal — the verifiable wire law for the PROD-02 persistent transport.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-sse-envelope-stream.js"],
+        test_paths: ["tests/node0-sse-envelope-stream.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-sse-envelope-stream-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_SSE_ENVELOPE_STREAM_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_SSE_ENVELOPE_STREAM_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "That a received sequence of SSE event envelopes can be independently proven ORDERED (consecutive seq from 1), CHAINED (each envelope binds its predecessor's hash under the repo's single canonical byte contract, so any flipped byte is detected), COMPLETE (exactly one terminal event and nothing after it), and LIVENESS-HONEST (heartbeats advance sequence while carrying no application state) — from the envelopes alone, with no transport. It also proves the SSE wire serialization round-trips through a refusing parser without losing verifiability, so reconnecting consumers re-derive order+integrity instead of trusting the connection.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [

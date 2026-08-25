@@ -50,6 +50,10 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   // route.ts; falls back to <cwd>/docs/receipts when unset. Read-only path
   // resolution, no secret.
   "DEMA_RECEIPTS_PATH",
+  "DEMA_SEASON_AUDITS_DIR",
+  "DEMA_SEASON_PORT",
+  "DEMA_SEASON_REPO_ROOT",
+  "DEMA_SEASON_WORKTREES",
   "DEMA_STAND_LOG_DIR",
   "DEMA_TALK_MODEL",
   "DEMA_TALK_PROVIDER",
