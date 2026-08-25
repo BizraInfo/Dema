@@ -201,6 +201,7 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // the component remains pure and does not observe or mutate any root.
   "packages/core/src/node0-estate-map.js",
   "packages/core/src/node0-sse-envelope-stream.js",
+  "packages/core/src/node0-sse-realm-composition.js",
   "packages/core/src/dema-presence.js",
   "packages/core/src/drs-realm-contracts.js",
   "packages/core/src/drs-presence-reducer.js",
@@ -367,6 +368,8 @@ function scanForForbiddenImporters() {
   const scanDirs = ["packages", "apps", "bin", "scripts"];
   const allowed = new Set([
     "scripts/review/canonical-json-v1-check.mjs",
+    "scripts/review/node0-sse-realm-composition-check.mjs",
+    "scripts/review/bizra-prompt-compiler-check.mjs",
     ...CANONICAL_JSON_V1_REGISTERED_CONSUMERS,
   ]);
   for (const dir of scanDirs) {

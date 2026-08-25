@@ -109,6 +109,9 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DRS_PRESENCE_REDUCER_2A",
   "DRS_FIXTURE_PUBLISHER_1A",
   "NODE0_FATE_STAGED_EFFECT_1A",
+  "NODE0_SSE_REALM_COMPOSITION_1A",
+  "BIZRA_PROMPT_COMPILER_0A",
+  "DEMA_TRACE_DIAGNOSTIC_CONTRACT_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2876,7 +2879,80 @@ function defaultCapabilityRows() {
         "unattended runtime",
       ],
     }),
-      ]);
+    capability({
+      capability_id: "NODE0_SSE_REALM_COMPOSITION_1A",
+      truth_label: "NODE0_REALM_SSE_COMPOSITION_MEASURED_REPO",
+      summary:
+        "SSE-to-Realm composition bridge: transport chain, frame law, wire law and presence projection proven as ONE pipeline with layer-tagged refusals",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-sse-realm-composition.js"],
+        test_paths: ["tests/node0-sse-realm-composition.test.js"],
+        review_gate_paths: ["scripts/review/node0-sse-realm-composition-check.mjs"],
+        receipt_paths: ["docs/receipts/NODE0_SSE_REALM_COMPOSITION_1A.md"],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "That the three frozen laws COMPOSE: an SSE text document is parsed and chain-verified (seq from 1, hash-linked, one terminal), every state/error payload must pass the realm frame law by name (FRAME_OVERSIZE/FRAME_MALFORMED_UTF8), survivors walk the realm wire law through the presence reducer, and ANY layer refusal degrades the derived render to UNKNOWN — never a familiar state, never stale success; simulated markers survive the whole pipe so fixtures stay production-inadmissible end-to-end. 10 join-law tests.",
+      what_this_does_not_prove:
+        "It does not prove a server, socket or persistent connection exists; that bytes crossed a network; that the payload resists forged bodies with recomputed transport hashes (no independent anchor); or that Node0 is closed.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "BIZRA_PROMPT_COMPILER_0A",
+      truth_label: "BIZRA_PROMPT_COMPILER_MEASURED_REPO",
+      summary:
+        "Founder-language prompt compiler: dense invocations compile into typed phase-ordered mission contracts with no silently dropped tokens",
+      evidence: evidence({
+        source_paths: ["packages/core/src/bizra-prompt-compiler.js"],
+        test_paths: ["tests/bizra-prompt-compiler.test.js"],
+        review_gate_paths: ["scripts/review/bizra-prompt-compiler-check.mjs"],
+        receipt_paths: ["docs/receipts/BIZRA_PROMPT_COMPILER_0A.md"],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "That the founder's cognitive OS compiles deterministically: OPERATOR_TABLE binds each vocabulary term to ONE role (objective / reasoning_method / verification_gate / deliverable), ONE phase of the 12-step precedence chain (evidence_boundary -> perception -> compression -> amplification -> one_spearpoint), and an emits contract; unrecognized doctrine names surface as UNCOMPILED_TOKENS warnings with their own output section (no silent drop, no brittle refusal); structure-sensitive tamper probe proves meaning changes change the contract while whitespace does not. 5 tests + gate.",
+      what_this_does_not_prove:
+        "It does not execute the compiled mission, call any model, or prove compiled missions pass their gates — compilation is structure, not performance.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_TRACE_DIAGNOSTIC_CONTRACT_1A",
+      truth_label: "DEMA_TRACE_DIAGNOSTIC_CONTRACT_PREVIEW_ONLY",
+      summary:
+        "Moat gate: four-rail promotion contract (provenance · consistency · disambiguation · corroboration) that makes every trace observable, testable, diagnosable and permits insight only after all four rails pass with scope/completeness/correlation limits explicit",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-trace-diagnostic-contract.js"],
+        test_paths: ["tests/dema-trace-diagnostic-contract.test.js"],
+        review_gate_paths: ["scripts/review/dema-trace-diagnostic-contract-check.mjs"],
+        receipt_paths: ["docs/receipts/DEMA_TRACE_DIAGNOSTIC_CONTRACT_1A.md"],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, autonomous promotion, production diagnosability, daemon, network, token, wallet, or federation. Promotion is a preview classification; INSIGHT_AUTHORIZED is not ground truth and requires independent corroboration before any system change.",
+      what_this_proves:
+        "That trace-derived conclusions are classified by four explicit, independently re-derived rails: provenance requires scope/completeness/correlation_limit/source_ref/source_sha256/observed_at; consistency requires referential integrity and no duplicate ids; disambiguation requires ≥2 hypotheses (graph-of-thoughts); corroboration requires independent replay_performed+hash; only ALL FOUR true yields INSIGHT_AUTHORIZED, provenance failure yields BLOCKED (inadmissible), any other failure yields REMAIN_TRACE; semantic rederivation rejects tampered promotion or rails even with recomputed hash. 14 tests + gate.",
+      what_this_does_not_prove:
+        "It does not prove the promoted insight is true, that production traces were measured, that a system change is authorized, or that any autopoietic loop closed — it classifies admissibility and promotion eligibility, not truth or authority.",
+      forbidden_claims: [
+        "live execution",
+        "autonomous promotion",
+        "production diagnosis",
+        "unattended runtime",
+      ],
+    }),
+              ]);
 }
 
 function blockedLiveSurfaces() {
