@@ -4,7 +4,7 @@ title: PROD-03 — REAL-LOCAL-MODEL-PATH-1A
 status: To Do
 assignee: []
 created_date: '2026-08-21 21:20'
-updated_date: '2026-08-23 11:25'
+updated_date: '2026-08-25 03:37'
 labels:
   - production
   - model
@@ -54,4 +54,6 @@ Qualify the existing local model invocation path as the production PAT model sub
 
 <!-- SECTION:NOTES:BEGIN -->
 Dependency added 2026-08-23: TASK-075.14 (MASTER-REGISTRY-EFFECTIVE-CONFIG-1A) must independently prove deterministic desired-plus-observed effective route resolution before PROD-03 may consume it. This does not authorize runtime activation in MR-1A.
+
+2026-08-25 PROD-03 first invocation: MODEL_PATH_LIVE. gemma4-12b @ llama.cpp :8080 responded: 39 prompt tokens, 199 completion tokens, finish=stop, latency 3152ms (~63 tok/s). Broker route proven (dema_face → gemma4-12b-deep). Hardware envelope recorded: i9-14900HX/128GB RAM/RTX4090-16GB/2.8TB. Admissibility chain live-discriminates. Receipt: PROD03-FIRST-MODEL-INVOCATION.json. Remaining seam: broker-to-invocation path (direct probe, not yet broker-mediated).
 <!-- SECTION:NOTES:END -->
