@@ -308,6 +308,12 @@ const KEY_STORE_SIGNING_OPTIONS = Object.freeze([
 ]);
 
 export async function signPreviewReceiptWithKeyStore(options = {}) {
+  // Fail-closed on unrecognized options. Measured 2026-08-20: a caller
+  // injecting loader parameters this function never read (loadPrivateKeyFn /
+  // loadPublicKeyFn) had them silently discarded, and the DEFAULT loader
+  // signed with the real operator key store — while the caller believed key
+  // loading was disabled. On a signing path an ignored option is not a
+  // convenience; it is an authority widening, so it refuses instead.
   const {
     preview,
     consent,
