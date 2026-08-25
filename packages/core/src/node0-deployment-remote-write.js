@@ -61,6 +61,31 @@ export const ROOT_FILE_NAMES = Object.freeze([
 /** Filesystems through which another party can write without a local process. */
 export const SYNC_FSTYPE_RE = /gvfs|fuse\.|nfs|cifs|smb|sshfs|davfs|s3fs|rclone/i;
 
+/**
+ * Correlation taxonomy (REMOTE-WRITE-CORRELATION-CONTRACT-1A, operator audit
+ * 2026-08-25): ExternalReachability ≠ ExternalWriteAuthority.
+ *
+ * DIRECT kinds bind an external write capability to sovereign state BY
+ * STRUCTURE — the route or the permission is itself measured, so a single one
+ * asserts EXTERNAL_WRITE_PATH_PRESENT.
+ *
+ * REACHABILITY-ONLY kinds prove exposure without proving a write route to
+ * sovereign state (who owns the socket? does its protocol write? does it reach
+ * state?). Alone they settle NOTHING: INCOMPLETE with a named reason — which
+ * blocks closure exactly as hard as VIOLATED, but claims no uncorrelated
+ * causal fact. Trace ≠ Diagnosis until correlation is earned.
+ */
+export const DIRECT_WRITE_FINDING_KINDS = Object.freeze([
+  "sync_mount_over_state_root",
+  "writable_state_root",
+  "writable_root_file",
+  "root_file_under_sync_mount",
+  "root_file_hash_drift",
+]);
+export const REACHABILITY_ONLY_FINDING_KINDS = Object.freeze([
+  "non_loopback_listener",
+]);
+
 const LOOPBACK_RE = /^(127\.|::1$|localhost$)/i;
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const arr = (v) => (Array.isArray(v) ? v : null);
@@ -78,8 +103,11 @@ const out = (verdict, reason, findings = []) =>
  *
  * Returns `external_write_path_present`, which the adapter hands to the ledger as
  * `observed`. The invariant declares `required: false`, so a surface with no
- * external write path scores SATISFIED and one with a path scores VIOLATED — a
- * real refutation, not silence.
+ * external write path scores SATISFIED and one with a correlated write path
+ * scores VIOLATED — a real refutation, not silence. A surface with only
+ * reachability findings (exposure without an established write route to
+ * sovereign state) scores INCOMPLETE: it settles nothing, which keeps the row
+ * UNKNOWN and Node0 OPEN without asserting an uncorrelated causal fact.
  */
 export function evaluateDeploymentSurface(surface) {
   if (!isObj(surface)) return out("INCOMPLETE", "no_surface");
@@ -169,7 +197,19 @@ export function evaluateDeploymentSurface(surface) {
   }
 
   if (findings.length) {
-    return out("EXTERNAL_WRITE_PATH_PRESENT", `findings:${findings.length}`, findings);
+    const direct = findings.filter((f) => DIRECT_WRITE_FINDING_KINDS.includes(f.kind));
+    if (direct.length > 0) {
+      return out("EXTERNAL_WRITE_PATH_PRESENT", `findings:${findings.length}`, findings);
+    }
+    // Reachability without correlation: exposure is real, the write route is
+    // not established. Refuse to certify clean AND refuse to assert a causal
+    // path — INCOMPLETE, with every finding carried so nothing is hidden.
+    const kinds = [...new Set(findings.map((f) => f.kind))].join(",");
+    return out(
+      "INCOMPLETE",
+      `reachability_without_write_correlation:${kinds}`,
+      findings,
+    );
   }
   return out("NO_EXTERNAL_WRITE_PATH", null, []);
 }
@@ -190,6 +230,16 @@ export function buildDeploymentRemoteWriteObservation({
   hash,
 } = {}) {
   if (typeof hash !== "function") throw new TypeError("hash function required");
+  const SURFACE =
+    "The machine's own exposure surface — listeners, sync/mount paths, writable state roots, root-file integrity and process authority — was measured on the host";
+  const PROSE_BY_VERDICT = {
+    NO_EXTERNAL_WRITE_PATH:
+      `${SURFACE} and carried no path by which an external party could silently mutate local sovereign state.`,
+    EXTERNAL_WRITE_PATH_PRESENT:
+      `${SURFACE} and FOUND a path by which an external party could reach local sovereign state; remote_write is VIOLATED on this host as measured.`,
+    INCOMPLETE:
+      "The machine's exposure surface was measured but either not completely measured or not correlated to write authority over sovereign state; exposure findings are carried as context, and this artefact settles nothing in either direction.",
+  };
   const body = {
     schema: NODE0_DEPLOYMENT_REMOTE_WRITE_SCHEMA,
     scope: NODE0_DEPLOYMENT_REMOTE_WRITE_SCOPE,
@@ -203,7 +253,7 @@ export function buildDeploymentRemoteWriteObservation({
     executed_code_hash: executedCodeHash,
     live_execution_performed: evidenceClass === "OBSERVED",
     what_this_proves:
-      "The machine's own exposure surface — listeners, sync/mount paths, writable state roots, root-file integrity and process authority — was measured on the host and carried no path by which an external party could silently mutate local sovereign state.",
+      PROSE_BY_VERDICT[facts?.verdict] ?? PROSE_BY_VERDICT.INCOMPLETE,
     what_this_does_not_prove:
       "It does NOT prove the node is unreachable, that no future mount or listener will appear, that a local process with legitimate authority cannot write, or that any other machine is safe. It speaks for this host at the moment it was measured.",
   };

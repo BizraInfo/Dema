@@ -1,11 +1,11 @@
 ---
 id: TASK-075.20
 title: P1 secret-safe estate-map payload and session capture exclusion
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-23 21:02'
-updated_date: '2026-08-23 21:13'
+updated_date: '2026-08-25 11:35'
 labels:
   - security
   - review-followup
@@ -49,3 +49,9 @@ Focused regression now proves both output and rehashed forged payloads cannot ca
 
 Verification: focused estate-map test passed (5/5); canonical JSON check, npm test (9563 pass, 0 fail, 4 skipped), llm guidance, and git diff --check passed. npm run check remains red only because its aggregate coverage process once hit an intermittent node0-recovery-proof.mjs JSON read race (RCA-02); the exact coverage-instrumented recovery test passed 5/5. No recovery-system change was made; task stays In Progress pending a scoped decision.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Closed by measurement: all four ACs landed at 9975f06 (estate-map secret-exclusion kernel, regression test, .gitignore /codex-session-*.md, capture removed). The only holdout — RCA-02 intermittent recovery-proof JSON read race under the coverage aggregate — classified INWARD/NOT-REPRODUCED-AT-CURRENT-BYTES with 8 bounded observations today (3 full npm run check aggregates exit 0 containing coverage gate scripts/check.mjs:176 + 5/5 plain producer runs RECOVERY_AFTER_EXIT_PROVEN). Receipt: docs/audits/RCA02_FLAKE_CLASSIFICATION_0A.md. Residual risk named; recurrence rule pinned (real-signal-first, atomic-read repair inward, never classifier weakening).
+<!-- SECTION:FINAL_SUMMARY:END -->

@@ -105,6 +105,10 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "POT_CLAIM_SCOPE_0A",
   "NODE0_SSE_ENVELOPE_STREAM_1A",
   "DEMA_PRESENCE_1A",
+  "DRS_REALM_CONTRACTS_1A",
+  "DRS_PRESENCE_REDUCER_2A",
+  "DRS_FIXTURE_PUBLISHER_1A",
+  "NODE0_FATE_STAGED_EFFECT_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2756,7 +2760,123 @@ function defaultCapabilityRows() {
         "unattended runtime",
       ],
     }),
-  ]);
+    capability({
+      capability_id: "DRS_REALM_CONTRACTS_1A",
+      truth_label: "DRS_REALM_CONTRACTS_MEASURED_REPO",
+      summary:
+        "Realm Shell IF-01 wire law: hello/resync/event schemas, source admission, sequence+digest chain, state evidence constraints, TTL freshness",
+      evidence: evidence({
+        source_paths: ["packages/core/src/drs-realm-contracts.js"],
+        test_paths: ["tests/drs-realm-contracts.test.js"],
+        review_gate_paths: [
+          "scripts/review/drs-realm-contracts-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DRS_REALM_CONTRACTS_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DRS_REALM_CONTRACTS_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The IF-01 wire law as a pure, deterministic kernel: hello/resync/event schemas; admission (authority_delta==0 required, uid/pid binding, revision + contracts_digest match, fail-closed executable-digest hook); snapshot-before-stream FSM; sequence contract with idempotent duplicate / DUPLICATE_CONTRADICTION / rollback / gap refusals; body-bound sha256-canonical-json-v1 event digest chain (tampered bodies refuse DIGEST_MISMATCH even mid-chain); state-specific evidence constraints (VERIFIED_DONE requires mission binding AND an evidence ref; VERIFYING requires a SAT_* code; RECOVERY a recovery-class code); TTL freshness classes with no-stale-success degradation. 42 conformance tests mirror ICD C01-C20 and golden scenarios G-01..G-05.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DRS_PRESENCE_REDUCER_2A",
+      truth_label: "DRS_PRESENCE_REDUCER_MEASURED_REPO",
+      summary:
+        "Realm Shell presence reducer v2: reduce IF-01-accepted RealmEvents into an 11-state projection snapshot and i18n-keyed RenderRequest with no-stale-success freshness",
+      evidence: evidence({
+        source_paths: ["packages/core/src/drs-presence-reducer.js"],
+        test_paths: ["tests/drs-presence-reducer.test.js"],
+        review_gate_paths: [
+          "scripts/review/drs-presence-reducer-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DRS_PRESENCE_REDUCER_2A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DRS_PRESENCE_REDUCER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The IF-02 projection derivation as a pure kernel over the frozen wire law: only transcripts that SURVIVE admission/sequence/digest-chain/evidence constraints can reduce to a render view; the 11-state ontology is imported (never duplicated) from DRS-REALM-CONTRACTS-1A; freshness classes and no-stale-success degradation are imported, not reimplemented; VERIFIED_DONE renders only with evidence refs carried from its event; WORKING renders only with mission binding; unavailable telemetry renders null, never zero; mission labels are newline-stripped and capped at 120 scalars; reason codes become i18n keys (`reason.<CODE>`), never prose; skin slots map 1:1 over all 11 states. A transcript refused by the wire law can only ever render UNKNOWN/OFFLINE — never a familiar state. 15 conformance tests including G-02 end-to-end.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DRS_FIXTURE_PUBLISHER_1A",
+      truth_label: "DRS_FIXTURE_PUBLISHER_MEASURED_REPO",
+      summary:
+        "Realm Shell simulated-feed harness: scenario transcript builders stamped simulated:true end-to-end, proving fixtures can never render as production truth",
+      evidence: evidence({
+        source_paths: ["packages/core/src/drs-fixture-publisher.js"],
+        test_paths: ["tests/drs-fixture-publisher.test.js"],
+        review_gate_paths: [
+          "scripts/review/drs-fixture-publisher-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DRS_FIXTURE_PUBLISHER_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DRS_FIXTURE_PUBLISHER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The simulated-feed harness for the Realm Shell: five golden scenario builders (idle, mission_work, refusal, recovery, integrity_breach) emit wire-law-valid transcripts stamped simulated:true at the signing choke point (snapshot body + every event payload) with SIMULATED_FIXTURE reason codes; fixtures are bound to a DISTINCT fixture component id — binding to a production component id refuses at build; the propagation law is measured end-to-end: even a transcript that walks cleanly to VERIFIED_DONE renders simulated:true in the derived view (DRS-PRESENCE-REDUCER-2A ORs any contributing marker), so a fixture can never look like production truth; an integrity-breach fixture qualifies as EXPECTED refusal and stays marked. 13 tests.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_FATE_STAGED_EFFECT_1A",
+      truth_label: "NODE0_FATE_STAGED_EFFECT_MEASURED_REPO",
+      summary:
+        "G6 composition kernel: FATE exact-string consent gates a staged reversible effect with independent world observation and exactly-once crash recovery (effect_done_receipt_absent never re-executes)",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-fate-staged-effect.js"],
+        test_paths: ["tests/node0-fate-staged-effect.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-fate-staged-effect-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_FATE_STAGED_EFFECT_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_FATE_STAGED_EFFECT_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "G6 composition kernel: FATE (evaluateConsent exact byte match) gates a STAGED reversible rename executed via the measured node0-reversible-execute-gate, observed by re-deriving world digests from bytes (never from claims), and sealed as a COMMITTED receipt hash-linked in an append-only journal whose stage record binds the fate phrase INSIDE its hashed subject. THE proven law: the crash window effect->receipt is exactly-once — a rename preserves bytes so the stage carries a PREDICTABLE after-image; resume measures the world and either observes+commits WITHOUT re-executing (effect_done_record_absent / effect_done_receipt_absent), executes once (staged-not-effected), or halts RECOVERY_REQUIRED on ambiguous worlds. Observation contradiction fails closed (gate law refuses undo once live state diverges). 14 tests incl. three SIGKILL-window recoveries and idempotent double-resume.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+      ]);
 }
 
 function blockedLiveSurfaces() {

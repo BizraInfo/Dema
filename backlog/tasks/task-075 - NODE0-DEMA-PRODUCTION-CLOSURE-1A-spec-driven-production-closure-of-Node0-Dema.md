@@ -6,7 +6,7 @@ title: >-
 status: In Progress
 assignee: []
 created_date: '2026-08-21 18:18'
-updated_date: '2026-08-25 02:00'
+updated_date: '2026-08-25 17:40'
 labels:
   - production
   - closure
@@ -46,7 +46,7 @@ MISSION: NODE0-DEMA-PRODUCTION-CLOSURE-1A. Convert the existing Node0/Dema proof
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-EXECUTION-ORDER RULING 2026-08-25 (dual third-party proposals converged by operator): H1->C3 precedes PROD-02 transport kernel — evidence frontier governs. Independent local re-verification this date: PRE0 body f5078a9e / receipt 1251f4a5 and PROD01_2B body 17aaa613 / receipt 27c07d9d re-derived OK via scripts/season/resume.sh (exit 0); consumer bf1a6ba + producer 3f4d8fae worktrees CLEAN; port 7421 FREE; verdict READY_FOR_HUMAN_GO=true. Frozen activation ladder: G0 H1 -> G1 C3 heartbeat -> G2 DEMA truth binding -> G3 model/MR route -> G4 PAT-1 -> G5 SAT-1 (isolated trust domain) -> G6 FATE reversible effect -> G7 PAT-7 -> G8 LOCAL_PROOF_RESOURCE_SUBSTRATE (identifier ruling: avoid URP term collision until versioned definition pinned) -> G9 SAT-5 -> G10 parallel loops -> G11 Verified Experience Ledger -> G12 shadow RL -> G13 shadow RSI -> G14 VRO/PoI -> G15 stability campaign -> G16 NODE0_GENESIS_V1. Law: prove one instance before multiplying the role (1 PAT + 1 SAT -> proven seam -> 7+5). No H1 inferred from relayed proposals; runtime GO awaits founder verbatim block only.
+2026-08-25 wording ruling applied: correlation contract status is IMPLEMENTED_LOCAL / TESTED_LOCAL / HOST_OBSERVED / UNCOMMITTED / NOT_CANONICAL — 'landed' was rejected by operator audit; canonicalization proceeds via G6-CANONICAL-PROMOTION-1A candidate (verifier v0.2: candidate-scoped aggregate in fresh clone, declared scaffold exclusions, candidate tree sha, zero-drift recheck) emitting READY_FOR_COMMIT_GO; commit/push remain separate explicit human words.
 <!-- SECTION:NOTES:END -->
 
 ## Comments

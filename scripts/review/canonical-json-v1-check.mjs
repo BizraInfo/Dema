@@ -202,6 +202,10 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/core/src/node0-estate-map.js",
   "packages/core/src/node0-sse-envelope-stream.js",
   "packages/core/src/dema-presence.js",
+  "packages/core/src/drs-realm-contracts.js",
+  "packages/core/src/drs-presence-reducer.js",
+  "packages/core/src/drs-fixture-publisher.js",
+  "packages/core/src/node0-fate-staged-effect.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

@@ -84,3 +84,7 @@ packages/dema-ui/dev.log
 # runtime data, never source.
 .claude-flow/
 .kiro/
+
+# Root-level opencode session captures can contain transient credentials.
+/session-ses_*.md
+/proof-of-promotion/

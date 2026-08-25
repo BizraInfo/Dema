@@ -7,7 +7,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-08-23 07:38'
-updated_date: '2026-08-23 10:12'
+updated_date: '2026-08-25 11:35'
 labels:
   - hooks
   - protocol
@@ -50,9 +50,7 @@ Explain and close the user-observed error: hook returned invalid stop hook JSON 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-2026-08-23 rapid-sprint rebind: the task remains a Stop-event-only repair. Confirmed prior evidence identifies a conditional malformed Ralph Loop Stop producer; Dema project hook mirrors are a separate already-repaired surface. No runtime, consent, production, SessionStart, or unrelated-hook scope is authorized.
-
-2026-08-23 rapid-sprint evidence: red-first fixture against enabled Ralph Loop v1.0.0 terminal paths produced human text on stdout (exit 0), violating the Stop protocol. Repaired only the exact active cache producer at /home/bizra-operating-system/.claude/plugins/cache/claude-plugins-official/ralph-loop/1.0.0/hooks/stop-hook.sh by redirecting its two terminal echoes to stderr; current SHA-256 55bb28b66026d42b7e5f8014e8152e66aac1a4fdad819bd945df65f9f71923b0. Host-bound focused matrix: 11/11 pass (terminal silence, continuing decision schema, one-byte removal control); normal repository focused matrix: 7 pass, 4 host-bound skips. npm test: 9520 pass, 0 fail, 4 skips. npm run check, npm run llm:guidance, and git diff --check: PASS. Dema peak-self-loop preview remained preview-only with no runtime/model/network/write/consent. STOP_HOOK_REALITY_INCOMPLETE: no actual post-repair Claude Stop event has been observed; real aggregation/selection proof remains limited to captured configuration and direct producer fixtures. SessionStart intentionally untouched; no runtime, consent, PROD-01, push, merge, or promotion.
+2026-08-25 freshness attestation (read-only): cache holds exactly one ralph-loop version (1.0.0); stop-hook.sh sha256 55bb28b66026d42b7e5f8014e8152e66aac1a4fdad819bd945df65f9f71923b0 — byte-identical to the recorded post-repair producer. No drift, no recurrence, loop inactive (no ralph-loop.local.md). STOP_HOOK_REALITY_INCOMPLETE unchanged and honest: the missing observation remains an actual harness Stop event, obtainable only at a real session end.
 <!-- SECTION:NOTES:END -->
 
 ## Comments

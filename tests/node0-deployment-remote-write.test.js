@@ -84,12 +84,16 @@ describe("node0 deployment remote-write · unmeasured is never clean", () => {
 });
 
 describe("node0 deployment remote-write · every exposure is a finding", () => {
-  it("DRW-10: a listener on a non-loopback address is an external write path", () => {
+  it("DRW-10 AMENDED 2026-08-25: a non-loopback listener alone is exposure, NOT a write path", () => {
+    // Operator audit REMOTE-WRITE-CORRELATION-CONTRACT-1A: this test formerly
+    // asserted listener ⇒ EXTERNAL_WRITE_PATH_PRESENT — the exact inference
+    // ruled defective (ExternalReachability ≠ ExternalWriteAuthority). A
+    // listener alone now settles nothing; see the CRW block below.
     const s = clone(cleanSurface());
     s.listeners.push({ address: "0.0.0.0", port: 8000, proto: "tcp" });
     const r = evaluateDeploymentSurface(s);
-    assert.equal(r.verdict, "EXTERNAL_WRITE_PATH_PRESENT");
-    assert.equal(r.external_write_path_present, true);
+    assert.equal(r.verdict, "INCOMPLETE");
+    assert.equal(r.external_write_path_present, false);
     assert.ok(r.findings.some((f) => f.kind === "non_loopback_listener"));
   });
 
@@ -153,10 +157,48 @@ describe("node0 deployment remote-write · the roots must not be writable BY ANY
   });
 });
 
+describe("node0 deployment remote-write · the prose cannot outlive its verdict", () => {
+  const sha = (s) => s ?? "";
+
+  it("DRW-45: a VIOLATED artefact never claims 'carried no path' — the field must agree with the verdict", () => {
+    const o = artefact({
+      verdict: "EXTERNAL_WRITE_PATH_PRESENT",
+      findings: [{ kind: "non_loopback_listener", address: "0.0.0.0", port: 8000 }],
+    });
+    assert.ok(o);
+    assert.equal(o.remote_write_verdict, "EXTERNAL_WRITE_PATH_PRESENT");
+    assert.ok(
+      !/no path|carried no/i.test(sha(o.what_this_proves)),
+      `prose contradicts a violated observation: ${o.what_this_proves}`,
+    );
+    assert.match(String(o.what_this_proves), /VIOLATED|external write path/i);
+  });
+
+  it("DRW-46: a SATISFIED artefact is the only one allowed the clean-surface claim", () => {
+    const clean = artefact({ verdict: "NO_EXTERNAL_WRITE_PATH" });
+    assert.match(String(clean.what_this_proves), /carried no path/i);
+
+    for (const v of ["EXTERNAL_WRITE_PATH_PRESENT", "INCOMPLETE"]) {
+      const o = artefact({ verdict: v });
+      assert.doesNotMatch(String(o.what_this_proves), /carried no path/i, `${v} must not read clean`);
+    }
+  });
+
+  it("DRW-47 MUTATION CONTROL: prose stays inside the hashed body", () => {
+    // The claim is evidence: flipping a word must break verification, so the
+    // prose cannot be edited after the fact without detection.
+    const o = artefact();
+    assert.equal(verifyDeploymentRemoteWriteHash(o, sha256CanonicalJsonV1), true);
+    const tampered = { ...o, what_this_proves: String(o.what_this_proves).replace(/host/, "HOST") };
+    assert.equal(verifyDeploymentRemoteWriteHash(tampered, sha256CanonicalJsonV1), false);
+  });
+});
+
 describe("node0 deployment remote-write · negative-control integrity", () => {
-  it("DRW-30: every exposure case is reachable — a always-clean evaluator would fail here", () => {
+  it("DRW-30: every DIRECT-WRITE exposure case is reachable — an always-clean evaluator would fail here", () => {
+    // AMENDED 2026-08-25: the pure-listener member moved out — reachability
+    // alone is INCOMPLETE under the correlation contract (CRW-01).
     const mutations = [
-      (s) => { s.listeners.push({ address: "0.0.0.0", port: 9, proto: "tcp" }); return s; },
       (s) => { s.mounts.push({ target: "/home/x/.dema/z", fstype: "nfs4", source: "nas:/x" }); return s; },
       (s) => { s.state_roots[0].other_writable = true; return s; },
       (s) => { s.root_files[0].writable = true; return s; },
@@ -180,7 +222,10 @@ import {
   currentRemoteWriteKernelHash,
   REMOTE_WRITE_INVARIANT_ID,
 } from "../packages/core/src/node0-deployment-remote-write-adapter.js";
-import { buildDeploymentRemoteWriteObservation } from "../packages/core/src/node0-deployment-remote-write.js";
+import {
+  buildDeploymentRemoteWriteObservation,
+  verifyDeploymentRemoteWriteHash,
+} from "../packages/core/src/node0-deployment-remote-write.js";
 import { sha256CanonicalJsonV1 } from "../packages/canon/src/sha256-canonical-json-v1.js";
 
 const KH = currentRemoteWriteKernelHash();
@@ -238,5 +283,78 @@ describe("node0 deployment remote-write · adapter", () => {
     const forged2 = { ...relabel, observed_at: t, observation_hash: sha256CanonicalJsonV1(relabel) };
     assert.equal(remoteWriteDeploymentObservation({ readFile: reader(forged2) }), null);
     assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(forged2) }).state, "SCHEMA_MISMATCH");
+  });
+});
+
+// ── correlation contract · REMOTE-WRITE-CORRELATION-CONTRACT-1A ──────────────
+// Operator audit 2026-08-25: ExternalReachability ≠ ExternalWriteAuthority.
+// A listener proves EXPOSURE, not a write route. Only findings whose very
+// structure binds an external write capability to sovereign state (sync mount
+// over state root, writable state root/file, root under sync mount, hash
+// drift) may assert EXTERNAL_WRITE_PATH_PRESENT. Reachability-only surfaces
+// settle NOTHING — INCOMPLETE — which blocks closure exactly as hard as
+// VIOLATED does, without claiming an uncorrelated causal fact.
+import {
+  DIRECT_WRITE_FINDING_KINDS,
+  REACHABILITY_ONLY_FINDING_KINDS,
+} from "../packages/core/src/node0-deployment-remote-write.js";
+
+describe("node0 deployment remote-write · correlation contract (Trace ≠ Diagnosis)", () => {
+  const listenerOnly = () => {
+    const s = clone(cleanSurface());
+    s.listeners.push({ address: "0.0.0.0", port: 8000, proto: "tcp" });
+    return evaluateDeploymentSurface(s);
+  };
+
+  it("CRW-01: reachability alone is INCOMPLETE — never EXTERNAL_WRITE_PATH_PRESENT", () => {
+    const r = listenerOnly();
+    assert.equal(r.verdict, "INCOMPLETE");
+    assert.notEqual(r.verdict, "EXTERNAL_WRITE_PATH_PRESENT");
+    assert.equal(r.external_write_path_present, false);
+    assert.match(String(r.reason), /reachability_without_write_correlation/);
+    assert.match(String(r.reason), /non_loopback_listener/);
+  });
+
+  it("CRW-02 VISIBILITY CONTROL: refused correlation still carries every finding", () => {
+    const r = listenerOnly();
+    assert.equal(r.findings.length, 1);
+    assert.equal(r.findings[0].kind, "non_loopback_listener");
+  });
+
+  it("CRW-03: each DIRECT-WRITE kind remains independently sufficient for VIOLATED", () => {
+    const cases = [
+      (s) => { s.mounts.push({ target: "/home/x/.dema", fstype: "fuse.gvfsd-fuse", source: "gvfsd" }); },
+      (s) => { s.state_roots[0].other_writable = true; },
+      (s) => { s.root_files[0].writable = true; },
+      (s) => { s.root_files[0].sha256 = "9".repeat(64); },
+      (s) => { s.root_files[0].under_sync_mount = true; },
+    ];
+    for (const mutate of cases) {
+      const s = clone(cleanSurface());
+      mutate(s);
+      const r = evaluateDeploymentSurface(s);
+      assert.equal(r.verdict, "EXTERNAL_WRITE_PATH_PRESENT", JSON.stringify(r.findings));
+    }
+  });
+
+  it("CRW-04 MIXED: one direct-write finding dominates; listeners ride along as context", () => {
+    const s = clone(cleanSurface());
+    s.listeners.push({ address: "0.0.0.0", port: 8000, proto: "tcp" });
+    s.state_roots[0].group_writable = true;
+    const r = evaluateDeploymentSurface(s);
+    assert.equal(r.verdict, "EXTERNAL_WRITE_PATH_PRESENT");
+    assert.ok(r.findings.some((f) => f.kind === "writable_state_root"));
+    assert.ok(r.findings.some((f) => f.kind === "non_loopback_listener"));
+  });
+
+  it("CRW-05 TAXONOMY: the two tiers are exhaustive and disjoint over known kinds", () => {
+    const all = new Set([...DIRECT_WRITE_FINDING_KINDS, ...REACHABILITY_ONLY_FINDING_KINDS]);
+    for (const k of ["non_loopback_listener", "sync_mount_over_state_root", "writable_state_root",
+      "writable_root_file", "root_file_under_sync_mount", "root_file_hash_drift"]) {
+      assert.ok(all.has(k), `unclassified finding kind: ${k}`);
+    }
+    for (const k of DIRECT_WRITE_FINDING_KINDS) {
+      assert.ok(!REACHABILITY_ONLY_FINDING_KINDS.includes(k));
+    }
   });
 });
