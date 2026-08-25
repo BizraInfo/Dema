@@ -299,14 +299,32 @@ export function signPreviewReceipt({
 
 // Key-store variant: same rail, operator keys under DEMA_HOME. Loaders are
 // injected (defaults are the #307 authorship key-store readers).
-export async function signPreviewReceiptWithKeyStore({
-  preview,
-  consent,
-  demaHome,
-  loadActiveKeyPairFn = loadActiveKeyPair,
-  signedAt,
-} = {}) {
+const KEY_STORE_SIGNING_OPTIONS = Object.freeze([
+  "preview",
+  "consent",
+  "demaHome",
+  "loadActiveKeyPairFn",
+  "signedAt",
+]);
+
+export async function signPreviewReceiptWithKeyStore(options = {}) {
+  const {
+    preview,
+    consent,
+    demaHome,
+    loadActiveKeyPairFn = loadActiveKeyPair,
+    signedAt,
+  } = options;
   const plan = planPreviewReceiptSigning({ consent, input: preview });
+  const unrecognized = Object.keys(options).filter(
+    (key) => !KEY_STORE_SIGNING_OPTIONS.includes(key),
+  );
+  if (unrecognized.length > 0) {
+    return blockedSigning(
+      plan,
+      unrecognized.map((key) => `unrecognized_option:${key}`),
+    );
+  }
   if (!plan.eligible) {
     return blockedSigning(plan);
   }

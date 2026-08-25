@@ -137,11 +137,34 @@ test("key-store signing path blocks when the store is unavailable", async () => 
   const blocked = await signPreviewReceiptWithKeyStore({
     preview: FIXTURE_PREVIEW,
     consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
-    loadPrivateKeyFn: async () => null,
-    loadPublicKeyFn: async () => null,
+    loadActiveKeyPairFn: async () => null,
   });
   assert.equal(blocked.signed, false);
   assert.ok(blocked.blocked_by.includes("key_store_unavailable"));
+});
+
+test("key-store signing path uses the injected active-key loader", async () => {
+  const signed = await signPreviewReceiptWithKeyStore({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    loadActiveKeyPairFn: async () => ({
+      ok: true,
+      private_key_pem: KEYS.private_key_pem,
+      public_key_pem: KEYS.public_key_pem,
+    }),
+  });
+  assert.equal(signed.signed, true);
+  assert.equal(signed.signature.algorithm, "ed25519");
+});
+
+test("key-store signing path refuses unrecognized options", async () => {
+  const refused = await signPreviewReceiptWithKeyStore({
+    preview: FIXTURE_PREVIEW,
+    consent: PREVIEW_RECEIPT_SIGNING_GO_PHRASE,
+    loadPrivateKeyFn: async () => null,
+  });
+  assert.equal(refused.signed, false);
+  assert.ok(refused.blocked_by.includes("unrecognized_option:loadPrivateKeyFn"));
 });
 
 test("verify rejects a tampered content_hash", () => {

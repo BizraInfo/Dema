@@ -5,7 +5,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 
-import { COMMAND_TABLE } from "../apps/cli/src/index.js";
+import { COMMAND_TABLE, dispatch } from "../apps/cli/src/index.js";
 
 const CLI = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
 const CLI_SOURCE = readFileSync(CLI, "utf8");
@@ -149,7 +149,7 @@ test("COMMAND_TABLE has no orphan handlers outside the known surface", () => {
   );
 });
 
-test("prototype property command tokens fall through to the unknown-command suggester", () => {
+test("unknown top-level commands refuse at the direct CLI boundary", () => {
   for (const token of ["constructor", "__defineSetter__", "toString"]) {
     const result = spawnSync("node", [CLI, token], {
       encoding: "utf8",
@@ -157,8 +157,8 @@ test("prototype property command tokens fall through to the unknown-command sugg
     });
     assert.equal(
       result.status,
-      0,
-      `${token} should not throw via inherited COMMAND_TABLE lookup\nstderr:\n${result.stderr}`,
+      1,
+      `${token} must refuse rather than look successful\nstderr:\n${result.stderr}`,
     );
     const displayedToken = token.toLowerCase();
     assert.match(
@@ -166,6 +166,32 @@ test("prototype property command tokens fall through to the unknown-command sugg
       new RegExp("I don\x27t have a `" + displayedToken + "` command\\."),
     );
   }
+});
+
+test("unknown dispatch returns a refusal sentinel without tainting an interactive shell", async () => {
+  const priorExitCode = process.exitCode;
+  const originalLog = console.log;
+  process.exitCode = undefined;
+  console.log = () => {};
+  try {
+    assert.deepEqual(await dispatch(["definitely-not-a-command"]), {
+      refused: true,
+      reason: "unknown_command",
+    });
+    assert.equal(process.exitCode, undefined);
+  } finally {
+    console.log = originalLog;
+    process.exitCode = priorExitCode;
+  }
+});
+
+test("known top-level help remains a successful CLI command", () => {
+  const result = spawnSync("node", [CLI, "help"], {
+    encoding: "utf8",
+    env: { ...process.env, DEMA_NO_TUI: "1" },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Dema/i);
 });
 
 test("dashboard command avoids access-before-read TOCTOU pattern", () => {

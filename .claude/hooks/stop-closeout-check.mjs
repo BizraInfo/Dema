@@ -61,9 +61,8 @@ async function main() {
   }
 
   if (missing.length) {
-    // Stop hooks must not emit the context-injection shape used by other hook
-    // events. In report-only mode, keep the diagnostic in the local log.
-    process.stdout.write("{}\n");
+    // Stop hooks must remain stdout-silent when report-only. `{}` is JSON, but
+    // not a valid Stop decision payload for the host hook protocol.
   }
 
   process.exit(0);

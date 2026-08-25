@@ -31,10 +31,29 @@ test("NCG-01 the gate passes while the ledger is OPEN", () => {
   assert.equal(r.ok, true);
   assert.equal(r.verdict, "OPEN");
   assert.deepEqual(r.blocked_by, []);
-  // One adapter exists, so exactly one row is settled. Nine is not a rounding
-  // error away from ten: six of the nine describe a running loop.
-  assert.equal(r.satisfied_count, 1);
-  assert.equal(r.unknown_count, 9);
+  // Host artefacts can honestly settle additional rows. The in-process
+  // acceptance adapter is the machine-independent floor; the exact count is
+  // tested below with a controlled adapter set.
+  assert.ok(r.satisfied_count >= 1, "the in-process acceptance adapter always settles");
+  assert.equal(
+    r.satisfied_count + r.violated_count + r.unknown_count,
+    r.total,
+  );
+});
+
+test("NCG-01b hermetic floor: only the acceptance adapter settles one row", () => {
+  const acceptanceOnly = CLOSURE_EVIDENCE_ADAPTERS.filter(
+    (adapter) => adapter.invariant_id === "acceptance_is_model_blind",
+  );
+  assert.equal(acceptanceOnly.length, 1);
+  const report = evaluateNode0ClosureInvariants(gatherClosureEvidence(acceptanceOnly));
+  assert.equal(report.satisfied_count, 1);
+  assert.equal(report.violated_count, 0);
+  assert.equal(report.unknown_count, CLOSURE_INVARIANTS.length - 1);
+  const settled = report.invariants.filter(
+    (row) => row.status === INVARIANT_STATUS.SATISFIED,
+  );
+  assert.deepEqual(settled.map((row) => row.id), ["acceptance_is_model_blind"]);
 });
 
 test("NCG-02 the gate publishes the true settled count, not a hopeful one", () => {
@@ -54,11 +73,12 @@ test("NCG-02 the gate publishes the true settled count, not a hopeful one", () =
       assert.match(row.source, /sha256:[0-9a-f]{64}/, `${row.id} source must bind to an artifact`);
     }
   }
-  // The settled row is the acceptance one, and it is the only one.
+  // The acceptance row is the machine-independent floor. Other settled rows
+  // reflect recorded host evidence and must not make this test deny reality.
   const settled = r.invariants.filter((row) => row.status === INVARIANT_STATUS.SATISFIED);
-  assert.deepEqual(
-    settled.map((row) => row.id),
-    ["acceptance_is_model_blind"],
+  assert.ok(
+    settled.some((row) => row.id === "acceptance_is_model_blind"),
+    "acceptance row must always settle",
   );
 });
 

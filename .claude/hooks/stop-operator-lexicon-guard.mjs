@@ -84,7 +84,8 @@ async function main() {
     process.exit(0);
   }
 
-  process.stdout.write("{}\n");
+  // An allowed Stop hook must not emit a placeholder object: `{}` is not a
+  // valid Stop decision payload for the host hook protocol.
   process.exit(0);
 }
 

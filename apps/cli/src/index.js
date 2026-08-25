@@ -1472,6 +1472,7 @@ async function dispatch(argv) {
   }
   lines.push("", "Type `dema help` to see everything I can do.");
   console.log(lines.join("\n"));
+  return { refused: true, reason: "unknown_command" };
 }
 
 async function runActiveKernel({ interactive = false, force = false } = {}) {
