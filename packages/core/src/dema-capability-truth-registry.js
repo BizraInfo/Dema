@@ -104,6 +104,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "OPENROUTER_ADMISSION_POLICY_COMPILER_1A",
   "POT_CLAIM_SCOPE_0A",
   "NODE0_SSE_ENVELOPE_STREAM_1A",
+  "DEMA_PRESENCE_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2718,6 +2719,35 @@ function defaultCapabilityRows() {
         "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
       what_this_proves:
         "That a received sequence of SSE event envelopes can be independently proven ORDERED (consecutive seq from 1), CHAINED (each envelope binds its predecessor's hash under the repo's single canonical byte contract, so any flipped byte is detected), COMPLETE (exactly one terminal event and nothing after it), and LIVENESS-HONEST (heartbeats advance sequence while carrying no application state) — from the envelopes alone, with no transport. It also proves the SSE wire serialization round-trips through a refusing parser without losing verifiability, so reconnecting consumers re-derive order+integrity instead of trusting the connection.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_PRESENCE_1A",
+      truth_label: "DEMA_PRESENCE_MEASURED_REPO",
+      summary:
+        "Truthful DEMA avatar presence state machine: maps verified Node0 runtime events (receipt-bound) to avatar states; refuses unbound theatrical state; UNKNOWN state makes uncertainty visible.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-presence.js"],
+        test_paths: ["tests/dema-presence.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-presence-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_PRESENCE_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_PRESENCE_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure, deterministic reducer maps receipt-bound Node0 runtime events to one of eight avatar presence states (IDLE/ACTIVE/NEEDS_HUMAN/VERIFYING/REFUSED/VERIFIED_DONE/RECOVERY/UNKNOWN). An event without a well-formed receipt hash is inadmissible; a sequence gap at the stream tail or an unrecognized event kind derives UNKNOWN — uncertainty is rendered, never papered over. The derived state is content-addressed and its verifier re-derives it from the events, so a claimed state the event stream does not justify is rejected.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
       forbidden_claims: [

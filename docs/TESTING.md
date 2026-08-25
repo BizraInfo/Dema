@@ -581,6 +581,7 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 | `tests/node0-estate-map.test.js`        | NODE0-ESTATE-MAP-0A (`packages/core/src/node0-estate-map.js`): Pure component comparator over caller-supplied approved-root metadata snapshots. Tests prove baseline/unchanged/changed outcomes, unavailable and incomplete evidence holds, restoration remains unverified, malformed or unknown roots refuse, and content-addressed rederivation rejects altered decision/boundary data. No observer, scan, filesystem action, runtime, model/provider, consent, receipt, recovery, mission, or VRO. |
 | `tests/node0-genesis-estate-refinery-spec.test.js` | GENESIS-ESTATE-REFINERY-0A (`docs/02-architecture/NODE0_GENESIS_ESTATE_REFINERY_0A.md`): Static contract check for one root-bound estate-refinery specification. It requires the existing three-root manifest/verifier references, DNA pack, future mission template, four bounded schemas, declarative twin plan, daily brief, drift outcomes, all-false authority posture, and explicit non-operational boundaries; it rejects shell and mutation/network implementation instructions. This is specification-only evidence, not a scan, mission, receipt, recovery, VRO, or Node0 closure proof. |
 | `tests/node0-sse-envelope-stream.test.js`        | NODE0-SSE-ENVELOPE-STREAM-1A (`packages/core/src/node0-sse-envelope-stream.js` + `scripts/review/node0-sse-envelope-stream-check.mjs`): Pure hash-chained SSE event-envelope stream contract — the verifiable wire law for the PROD-02 persistent transport. 19 tests prove the builder derives seqs and chains hashes (callers cannot construct gaps); the verifier names each near-miss separately: seq gap/duplicate, chain break, per-event hash rederivation (flipped byte caught), unknown closed-set kind, state-carrying heartbeat, post-terminal vs missing-terminal kept distinct; the SSE wire layer round-trips through a refusing parser (`frame_N:incomplete/id_seq_mismatch/kind_mismatch/unknown_field`) so reconnects re-prove order+integrity; the orchestrator runs three negative controls (flipped hash / mutated frame under original hash / dropped terminal) and fails closed if any passes. Wired into `npm run check`. |
+| `tests/dema-presence.test.js`        | DEMA-PRESENCE-1A (`packages/core/src/dema-presence.js` + `scripts/review/dema-presence-check.mjs`): Truthful DEMA avatar presence state machine: maps verified Node0 runtime events (receipt-bound) to avatar states; refuses unbound theatrical state; UNKNOWN state makes uncertainty visible. Red-first scaffold — fill the kernel bodies and turn the proof contract green. N tests. Wired into `npm run check`. |
 
 ## Smoke checks
 
@@ -738,6 +739,7 @@ node scripts/review/dema-master-registry-effective-config-check.mjs
 node scripts/review/openrouter-admission-policy-compiler-check.mjs
 node scripts/review/pot-claim-scope-check.mjs
 node scripts/review/node0-sse-envelope-stream-check.mjs
+node scripts/review/dema-presence-check.mjs
 node scripts/review/dema-capability-truth-registry-check.mjs
 node scripts/review/boundary-vocab-unification-check.mjs
 node scripts/review/dema-fde-dual-diagnostic-check.mjs

@@ -201,6 +201,7 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // the component remains pure and does not observe or mutate any root.
   "packages/core/src/node0-estate-map.js",
   "packages/core/src/node0-sse-envelope-stream.js",
+  "packages/core/src/dema-presence.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
