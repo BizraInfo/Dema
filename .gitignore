@@ -88,3 +88,5 @@ packages/dema-ui/dev.log
 # Root-level opencode session captures can contain transient credentials.
 /session-ses_*.md
 /proof-of-promotion/
+.local/
+.claude/skills/dema-data-steward/

@@ -40,10 +40,7 @@ Single-file runs: `node --test tests/<surface>.test.js`.
 
 ### Known failures
 
-1. `NCG-01` / `NCG-02` (`tests/node0-closure-invariants-gate.test.js`) — ledger counts break on machines with real `~/.dema/node0/` artifacts.
-2. `key-store signing path blocks when the store is unavailable` (`tests/preview-receipt-signing.test.js`) — parameter name mismatch; injected loaders ignored.
-
-Fix on branch `slice/node0-evidence-honest-suite-1a` (`934d84e`), not merged to `main`.
+None on `main` as of `b233539` (merge of `slice/node0-evidence-honest-suite-1a`): full suite green on machines with real `~/.dema/node0/` artifacts. Historical pre-merge failures (`NCG-01`/`NCG-02` ledger counts; preview-receipt-signing loader param mismatch) are resolved by that merge — if you see either on an older checkout, update to >= `b233539` instead of patching locally.
 
 ## Ladder
 
