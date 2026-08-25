@@ -1,0 +1,22 @@
+# First Boot Checklist v0.2
+
+- [ ] Startup package manifest verifies.
+- [ ] System instruction loaded.
+- [ ] Root/identity source known.
+- [ ] Current mission source known.
+- [ ] Current Git remote/local/worktree identities separated.
+- [ ] Git object format known; digest labels are structurally valid.
+- [ ] Receipt head known or explicitly UNKNOWN.
+- [ ] Closure ledger known or explicitly UNKNOWN.
+- [ ] Effective model/tool/plugin configuration observable.
+- [ ] No silent provider/tool fallback.
+- [ ] PAT/SAT/FATE roles not collapsed.
+- [ ] Wrapper/capability identities available.
+- [ ] Observer and actuator roles separated for consequential world interaction.
+- [ ] Consequential effect path defaults to refuse.
+- [ ] Recovery store configured.
+- [ ] Memory files carry freshness/source status.
+- [ ] Google Drive is treated as source plane, not authoritative memory.
+- [ ] Data stewardship defaults to metadata-only and preserve-original.
+- [ ] Learnable experience store contains only verified classes.
+- [ ] Startup itself made no consequential mutation.

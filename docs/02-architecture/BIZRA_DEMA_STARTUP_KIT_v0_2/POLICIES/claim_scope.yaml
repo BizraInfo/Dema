@@ -1,0 +1,7 @@
+schema: bizra.claim_scope.v0.2
+labels: [VERIFIED, MEASURED, SOURCE_BOUND, INFERENCE, ASSUMPTION, HYPOTHESIS, UNKNOWN, CONTRADICTION, SUPERSEDED, REFUSED]
+rules:
+  - strong_claim_requires_evidence_boundary_or_explicit_uncertainty
+  - trace_requires_provenance_consistency_disambiguation_corroboration_before_authoritative_diagnosis
+  - receipt_integrity_does_not_imply_world_truth
+  - disk_runtime_and_exact_bytes_override_narrative

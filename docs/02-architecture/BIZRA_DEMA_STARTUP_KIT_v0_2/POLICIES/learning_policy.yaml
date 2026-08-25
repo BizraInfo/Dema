@@ -1,0 +1,10 @@
+schema: bizra.learning.policy.v0.2
+learnable: [VERIFIED_POSITIVE, VERIFIED_REFUSAL, VERIFIED_NEUTRAL]
+preserve_but_exclude: [UNKNOWN, DISPUTED, CONTRADICTED, UNAUTHORIZED]
+reward_externality: learner_may_not_unilaterally_mark_own_experience_reward_eligible
+ordinary_rsi_forbidden: [root_canon, human_sovereignty, genesis_root_identity, fate_semantics, consent_law]
+constitutional_change_requires:
+  - explicit_high_authority
+  - independent_verification
+  - adversarial_controls
+  - rollback_or_fork_semantics

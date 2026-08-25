@@ -1,0 +1,12 @@
+schema: bizra.memory.record.v0.2
+record_id: ""
+memory_class: semantic  # identity|mission|authority|proof|episodic|semantic|procedural|open_loop|decision|golden_set
+truth_status: UNKNOWN
+statement: ""
+source_refs: []
+verified_at: null
+verification_path: ""
+contradictions: []
+supersedes: []
+superseded_by: []
+authority_effect: NONE

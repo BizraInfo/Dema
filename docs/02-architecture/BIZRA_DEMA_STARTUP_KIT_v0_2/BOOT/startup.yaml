@@ -1,0 +1,25 @@
+schema: bizra.dema.startup.v0.2
+system_instruction: ../SYSTEM_INSTRUCTION.md
+knowledge_index: ../KNOWLEDGE/INDEX.yaml
+memory_index: ../MEMORY/MEMORY_INDEX.yaml
+current_state: ../CURRENT_STATE.md
+roadmap: ../ROADMAP_NODE0_CLOSE.md
+local_agent_runbook: ../LOCAL_AGENT_RUNBOOK.md
+dod: ../DOD/NODE0_DOD.md
+load_order:
+  - manifest
+  - system_instruction
+  - always_load_knowledge
+  - memory_index
+  - root_and_current_mission_state
+  - git_runtime_disk_reconciliation
+  - effective_runtime_configuration
+  - receipt_head_and_closure_ledger
+  - current_state_reconciliation
+  - mission_relevant_knowledge
+startup_effect_permission: NONE
+on_contradiction: BLOCK_AND_REPORT
+on_stale_memory: MARK_STALE_AND_REDERIVE
+on_missing_authority: CONTINUE_READ_ONLY_OR_REFUSE_EFFECT
+on_plugin_unknown: DO_NOT_MOUNT_AS_AUTHORIZED
+on_data_mutation_without_exact_go: PREVIEW_ONLY

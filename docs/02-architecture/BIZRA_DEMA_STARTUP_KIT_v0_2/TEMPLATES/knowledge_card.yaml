@@ -1,0 +1,13 @@
+schema: bizra.knowledge.card.v0.2
+card_id: ""
+kind: claim  # claim|decision|invariant|procedure|failure|benchmark|receipt_ref|question|gem
+statement: ""
+truth_status: SOURCE_BOUND
+source_refs: []
+source_spans: []
+provenance_parents: []
+currentness: UNKNOWN
+mission_relevance: []
+contradictions: []
+supersedes: []
+verification_path: ""
