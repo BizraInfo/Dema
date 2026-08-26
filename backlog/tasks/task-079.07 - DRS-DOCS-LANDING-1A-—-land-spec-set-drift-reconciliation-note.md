@@ -1,9 +1,10 @@
 ---
 id: TASK-079.07
 title: DRS-DOCS-LANDING-1A — land spec set + drift reconciliation note
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-08-25 08:28'
+updated_date: '2026-08-26 01:49'
 labels:
   - realm-shell
   - docs

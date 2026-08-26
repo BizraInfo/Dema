@@ -1,9 +1,10 @@
 ---
 id: TASK-079.04
 title: DRS-SERVICE-WORKSPACE-0A — /data/bizra/realm-shell Rust workspace skeleton
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-25 08:28'
+updated_date: '2026-08-26 00:44'
 labels:
   - realm-shell
   - rust

@@ -1,9 +1,10 @@
 ---
 id: TASK-079.06
 title: DRS-QUALIFICATION-PACKAGE-1A — package descriptor + verifier + A1-A20 campaign
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-25 08:28'
+updated_date: '2026-08-26 01:36'
 labels:
   - realm-shell
   - qualification

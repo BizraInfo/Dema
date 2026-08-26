@@ -1,9 +1,10 @@
 ---
 id: TASK-079.05
 title: DRS-HOST-CONFORMANCE-1A — Omarchy binding spike O01-O10
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-25 08:28'
+updated_date: '2026-08-26 01:03'
 labels:
   - realm-shell
   - host-binding
