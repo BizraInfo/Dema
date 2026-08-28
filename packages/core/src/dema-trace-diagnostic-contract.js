@@ -28,6 +28,8 @@ import { buildPreviewBoundary } from "./preview-boundary.js";
 
 export const DEMA_TRACE_DIAGNOSTIC_CONTRACT_SCHEMA =
   "bizra.dema.trace_diagnostic_contract.v0.1";
+export const DEMA_TRACE_DIAGNOSTIC_CONTRACT_V2_SCHEMA =
+  "bizra.dema.trace_diagnostic_contract.v0.2";
 export const DEMA_TRACE_DIAGNOSTIC_CONTRACT_TRUTH_LABEL =
   "DEMA_TRACE_DIAGNOSTIC_CONTRACT_PREVIEW_ONLY";
 export const DEMA_TRACE_DIAGNOSTIC_CONTRACT_GO_PHRASE =
@@ -181,6 +183,76 @@ function evaluateDisambiguation(hypothesis_graph) {
   return { ok: blocked.length === 0, blocked_by: Object.freeze(blocked) };
 }
 
+function evaluateDisambiguationV2(trace_set, hypothesis_graph) {
+  const blocked = [];
+  if (!Array.isArray(hypothesis_graph) || hypothesis_graph.length === 0) {
+    blocked.push("v2_disambiguation_no_hypothesis_graph");
+    return { ok: false, blocked_by: Object.freeze(blocked) };
+  }
+  if (hypothesis_graph.length < 2) {
+    blocked.push("v2_disambiguation_requires_at_least_two_hypotheses");
+  }
+
+  const traceById = new Map(
+    (Array.isArray(trace_set) ? trace_set : [])
+      .filter(isPlainObject)
+      .map((trace) => [textVal(trace.trace_id), trace]),
+  );
+  const admissibleTraceIds = new Set(
+    [...traceById.entries()]
+      .filter(([traceId, trace]) => traceId && trace.completeness !== "PARTIAL")
+      .map(([traceId]) => traceId),
+  );
+  const evidenceBearingHypotheses = new Set();
+  const explainedByTrace = new Map();
+
+  for (let i = 0; i < hypothesis_graph.length; i++) {
+    const hypothesis = hypothesis_graph[i];
+    if (!isPlainObject(hypothesis)) {
+      blocked.push(`v2_disambiguation_hypothesis_${i}_malformed`);
+      continue;
+    }
+    const hypothesisId = textVal(hypothesis.hypothesis_id).trim();
+    if (!hypothesisId) blocked.push(`v2_disambiguation_hypothesis_${i}_id_missing`);
+    if (!Array.isArray(hypothesis.explains_traces)) {
+      blocked.push(`v2_disambiguation_hypothesis_${i}_explains_missing`);
+      continue;
+    }
+
+    const admissibleExplains = new Set();
+    for (const traceId of hypothesis.explains_traces) {
+      const trace = traceById.get(traceId);
+      if (trace?.completeness === "PARTIAL") {
+        blocked.push(`v2_disambiguation_partial_trace_ref:${traceId}`);
+        continue;
+      }
+      if (!admissibleTraceIds.has(traceId)) continue;
+      admissibleExplains.add(traceId);
+    }
+    if (admissibleExplains.size === 0) {
+      if (!blocked.includes("v2_disambiguation_hypothesis_without_evidence")) {
+        blocked.push("v2_disambiguation_hypothesis_without_evidence");
+      }
+      continue;
+    }
+    if (!hypothesisId) continue;
+    evidenceBearingHypotheses.add(hypothesisId);
+    for (const traceId of admissibleExplains) {
+      if (!explainedByTrace.has(traceId)) explainedByTrace.set(traceId, new Set());
+      explainedByTrace.get(traceId).add(hypothesisId);
+    }
+  }
+
+  if (evidenceBearingHypotheses.size < 2) {
+    blocked.push("v2_disambiguation_requires_two_evidence_bearing_hypotheses");
+  }
+  if (![...explainedByTrace.values()].some((hypothesisIds) => hypothesisIds.size >= 2)) {
+    blocked.push("v2_disambiguation_no_competing_evidence");
+  }
+
+  return { ok: blocked.length === 0, blocked_by: Object.freeze(blocked) };
+}
+
 function evaluateCorroboration(verification) {
   const blocked = [];
   if (!isPlainObject(verification)) {
@@ -195,6 +267,133 @@ function evaluateCorroboration(verification) {
 }
 
 function derivePromotionStatus(rails) {
+  if (!rails.provenance.ok) return "BLOCKED";
+  if (rails.consistency.ok && rails.disambiguation.ok && rails.corroboration.ok) return "INSIGHT_AUTHORIZED";
+  return "REMAIN_TRACE";
+}
+
+// --- v0.2 rail evaluators -------------------------------------------------
+// v0.2 adds: subject binding, insight claim/evidence_ref integrity,
+// PARTIAL-completeness promotion restriction, and evidence-orphan detection.
+
+function evaluateConsistencyV2(trace_set, hypothesis_graph, insight_candidate) {
+  const blocked = [];
+  // Inherit v0.1 provenance check (trace_set must exist)
+  if (!Array.isArray(trace_set) || trace_set.length === 0) {
+    return { ok: false, blocked_by: Object.freeze(["v2_provenance_trace_set_empty"]) };
+  }
+  const traceIds = new Set(trace_set.map((t) => textVal(t?.trace_id)));
+
+  // v0.2: insight_candidate must have non-empty claim
+  const claim = textVal(insight_candidate?.claim).trim();
+  if (!claim) blocked.push("v2_insight_claim_empty");
+
+  // v0.2: insight_candidate must have non-empty evidence_refs
+  const evidenceRefs = Array.isArray(insight_candidate?.evidence_refs)
+    ? insight_candidate.evidence_refs
+    : [];
+  if (evidenceRefs.length === 0) blocked.push("v2_evidence_refs_empty");
+
+  // v0.2: every evidence_ref must resolve to an existing trace_id
+  for (const ref of evidenceRefs) {
+    if (!traceIds.has(ref)) {
+      blocked.push(`v2_unknown_evidence_ref:${ref}`);
+    }
+  }
+
+  // v0.2: every evidence_ref must be covered by at least one hypothesis
+  // explains_traces edge
+  const coveredTraces = new Set();
+  if (Array.isArray(hypothesis_graph)) {
+    for (const h of hypothesis_graph) {
+      if (Array.isArray(h?.explains_traces)) {
+        for (const t of h.explains_traces) coveredTraces.add(t);
+      }
+    }
+  }
+  for (const ref of evidenceRefs) {
+    if (traceIds.has(ref) && !coveredTraces.has(ref)) {
+      blocked.push(`v2_orphan_evidence_ref:${ref}`);
+    }
+  }
+
+  // v0.2: if ANY cited trace has completeness PARTIAL, promotion must
+  // remain REMAIN_TRACE (partial evidence cannot authorize insight)
+  for (const ref of evidenceRefs) {
+    const trace = trace_set.find((t) => textVal(t?.trace_id) === ref);
+    if (trace && trace.completeness === "PARTIAL") {
+      blocked.push(`v2_partial_evidence_cited:${ref}`);
+    }
+  }
+
+  // v0.2: hypothesis graph referential integrity (inherited from v0.1)
+  if (!Array.isArray(hypothesis_graph)) {
+    blocked.push("v2_hypothesis_graph_missing");
+  } else {
+    for (let i = 0; i < hypothesis_graph.length; i++) {
+      const h = hypothesis_graph[i];
+      if (!isPlainObject(h)) {
+        blocked.push(`v2_hypothesis_${i}_malformed`);
+        continue;
+      }
+      if (!textVal(h.hypothesis_id).trim())
+        blocked.push(`v2_hypothesis_${i}_id_missing`);
+      if (!Array.isArray(h.explains_traces))
+        blocked.push(`v2_hypothesis_${i}_explains_traces_not_array`);
+      else {
+        for (const ref of h.explains_traces) {
+          if (!traceIds.has(ref)) {
+            blocked.push(`v2_unknown_trace_ref:${ref}`);
+            break;
+          }
+        }
+      }
+    }
+    const hypIds = hypothesis_graph.map((h) => textVal(h?.hypothesis_id));
+    if (new Set(hypIds).size !== hypIds.length) blocked.push("v2_duplicate_hypothesis_id");
+  }
+
+  return { ok: blocked.length === 0, blocked_by: Object.freeze(blocked) };
+}
+
+export function computeTraceDiagnosticReplaySubjectHashV2(
+  trace_set,
+  hypothesis_graph,
+  insight_candidate,
+) {
+  const payload = stableStringify({ trace_set, hypothesis_graph, insight_candidate });
+  return sha256Hex(payload);
+}
+
+function evaluateCorroborationV2(verification, trace_set, hypothesis_graph, insight_candidate) {
+  const blocked = [];
+  if (!isPlainObject(verification)) {
+    blocked.push("v2_corroboration_verification_missing");
+    return { ok: false, blocked_by: Object.freeze(blocked) };
+  }
+  if (verification.replay_performed !== true) blocked.push("v2_corroboration_replay_not_performed");
+  const h = textVal(verification.independent_replay_hash).trim();
+  if (!HEX64_RE.test(h)) blocked.push("v2_corroboration_replay_hash_invalid");
+  if (verification.independent !== true) blocked.push("v2_corroboration_not_independent");
+
+  // v0.2: replay_subject_hash must equal canonical SHA-256 of
+  // trace_set + hypothesis_graph + insight_candidate
+  const expectedSubjectHash = computeTraceDiagnosticReplaySubjectHashV2(
+    trace_set,
+    hypothesis_graph,
+    insight_candidate,
+  );
+  const actualSubjectHash = textVal(verification.replay_subject_hash).trim();
+  if (!actualSubjectHash) {
+    blocked.push("v2_replay_subject_hash_missing");
+  } else if (actualSubjectHash !== expectedSubjectHash) {
+    blocked.push("v2_replay_subject_hash_mismatch");
+  }
+
+  return { ok: blocked.length === 0, blocked_by: Object.freeze(blocked) };
+}
+
+function derivePromotionStatusV2(rails) {
   if (!rails.provenance.ok) return "BLOCKED";
   if (rails.consistency.ok && rails.disambiguation.ok && rails.corroboration.ok) return "INSIGHT_AUTHORIZED";
   return "REMAIN_TRACE";
@@ -339,6 +538,169 @@ export function runTraceDiagnosticContractGate({ input = defaultTraceDiagnosticF
   return deepFreeze({
     ok: verified.ok && built.promotion_status === "INSIGHT_AUTHORIZED",
     schema: DEMA_TRACE_DIAGNOSTIC_CONTRACT_SCHEMA,
+    truth_label: DEMA_TRACE_DIAGNOSTIC_CONTRACT_TRUTH_LABEL,
+    promotion_status: built.promotion_status,
+    rails: built.rails,
+    blocked_by: built.blocked_by,
+    diagnostic_hash: built.diagnostic_hash,
+    verified,
+    report: built,
+  });
+}
+
+// --- v0.2: versioned builder / verifier / fixture -------------------------
+
+export function buildTraceDiagnosticContractV2(input = {}) {
+  const normalized = normalizeInput(input);
+  const prov = evaluateProvenance(normalized.trace_set);
+  const cons = evaluateConsistencyV2(
+    normalized.trace_set,
+    normalized.hypothesis_graph,
+    normalized.insight_candidate,
+  );
+  const dis = evaluateDisambiguationV2(normalized.trace_set, normalized.hypothesis_graph);
+  const corr = evaluateCorroborationV2(
+    normalized.verification,
+    normalized.trace_set,
+    normalized.hypothesis_graph,
+    normalized.insight_candidate,
+  );
+
+  const rails = deepFreeze({
+    provenance: Object.freeze({ ok: prov.ok, blocked_by: prov.blocked_by }),
+    consistency: Object.freeze({ ok: cons.ok, blocked_by: cons.blocked_by }),
+    disambiguation: Object.freeze({ ok: dis.ok, blocked_by: dis.blocked_by }),
+    corroboration: Object.freeze({ ok: corr.ok, blocked_by: corr.blocked_by }),
+  });
+
+  const promotion_status = derivePromotionStatusV2(rails);
+  const blocked_by = deepFreeze([
+    ...(!prov.ok ? prov.blocked_by : []),
+    ...(!cons.ok ? cons.blocked_by : []),
+    ...(!dis.ok ? dis.blocked_by : []),
+    ...(!corr.ok ? corr.blocked_by : []),
+  ]);
+
+  const body = {
+    schema: DEMA_TRACE_DIAGNOSTIC_CONTRACT_V2_SCHEMA,
+    truth_label: DEMA_TRACE_DIAGNOSTIC_CONTRACT_TRUTH_LABEL,
+    stage: DEMA_TRACE_DIAGNOSTIC_CONTRACT_STAGE,
+    version: "0.2",
+    trace_set: normalized.trace_set,
+    hypothesis_graph: normalized.hypothesis_graph,
+    insight_candidate: normalized.insight_candidate,
+    verification: normalized.verification,
+    rails,
+    promotion_status,
+    blocked_by,
+    boundary: buildPreviewBoundary(),
+  };
+
+  return deepFreeze({ ...body, diagnostic_hash: diagnosticHash(body) });
+}
+
+export function verifyTraceDiagnosticContractV2(report) {
+  const blocked_by = [];
+  if (!report || report.schema !== DEMA_TRACE_DIAGNOSTIC_CONTRACT_V2_SCHEMA) {
+    return deepFreeze({ ok: false, blocked_by: Object.freeze(["v2_invalid_schema"]), verification_mode: "semantic_rederivation" });
+  }
+  if (report.truth_label !== DEMA_TRACE_DIAGNOSTIC_CONTRACT_TRUTH_LABEL) blocked_by.push("v2_invalid_truth_label");
+  if (report.stage !== DEMA_TRACE_DIAGNOSTIC_CONTRACT_STAGE) blocked_by.push("v2_invalid_stage");
+  if (!PROMOTION_STATUSES.includes(report.promotion_status)) blocked_by.push("v2_invalid_promotion_status");
+  if (!report.boundary || typeof report.boundary !== "object") blocked_by.push("v2_boundary_missing");
+  else {
+    for (const [k, v] of Object.entries(report.boundary)) {
+      if (v !== false) blocked_by.push(`v2_boundary_not_false:${k}`);
+    }
+  }
+  // hash must be internal-consistent
+  const { diagnostic_hash: _omit, ...hashBody } = report;
+  if (report.diagnostic_hash !== diagnosticHash(hashBody)) blocked_by.push("v2_diagnostic_hash_mismatch");
+
+  // semantic rederivation
+  const hasInputs =
+    Array.isArray(report.trace_set) &&
+    Array.isArray(report.hypothesis_graph) &&
+    report.verification &&
+    typeof report.verification === "object" &&
+    report.insight_candidate &&
+    typeof report.insight_candidate === "object";
+  if (!hasInputs) {
+    blocked_by.push("v2_inputs_missing_for_rederivation");
+  } else {
+    const rederived = buildTraceDiagnosticContractV2({
+      trace_set: report.trace_set,
+      hypothesis_graph: report.hypothesis_graph,
+      insight_candidate: report.insight_candidate,
+      verification: report.verification,
+    });
+    if (rederived.diagnostic_hash !== report.diagnostic_hash) blocked_by.push("v2_semantic_rederivation_mismatch");
+    if (rederived.promotion_status !== report.promotion_status) blocked_by.push("v2_promotion_status_mismatch");
+    if (JSON.stringify(rederived.rails) !== JSON.stringify(report.rails)) blocked_by.push("v2_rails_mismatch");
+    if (JSON.stringify(rederived.blocked_by) !== JSON.stringify(report.blocked_by)) blocked_by.push("v2_blocked_by_mismatch");
+  }
+
+  return deepFreeze({
+    ok: blocked_by.length === 0,
+    blocked_by: Object.freeze([...blocked_by]),
+    verification_mode: "semantic_rederivation",
+  });
+}
+
+export function defaultTraceDiagnosticFixtureV2() {
+  const trace_set = [
+    {
+      trace_id: "trace.code_static_001",
+      scope: "code::packages/core/src/dema-trace-diagnostic-contract.js",
+      completeness: "SCOPED",
+      correlation_limit: "static-code only; no runtime, no production",
+      source_ref: "packages/core/src/dema-trace-diagnostic-contract.js",
+      source_sha256: "a".repeat(64),
+      observed_at: "2026-08-26T00:00:00.000Z",
+    },
+    {
+      trace_id: "trace.runtime_harness_001",
+      scope: "runtime::npm test",
+      completeness: "COMPLETE",
+      correlation_limit: "local harness only; single host",
+      source_ref: "scripts/check.mjs",
+      source_sha256: "b".repeat(64),
+      observed_at: "2026-08-26T00:00:00.000Z",
+    },
+  ];
+  const hypothesis_graph = [
+    {
+      hypothesis_id: "H1_inward_defect",
+      explains_traces: ["trace.code_static_001", "trace.runtime_harness_001"],
+    },
+    { hypothesis_id: "H2_outward_env", explains_traces: ["trace.runtime_harness_001"] },
+  ];
+  const insight_candidate = { claim: "promotion requires 4 rails plus subject binding", evidence_refs: ["trace.code_static_001", "trace.runtime_harness_001"] };
+  const subjectHash = computeTraceDiagnosticReplaySubjectHashV2(
+    trace_set,
+    hypothesis_graph,
+    insight_candidate,
+  );
+  const verification = {
+    replay_performed: true,
+    independent: true,
+    independent_replay_hash: "c".repeat(64),
+    replay_subject_hash: subjectHash,
+  };
+  return deepFreeze({
+    trace_set: Object.freeze(trace_set.map(deepFreeze)),
+    hypothesis_graph: Object.freeze(hypothesis_graph.map(deepFreeze)),
+    insight_candidate: deepFreeze(insight_candidate),
+    verification: deepFreeze(verification),
+  });
+}
+
+export function runTraceDiagnosticContractGateV2({ input = defaultTraceDiagnosticFixtureV2(), report } = {}) {
+  const built = report ?? buildTraceDiagnosticContractV2(input);
+  const verified = verifyTraceDiagnosticContractV2(built);
+  return deepFreeze({
+    ok: verified.ok && built.promotion_status === "INSIGHT_AUTHORIZED",
+    schema: DEMA_TRACE_DIAGNOSTIC_CONTRACT_V2_SCHEMA,
     truth_label: DEMA_TRACE_DIAGNOSTIC_CONTRACT_TRUTH_LABEL,
     promotion_status: built.promotion_status,
     rails: built.rails,

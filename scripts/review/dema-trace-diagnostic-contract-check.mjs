@@ -7,9 +7,13 @@ import { pathToFileURL } from "node:url";
 import {
   runTraceDiagnosticContractGate,
   DEMA_TRACE_DIAGNOSTIC_CONTRACT_SCHEMA,
+  DEMA_TRACE_DIAGNOSTIC_CONTRACT_V2_SCHEMA,
   DEMA_TRACE_DIAGNOSTIC_CONTRACT_TRUTH_LABEL,
   buildTraceDiagnosticContract,
   verifyTraceDiagnosticContract,
+  defaultTraceDiagnosticFixtureV2,
+  buildTraceDiagnosticContractV2,
+  verifyTraceDiagnosticContractV2,
 } from "../../packages/core/src/dema-trace-diagnostic-contract.js";
 
 const JSON_MODE = process.argv.includes("--json");
@@ -49,6 +53,37 @@ export function runDemaTraceDiagnosticContractCheck() {
   const v = verifyTraceDiagnosticContract(forged);
   if (v.ok) {
     return { ok: false, blocked_by: ["tamper_probe_should_fail"], verified: v };
+  }
+
+  // ─── v0.2: adversarial evidence-laundering probe ──────────────────────
+  // Attack: build a valid v0.2 report, then evict hypothesis coverage
+  // for one cited evidence_ref. The re-derivation must detect the orphan
+  // and refuse AUTHORIZED status.
+  const v2input = defaultTraceDiagnosticFixtureV2();
+  const v2built = buildTraceDiagnosticContractV2(v2input);
+  if (v2built.promotion_status !== "INSIGHT_AUTHORIZED") {
+    return { ok: false, blocked_by: ["v2_happy_path_not_authorized"], report: v2built };
+  }
+  // Evict: remove H2 so trace.runtime_harness_001 becomes orphan
+  const attacked = {
+    ...v2built,
+    hypothesis_graph: [
+      { hypothesis_id: "H1_inward_defect", explains_traces: ["trace.code_static_001"] },
+    ],
+  };
+  const v2rederived = buildTraceDiagnosticContractV2({
+    trace_set: attacked.trace_set,
+    hypothesis_graph: attacked.hypothesis_graph,
+    insight_candidate: attacked.insight_candidate,
+    verification: attacked.verification,
+  });
+  if (v2rederived.promotion_status === "INSIGHT_AUTHORIZED") {
+    return { ok: false, blocked_by: ["v2_evidence_laundering_probe_failed"], report: v2rederived };
+  }
+  // Verify the rederived report is still well-formed
+  const v2verify = verifyTraceDiagnosticContractV2(v2rederived);
+  if (!v2verify.ok) {
+    return { ok: false, blocked_by: ["v2_rederived_report_invalid"], verified: v2verify };
   }
 
   return happy;

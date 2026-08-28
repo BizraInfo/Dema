@@ -106,7 +106,7 @@ export function buildSseStream({ streamId, frames } = {}) {
 
 // ── stream verification (fail-closed, order matters only for diagnostics) ───
 
-function verifyOneEventEnvelope(ev, expectedSeq, prevHash, blocked, label) {
+export function verifyOneEventEnvelope(ev, expectedSeq, prevHash, blocked, label) {
   if (!isPlainObject(ev)) { blocked.push(`${label}:event_not_object`); return null; }
   const { event_hash, ...body } = ev;
   if (typeof event_hash !== "string" || !/^sha256:[0-9a-f]{64}$/.test(event_hash)) {

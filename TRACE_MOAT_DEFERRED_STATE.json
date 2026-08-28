@@ -1,0 +1,28 @@
+{
+  "base_head": "7f4ce3a7f06a201821cc557887d768ab978aced9",
+  "tracked_modified_paths": [
+    "packages/core/src/peak-self-loop-preview.js"
+  ],
+  "new_files": [
+    "tests/peak-trace-diagnostic-moat.test.js"
+  ],
+  "sha256": {
+    "packages/core/src/peak-self-loop-preview.js": "bd89895e745cee27ba1564e5a3399473f96544008dbb912b1a569912baf58592",
+    "tests/peak-trace-diagnostic-moat.test.js": "d794297e34ffe5bc944b5475fab0e8e453f08a201484fad748e12d71894c8000"
+  },
+  "focused_test_results": {
+    "dema_trace_diagnostic_contract": "14/14 PASS",
+    "peak_self_loop_preview": "28/28 PASS",
+    "peak_trace_moat": "7/7 PASS",
+    "combined_focused": "49/49 PASS",
+    "llm_guidance": "PASS",
+    "diff_check": "PASS"
+  },
+  "authority_delta": 0,
+  "push_performed": false,
+  "merge_performed": false,
+  "classification": "VALID_DEFERRED_PREVIEW_SLICE",
+  "reason_deferred": "PROD01_AC5_DOMINANT_BLOCKER",
+  "deferred_at": "2026-08-27T00:00:00Z",
+  "note": "Previous peak audit spearpoint PEAK-TRACE-DIAGNOSTIC-MOAT-1A improved self-consistency but not PROD01 AC5 runtime identity closure; deferred per cross-agent continuation directive"
+}

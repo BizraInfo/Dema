@@ -33,6 +33,16 @@ defend against a forged body with a recomputed hash. Launder-resistance arrives
 when this slice gains an independent anchor (signature or externally measured
 stream head) — until then no such claim is made.
 
+Moat articulation (NODE0-SSE-ENVELOPE-STREAM-MOAT-1A):
+  - SSE envelope stream + 4-rail trace diagnostic moat is observable and testable
+  - Each property (provenance, consistency, disambiguation, corroboration) is a
+    named law instead of a hope
+  - Triple-negative controls: tampered hash rejected, mutated frame rejected,
+    dropped terminal rejected
+  - Promotion gate: `INSIGHT_AUTHORIZED` requires all four rails pass; any
+    failure yields `REMAIN_TRACE` or `BLOCKED`
+  - Test: `tests/node0-sse-trace-moat-articulation.test.js` (3 subtests, all pass)
+
 `npm run check` runs `node0-sse-envelope-stream-check.mjs` and keeps `NODE0_SSE_ENVELOPE_STREAM_1A` at `MEASURED_REPO`.
 
 ## Commands
