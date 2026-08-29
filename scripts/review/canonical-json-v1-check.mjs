@@ -207,6 +207,11 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/core/src/drs-presence-reducer.js",
   "packages/core/src/drs-fixture-publisher.js",
   "packages/core/src/node0-fate-staged-effect.js",
+  // NODE0-GENESIS-CLOSURE-LEASE-1A — PAT proposals and the Dema client
+  // checkpoint cross process and restart boundaries, so proposal/request
+  // identities must be reproducible from the same bytes.
+  "packages/core/src/mission-runtime-0b.js",
+  "scripts/node0-genesis-closure.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
