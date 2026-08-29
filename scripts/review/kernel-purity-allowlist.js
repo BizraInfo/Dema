@@ -33,8 +33,6 @@ export const NONCORE_IO_TIER_ALLOWLIST = Object.freeze({
     "execFileAsync(\"ss\",[\"-tln\"],{timeout:1500}) — fixed argv, no shell, no user interpolation, opt-out DEMA_MODELS_SKIP_TCP=1; only reads local TCP listener table for localhost-binding detection; failures caught; no remote command, no egress.",
   "packages/node-adapter/src/gateway-http-adapter.js":
     "fetch() is GET-only, hard-gated to localhost via isLocalGatewayUrl (refuses non-http/non-localhost), 5s AbortController, 4 fixed read-only endpoints (/health,/chain,/poi/summary,/resources/list); no remote egress.",
-  "packages/node-adapter/src/gateway-server.js":
-    "node:http createServer + node:fs appendFileSync/readFileSync for the local Node0 gateway on 127.0.0.1:7421; loopback-only, consent-gated POST /mission/run, JSONL chain persistence, stdlib only; no network/child_process/fetch. Local-only conductor.",
   "packages/receipts/src/authorship-sign-command.js":
     "readFile(artifactPath) of operator-supplied artifact + atomic writeFile to $DEMA_HOME/receipts via wx+rename; no network.",
   "packages/receipts/src/route-receipt-save.js":

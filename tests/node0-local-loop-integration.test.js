@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { createGatewayServer } from "../packages/node-adapter/src/gateway-server.js";
+import { createGatewayServer } from "../scripts/gateway-server.mjs";
 import { fetchGatewayState, composeNode0StatusFromGateway } from "../packages/node-adapter/src/gateway-http-adapter.js";
 
 const CONSENT = "GO: Node0 bounded diagnostic activation only";
