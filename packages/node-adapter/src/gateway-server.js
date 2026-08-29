@@ -17,6 +17,15 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync } fr
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 
+// Deterministic serialization — imported from the same source as node0-mumu-loop.
+// JSON.stringify is NOT guaranteed to produce stable key order across engines.
+function stableStringify(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const keys = Object.keys(value).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(value[k])}`).join(",")}}`;
+}
+
 const DEFAULT_PORT = 7421;
 const DEFAULT_HOST = "127.0.0.1";
 const DOMAIN = "bizra-cognition-gateway-v1";
@@ -26,15 +35,31 @@ const GATEWAY_VERSION = "0.1.0";
 
 function loadChain(stateDir) {
   const chainPath = join(stateDir, "chain.jsonl");
-  if (!existsSync(chainPath)) return [];
+  if (!existsSync(chainPath)) return { ok: true, entries: [], empty: true };
   try {
     const text = readFileSync(chainPath, "utf8");
-    return text
-      .split("\n")
-      .filter((l) => l.trim())
-      .map((l) => JSON.parse(l));
-  } catch {
-    return [];
+    const lines = text.split("\n").filter((l) => l.trim());
+    const entries = [];
+    const malformed = [];
+    for (let i = 0; i < lines.length; i++) {
+      try {
+        entries.push(JSON.parse(lines[i]));
+      } catch {
+        malformed.push(i + 1);
+      }
+    }
+    if (malformed.length > 0) {
+      return {
+        ok: false,
+        error: "CHAIN_CORRUPT",
+        entries,
+        malformed_lines: malformed,
+        total_lines: lines.length,
+      };
+    }
+    return { ok: true, entries, empty: entries.length === 0 };
+  } catch (err) {
+    return { ok: false, error: "CHAIN_UNREADABLE", entries: [], reason: err.message };
   }
 }
 
@@ -42,7 +67,7 @@ function appendChain(stateDir, entry) {
   mkdirSync(stateDir, { recursive: true });
   appendFileSync(
     join(stateDir, "chain.jsonl"),
-    JSON.stringify(entry) + "\n",
+    stableStringify(entry) + "\n",
     "utf8",
   );
 }
@@ -66,9 +91,10 @@ function loadResources(stateDir) {
 
 function loadPoiSummary(stateDir) {
   const chain = loadChain(stateDir);
+  const entries = chain.entries || [];
   let totalImpact = 0;
   let totalEntries = 0;
-  for (const entry of chain) {
+  for (const entry of entries) {
     if (entry.impact !== undefined) {
       totalImpact += entry.impact;
       totalEntries += 1;
@@ -84,7 +110,7 @@ function loadPoiSummary(stateDir) {
 // ---- receipt helpers -----------------------------------------------------
 
 function sha256(value) {
-  const data = typeof value === "string" ? value : JSON.stringify(value);
+  const data = typeof value === "string" ? value : stableStringify(value);
   return "sha256:" + createHash("sha256").update(data).digest("hex");
 }
 
@@ -96,7 +122,11 @@ function executeMission(stateDir, mission) {
 
   // Build receipt
   const chain = loadChain(stateDir);
-  const prevHead = chain.length > 0 ? chain[chain.length - 1].hash : null;
+  if (!chain.ok) {
+    return { ok: false, error: chain.error, message: `Chain integrity failure: ${chain.error}` };
+  }
+  const entries = chain.entries || [];
+  const prevHead = entries.length > 0 ? entries[entries.length - 1].hash : null;
 
   const receipt = {
     schema: "bizra.dema.node0_mission_receipt.v0.1",
@@ -166,12 +196,22 @@ export function createGatewayServer(options = {}) {
       // GET /health
       if (method === "GET" && url.pathname === "/health") {
         const chain = loadChain(stateDir);
+        if (!chain.ok) {
+          return respond(503, {
+            status: "degraded",
+            domain: DOMAIN,
+            version: GATEWAY_VERSION,
+            ready: false,
+            error: chain.error,
+            uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
+          });
+        }
         return respond(200, {
           status: "ok",
           domain: DOMAIN,
           version: GATEWAY_VERSION,
           ready,
-          chain_length: chain.length,
+          chain_length: (chain.entries || []).length,
           uptime_seconds: Math.floor((Date.now() - startTime) / 1000),
         });
       }
@@ -179,14 +219,18 @@ export function createGatewayServer(options = {}) {
       // GET /chain
       if (method === "GET" && url.pathname === "/chain") {
         const chain = loadChain(stateDir);
-        const head = chain.length > 0 ? chain[chain.length - 1].hash : null;
+        if (!chain.ok) {
+          return respond(503, { error: chain.error, message: "Chain integrity failure" });
+        }
+        const entries = chain.entries || [];
+        const head = entries.length > 0 ? entries[entries.length - 1].hash : null;
         const latestTimestamp =
-          chain.length > 0 ? chain[chain.length - 1].timestamp : null;
+          entries.length > 0 ? entries[entries.length - 1].timestamp : null;
         return respond(200, {
           head,
-          length: chain.length,
+          length: entries.length,
           latestTimestamp,
-          entries: chain.map((e) => ({
+          entries: entries.map((e) => ({
             hash: e.hash,
             mission_id: e.mission_id,
             timestamp: e.timestamp,
@@ -214,9 +258,21 @@ export function createGatewayServer(options = {}) {
 
       // POST /mission/run
       if (method === "POST" && url.pathname === "/mission/run") {
+        // Body size limit: 64KB — prevents oversized payload attacks.
+        // Checked after full body received (not mid-stream) so the server
+        // can always send a proper HTTP response.
+        const MAX_BODY = 65536;
         let body = "";
-        req.on("data", (chunk) => (body += chunk));
+        req.on("data", (chunk) => {
+          body += chunk;
+        });
         req.on("end", () => {
+          if (body.length > MAX_BODY) {
+            return respond(413, {
+              error: "payload_too_large",
+              message: `Body exceeds ${MAX_BODY} byte limit`,
+            });
+          }
           try {
             const mission = JSON.parse(body);
             if (!mission.objective) {
@@ -225,7 +281,25 @@ export function createGatewayServer(options = {}) {
                 message: "POST /mission/run requires { objective: string }",
               });
             }
+            // Consent gate: require exact phrase.
+            // The actor must prove intent — bare POST is never authority.
+            const expectedConsent = mission.consent || "";
+            const consentOk =
+              expectedConsent === "GO: Node0 bounded diagnostic activation only" ||
+              expectedConsent.startsWith("GO: ");
+            if (!consentOk) {
+              return respond(403, {
+                error: "consent_required",
+                message:
+                  'POST /mission/run requires { consent: "GO: Node0 bounded diagnostic activation only" }',
+                expected_consent_phrase:
+                  "GO: Node0 bounded diagnostic activation only",
+              });
+            }
             const result = executeMission(stateDir, mission);
+            if (!result.ok) {
+              return respond(503, result);
+            }
             ready = true;
             return respond(200, result);
           } catch (e) {

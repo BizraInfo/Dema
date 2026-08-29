@@ -13,11 +13,14 @@ import { tmpdir } from "node:os";
 import { createGatewayServer } from "../packages/node-adapter/src/gateway-server.js";
 import { fetchGatewayState, composeNode0StatusFromGateway } from "../packages/node-adapter/src/gateway-http-adapter.js";
 
+const CONSENT = "GO: Node0 bounded diagnostic activation only";
+
 describe("NODE0-LOCAL-LOOP-INTEGRATION-1A — one node, really functioning", () => {
   let gw;
   let baseUrl;
   let stateDir;
   let missionResult;
+  let savedEnv = {};
 
   before(async () => {
     stateDir = mkdtempSync(join(tmpdir(), "n0-integration-"));
@@ -25,17 +28,24 @@ describe("NODE0-LOCAL-LOOP-INTEGRATION-1A — one node, really functioning", () 
     await gw.start();
     const addr = gw.server.address();
     baseUrl = `http://127.0.0.1:${addr.port}`;
+    // Save originals to restore in after() — never leave env dirty.
+    savedEnv = {
+      DEMA_GATEWAY_URL: process.env.DEMA_GATEWAY_URL,
+      DEMA_NODE0_ADAPTER: process.env.DEMA_NODE0_ADAPTER,
+    };
   });
 
   after(async () => {
     await gw.stop();
     rmSync(stateDir, { recursive: true, force: true });
-    delete process.env.DEMA_GATEWAY_URL;
-    delete process.env.DEMA_NODE0_ADAPTER;
+    // Restore originals (undefined → delete, value → restore).
+    for (const [key, val] of Object.entries(savedEnv)) {
+      if (val === undefined) delete process.env[key];
+      else process.env[key] = val;
+    }
   });
 
   it("gateway-http-adapter can compose Node0 status from gateway", async () => {
-    // Point adapter at our test gateway
     process.env.DEMA_GATEWAY_URL = baseUrl;
     const state = await fetchGatewayState(baseUrl, { timeoutMs: 5000 });
     const status = composeNode0StatusFromGateway(state);
@@ -44,8 +54,8 @@ describe("NODE0-LOCAL-LOOP-INTEGRATION-1A — one node, really functioning", () 
     assert.equal(status.source, "gateway-http-composed");
     assert.equal(status.gateway.reachable, true);
     assert.equal(status.gateway.domain, "bizra-cognition-gateway-v1");
-    assert.equal(status.chain.length, 0); // no mission yet
-    assert.equal(status.ready, false); // no mission yet
+    assert.equal(status.chain.length, 0);
+    assert.equal(status.ready, false);
   });
 
   it("execute one bounded mission — effect_count=1, duplicate_effects=0", async () => {
@@ -55,6 +65,7 @@ describe("NODE0-LOCAL-LOOP-INTEGRATION-1A — one node, really functioning", () 
       body: JSON.stringify({
         objective: "MORNING-DELTA-0A — one bounded local mission",
         effect_class: "READ_ONLY_OBSERVATION",
+        consent: CONSENT,
       }),
     });
     assert.equal(res.ok, true);
@@ -66,7 +77,6 @@ describe("NODE0-LOCAL-LOOP-INTEGRATION-1A — one node, really functioning", () 
     assert.ok(result.receipt_hash.startsWith("sha256:"));
     assert.ok(result.mission_id);
 
-    // Store for later assertions
     missionResult = result;
   });
 
@@ -82,21 +92,17 @@ describe("NODE0-LOCAL-LOOP-INTEGRATION-1A — one node, really functioning", () 
   });
 
   it("gateway survives restart and recovers chain from durable state", async () => {
-    // Stop gateway
     await gw.stop();
 
-    // Restart with same stateDir
     gw = createGatewayServer({ port: 0, stateDir });
     await gw.start();
     const addr = gw.server.address();
     baseUrl = `http://127.0.0.1:${addr.port}`;
 
-    // Chain persisted
     const chain = await fetch(`${baseUrl}/chain`).then((r) => r.json());
     assert.equal(chain.length, 1, "chain survived restart");
     assert.ok(chain.head !== null);
 
-    // Adapter still works
     const state = await fetchGatewayState(baseUrl, { timeoutMs: 5000 });
     const status = composeNode0StatusFromGateway(state);
     assert.equal(status.chain.length, 1);
@@ -110,6 +116,7 @@ describe("NODE0-LOCAL-LOOP-INTEGRATION-1A — one node, really functioning", () 
       body: JSON.stringify({
         objective: "SECOND-MISSION-0A — proving no duplicate",
         effect_class: "READ_ONLY_OBSERVATION",
+        consent: CONSENT,
       }),
     });
     assert.equal(res.ok, true);
@@ -119,16 +126,28 @@ describe("NODE0-LOCAL-LOOP-INTEGRATION-1A — one node, really functioning", () 
     assert.equal(result.effect_count, 1);
     assert.equal(result.duplicate_effects, 0);
 
-    // Chain now has 2 entries
     const chain = await fetch(`${baseUrl}/chain`).then((r) => r.json());
     assert.equal(chain.length, 2);
+  });
+
+  it("mission without consent is rejected (403)", async () => {
+    const res = await fetch(`${baseUrl}/mission/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        objective: "unauthorized attempt",
+        effect_class: "READ_ONLY_OBSERVATION",
+      }),
+    });
+    assert.equal(res.status, 403);
+    const body = await res.json();
+    assert.equal(body.error, "consent_required");
   });
 
   it("POI summary reflects both missions", async () => {
     const res = await fetch(`${baseUrl}/poi/summary`);
     assert.equal(res.ok, true);
     const body = await res.json();
-    // No impact scores assigned yet (read-only observation)
     assert.equal(typeof body.totalEntries, "number");
     assert.equal(typeof body.totalImpact, "number");
   });
