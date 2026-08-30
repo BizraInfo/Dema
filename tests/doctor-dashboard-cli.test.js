@@ -47,7 +47,7 @@ test("dema doctor --json → JSON.parse succeeds, schema field present", async (
 
 // TASK-036 defect 2, end to end: point the gateway adapter at a port with
 // nothing listening. The adapter payload is honest here (truth_label DEGRADED,
-// gateway.reachable false, four "unreachable" findings), so doctor must not
+// gateway.reachable false, five "unreachable" findings), so doctor must not
 // contradict it by printing a green reachable probe.
 test("dema doctor → a dead gateway is not reported as reachable", async () => {
   const env = await freshEnv();

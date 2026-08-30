@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-08-21 21:19'
-updated_date: '2026-08-28 02:31'
+updated_date: '2026-08-28 23:24'
 labels:
   - production
   - runtime
@@ -49,17 +49,7 @@ Normative spec: NODE0_DEMA_PRODUCTION_CLOSURE_SPEC_v1_0.md @ b01b4b32e9e978287a9
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-C0-C2B — Completed historically: preserve the prior package, re-bind it to a clean Dema consumer, and qualify A1-A6 without runtime start or GO consumption.
-
-C3 — Historical first heartbeat exists, but it does not close runtime acceptance criteria by declaration: the Phase 2 supervisor required manual continuation under H1 scope.
-
-C4 — Completed current contract lease: C3 artifacts were read/hashed/listed against AC #1-#8. The bound Phase 2 heredoc is defective, the package lacks complete post-restart evidence, and historical manual continuation leaves AC #7 RED.
-
-C5 — Create a fresh, unconsumed 2D observation package (preserving consumed 2B and stale/misbound 2C). Repair the Phase 2 heredoc; require an explicit verifier flag before a disposable runtime test can start; prove syntax/static-contract GREEN and rebind the hash DAG. Retain the original GET-only scope and report durable recovery as NOT_PROVEN rather than fabricating a green.
-
-C6a — Prepare a fresh 3A persistence-proof packet without starting a runtime. Bind the exact producer/consumer/binary, one known-valid mission fixture, loopback-only route allowlist, explicit missing-authorization RED control, SIGKILL/restart evidence layout, and a separate deterministic verifier. A static GREEN means only C6_READY_FOR_EXACT_GO; it closes no runtime criterion.
-
-C6b — Only an exact human authorization for GO-PROD01-C6-STATEFUL-PERSISTENCE-3A may issue and atomically consume the matching one-use record. Its sole permitted effect is: one 127.0.0.1:7421 producer process, one POST /missions with the bound fixture, bounded GET observations, SIGKILL, one restart using the same receipt-store path, byte/field comparison, verifier receipt, and automatic shutdown. No public network, Node1/Node2, model invocation, principal activation, push, merge, or authority increase.
+1. Re-derive current Dema, HUMAN_NODE projection, runtime, binary, toolchain, dependency-lock, public signer, and Root Canon facts without runtime/model/private-key access. 2. Create append-only AC5-HUMAN-SIGNED-PRODUCER-DECLARATION-1J canonical facts-to-sign bytes plus a public-key-only verifier. 3. Prove deterministic generation, fresh-disk rebinding, detached-signature failure closure, authority-ceiling refusal, and required negative controls. 4. Run focused verification and repository proof-closeout, then stop at CANDIDATE_READY_FOR_HUMAN_REVIEW_AND_SIGNATURE with no signature or activation.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes

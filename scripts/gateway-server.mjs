@@ -15,7 +15,9 @@
 import { createServer } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { createHash } from "node:crypto";
+import { evaluateConsent } from "../packages/fate/src/fate.js";
 
 // Deterministic serialization — imported from the same source as node0-mumu-loop.
 // JSON.stringify is NOT guaranteed to produce stable key order across engines.
@@ -30,6 +32,11 @@ const DEFAULT_PORT = 7421;
 const DEFAULT_HOST = "127.0.0.1";
 const DOMAIN = "bizra-cognition-gateway-v1";
 const GATEWAY_VERSION = "0.1.0";
+const MISSION_CONSENT_PHRASE = "GO: Node0 bounded diagnostic activation only";
+
+function defaultStateDir() {
+  return join(process.env.DEMA_HOME || join(homedir(), ".dema"), "node0");
+}
 
 // ---- state persistence ---------------------------------------------------
 
@@ -167,7 +174,7 @@ export function createGatewayServer(options = {}) {
   const {
     port = DEFAULT_PORT,
     host = DEFAULT_HOST,
-    stateDir = options.stateDir || join(process.cwd(), ".node0-state"),
+    stateDir = options.stateDir || defaultStateDir(),
   } = options;
 
   let ready = false;
@@ -283,17 +290,17 @@ export function createGatewayServer(options = {}) {
             }
             // Consent gate: require exact phrase.
             // The actor must prove intent — bare POST is never authority.
-            const expectedConsent = mission.consent || "";
-            const consentOk =
-              expectedConsent === "GO: Node0 bounded diagnostic activation only" ||
-              expectedConsent.startsWith("GO: ");
-            if (!consentOk) {
+            const consent = evaluateConsent({
+              phrase: mission.consent,
+              requiredPhrase: MISSION_CONSENT_PHRASE,
+            });
+            if (!consent.accepted) {
               return respond(403, {
                 error: "consent_required",
                 message:
                   'POST /mission/run requires { consent: "GO: Node0 bounded diagnostic activation only" }',
                 expected_consent_phrase:
-                  "GO: Node0 bounded diagnostic activation only",
+                  MISSION_CONSENT_PHRASE,
               });
             }
             const result = executeMission(stateDir, mission);
@@ -357,7 +364,7 @@ if (
   const port = Number(process.env.BIZRA_COGNITION_PORT || DEFAULT_PORT);
   const stateDir =
     process.env.BIZRA_SOVEREIGN_STATE_PATH ||
-    join(process.cwd(), ".node0-state");
+    defaultStateDir();
 
   const gw = createGatewayServer({ port, stateDir });
 

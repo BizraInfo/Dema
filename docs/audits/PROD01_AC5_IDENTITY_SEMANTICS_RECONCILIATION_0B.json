@@ -1,0 +1,267 @@
+{
+    "schema": "bizra.dema.prod01_ac5_identity_semantics_reconciliation.v0.2",
+    "truth_label": "PROD01_AC5_IDENTITY_SEMANTICS_RECONCILIATION_0B",
+    "mode": "READ_ONLY_RECONCILIATION",
+    "frozen_at": "2026-08-26T23:10:00Z",
+    "authorization": "GO 0A parent authorization covers 0B as its direct read-only successor \u2014 no activation/key/PROD-02 authority",
+    "predecessor_contract": {
+        "path": "docs/audits/PROD01_AC5_IDENTITY_SUBJECT_CONTRACT_0A.json",
+        "hash": "49ea88d7670352e5b8fb1a0a2f9abe29ad381dffb13430c90aab2e8e01a20ce7",
+        "verdict": "RED_BLOCKED_PENDING_CANON_CODE_RECONCILIATION"
+    },
+    "mission": "Reconcile BIZRA human-node identity semantics across canon, Dema schemas, and Node0 principal contract without activating a principal",
+    "current_blocker_restated": "Topology says NODE=HUMAN while canonical registry and profiles implementation use node_uid as per-device identifier (IDENTITY-SUBJECT-SEMANTIC-COLLISION)",
+    "evidence_hashes": {
+        "topology_canon_path": "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+        "topology_canon_sha256": "70b15aeed848c633a4f29c51bf73c918dafd0f56474799d56d1b73fc9c4106ff",
+        "topology_canon_frozen": "25 March 2026",
+        "canon_registry_path": "docs/canon/canon_registry.json",
+        "canon_registry_sha256": "0d549cdb96bcaa67dfd946c7dda0c5c2e43e875a22f65d3432eedd310b9bf171",
+        "canon_registry_node_ordinal_law": {
+            "version": "v0.1",
+            "uid_seed_format": "operator|ordinal|device",
+            "introduced_at_commit": "9a8389e",
+            "rules": [
+                "node0_is_origin",
+                "node1_is_first_invited_human_not_second_device",
+                "ordinal_is_registry_assigned_never_guessed",
+                "no_duplicate_ordinal",
+                "no_skipped_ordinal_without_canon_authorization",
+                "no_hidden_ordinal",
+                "companion_device_shares_ordinal_distinct_uid",
+                "identity_independent_of_presentation"
+            ]
+        },
+        "profile_impl_path": "packages/core/src/profiles.js",
+        "profile_impl_sha256": "6ba51591d1a88983ba6794d51583cbc2bb498912187da34dee1d960e683e04bf",
+        "profile_impl_detail": "deriveNodeUid = sha256(operator|ordinal|device) -> bizra_node_<ordinal>_<12hex>; language NOT in seed; companion_of binding explicit",
+        "principal_contract_path": "/data/bizra/node0-closure/worktrees/prod01-mission-recovery-1a-8f744/bizra-omega/bizra-cognition-gateway/src/contracts.rs",
+        "principal_contract_sha256": "53730ea8f0b7f9ba237c417419e9cba99a8808e90fccbd2906b319356b849934",
+        "principal_status_schema": "bizra.node0.principal_identity_status.v0.2",
+        "principal_status_evidence_sha256": "49f091f97f77f5af6ef691e0f768bb0ae9a22cc6a00a3b7b5e7595507f98d2d2",
+        "c6b_descriptor_sha256": "341ed689a78be7b7fa4965330da95b9bd5a147797621a71c592cc826278240cd",
+        "dema_identity_root_canon_path": "packages/core/src/dema-identity-root-canon.js",
+        "dema_identity_root_canon_sha256": "73b7a8513cf345cd3a0bfcc41e19ad81c0dd7db6a20f463aec519ef0209c1b60",
+        "dema_identity_root_canon_truth_label": "DEMA_IDENTITY_ROOT_CANON_LOCAL_ONLY",
+        "dema_identity_root_canon_boundary": "PREVIEW_ONLY, grants no authority, no activation, no consent proof (explicit does_not_prove)",
+        "onboarding_seal_path": "packages/core/src/onboarding-seal.js",
+        "onboarding_seal_sha256": "131f68996f68a9ba73baafb4cd03fdc6240abaeba80406895e26441711130592"
+    },
+    "reclassified_blocker": {
+        "old_label_in_0A": "code drift",
+        "correct_label": "IDENTITY-SUBJECT-SEMANTIC-COLLISION",
+        "explanation": "Not merely drift. Current canon_registry v0.1 explicitly records uid_seed_format operator|ordinal|device and rule companion_device_shares_ordinal_distinct_uid. profiles.js faithfully implements that spec. Topology canon simultaneously defines NODE=HUMAN. Both artifacts are internally consistent with their own spec; collision is between specs' vocabulary: 'node_uid' is device-derived while 'Node' is human. Fixing only profiles.js would diverge code from registry. Canon vocabulary + implementation must converge together via versioned additive change."
+    },
+    "dema_identity_root_canon_not_principal_anchor": {
+        "statement": "dema-identity-root-canon.js is NOT the AC5 principal anchor and must not be used as such",
+        "evidence": "Module truth_label DEMA_IDENTITY_ROOT_CANON_LOCAL_ONLY, boundary PREVIEW_ONLY, does_not_prove includes 'any authority, consent, runtime activation, or autonomous capability' (dema-identity-root-canon.js:81-84). It binds Dema's speaking persona to 5 founding roots (BIZRA_Ideology, bizra.pdf, Third Fact, narrations.pdf, themassage.pdf) via content-bound sha256 pins. Node0 principal identity is separate: chain-sealed PrincipalActivation receipt 0x61 + Ed25519 nodePubkey binding to human_node_id, verified via contracts.rs PrincipalIdentityStatusContract Verified fields principalId/principalProfileHash/nodePubkey/activationReceiptRef.",
+        "keep_separate": [
+            "DEMA IDENTITY ROOT CANON = who Dema speaks as / founding-root provenance",
+            "NODE0 PRINCIPAL IDENTITY = who sovereign runtime cryptographically represents"
+        ]
+    },
+    "versioned_identity_vocabulary": {
+        "principle": "new semantics => new schema/version, not reinterpretation of old bytes (historical hashes untouched)",
+        "v0_1_legacy": {
+            "version": "v0.1",
+            "field": "node_uid",
+            "value": "bizra_node_<ordinal>_<12hex> = sha256(operator|ordinal|device_label)",
+            "semantics": "device-derived identifier (per-device, not human-stable)",
+            "status": "HISTORICAL_FROZEN_PRESERVE_BYTES",
+            "tests_preserving": [
+                "profile-foundation-preview.test.js:381 distinct across devices",
+                "test:443 language does not mutate node_uid"
+            ],
+            "compatibility": "retain as legacy_node_uid alias where required; never silently redefine"
+        },
+        "v0_2_proposed": {
+            "version": "v0.2",
+            "fields": {
+                "human_node_id": {
+                    "meaning": "sovereign human node identifier, stable across all companion devices and runtime replacements",
+                    "scope": "HUMAN_NODE",
+                    "laws": [
+                        "human-scoped",
+                        "device-independent",
+                        "runtime-independent",
+                        "presentation-independent",
+                        "stable across restart",
+                        "stable across companion-device enrollment"
+                    ],
+                    "relationship": "1 human_node_id 1\u2014* device_id"
+                },
+                "device_id": {
+                    "meaning": "unique per physical/logical companion device",
+                    "derivation_current": "explicit device-derived identifier = legacy node_uid value; belongs_to = human_node_id",
+                    "laws": [
+                        "unique per device",
+                        "belongs_to human_node_id"
+                    ]
+                },
+                "dema_id": {
+                    "meaning": "persistent Dema companion identity for that human",
+                    "relationship": "belongs_to human_node_id, persistent across authorized devices"
+                },
+                "runtime_instance_id": {
+                    "meaning": "ephemeral gateway instance",
+                    "relationship": "runs_on device_id, MAY CHANGE on restart"
+                },
+                "principal_id": {
+                    "meaning": "cryptographic principal identifier",
+                    "binding": "subject_kind=HUMAN_NODE, subject_id=human_node_id, fingerprint binds to human_node_id, seal_ref = PrincipalActivation receipt hash",
+                    "stability": "SAME across same-human restart (key rotation is separate lifecycle)"
+                },
+                "principal_subject_kind": "HUMAN_NODE (explicit, never inferred from field name)"
+            }
+        }
+    },
+    "required_laws": {
+        "human_node_id": [
+            "human-scoped",
+            "device-independent",
+            "runtime-independent",
+            "presentation-independent",
+            "stable across restart",
+            "stable across companion-device enrollment"
+        ],
+        "device_id": [
+            "unique per device",
+            "belongs_to = human_node_id"
+        ],
+        "dema_id": [
+            "belongs_to = human_node_id",
+            "persistent across human authorized devices"
+        ],
+        "runtime_instance_id": [
+            "ephemeral/restartable",
+            "runs_on = device_id"
+        ],
+        "principal_id": [
+            "subject_kind = HUMAN_NODE",
+            "subject_id = human_node_id",
+            "cryptographic not display identity"
+        ]
+    },
+    "human_node_id_derivation": {
+        "proposed_in_0A": "sha256(operator|ordinal) truncated 12hex",
+        "verdict": "NOT_YET_NORMATIVE_REJECTED_AS_CANONICAL",
+        "reason": "operator is presentation-level display name (default MoMo, test uses Mumu, RTL \u0645\u062d\u0645\u062f \u0628\u0634\u0631) \u2014 changeable, language-dependent, not immutable. Human-scoped identifier must not depend on changeable display string or presentation. No existing immutable human-level seed exists in inspected canon/schemas (canon_registry uid_seed_format explicitly uses operator; profiles.js operator default mutable). Language-independence is proven for node_uid (test:443) but operator-dependence remains for any operator-derived id.",
+        "required_root_if_canonical": "immutable genesis subject identifier OR registry-issued human subject identifier OR another canon-authorized non-presentation root",
+        "outcome": "HUMAN_NODE_ID_DERIVATION = UNKNOWN",
+        "acceptable_result": "return UNKNOWN rather than manufacture from 'Mumu'/'MoMo' to make schema green",
+        "healthier_than_invention": true
+    },
+    "adversarial_red_controls": [
+        {
+            "control": "human_node_id changes because device_label changes",
+            "required": "REFUSE",
+            "result": "WOULD_REFUSE (human_node_id must be device-independent; device_id captures device variation)",
+            "note": "v0.1 node_uid fails this \u2014 by design device-derived; v0.2 human_node_id must pass"
+        },
+        {
+            "control": "human_node_id changes because PID changes",
+            "required": "REFUSE",
+            "result": "WOULD_REFUSE (runtime-independent)",
+            "note": "PID is ephemeral in principal_status evidence PID 4046477->4046570"
+        },
+        {
+            "control": "human_node_id changes because language changes",
+            "required": "REFUSE",
+            "result": "WOULD_REFUSE (presentation-independent)",
+            "evidence": "profiles.js language NOT in seed; test language does NOT mutate node_uid proves correct separation"
+        },
+        {
+            "control": "device_id == human_node_id",
+            "required": "REFUSE",
+            "result": "WOULD_REFUSE (distinct fields by v0.2 hierarchy)"
+        },
+        {
+            "control": "principal_subject_kind != HUMAN_NODE",
+            "required": "REFUSE",
+            "result": "WOULD_REFUSE (must be HUMAN_NODE)"
+        },
+        {
+            "control": "principal subject_id != human_node_id",
+            "required": "REFUSE",
+            "result": "WOULD_REFUSE (subject_id must equal human_node_id)"
+        },
+        {
+            "control": "old node_uid silently changes meaning",
+            "required": "REFUSE",
+            "result": "WOULD_REFUSE (v0.1 preserved as legacy_node_uid, never reinterpreted)"
+        },
+        {
+            "control": "historical receipt/hash requires mutation",
+            "required": "REFUSE",
+            "result": "WOULD_REFUSE (new semantics via new version, old bytes frozen)"
+        },
+        {
+            "control": "companion device receives a new human identity",
+            "required": "REFUSE",
+            "result": "WOULD_REFUSE (companion shares human_node_id, distinct device_id, companion_of binding)"
+        },
+        {
+            "control": "two different humans at same ordinal/device label must not collide",
+            "required": "REFUSE collision",
+            "result": "WOULD_REFUSE collision if operator were removed without replacement; with v0.2 UNKNOWN requires registry-issued id to guarantee distinctness",
+            "note": "Current v0.1 operator|ordinal|device would differentiate via operator, but operator is mutable display \u2014 stronger immutable seed needed"
+        }
+    ],
+    "historical_hashes_untouched": true,
+    "migration_rule": "preserve v0.1 node_uid bytes as legacy_node_uid where compatibility required; v0.2 human_node_id additive, not reinterpretive",
+    "verdict": "RED_BLOCKED_HUMAN_NODE_ID_DERIVATION_UNKNOWN",
+    "verdict_detail": "0B correctly reconciles vocabulary collision and separates Dema persona from principal anchor; it cannot yet freeze human_node_id derivation because no immutable non-presentation human subject identifier exists in current canon/schemas. This is the intended healthy UNKNOWN, not invention.",
+    "READY_FOR_AC5_PACKAGE": false,
+    "READY_FOR_HUMAN_GO": false,
+    "next_required": {
+        "type": "canon_authorized_immutable_human_subject_identifier",
+        "options": [
+            "registry-issued human subject identifier",
+            "genesis subject identifier rooted in onboarding seal or registry",
+            "other canon-authorized non-presentation root"
+        ],
+        "must_be": "presentation-independent (not operator display name), device-independent, runtime-independent, stable across companion enrollment",
+        "then": "versioned v0.2 schema can be green-lit, then AC5 PACKAGE QUALIFICATION may bind exact producer+anchor+subject+key+verifier"
+    },
+    "sequence": [
+        "0A identity subject discovered (49ea88d...)",
+        "0B canon+schema+implementation semantics converge \u2014 THIS SLICE (pending immutable seed)",
+        "AC5 PACKAGE QUALIFICATION exact producer+anchor+subject+key+verifier bound",
+        "READY_FOR_HUMAN_GO=true",
+        "show package_hash + principal_subject + human_node_id + anchor_hash + public-key fingerprint + authority ceiling + negative-control verdicts",
+        "generate exact one-shot GO phrase",
+        "HUMAN TYPES EXACT PHRASE",
+        "ABSENT -> VERIFIED",
+        "SIGKILL/restart same human principal re-derived",
+        "AC5 PASS -> PROD-01 closure re-derivation"
+    ],
+    "ac5_restart_invariants": {
+        "MUST_REMAIN_SAME": [
+            "human_node_id",
+            "device_id (same physical device in this test)",
+            "principal_id",
+            "principal_subject_id",
+            "public_key_fingerprint (same key epoch)",
+            "principal activation/seal binding"
+        ],
+        "MUST_OR_MAY_CHANGE": [
+            "pid MUST change after killed process",
+            "runtime_instance_id MAY change"
+        ],
+        "note": "fingerprint SAME is AC5 restart invariant, not eternal law \u2014 future authorized key rotation is separate lifecycle"
+    },
+    "forbidden_in_0B": [
+        "activation",
+        "runtime start",
+        "key creation",
+        "principal mutation",
+        "ABSENT->VERIFIED",
+        "PAT/SAT changes",
+        "PROD-02",
+        "external network",
+        "commit/push/merge",
+        "authority increase",
+        "mutating historical node_uid semantics"
+    ],
+    "authority_delta": 0
+}

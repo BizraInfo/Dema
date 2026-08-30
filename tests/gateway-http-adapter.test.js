@@ -15,6 +15,25 @@ import {
 import { createNode0Adapter } from "../packages/node-adapter/src/node0-adapter.js";
 
 const HEALTHY_GATEWAY_DOMAIN = "bizra-cognition-gateway-v1";
+const PRINCIPAL_STATUS_SCHEMA = "bizra.node0.principal_identity_status.v0.3";
+const READ_ONLY_OPERATION_EFFECTS = Object.freeze({
+  mutationPerformed: false,
+  activationPerformed: false,
+  witnessIssued: false,
+  poiMinted: false,
+  soakStarted: false,
+});
+const VERIFIED_PRINCIPAL_IDENTITY = Object.freeze({
+  principalId: "bizra:human-node:v1:0",
+  principalProfileHash: "ab".repeat(32),
+  subjectKind: "human-node",
+  subjectId: "bizra:human-node:v1:0",
+  nodePubkey: "cd".repeat(32),
+  activationReceiptRef: "receipt:activation:1",
+  receiptId: "receipt-1",
+  timestampNs: "1234567890",
+  prevChain: "0".repeat(64),
+});
 const execFileAsync = promisify(execFile);
 const cliPath = fileURLToPath(
   new URL("../apps/cli/src/index.js", import.meta.url),
@@ -50,6 +69,42 @@ async function withNode0AdapterEnv(values, fn) {
 
 function jsonResponse(body, status = 200) {
   return { status, body, headers: { "content-type": "application/json" } };
+}
+
+function principalStatus(overrides = {}) {
+  const base = {
+    schema: PRINCIPAL_STATUS_SCHEMA,
+    runtimeDomain: HEALTHY_GATEWAY_DOMAIN,
+    verdict: "ABSENT",
+    identityVerified: false,
+    bridgeEligible: false,
+    verifiedIdentity: null,
+    evidenceState: {
+      profilePresent: false,
+      activeChainRecordFound: false,
+      durableReceiptMetadataFound: false,
+      canonicalPayloadAvailable: false,
+      chainContinuityVerified: false,
+    },
+    chainHead: "0".repeat(64),
+    chainLength: 0,
+    authorityPolicy: {
+      activationRequires: "EXPLICIT_GO",
+      authorityDelta: 0,
+    },
+    operationEffects: READ_ONLY_OPERATION_EFFECTS,
+    reasonCodes: [],
+  };
+  return {
+    ...base,
+    ...overrides,
+    evidenceState: { ...base.evidenceState, ...overrides.evidenceState },
+    authorityPolicy: { ...base.authorityPolicy, ...overrides.authorityPolicy },
+    operationEffects: {
+      ...base.operationEffects,
+      ...overrides.operationEffects,
+    },
+  };
 }
 
 function startFakeGateway(routes) {
@@ -100,9 +155,10 @@ const HEALTHY_ROUTES = {
       avgImpact: 0,
     }),
   "/resources/list": () => jsonResponse({ resources: [] }),
+  "/principal/status": () => jsonResponse(principalStatus()),
 };
 
-test("gateway-http adapter composes v0.2 status from /health + /chain + /poi + /resources", async () => {
+test("gateway-http adapter composes v0.2 status from five read-only endpoints", async () => {
   const gw = await startFakeGateway(HEALTHY_ROUTES);
   try {
     const adapter = createGatewayHttpAdapter({ baseUrl: gw.url });
@@ -116,11 +172,21 @@ test("gateway-http adapter composes v0.2 status from /health + /chain + /poi + /
     assert.equal(status.chain.length, 0);
     assert.equal(status.poi.totalEntries, 0);
     assert.equal(status.resources.count, 0);
+    assert.equal(status.principal.observation, "MEASURED");
+    assert.equal(status.principal.contractValid, true);
+    assert.equal(status.principal.verdict, "ABSENT");
+    assert.equal(status.principal.identityVerified, false);
+    assert.equal(status.principal.bridgeEligible, false);
+    assert.equal(status.principal.authorityDelta, 0);
+    assert.deepEqual(
+      status.principal.operationEffects,
+      READ_ONLY_OPERATION_EFFECTS,
+    );
     assert.equal(status.activationGate, "EXPLICIT_GO_REQUIRED");
     assert.equal(status.consoleReady, true);
     assert.ok(status.findings.some((f) => f.includes("first mission")));
 
-    // Adapter must be read-only — only GET requests, only the four endpoints.
+    // Adapter must be read-only — only GET requests, only the declared endpoints.
     const methods = new Set(gw.calls.map((c) => c.method));
     assert.deepEqual([...methods], ["GET"]);
     const paths = new Set(gw.calls.map((c) => c.url));
@@ -128,8 +194,110 @@ test("gateway-http adapter composes v0.2 status from /health + /chain + /poi + /
       "/chain",
       "/health",
       "/poi/summary",
+      "/principal/status",
       "/resources/list",
     ]);
+  } finally {
+    await gw.stop();
+  }
+});
+
+test("gateway-http adapter exposes a fully verified principal without making Node0 ready", async () => {
+  const gw = await startFakeGateway({
+    ...HEALTHY_ROUTES,
+    "/principal/status": () =>
+      jsonResponse(
+        principalStatus({
+          verdict: "VERIFIED",
+          identityVerified: true,
+          bridgeEligible: true,
+          verifiedIdentity: VERIFIED_PRINCIPAL_IDENTITY,
+          evidenceState: {
+            profilePresent: true,
+            activeChainRecordFound: true,
+            durableReceiptMetadataFound: true,
+            canonicalPayloadAvailable: true,
+            chainContinuityVerified: true,
+          },
+        }),
+      ),
+  });
+  try {
+    const status = await createGatewayHttpAdapter({ baseUrl: gw.url }).status();
+
+    assert.equal(status.truth_label, "MEASURED_PARTIAL");
+    assert.equal(status.principal.observation, "MEASURED");
+    assert.equal(status.principal.contractValid, true);
+    assert.equal(status.principal.verdict, "VERIFIED");
+    assert.equal(status.principal.identityVerified, true);
+    assert.equal(status.principal.bridgeEligible, true);
+    assert.deepEqual(
+      status.principal.verifiedIdentity,
+      VERIFIED_PRINCIPAL_IDENTITY,
+    );
+    assert.equal(status.ready, false);
+  } finally {
+    await gw.stop();
+  }
+});
+
+test("gateway-http adapter rejects a forged verified principal with authority or effect drift", async () => {
+  const gw = await startFakeGateway({
+    ...HEALTHY_ROUTES,
+    "/principal/status": () =>
+      jsonResponse(
+        principalStatus({
+          verdict: "VERIFIED",
+          identityVerified: true,
+          bridgeEligible: true,
+          verifiedIdentity: VERIFIED_PRINCIPAL_IDENTITY,
+          evidenceState: {
+            profilePresent: true,
+            activeChainRecordFound: true,
+            durableReceiptMetadataFound: true,
+            canonicalPayloadAvailable: true,
+            chainContinuityVerified: true,
+          },
+          authorityPolicy: { authorityDelta: 1 },
+          operationEffects: { activationPerformed: true },
+        }),
+      ),
+  });
+  try {
+    const status = await createGatewayHttpAdapter({ baseUrl: gw.url }).status();
+
+    assert.equal(status.truth_label, "DEGRADED");
+    assert.equal(status.principal.observation, "INVALID");
+    assert.equal(status.principal.contractValid, false);
+    assert.equal(status.principal.identityVerified, null);
+    assert.equal(status.principal.verifiedIdentity, null);
+    assert.ok(
+      status.principal.contractIssues.includes("authority_policy_not_read_only"),
+    );
+    assert.ok(
+      status.principal.contractIssues.includes("operation_effects_not_read_only"),
+    );
+  } finally {
+    await gw.stop();
+  }
+});
+
+test("gateway-http adapter leaves principal identity unknown when the endpoint is absent", async () => {
+  const routes = { ...HEALTHY_ROUTES };
+  delete routes["/principal/status"];
+  const gw = await startFakeGateway(routes);
+  try {
+    const status = await createGatewayHttpAdapter({ baseUrl: gw.url }).status();
+
+    assert.equal(status.gateway.reachable, true);
+    assert.equal(status.truth_label, "MEASURED_PARTIAL");
+    assert.equal(status.principal.observation, "UNAVAILABLE");
+    assert.equal(status.principal.contractValid, false);
+    assert.equal(status.principal.identityVerified, null);
+    assert.equal(status.ready, false);
+    assert.ok(
+      status.unknown.includes("principal_identity_not_exposed_by_gateway"),
+    );
   } finally {
     await gw.stop();
   }
@@ -223,8 +391,8 @@ test("gateway-http adapter network failure is reported, never thrown", async () 
   assert.equal(status.gateway.reachable, false);
   assert.equal(status.truth_label, "DEGRADED");
   assert.ok(status.findings.length > 0);
-  // All four endpoints failed → at least 4 findings (one per endpoint).
-  assert.ok(status.findings.length >= 4);
+  // All five endpoints failed → at least 5 findings (one per endpoint).
+  assert.ok(status.findings.length >= 5);
 });
 
 test("gateway-http adapter refuses public HTTPS endpoints before fetch", async () => {
@@ -311,7 +479,7 @@ test("createNode0Adapter prefers a configured gateway URL over legacy status com
         assert.equal(status.gateway.base_url, gw.url);
         assert.deepEqual(
           gw.calls.map((call) => call.method),
-          ["GET", "GET", "GET", "GET"],
+          ["GET", "GET", "GET", "GET", "GET"],
         );
       },
     );

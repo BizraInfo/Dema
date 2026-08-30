@@ -20,6 +20,10 @@ import { NODE0_RUNTIME_KILL_RESUME_SCOPE } from "../packages/core/src/node0-reco
 import { CLOSURE_INVARIANTS } from "../packages/core/src/node0-closure-invariants.js";
 
 const PROOF = join(import.meta.dirname, "..", "scripts", "proof", "node0-recovery-proof.mjs");
+const RECOVERY_PUBLISHERS = [
+  join(import.meta.dirname, "..", "scripts", "proof", "node0-recovery-supervisor.mjs"),
+  join(import.meta.dirname, "..", "scripts", "proof", "node0-recovery-worker.mjs"),
+];
 
 function produce() {
   const home = mkdtempSync(join(tmpdir(), "rec-ad-"));
@@ -93,4 +97,12 @@ test("RCA-05: the diagnostic carries neither `observed` nor `source` and leaks n
     assert.equal(d.settles_nothing, true);
     assert.equal(JSON.stringify(d).includes(home), false);
   } finally { rmSync(home, { recursive: true, force: true }); }
+});
+
+test("RCA-06: concurrent recovery publishers atomically replace JSON reports", () => {
+  for (const publisher of RECOVERY_PUBLISHERS) {
+    const source = readFileSync(publisher, "utf8");
+    assert.match(source, /writeFileSync\(tmp, JSON\.stringify\(o, null, 2\)\)/);
+    assert.match(source, /renameSync\(tmp, target\)/);
+  }
 });

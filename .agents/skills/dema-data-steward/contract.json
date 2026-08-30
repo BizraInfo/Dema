@@ -1,0 +1,68 @@
+{
+  "skill_id": "dema-data-steward",
+  "version": "1.0.0",
+  "capability_family": "dema-data-estate",
+  "lifecycle_phase": "data-preparation",
+  "applicability": [
+    "inventory local files or Google Drive-derived corpora",
+    "classify, deduplicate, normalize, organize BIZRA knowledge",
+    "build File Cards or Knowledge Cards",
+    "maintain Decision Graph and Golden Set artifacts",
+    "prepare reversible organization plans"
+  ],
+  "exclusions": [
+    "runtime mutation without explicit consent",
+    "deletion of originals",
+    "making the data-processing layer authoritative",
+    "training from UNKNOWN or CONTRADICTED experience"
+  ],
+  "preconditions": [
+    "repository checkout exists",
+    "evidence boundary is bound (root, scope, allowed reads)",
+    "content read authorization confirmed if needed"
+  ],
+  "inputs": [
+    "target filesystem root or Google Drive reference",
+    "evidence boundary declaration",
+    "mission scope"
+  ],
+  "outputs": [
+    "inventory.jsonl",
+    "summary.json",
+    "File Cards",
+    "deduplication candidates",
+    "organization preview",
+    "receipts and manifests",
+    "authority_delta report"
+  ],
+  "side_effects": [
+    "metadata-only reads by default",
+    "file mutation only with exact consent",
+    "never deletes originals during ordinary stewardship"
+  ],
+  "permissions": [
+    "read repository",
+    "read filesystem metadata",
+    "read file content when authorized",
+    "write manifests and receipts",
+    "write file mutations with exact consent"
+  ],
+  "resource_bindings": [
+    "scripts/inventory_fs.py",
+    "scripts/build_file_cards.py",
+    "scripts/dedupe_candidates.py",
+    "scripts/seal_run.py",
+    "references/google-knowledge-system.md",
+    "references/node0-data-contract.md",
+    "references/output-contract.md"
+  ],
+  "truth_boundary": "report-and-prepare",
+  "evidence_refs": [],
+  "projection_targets": [".claude", ".agents"],
+  "convergence": {
+    "formal": 2,
+    "cryptographic": 1,
+    "empirical": 2,
+    "economic": 0
+  }
+}

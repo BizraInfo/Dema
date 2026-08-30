@@ -1,0 +1,40 @@
+{
+  "schema": "bizra.skill-manifest/v1",
+  "generated_at": "2026-08-30T20:38:09.091Z",
+  "source_root": "skills-src",
+  "skill_id": "dema-slice-scaffold",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "4e0637cafd839a8e968b2426d9d85b96ec79442f3c69ab93a7d22127fe4deae2",
+      "size": 8853
+    },
+    {
+      "path": "contract.json",
+      "sha256": "50d2cab8214aea0773d64217f2ffb2ddeefa4f270a458b118326281625651027",
+      "size": 1913
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "2c9caaf272f16cb6c1732f6652de3d809ea27c96ea5d54cfebd54f7a130ab9f7",
+      "size": 1601
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "625f70c9d83ae0b2561c2d2b303a1de57d4938f8c415b7e551f0516e3ef60bf8",
+      "size": 363
+    },
+    {
+      "path": "references/slice-anatomy.md",
+      "sha256": "4ccd6faef18f3102cb9a193206069816eb83a33bb5b69e73e1647275f888be32",
+      "size": 9081
+    },
+    {
+      "path": "scripts/scaffold_slice.mjs",
+      "sha256": "20b8dec21d92f33415620383e60cae26bc30d645a509e9282c88195b68f3d555",
+      "size": 32270
+    }
+  ],
+  "total_files": 6,
+  "total_bytes": 54081
+}

@@ -18,7 +18,7 @@ If DEMA duplicates any core truth (e.g., reimplements receipt validation, invent
 
 ## Decision
 
-DEMA consumes core truth exclusively through the read-only gateway HTTP surface (today: [`packages/node-adapter/src/gateway-http-adapter.js`](../../packages/node-adapter/src/gateway-http-adapter.js), enforced GET-only, four endpoints: `/health`, `/chain`, `/poi/summary`, `/resources/list`). It never:
+DEMA consumes core truth exclusively through the read-only gateway HTTP surface (today: [`packages/node-adapter/src/gateway-http-adapter.js`](../../packages/node-adapter/src/gateway-http-adapter.js), enforced GET-only, five endpoints: `/health`, `/chain`, `/poi/summary`, `/resources/list`, `/principal/status`). It never:
 
 - Duplicates mission law or mission state machines
 - Reimplements admissibility checks

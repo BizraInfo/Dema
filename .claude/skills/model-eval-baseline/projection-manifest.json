@@ -1,0 +1,10 @@
+{
+  "schema": "bizra.skill-projection/v1",
+  "skill_id": "model-eval-baseline",
+  "projection_target": ".claude",
+  "source_registry_hash": "9c8c18c7e954f18a92bc5e78cf5bebf9e1a4e1a5945551dc090e600ffdc12e37",
+  "contract_hash": "a6b4da89d3d7ec077c029e33b36e9cde9b6994a0f9648e9383b52f0deb012a23",
+  "generated_at": "2026-08-30T20:41:22.074Z",
+  "files_projected": 3,
+  "files_skipped": 0
+}

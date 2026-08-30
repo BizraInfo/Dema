@@ -1,0 +1,70 @@
+{
+  "schema": "bizra.skill-manifest/v1",
+  "generated_at": "2026-08-30T20:38:09.089Z",
+  "source_root": "skills-src",
+  "skill_id": "dema-data-steward",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "a1d6bb65d692b4c6d1eea69c2c964907f0d5aa36aa3fc66ed8e4c1863427756c",
+      "size": 6179
+    },
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "c9b0e45c363b2eab0113dbf6e45c8391a6c5f7f93588712fea7efe62fdea8a5a",
+      "size": 303
+    },
+    {
+      "path": "assets/icon.svg",
+      "sha256": "51a6923974188748638a424aa59b42b6afad2d910f910a1d43bb13ee10f3ce26",
+      "size": 2182
+    },
+    {
+      "path": "contract.json",
+      "sha256": "d3077b542c20e01bb056f47ad15ea09b1ff70ca01813d015176a27ad0d284753",
+      "size": 2023
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "11442cf4e35e478695f2cbf9148658cdc592f018c190e355cd4e63ea659e78d7",
+      "size": 361
+    },
+    {
+      "path": "references/google-knowledge-system.md",
+      "sha256": "c322129d140f735d0b60bb3d582efd1a8e85b919aff33763de06bfa918f9cf12",
+      "size": 2495
+    },
+    {
+      "path": "references/node0-data-contract.md",
+      "sha256": "cf309218ffef6ceddd94f47cfd4b861204bc8579582a3d92ad92f4d499e12043",
+      "size": 2576
+    },
+    {
+      "path": "references/output-contract.md",
+      "sha256": "7516e0e1923644f395fa547b585ade55e872dbc0b9adbc81843c81fff1d56e6b",
+      "size": 1154
+    },
+    {
+      "path": "scripts/build_file_cards.py",
+      "sha256": "c9174d50a181cb9d7233d26b3b4c64aa8c97b92be6855dc093da1ce5f794462a",
+      "size": 2396
+    },
+    {
+      "path": "scripts/dedupe_candidates.py",
+      "sha256": "5e210c624ddadca84429305dc246497241401975984714da941f44351b696afd",
+      "size": 2162
+    },
+    {
+      "path": "scripts/inventory_fs.py",
+      "sha256": "9273edd4674198c9dc9df66022cde82d6800d05be86f78c75e95f2ddb44a6d22",
+      "size": 5141
+    },
+    {
+      "path": "scripts/seal_run.py",
+      "sha256": "11d5aa20826448b31cd54958d1a03c4ebbed27d6db88fc11e7996dc740f02d9d",
+      "size": 1727
+    }
+  ],
+  "total_files": 12,
+  "total_bytes": 28699
+}

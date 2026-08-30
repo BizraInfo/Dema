@@ -1,0 +1,54 @@
+{
+  "skill_id": "model-eval-baseline",
+  "version": "1.0.0",
+  "capability_family": "dema-model-evaluation",
+  "lifecycle_phase": "post-implementation",
+  "applicability": [
+    "running Dema local model eval baseline",
+    "discovering available models",
+    "establishing a baseline score",
+    "comparing candidate changes against baseline"
+  ],
+  "exclusions": [
+    "proving model correctness",
+    "proving MoE, KV-cache, RSI, federation, council, economy, leaderboard rank",
+    "external provider calls without --include-external flag"
+  ],
+  "preconditions": [
+    "localhost model endpoint reachable (default Ollama http://localhost:11434)",
+    "or injected fetch in tests"
+  ],
+  "inputs": [
+    "suite name (e.g. bizra-local-small)",
+    "baseline JSON (for compare)"
+  ],
+  "outputs": [
+    "baseline JSON with content_hash and verdict",
+    "comparison report",
+    "what_this_does_not_prove boundary"
+  ],
+  "side_effects": [
+    "reads from local model endpoint",
+    "writes baseline and comparison JSON",
+    "no external calls by default"
+  ],
+  "permissions": [
+    "read repository",
+    "read local model endpoint",
+    "write baseline and comparison files"
+  ],
+  "resource_bindings": [
+    "packages/core/src/model-eval-baseline.js",
+    "apps/cli/src/commands/eval-baseline-gatherer.js",
+    ".claude/rules/03-model-eval.md"
+  ],
+  "truth_boundary": "preview-local-only",
+  "evidence_refs": [],
+  "projection_targets": [".claude", ".agents"],
+  "convergence": {
+    "formal": 2,
+    "cryptographic": 0,
+    "empirical": 2,
+    "economic": 0
+  }
+}

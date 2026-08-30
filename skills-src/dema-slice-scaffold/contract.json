@@ -1,0 +1,61 @@
+{
+  "skill_id": "dema-slice-scaffold",
+  "version": "1.0.0",
+  "capability_family": "dema-slice-lifecycle",
+  "lifecycle_phase": "pre-implementation",
+  "applicability": [
+    "starting a new NODE0-*-1A or DEMA-*-1A capability slice",
+    "adding a 1A kernel",
+    "scaffold a slice",
+    "new pre-action spine capability",
+    "start the X-1A slice",
+    "stub out a kernel + review gate",
+    "wire a new slice into the registry"
+  ],
+  "exclusions": [
+    "implementing logic in an existing kernel",
+    "adding new CLI commands (ADR-012: no new kebab CLI names)",
+    "running npm test or npm run check",
+    "making runtime, network, daemon, key, or commit actions"
+  ],
+  "preconditions": [
+    "repository checkout exists",
+    "slice anatomy reference understood (references/slice-anatomy.md)"
+  ],
+  "inputs": [
+    "slice id (e.g. NODE0-FOO-BAR-1A)",
+    "one-line intent"
+  ],
+  "outputs": [
+    "packages/core/src/<kebab>.js (RED kernel)",
+    "tests/<kebab>.test.js (mirrored test)",
+    "scripts/review/<kebab>-check.mjs (review gate)",
+    "docs/receipts/<CAPID>.md (receipt)",
+    "docs/02-architecture/<PREFIX>_v0_1.md (architecture doc)",
+    "wiring edits to scripts/check.mjs, docs/TESTING.md, docs/CURRENT_LIMITS.md, dema-capability-truth-registry.js"
+  ],
+  "side_effects": [
+    "writes files and wiring edits",
+    "deliberately leaves slice RED (kernel throws not_implemented)",
+    "does not implement slice logic",
+    "does not run gates"
+  ],
+  "permissions": [
+    "write repository files",
+    "edit wiring files"
+  ],
+  "resource_bindings": [
+    "scripts/scaffold_slice.mjs",
+    "references/slice-anatomy.md",
+    "dema-capability-truth-registry.js"
+  ],
+  "truth_boundary": "scaffold-only-report-only",
+  "evidence_refs": [],
+  "projection_targets": [".claude", ".agents"],
+  "convergence": {
+    "formal": 2,
+    "cryptographic": 1,
+    "empirical": 2,
+    "economic": 0
+  }
+}

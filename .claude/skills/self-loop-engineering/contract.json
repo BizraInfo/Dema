@@ -1,0 +1,64 @@
+{
+  "skill_id": "self-loop-engineering",
+  "version": "1.0.0",
+  "capability_family": "dema-self-loop",
+  "lifecycle_phase": "post-implementation",
+  "applicability": [
+    "after a slice, before closeout",
+    "ranking next steps",
+    "surfacing blind spots",
+    "running the deterministic self-loop preview stack",
+    "OODA, HHMM, hash-table, diffusion, RSI preview"
+  ],
+  "exclusions": [
+    "live autopoietic runtime",
+    "neural HHMM or neural diffusion",
+    "agent RL",
+    "verified reward",
+    "consciousness claims"
+  ],
+  "preconditions": [
+    "repository checkout exists",
+    "a slice has been implemented"
+  ],
+  "inputs": [
+    "signal events (optional, for SNR binding)",
+    "drafts file (for diffusion denoising)"
+  ],
+  "outputs": [
+    "peak self-loop preview report",
+    "SNR score and convergence axes",
+    "diffusion denoising report",
+    "RSI proposal preview",
+    "self-awareness blind-spot ledger",
+    "OODA bounded review"
+  ],
+  "side_effects": [
+    "no runtime execution",
+    "no model invocation",
+    "no network",
+    "no self-modification",
+    "ACT phase must not execute (executed: false)"
+  ],
+  "permissions": [
+    "read repository",
+    "read kernel source files"
+  ],
+  "resource_bindings": [
+    "packages/core/src/peak-self-loop-preview.js",
+    "packages/core/src/rsi-proposal-preview.js",
+    "packages/core/src/self-awareness-report.js",
+    "packages/core/src/self-loop-ooda.js",
+    "docs/CURRENT_LIMITS.md",
+    ".claude/rules/00-claim-discipline.md"
+  ],
+  "truth_boundary": "preview-only",
+  "evidence_refs": [],
+  "projection_targets": [".claude", ".agents"],
+  "convergence": {
+    "formal": 3,
+    "cryptographic": 1,
+    "empirical": 3,
+    "economic": 0
+  }
+}
