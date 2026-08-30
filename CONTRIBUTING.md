@@ -17,6 +17,15 @@ npm test
 npm run check
 ```
 
+## Source preservation
+
+A slice is not source-durable until its source bytes are both committed to Git
+and ingested into the governed BIZRA Genesis Library as immutable original
+bytes. Receipts, test output, and session transcripts are evidence, not source
+backups. This policy does not authorize BGL ingestion: until that governed path
+and its consent are present, label the slice `RECOVERY_RISK` and do not call
+source recovery complete.
+
 ## Pull request checklist
 
 - [ ] User-facing language is simple and non-hype.
@@ -24,6 +33,7 @@ npm run check
 - [ ] No hidden background process.
 - [ ] Consent boundary is explicit.
 - [ ] Tests included.
+- [ ] Source preservation is Git-committed and BGL-ingested, or explicitly marked `RECOVERY_RISK`.
 - [ ] README remains understandable by non-technical users.
 
 ## Lighthouse pilot lane
