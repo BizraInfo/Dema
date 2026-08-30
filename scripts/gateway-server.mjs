@@ -13,7 +13,7 @@
 // Loopback-only. No network surface. Stdlib only.
 
 import { createServer } from "node:http";
-import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 
@@ -30,6 +30,7 @@ const DEFAULT_PORT = 7421;
 const DEFAULT_HOST = "127.0.0.1";
 const DOMAIN = "bizra-cognition-gateway-v1";
 const GATEWAY_VERSION = "0.1.0";
+const MISSION_CONSENT_PHRASE = "GO: Node0 bounded diagnostic activation only";
 
 // ---- state persistence ---------------------------------------------------
 
@@ -281,19 +282,15 @@ export function createGatewayServer(options = {}) {
                 message: "POST /mission/run requires { objective: string }",
               });
             }
-            // Consent gate: require exact phrase.
-            // The actor must prove intent — bare POST is never authority.
+            // Consent is exact-string authority. Any other GO-prefixed text
+            // is a different instruction and must be refused, not widened.
             const expectedConsent = mission.consent || "";
-            const consentOk =
-              expectedConsent === "GO: Node0 bounded diagnostic activation only" ||
-              expectedConsent.startsWith("GO: ");
+            const consentOk = expectedConsent === MISSION_CONSENT_PHRASE;
             if (!consentOk) {
               return respond(403, {
                 error: "consent_required",
-                message:
-                  'POST /mission/run requires { consent: "GO: Node0 bounded diagnostic activation only" }',
-                expected_consent_phrase:
-                  "GO: Node0 bounded diagnostic activation only",
+                message: `POST /mission/run requires { consent: "${MISSION_CONSENT_PHRASE}" }`,
+                expected_consent_phrase: MISSION_CONSENT_PHRASE,
               });
             }
             const result = executeMission(stateDir, mission);
