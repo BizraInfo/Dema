@@ -113,6 +113,7 @@ export const commands = [
   ["node", ["scripts/review/openrouter-admission-policy-compiler-check.mjs"]],
   ["node", ["scripts/review/pot-claim-scope-check.mjs"]],
   ["node", ["scripts/review/node0-sse-envelope-stream-check.mjs"]],
+  ["node", ["scripts/review/baseline-verifier-gate-check.mjs"]],
   ["node", ["scripts/review/dema-presence-check.mjs"]],
   ["node", ["scripts/review/drs-realm-contracts-check.mjs"]],
   ["node", ["scripts/review/node0-sse-realm-composition-check.mjs"]],
