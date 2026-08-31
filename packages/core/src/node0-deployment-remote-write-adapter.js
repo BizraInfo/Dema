@@ -23,6 +23,7 @@ import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.
 import {
   NODE0_DEPLOYMENT_REMOTE_WRITE_SCHEMA,
   NODE0_DEPLOYMENT_REMOTE_WRITE_SCOPE,
+  DIRECT_WRITE_FINDING_KINDS,
   verifyDeploymentRemoteWriteHash,
   isCleanEligibleDeployment,
 } from "./node0-deployment-remote-write.js";
@@ -96,10 +97,38 @@ const defaults = () => ({
  * which the evaluator scores SATISFIED, and a surface carrying a write path emits
  * `observed: true`, which scores VIOLATED. A real refutation, not silence.
  */
+const REMOTE_WRITE_ARTEFACT_RELPATH_REEVALUATION = join("node0", "deployment", "observation.json");
+
+/**
+ * REMOTE-WRITE-DERIVATION-BINDING-1A: independently re-derive the verdict from
+ * the carried findings so that a hand-edited verdict cannot exploit the carried-
+ * verdict seam. The adapter verifies hash + kernel bytes, but a forged artefact
+ * with a recomputed hash could still carry a mismatched verdict. This function
+ * applies the same classification logic as evaluateDeploymentSurface: any direct-
+ * write finding asserts EXTERNAL_WRITE_PATH_PRESENT; only reachability-only
+ * findings assert INCOMPLETE; no findings assert NO_EXTERNAL_WRITE_PATH.
+ */
+function deriveVerdictFromFindings(findings) {
+  if (!Array.isArray(findings) || findings.length === 0) {
+    return "NO_EXTERNAL_WRITE_PATH";
+  }
+  const hasDirect = findings.some((f) => DIRECT_WRITE_FINDING_KINDS.includes(f.kind));
+  if (hasDirect) return "EXTERNAL_WRITE_PATH_PRESENT";
+  return "INCOMPLETE";
+}
+
 export function remoteWriteDeploymentObservation(opts = {}) {
   const { demaHome, kernelPath, readFile } = { ...defaults(), ...opts };
   const { state, artefact } = classify({ demaHome, kernelPath, readFile });
   if (state !== "ACCEPTED") return null;
+
+  // DERIVATION BINDING: independently re-derive the verdict from the carried
+  // findings and reject any mismatch. This prevents a forged artefact with a
+  // recomputed hash from claiming a clean surface when the evidence says otherwise.
+  const derivedVerdict = deriveVerdictFromFindings(artefact.findings);
+  if (derivedVerdict !== artefact.remote_write_verdict) {
+    return null;
+  }
 
   if (isCleanEligibleDeployment(artefact)) {
     return Object.freeze({

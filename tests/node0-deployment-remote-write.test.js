@@ -213,6 +213,27 @@ describe("node0 deployment remote-write · negative-control integrity", () => {
     // simply refusing everything
     assert.equal(evaluateDeploymentSurface(cleanSurface()).verdict, "NO_EXTERNAL_WRITE_PATH");
   });
+
+  it("DRW-44b DERIVATION BINDING: hand-edited verdict with carry-evidence mismatch is rejected", () => {
+    // The false-GREEN exploit: take a valid INCOMPLETE artefact with reachability-only
+    // findings, hand-edit the verdict to NO_EXTERNAL_WRITE_PATH, recompute the hash.
+    // Before derivation binding, the adapter accepted this. After, it must reject it.
+    const a = artefact({
+      verdict: "NO_EXTERNAL_WRITE_PATH",
+      findings: [
+        { kind: "non_loopback_listener", address: "100.79.96.62", port: 22 },
+        { kind: "non_loopback_listener", address: "0.0.0.0", port: 15611 },
+      ],
+    });
+    // Verify the artefact is internally consistent (hash matches)
+    assert.ok(verifyDeploymentRemoteWriteHash(a, sha256CanonicalJsonV1), "hash must verify");
+    assert.equal(a.evidence_class, "OBSERVED");
+    assert.equal(a.remote_write_verdict, "NO_EXTERNAL_WRITE_PATH");
+    // The exploit: this artefact has reachability-only findings but claims clean.
+    // After derivation binding, the adapter must reject it (return null).
+    const o = remoteWriteDeploymentObservation({ readFile: reader(a) });
+    assert.equal(o, null, "derivation binding must reject verdict/evidence mismatch");
+  });
 });
 
 // ── the adapter · the highest bar in the ledger ───────────────────────────────
