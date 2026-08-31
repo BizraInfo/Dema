@@ -1,10 +1,15 @@
 #!/usr/bin/env node
-// Bind 9 signal events to real file content via peak-evidence-gatherer — SNR 0 → 0.75
-// Purity by injection: readSource supplied by caller, no node:fs inside gatherer.
-// This is the caller the kernel's CEILING note asks for.
+// PEAK-EVIDENCE-SEMANTIC-ADMISSION-1A negative control.
+//
+// These nine candidates point at implementation/source files. Source-byte
+// existence and a matching SHA-256 prove provenance only; they do NOT prove a
+// gate passed or a commit is clean. The semantic gatherer must therefore exclude
+// this entire set and leave the peak self-loop in HOLD.
+//
+// A future positive demonstration must point at event-class-specific proof
+// artefacts (for gate_passed today: JSON { gate:<id>, exit:0 }), not source code.
 
 import { readFileSync } from "node:fs";
-import { createHash } from "node:crypto";
 import { gatherEvidenceSignals, verifyEvidenceSignals } from "../packages/core/src/peak-evidence-gatherer.js";
 import { buildPeakSelfLoopPreview } from "../packages/core/src/peak-self-loop-preview.js";
 
@@ -30,36 +35,32 @@ const candidates = [
 
 console.log("=== BEFORE (no evidence) ===");
 const before = buildPeakSelfLoopPreview({});
-console.log("SNR:", before.snr_framework.score, "verdict:", before.snr_framework.verdict, "verified:", before.snr_framework.verified_signal_count, "excluded:", before.snr_framework.excluded_signal_count, "debt:", before.snr_framework.evidence_debt.length, "boundary all-false:", before.boundary?.all_false);
+console.log("SNR:", before.snr_framework.score, "verified:", before.snr_framework.verified_signal_count, "RSI:", before.autonomous_rsi.merged_verdict);
 
-console.log("\n=== GATHER ===");
+console.log("\n=== GATHER SOURCE-CODE CANDIDATES ===");
 const gathered = gatherEvidenceSignals({ candidates, readSource });
 console.log("gathered:", gathered.gathered_count, "excluded:", gathered.excluded_count);
-for (const e of gathered.events) {
-  console.log(`  ${e.id} → ${e.source_ref} → sha256:${e.source_sha256.slice(0,12)}... ${e.truth_label}`);
-}
-if (gathered.excluded.length) {
-  console.log("excluded:", gathered.excluded);
+for (const row of gathered.excluded) {
+  console.log(`  ${row.id ?? "<unknown>"} → ${row.gap}`);
 }
 
-console.log("\n=== VERIFY ===");
+console.log("\n=== VERIFY ADMITTED SET ===");
 const verified = verifyEvidenceSignals({ events: gathered.events, readSource });
 console.log("verify:", { ok: verified.ok, verified: verified.verified_count, mismatches: verified.mismatches.length });
 
-console.log("\n=== AFTER (with signal_events) ===");
+console.log("\n=== AFTER ===");
 const after = buildPeakSelfLoopPreview({ signal_events: gathered.events });
-console.log("SNR:", after.snr_framework.score, "verdict:", after.snr_framework.verdict, "verified:", after.snr_framework.verified_signal_count, "excluded:", after.snr_framework.excluded_signal_count, "debt:", after.snr_framework.evidence_debt.length, "boundary all-false:", after.boundary?.all_false);
-console.log("RSI:", after.autonomous_rsi.merged_verdict, "rsi", after.autonomous_rsi.process_rsi);
-console.log("Trace diagnostic moat:", after.trace_diagnostic_moat?.promotion_status);
+console.log("SNR:", after.snr_framework.score, "verified:", after.snr_framework.verified_signal_count, "RSI:", after.autonomous_rsi.merged_verdict);
 
-// Demonstrate that camelCase signalEvents would still be 0 (single source truth)
-const wrong = buildPeakSelfLoopPreview({ signalEvents: gathered.events });
-console.log("\n=== WRONG KEY (signalEvents camelCase) ===");
-console.log("SNR:", wrong.snr_framework.score, "verified:", wrong.snr_framework.verified_signal_count, "(should be 0 — proves snake_case is the contract)");
+const held =
+  gathered.gathered_count === 0 &&
+  gathered.excluded_count === candidates.length &&
+  after.snr_framework.verified_signal_count === 0 &&
+  after.autonomous_rsi.merged_verdict === "HOLD_AND_REDUCE_NOISE";
 
-// Economic clarity: founder cost is measured, not value — ensure 9th event label is correct
-const ninth = gathered.events.find(e => e.id === "proof-of-spend-1a");
-console.log("\n=== ECONOMIC CLARITY ===");
-console.log("9th event label:", ninth.label);
-console.log("truth_label:", ninth.truth_label, "(MEASURED = cost receipt, NOT minted value)");
-console.log("This is FOUNDER_COST_MEASURED_NOT_VALUE — 15k hours across 6k conversations, multi-email, multi-drive, unstructured R&D since Ramadan 2023 is MEASURED COST, not minted value. Token mint waits for SAT verified benefit after Genesis Library is the single source of truth.");
+if (!held) {
+  console.error("FAIL: source-code provenance was promoted into positive semantic evidence");
+  process.exitCode = 1;
+} else {
+  console.log("PASS: readable source code remains evidence debt; semantic proof is required before SNR can rise.");
+}
