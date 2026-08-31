@@ -7,7 +7,11 @@ import { createGatewayServer } from "../scripts/gateway-server.mjs";
 
 const CONSENT = "GO: Node0 bounded diagnostic activation only";
 
-describe("Gateway Verified Mission — supervisor + SAT-5", () => {
+// QUARANTINE: This suite is FIXTURE-ONLY preview of request-envelope admission.
+// It does NOT prove governed-runtime mission execution, independent SAT, or
+// constitutional verification. Production JS gateway is retired per
+// DEMA_GOVERNED_RUNTIME_HANDOFF-1A. See scripts/gateway-server.mjs header.
+describe("Gateway Verified Mission — PREVIEW admission filter (fixture-only)", () => {
   let gw;
   let baseUrl;
   let stateDir;

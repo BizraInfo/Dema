@@ -1,14 +1,24 @@
-// Node0 Gateway Server v0.1 — the missing conductor.
+// Node0 Gateway Server v0.1 — QUARANTINED: LEGACY CONSUMER — FIXTURE-ONLY
 //
-// Lightweight HTTP server on 127.0.0.1:7421 that implements the contract
-// expected by the gateway-http-adapter. Makes one Node0 actually run locally.
+// RETIRED per DEMA_GOVERNED_RUNTIME_HANDOFF-1A (2026-08-31 evaluation).
+// This JavaScript gateway MUST NOT execute or certify production missions.
+// Production path is the governed Rust runtime (bizra-data-lake).
+// This file remains ONLY as a fixture for isolated tests
+// (tests/gateway-verified-mission.test.js with injected stateDir=temp).
+// Production stateDir (~/.dema/node0) via POST /mission/run now returns
+// 410 Gone. The preview SAT-5 admission filter inside executeMission is
+// request-envelope admission (same-process, caller-supplied booleans,
+// hard-coded effect_count=1, SAT preview inert) — NOT independent
+// mission execution, NOT governed-runtime receipt, NOT CONSTITUTIONAL
+// verification. See docs/CURRENT_LIMITS.md and incident receipt
+// docs/receipts/GATEWAY_QUARANTINE_2026-08-31.md.
 //
-// Endpoints:
+// Endpoints (fixture-only):
 //   GET /health        — domain=bizra-cognition-gateway-v1, status=ok
 //   GET /chain         — receipt chain head, length, latestTimestamp
 //   GET /poi/summary   — proof-of-impact summary
 //   GET /resources/list — resource availability
-//   POST /mission/run  — execute one bounded mission (accepts consent phrase)
+//   POST /mission/run  — 410 in production; 200 only with isolated stateDir
 //
 // Loopback-only. No network surface. Stdlib only.
 
@@ -42,6 +52,16 @@ const MISSION_CONSENT_PHRASE = "GO: Node0 bounded diagnostic activation only";
 
 function defaultStateDir() {
   return join(process.env.DEMA_HOME || join(homedir(), ".dema"), "node0");
+}
+
+function isProductionStateDir(stateDir) {
+  try {
+    const def = defaultStateDir();
+    // Exact match is production; temp dirs (mkdtemp) are fixture
+    return resolve(stateDir) === resolve(def);
+  } catch {
+    return false;
+  }
 }
 
 // ---- state persistence ---------------------------------------------------
@@ -391,6 +411,15 @@ export function createGatewayServer(options = {}) {
                 message: "POST /mission/run requires { objective: string }",
               });
             }
+            // QUARANTINE: production execution retired
+            if (isProductionStateDir(stateDir)) {
+              return respond(410, {
+                error: "gateway_retired",
+                message: "JS gateway retired: production mission execution via governed Rust runtime only (DEMA_GOVERNED_RUNTIME_HANDOFF-1A). Fixture-only with isolated stateDir.",
+                retired: true,
+                expected: "governed_runtime",
+              });
+            }
             // Consent gate: require exact phrase.
             // The actor must prove intent — bare POST is never authority.
             const consent = evaluateConsent({
@@ -473,24 +502,37 @@ if (
     process.env.BIZRA_SOVEREIGN_STATE_PATH ||
     defaultStateDir();
 
-  const gw = createGatewayServer({ port, stateDir });
+  if (isProductionStateDir(stateDir) && !process.env.DEMA_GATEWAY_ALLOW_FIXTURE) {
+    console.error(
+      JSON.stringify({
+        error: "gateway_retired",
+        message:
+          "JS gateway retired: production execution via governed Rust runtime only (DEMA_GOVERNED_RUNTIME_HANDOFF-1A). Use fixture with isolated stateDir or set DEMA_GATEWAY_ALLOW_FIXTURE=1 for local preview.",
+        stateDir,
+        retired: true,
+      }),
+    );
+    process.exitCode = 1;
+  } else {
+    const gw = createGatewayServer({ port, stateDir });
 
-  gw.start()
-    .then(() => {
-      console.log(
-        JSON.stringify({
-          status: "started",
-          domain: DOMAIN,
-          port,
-          host: DEFAULT_HOST,
-          stateDir,
-          loopback_only: true,
-          message: "Node0 gateway listening on 127.0.0.1:" + port,
-        }),
-      );
-    })
-    .catch((err) => {
-      console.error("Gateway failed to start:", err.message);
-      process.exitCode = 1;
-    });
+    gw.start()
+      .then(() => {
+        console.log(
+          JSON.stringify({
+            status: "started",
+            domain: DOMAIN,
+            port,
+            host: DEFAULT_HOST,
+            stateDir,
+            loopback_only: true,
+            message: "Node0 gateway listening on 127.0.0.1:" + port,
+          }),
+        );
+      })
+      .catch((err) => {
+        console.error("Gateway failed to start:", err.message);
+        process.exitCode = 1;
+      });
+  }
 }

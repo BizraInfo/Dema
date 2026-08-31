@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "node apps/cli/src/index.js status",
     "node0": "node scripts/node0-mumu-loop.mjs",
-    "node0:gateway": "node scripts/gateway-server.mjs",
+    "node0:gateway": "echo 'DEMA_GOVERNED_RUNTIME_HANDOFF-1A: JS gateway retired — production execution via governed Rust runtime only (fixture-only under tests/gateway-verified-mission.test.js with isolated stateDir)' && exit 1",
     "node0:replay": "node scripts/node0-mumu-replay.mjs",
     "node0:test": "node --test tests/node0-mumu-loop.test.js tests/node0-mumu-replay.test.js",
     "check": "node scripts/ci/run-with-classifier.mjs --require-check-gate-evidence --log \"${TMPDIR:-/tmp}/bizra-check-output.$$.log\" -- node scripts/check.mjs",
