@@ -22,8 +22,10 @@ import { fileURLToPath } from "node:url";
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
 import {
   NODE0_DEPLOYMENT_REMOTE_WRITE_SCHEMA,
+  NODE0_DEPLOYMENT_REMOTE_WRITE_LEGACY_SCHEMA,
   NODE0_DEPLOYMENT_REMOTE_WRITE_SCOPE,
-  DIRECT_WRITE_FINDING_KINDS,
+  deploymentSurfaceFacetCounts,
+  evaluateDeploymentSurface,
   verifyDeploymentRemoteWriteHash,
   isCleanEligibleDeployment,
 } from "./node0-deployment-remote-write.js";
@@ -36,27 +38,60 @@ const KERNEL_PATH = join(
   dirname(fileURLToPath(import.meta.url)),
   "node0-deployment-remote-write.js",
 );
+const COLLECTOR_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..", "..", "..", "scripts", "proof", "node0-deployment-remote-write-proof.mjs",
+);
+const MAX_OBSERVATION_AGE_MS = 24 * 60 * 60 * 1000;
+const MAX_FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 export const REMOTE_WRITE_INTEGRITY_SUSPECT_STATES = Object.freeze([
   "UNREADABLE",
   "SCHEMA_MISMATCH",
+  "LEGACY_DERIVATION_UNVERIFIED",
   "HASH_UNVERIFIED",
   "KERNEL_BYTES_MISMATCH",
+  "COLLECTOR_BYTES_MISMATCH",
+  "DERIVATION_UNVERIFIED",
+  "DERIVATION_MISMATCH",
+  "INVALID_OBSERVED_AT",
+  "OBSERVATION_FUTURE_DATED",
 ]);
 
 export function resolveDemaHome(env = process.env) {
   return env.DEMA_HOME || join(homedir(), ".dema");
 }
 
-export function currentRemoteWriteKernelHash(kernelPath = KERNEL_PATH) {
+function currentCodeHash(path) {
   try {
-    return `sha256:${createHash("sha256").update(readFileSync(kernelPath)).digest("hex")}`;
+    return `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
   } catch {
     return null;
   }
 }
 
-function classify({ demaHome, kernelPath, readFile }) {
+export function currentRemoteWriteKernelHash(kernelPath = KERNEL_PATH) {
+  return currentCodeHash(kernelPath);
+}
+
+export function currentRemoteWriteCollectorHash(collectorPath = COLLECTOR_PATH) {
+  return currentCodeHash(collectorPath);
+}
+
+function temporalState(observedAt, now) {
+  const observedMs = typeof observedAt === "string" ? Date.parse(observedAt) : Number.NaN;
+  const nowMs = typeof now === "function" ? now() : now;
+  if (!Number.isFinite(observedMs) || !Number.isFinite(nowMs)) return "INVALID_OBSERVED_AT";
+  if (observedMs - nowMs > MAX_FUTURE_CLOCK_SKEW_MS) return "OBSERVATION_FUTURE_DATED";
+  if (nowMs - observedMs > MAX_OBSERVATION_AGE_MS) return "OBSERVATION_STALE";
+  return null;
+}
+
+function sameCanonicalJson(a, b) {
+  return sha256CanonicalJsonV1(a) === sha256CanonicalJsonV1(b);
+}
+
+function classify({ demaHome, kernelPath, collectorPath, readFile, now }) {
   let raw;
   try {
     raw = readFile(join(demaHome, REMOTE_WRITE_ARTEFACT_RELPATH));
@@ -67,6 +102,9 @@ function classify({ demaHome, kernelPath, readFile }) {
   try { a = JSON.parse(raw); } catch { return { state: "UNREADABLE", artefact: null }; }
   if (!a || typeof a !== "object" || Array.isArray(a)) {
     return { state: "UNREADABLE", artefact: null };
+  }
+  if (a.schema === NODE0_DEPLOYMENT_REMOTE_WRITE_LEGACY_SCHEMA) {
+    return { state: "LEGACY_DERIVATION_UNVERIFIED", artefact: null };
   }
   if (a.schema !== NODE0_DEPLOYMENT_REMOTE_WRITE_SCHEMA) {
     return { state: "SCHEMA_MISMATCH", artefact: null };
@@ -82,13 +120,37 @@ function classify({ demaHome, kernelPath, readFile }) {
   if (k === null || a.executed_code_hash !== k) {
     return { state: "KERNEL_BYTES_MISMATCH", artefact: null };
   }
+  const c = currentRemoteWriteCollectorHash(collectorPath);
+  if (c === null || a.collector_code_hash !== c) {
+    return { state: "COLLECTOR_BYTES_MISMATCH", artefact: null };
+  }
+  const timeState = temporalState(a.observed_at, now);
+  if (timeState) return { state: timeState, artefact: null };
+  if (!a.surface || typeof a.surface !== "object" || Array.isArray(a.surface)) {
+    return { state: "DERIVATION_UNVERIFIED", artefact: null };
+  }
+  const derived = evaluateDeploymentSurface(a.surface);
+  const derivedCounts = deploymentSurfaceFacetCounts(a.surface);
+  if (
+    a.remote_write_verdict !== derived.verdict ||
+    a.remote_write_reason !== derived.reason ||
+    a.external_write_path_present !== derived.external_write_path_present ||
+    !Array.isArray(a.findings) ||
+    !sameCanonicalJson(a.findings, derived.findings) ||
+    !a.facet_counts || typeof a.facet_counts !== "object" || Array.isArray(a.facet_counts) ||
+    !sameCanonicalJson(a.facet_counts, derivedCounts)
+  ) {
+    return { state: "DERIVATION_MISMATCH", artefact: null };
+  }
   return { state: "ACCEPTED", artefact: a };
 }
 
 const defaults = () => ({
   demaHome: resolveDemaHome(),
   kernelPath: KERNEL_PATH,
+  collectorPath: COLLECTOR_PATH,
   readFile: (p) => readFileSync(p, "utf8"),
+  now: () => Date.now(),
 });
 
 /**
@@ -99,36 +161,10 @@ const defaults = () => ({
  */
 const REMOTE_WRITE_ARTEFACT_RELPATH_REEVALUATION = join("node0", "deployment", "observation.json");
 
-/**
- * REMOTE-WRITE-DERIVATION-BINDING-1A: independently re-derive the verdict from
- * the carried findings so that a hand-edited verdict cannot exploit the carried-
- * verdict seam. The adapter verifies hash + kernel bytes, but a forged artefact
- * with a recomputed hash could still carry a mismatched verdict. This function
- * applies the same classification logic as evaluateDeploymentSurface: any direct-
- * write finding asserts EXTERNAL_WRITE_PATH_PRESENT; only reachability-only
- * findings assert INCOMPLETE; no findings assert NO_EXTERNAL_WRITE_PATH.
- */
-function deriveVerdictFromFindings(findings) {
-  if (!Array.isArray(findings) || findings.length === 0) {
-    return "NO_EXTERNAL_WRITE_PATH";
-  }
-  const hasDirect = findings.some((f) => DIRECT_WRITE_FINDING_KINDS.includes(f.kind));
-  if (hasDirect) return "EXTERNAL_WRITE_PATH_PRESENT";
-  return "INCOMPLETE";
-}
-
 export function remoteWriteDeploymentObservation(opts = {}) {
-  const { demaHome, kernelPath, readFile } = { ...defaults(), ...opts };
-  const { state, artefact } = classify({ demaHome, kernelPath, readFile });
+  const { demaHome, kernelPath, collectorPath, readFile, now } = { ...defaults(), ...opts };
+  const { state, artefact } = classify({ demaHome, kernelPath, collectorPath, readFile, now });
   if (state !== "ACCEPTED") return null;
-
-  // DERIVATION BINDING: independently re-derive the verdict from the carried
-  // findings and reject any mismatch. This prevents a forged artefact with a
-  // recomputed hash from claiming a clean surface when the evidence says otherwise.
-  const derivedVerdict = deriveVerdictFromFindings(artefact.findings);
-  if (derivedVerdict !== artefact.remote_write_verdict) {
-    return null;
-  }
 
   if (isCleanEligibleDeployment(artefact)) {
     return Object.freeze({
@@ -154,8 +190,8 @@ export function remoteWriteDeploymentObservation(opts = {}) {
 }
 
 export function remoteWriteDeploymentDiagnostic(opts = {}) {
-  const { demaHome, kernelPath, readFile } = { ...defaults(), ...opts };
-  const { state, artefact } = classify({ demaHome, kernelPath, readFile });
+  const { demaHome, kernelPath, collectorPath, readFile, now } = { ...defaults(), ...opts };
+  const { state, artefact } = classify({ demaHome, kernelPath, collectorPath, readFile, now });
   if (state !== "ACCEPTED") {
     return Object.freeze({
       invariant_id: REMOTE_WRITE_INVARIANT_ID,

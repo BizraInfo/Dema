@@ -7,7 +7,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-08-23 02:13'
-updated_date: '2026-08-23 02:28'
+updated_date: '2026-08-31 13:15'
 labels:
   - node0
   - proof
@@ -45,17 +45,26 @@ Prevent the Node0 remote-write adapter from admitting a rehashed deployment arti
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Create a detached clean worktree at current HEAD. 2. Add a red regression using a rehashed mismatched clean artifact with a non-loopback listener. 3. Introduce a v0.2 observation surface binding and adapter re-derivation with explicit diagnostic states. 4. Verify producer/test fixtures emit self-consistent v0.2 bytes without running the host producer. 5. Run focused tests and project gates; report the still-open closure boundary.
+1. Reclassify the historical detached candidate as noncanonical and preserve the current main plus no-runtime boundary.
+2. Port schema v0.2 surface binding onto current main; hash observed_at and bind the exact producer bytes.
+3. Make the adapter verify kernel, producer, timestamp admission, one pure surface re-derivation, and every decision-bearing field plus facet counts.
+4. Reuse the shared facet-count derivation in the producer without running it.
+5. Add forged-clean, timestamp, collector, legacy, mismatch, and correlation negative controls; update truthful limits/testing docs.
+6. Run focused tests, npm test, npm run check, npm run llm:guidance, npm run claim:check:corpus, and git diff --check; rebind final commit/tree/status.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
 2026-08-23 closeout: implemented in detached worktree /data/bizra/worktrees/remote-write-derivation-binding-1a at base HEAD 9eb7f3f8287fd7e4e979a7922bcd718a8d49b0e3. Patch SHA-256: 7239342a2b79306f1ce3d308a701439ca5620d37b4ca354dad32a6d4d7de4f55. Focused node --test tests/node0-deployment-remote-write.test.js: 22 pass, 0 fail. The final closure gate remains OPEN with 9 satisfied, 0 violated, 1 unknown; remote_write is UNKNOWN because existing v0.1 evidence is now LEGACY_DERIVATION_UNVERIFIED. npm test: 9516 pass, 3 fail. npm run check: 9552 pass, 3 fail. Both report the same known baseline failures: NCG-01, NCG-02, and key-store signing path blocks when the store is unavailable. npm run llm:guidance and git diff --check pass. No host producer, runtime, key, DEMA_HOME, network, Node1, federation, token, or canonical execution action was started.
+
+2026-08-31 canonical reconciliation authorized. Historical v0.2 candidate remains detached at /data/bizra/worktrees/remote-write-derivation-binding-1a and is source material only; canonical main at 9f13a8d is v0.1. No host producer, DEMA_HOME, runtime, service, network, key, or signer action is authorized or will be run.
+
+2026-08-31 canonical repair verification: focused node --test tests/node0-deployment-remote-write.test.js: 30 pass, 0 fail. npm test: 9836 tests, 9832 pass, 0 fail, 4 skipped, exit 0. npm run check: exit 0; its temporary DEMA_HOME attempt was correctly refused by env hygiene, then a rerun with DEMA_HOME unset passed. npm run llm:guidance, npm run claim:check:corpus, and git diff --check all exit 0. No host producer was run; no real DEMA_HOME, runtime, service, network, key, or signer state was modified.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Implemented schema-v0.2 surface binding and independent adapter re-derivation. Rehashed conflicting observations and every decision-bearing carried field are refused; v0.1 evidence is non-authoritative. Focused proof and guidance/diff checks pass. Repository-wide gates remain red only on the three documented baseline failures, so this task is done with known remaining risk and does not close Node0.
+Canonical schema-v0.2 repair complete: the artifact now binds its surface, observed_at, evaluator bytes, and collector bytes; the adapter re-derives every decision field and facet count, refuses legacy/stale/future/missing-surface/mismatched evidence, and the rehashed deleted-findings forged-clean control is refused. Focused and full project gates pass. This is evidence-admission repair only; remote_write and Node0 closure remain unresolved pending a separately authorized host observation.
 <!-- SECTION:FINAL_SUMMARY:END -->
