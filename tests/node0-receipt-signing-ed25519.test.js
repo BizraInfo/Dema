@@ -268,11 +268,11 @@ test("key-store signing keeps keys outside repo under consented DEMA_HOME", asyn
     });
     assert.equal(init.initialized, true);
     assert.ok(
-      resolve(init.private_key_path).startsWith(resolve(demaHome)),
+      `${resolve(init.private_key_path)}/`.startsWith(`${resolve(demaHome)}/`),
       "private key must live under consented DEMA_HOME",
     );
     assert.ok(
-      !resolve(init.private_key_path).startsWith(REPO_ROOT),
+      !`${resolve(init.private_key_path)}/`.startsWith(`${REPO_ROOT}/`),
       "private key must not live inside repo",
     );
     const attestation = await signExecuteReceiptAttestationWithKeyStore({
