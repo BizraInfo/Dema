@@ -24,6 +24,37 @@ git diff --check
 It enforces the repo coverage floor with Node's native threshold flags:
 95% lines, 84% branches, and 95% functions.
 
+### Secret scanning — not covered by the gate above
+
+```bash
+npm run scan:secrets
+```
+
+**A green `npm run check` does not imply a green CI `scan` job.** The local gate's
+only secret check is gate 35 (`repo-claude-config-check.mjs`), which applies the
+repo's own narrow `secret-pattern.js` to `.claude/` config files. CI's `scan` job
+applies gitleaks' full default ruleset to the entire git history — a different
+detector over a different corpus.
+
+`npm run scan:secrets` closes that gap by running CI's job locally. It parses the
+version, SHA-256 pin and flags out of `.github/workflows/gitleaks.yml` rather than
+restating them, so it cannot drift from CI; it re-verifies the binary checksum on
+every run and refuses to execute on mismatch, and refuses to run on a shallow clone
+where a partial history would report a false clean.
+
+It is **not** part of `npm run check`, which stays offline-capable. It *is* wired
+into `npm run pre-push:seal` as the `scan_secrets` gate, positioned immediately
+after `git diff --check` so a leaked credential fails before the slow gates spend
+minutes on it. First run needs network; the verified binary is then cached under
+`node_modules/.cache/`, so later runs work offline. `--skip-gates` remains the
+explicit override.
+
+Credential-shaped fixtures in `tests/**` are legitimate — the secret-detector tests
+need real-looking inputs — and they trip gitleaks. Suppress a confirmed-synthetic
+one with a `.gitleaksignore` fingerprint, never a path-scoped `[[allowlists]]`
+entry: see the `condition` / `targetRules` notes in `.gitleaks.toml` for why a
+path allowlist blinds the whole file.
+
 Run one test file:
 
 ```bash

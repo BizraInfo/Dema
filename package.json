@@ -57,7 +57,8 @@
     "delivery:perf-gate": "node scripts/review/performance-budget-gate.mjs",
     "artifact-011:preflight": "node scripts/artifact-011-ceremony-preflight.mjs --isolated --json",
     "pre-push:seal": "node scripts/pre-push-proof-seal.mjs",
-    "layer-a5:prep": "node scripts/layer-a5-operator-prep.mjs --json"
+    "layer-a5:prep": "node scripts/layer-a5-operator-prep.mjs --json",
+    "scan:secrets": "node scripts/review/scan-secrets.mjs"
   },
   "engines": {
     "node": ">=20"
