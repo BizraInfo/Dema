@@ -25,6 +25,25 @@ test("T-02 env-hygiene single DEMA_* var set produces one polluter", () => {
   assert.equal(report.remediation, "env -u DEMA_NODE0_ADAPTER <command>");
 });
 
+test("T-03A gateway fixture variable declared but unset stays clean", () => {
+  const report = checkEnvHygiene({
+    env: { DEMA_GATEWAY_ALLOW_FIXTURE: undefined },
+  });
+  assert.equal(report.ok, true);
+  assert.equal(report.polluter_count, 0);
+});
+
+test("T-03B gateway fixture variable set is reported without exposing its value", () => {
+  const report = checkEnvHygiene({
+    env: { DEMA_GATEWAY_ALLOW_FIXTURE: "1" },
+  });
+  assert.equal(report.ok, false);
+  assert.equal(report.polluter_count, 1);
+  assert.equal(report.polluters[0].name, "DEMA_GATEWAY_ALLOW_FIXTURE");
+  assert.equal(report.polluters[0].value_length, 1);
+  assert.equal(Object.hasOwn(report.polluters[0], "value"), false);
+});
+
 test("T-03 env-hygiene all 10 fixture DEMA_* vars produce 10 polluters", () => {
   const env = {
     DEMA_DOWNLOADS_ROOT: "/tmp/a",
