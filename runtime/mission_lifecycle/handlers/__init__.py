@@ -24,25 +24,19 @@ different args.
 """
 from __future__ import annotations
 
-from typing import Callable, Dict
+from importlib import import_module
+from typing import Dict
 
-from . import read_file as _read_file
-from . import write_file as _write_file
-from . import downloads_analyze as _downloads_analyze
-from . import downloads_propose_organize as _downloads_propose_organize
-from . import downloads_apply_organize as _downloads_apply_organize
-from . import sovereign_render as _sovereign_render
-from . import node0_awakening as _node0_awakening
-
-# Handler name → callable
-REGISTRY: Dict[str, Callable] = {
-    "read_file_inside_boundary": _read_file.handle,        # ALWAYS tier
-    "write_under_mission_directory": _write_file.handle,   # RECEIPT_BOUND tier
-    "downloads_analyze": _downloads_analyze.handle,        # RECEIPT_BOUND tier (read-only)
-    "downloads_propose_organize": _downloads_propose_organize.handle,  # RECEIPT_BOUND tier (read-only, proposal-only)
-    "downloads_apply_organize": _downloads_apply_organize.handle,      # RECEIPT_BOUND tier (read-only, dry-run plan only — apply runtime NOT BUILT v0.1)
-    "sovereign_render": _sovereign_render.handle,          # RECEIPT_BOUND tier (read-only, SMI Path A scaffold render to mission outputs)
-    "node0_awakening": _node0_awakening.handle,            # RECEIPT_BOUND tier (metadata-only scan, mints custom awakening receipt)
+# Handler name → (module, callable). Modules load only when selected so an
+# optional handler dependency cannot block an unrelated bounded act.
+REGISTRY: Dict[str, tuple[str, str]] = {
+    "read_file_inside_boundary": (".read_file", "handle"),        # ALWAYS tier
+    "write_under_mission_directory": (".write_file", "handle"),   # RECEIPT_BOUND tier
+    "downloads_analyze": (".downloads_analyze", "handle"),        # RECEIPT_BOUND tier (read-only)
+    "downloads_propose_organize": (".downloads_propose_organize", "handle"),  # RECEIPT_BOUND tier (read-only, proposal-only)
+    "downloads_apply_organize": (".downloads_apply_organize", "handle"),      # RECEIPT_BOUND tier (read-only, dry-run plan only — apply runtime NOT BUILT v0.1)
+    "sovereign_render": (".sovereign_render", "handle"),          # RECEIPT_BOUND tier (read-only, SMI Path A scaffold render to mission outputs)
+    "node0_awakening": (".node0_awakening", "handle"),            # RECEIPT_BOUND tier (metadata-only scan, mints custom awakening receipt)
 }
 
 
@@ -53,7 +47,9 @@ def get_handler(handler_name: str):
             f"handler not registered: {handler_name!r}. "
             f"Known handlers: {sorted(REGISTRY.keys())}"
         )
-    return REGISTRY[handler_name]
+    module_name, callable_name = REGISTRY[handler_name]
+    module = import_module(module_name, package=__package__)
+    return getattr(module, callable_name)
 
 
 def list_handlers():

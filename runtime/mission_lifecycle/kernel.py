@@ -12,6 +12,7 @@ USAGE
   python3 kernel.py status <mission_id>                        # show capsule state + receipts
   python3 kernel.py consent <mission_id> "<consent phrase>"    # record consent for MUMO_GO act
   python3 kernel.py run <mission_id>                           # run; completion requires observed postconditions
+  python3 kernel.py observe <mission_id>                       # independently observe a declared filesystem postcondition
   python3 kernel.py list                                        # all missions
   python3 kernel.py --help
 
@@ -229,8 +230,10 @@ def new_mission_capsule(agent_name: str, task_statement: str, contract: dict,
             "inputs_read": [],
             "outputs_written": [],
             "receipts_minted": [],
+            "effect_records": [],
             "blake3_chain_segment": {"first": None, "last": None, "count": 0},
         },
+        "observations": {},
         "outcome": {
             "result": None,
             "finding": None,
@@ -459,6 +462,91 @@ def transition_state(capsule: dict, contract: dict, target_state: str,
     return receipt
 
 
+def _validate_file_postcondition(spec: dict) -> dict:
+    """Normalize the one bounded postcondition supported by the live observer."""
+    if not isinstance(spec, dict) or spec.get("type") != "file_sha256":
+        raise ValueError("postcondition_type_not_supported")
+    relative_path = spec.get("relative_path")
+    expected_sha256 = spec.get("expected_sha256")
+    if not isinstance(relative_path, str) or not relative_path.strip():
+        raise ValueError("postcondition_relative_path_missing")
+    path = Path(relative_path)
+    if (path.is_absolute() or relative_path.startswith(("/", "~"))
+            or not path.parts or any(part in ("..", "") for part in path.parts)):
+        raise ValueError("postcondition_path_outside_mission")
+    if (not isinstance(expected_sha256, str) or len(expected_sha256) != 64
+            or any(char not in "0123456789abcdefABCDEF" for char in expected_sha256)):
+        raise ValueError("postcondition_sha256_malformed")
+    normalized = {
+        "type": "file_sha256",
+        "relative_path": relative_path,
+        "expected_sha256": expected_sha256.lower(),
+    }
+    normalized["predicate"] = "file_sha256:" + canonicalize_for_hash({
+        "relative_path": normalized["relative_path"],
+        "expected_sha256": normalized["expected_sha256"],
+    })
+    return normalized
+
+
+def _bind_postconditions(acts: list) -> list:
+    """Bind declared file effects to exact, mission-relative expected bytes."""
+    predicates = []
+    for planned_act in acts:
+        if not isinstance(planned_act, dict):
+            raise ValueError("planned_act_malformed")
+        handler_name = planned_act.get("handler")
+        raw_spec = planned_act.get("postcondition")
+        if handler_name == "write_under_mission_directory" and raw_spec is None:
+            raise ValueError("postcondition_required_for_write_act")
+        if raw_spec is None:
+            continue
+        if handler_name != "write_under_mission_directory":
+            raise ValueError("postcondition_handler_not_supported")
+        effect_id = planned_act.get("effect_id")
+        producer_id = planned_act.get("producer_id")
+        if (not isinstance(effect_id, str) or not effect_id.strip()
+                or not isinstance(producer_id, str) or not producer_id.strip()):
+            raise ValueError("effect_identity_required")
+        normalized = _validate_file_postcondition(raw_spec)
+        args = planned_act.get("args") or {}
+        if args.get("relative_path") != normalized["relative_path"]:
+            raise ValueError("postcondition_target_mismatch")
+        content = args.get("content")
+        if not isinstance(content, str):
+            raise ValueError("write_content_missing")
+        if sha256_hex(content.encode("utf-8")) != normalized["expected_sha256"]:
+            raise ValueError("postcondition_content_hash_mismatch")
+        planned_act["postcondition"] = normalized
+        if normalized["predicate"] in predicates:
+            raise ValueError("postcondition_duplicate")
+        predicates.append(normalized["predicate"])
+    return predicates
+
+
+def _resolve_mission_target(mission_id: str, relative_path: str) -> Path:
+    """Resolve one declared mission-relative file without following an escape."""
+    mission_dir = (MISSIONS_DIR / mission_id).resolve()
+    target = MISSIONS_DIR / mission_id / relative_path
+    resolved_parent = target.parent.resolve()
+    resolved_target = target.resolve(strict=False)
+    if (resolved_parent != mission_dir
+            and mission_dir not in resolved_parent.parents):
+        raise ValueError("observer_target_outside_mission")
+    if (resolved_target != mission_dir
+            and mission_dir not in resolved_target.parents):
+        raise ValueError("observer_target_outside_mission")
+    if target.is_symlink():
+        raise ValueError("observer_target_symlink")
+    return resolved_target
+
+
+def _validate_mission_id(mission_id: str):
+    """Keep observer lookup inside the UUID-named mission store."""
+    if not isinstance(mission_id, str) or str(uuid.UUID(mission_id)) != mission_id:
+        raise ValueError("mission_id_malformed")
+
+
 # ─── commands ─────────────────────────────────────────────────────────────
 def cmd_preview(agent_name: str, task: str, acts_file: str = None,
                 iqra_preview_ref: dict = None) -> dict:
@@ -476,7 +564,9 @@ def cmd_preview(agent_name: str, task: str, acts_file: str = None,
             acts = json.loads(acts_path.read_text(encoding="utf-8"))
         if not isinstance(acts, list):
             raise ValueError(f"acts file must contain a list, got {type(acts).__name__}")
+        predicates = _bind_postconditions(acts)
         capsule["authority"]["acts_planned"] = acts
+        capsule["dod"]["predicates_required"] = predicates
         # Set required_tier to highest tier among planned acts
         tiers = [a.get("tier", "ALWAYS") for a in acts]
         if "MUMO_GO_REQUIRED" in tiers:
@@ -580,6 +670,17 @@ def _validate_postcondition_observation(capsule: dict, predicate: str,
     if not isinstance(target_binding, dict):
         return False, "observation_target_binding_malformed", None
 
+    if predicate.startswith("file_sha256:"):
+        try:
+            expected = json.loads(predicate.split(":", 1)[1])
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return False, "postcondition_malformed", None
+        if (not isinstance(expected, dict)
+                or target_binding.get("relative_path") != expected.get("relative_path")
+                or observation.get("observed_sha256") != expected.get("expected_sha256")
+                or target_binding.get("observed_sha256") != observation.get("observed_sha256")):
+            return False, "observed_digest_mismatch", None
+
     matches = [record for record in act_results
                if isinstance(record, dict)
                and record.get("act_id") == observation["act_id"]]
@@ -600,7 +701,6 @@ def _validate_postcondition_observation(capsule: dict, predicate: str,
         return False, "observation_effect_mismatch", None
     if observation["observer_id"] == producer_id:
         return False, "observer_is_effect_producer", None
-
     expected_binding = {
         "mission_id": capsule.get("mission_id"),
         "effect_id": effect_id,
@@ -747,12 +847,16 @@ def cmd_run(mission_id: str):
 
         result = handler(planned_act, capsule, contract)
         # Handler success is execution evidence only; it is never a postcondition observation.
-        act_results.append({
+        act_record = {
             "act_id": planned_act["act_id"],
             "effect_id": planned_act.get("effect_id"),
             "producer_id": planned_act.get("producer_id"),
+            "executed_at": now_iso(),
             "result": result,
-        })
+        }
+        act_results.append(act_record)
+        # Persist each execution record before any failure/suspension transition.
+        capsule.setdefault("evidence", {}).setdefault("effect_records", []).append(act_record)
         for out in result.get("outputs", []):
             capsule["evidence"]["outputs_written"].append(out)
         mint_act_handler_receipt(capsule, contract, planned_act, result)
@@ -765,6 +869,7 @@ def cmd_run(mission_id: str):
                   file=sys.stderr)
             sys.exit(1)
 
+    capsule.setdefault("evidence", {})["effect_records"] = act_results
     completion = _completion_verification(capsule, act_results)
     capsule["outcome"]["completion_verification"] = completion
     if not completion["eligible"]:
@@ -795,6 +900,144 @@ def cmd_run(mission_id: str):
     print(f"mission {mission_id} archived. state: {capsule['state']['current']}")
     print(f"receipts minted: {len(capsule['evidence']['receipts_minted'])}")
     print(f"chain segment: {capsule['evidence']['blake3_chain_segment']['count']} receipts")
+
+
+def cmd_observe(mission_id: str):
+    """Fresh-process, fixed-scope filesystem observation for a suspended effect."""
+    try:
+        _validate_mission_id(mission_id)
+    except (AttributeError, ValueError):
+        print("ERROR: observer refused malformed mission id", file=sys.stderr)
+        sys.exit(1)
+    capsule = load_capsule(mission_id)
+    if capsule["state"]["current"] != STATE_SUSPENDED:
+        print(f"ERROR: mission not suspended awaiting observation (current: {capsule['state']['current']})",
+              file=sys.stderr)
+        sys.exit(1)
+    if capsule.get("observations"):
+        print("ERROR: observation checkpoint already recorded", file=sys.stderr)
+        sys.exit(1)
+
+    contract = load_agent_contract(capsule["agent_binding"]["agent_name"])
+    planned = capsule.get("authority", {}).get("acts_planned")
+    effect_records = capsule.get("evidence", {}).get("effect_records")
+    required = capsule.get("dod", {}).get("predicates_required")
+    if not isinstance(planned, list) or not isinstance(effect_records, list):
+        print("ERROR: effect checkpoint missing or malformed", file=sys.stderr)
+        sys.exit(1)
+    if not isinstance(required, list) or not required:
+        print("ERROR: observable postcondition missing", file=sys.stderr)
+        sys.exit(1)
+
+    observations = {}
+    observer_id = "dema.mission_observer.filesystem_readback"
+    observer_class = "independent_postcondition_observer"
+    for planned_act in planned:
+        raw_spec = planned_act.get("postcondition") if isinstance(planned_act, dict) else None
+        if raw_spec is None:
+            continue
+        try:
+            spec = _validate_file_postcondition(raw_spec)
+            target = _resolve_mission_target(mission_id, spec["relative_path"])
+        except (ValueError, OSError) as exc:
+            print(f"ERROR: observer refused target: {exc}", file=sys.stderr)
+            sys.exit(1)
+        predicate = spec["predicate"]
+        if predicate not in required:
+            print("ERROR: postcondition is not bound in mission DoD", file=sys.stderr)
+            sys.exit(1)
+        matches = [record for record in effect_records
+                   if isinstance(record, dict)
+                   and record.get("act_id") == planned_act.get("act_id")]
+        if len(matches) != 1:
+            print("ERROR: observer effect checkpoint is ambiguous", file=sys.stderr)
+            sys.exit(1)
+        record = matches[0]
+        result = record.get("result")
+        if not isinstance(result, dict) or result.get("passed") is not True:
+            print("ERROR: observer effect checkpoint is not successful", file=sys.stderr)
+            sys.exit(1)
+        executed_at = record.get("executed_at")
+        try:
+            executed_dt = datetime.fromisoformat(executed_at.replace("Z", "+00:00"))
+        except (AttributeError, TypeError, ValueError):
+            print("ERROR: observer effect checkpoint timestamp malformed", file=sys.stderr)
+            sys.exit(1)
+        if executed_dt.tzinfo is None:
+            print("ERROR: observer effect checkpoint timestamp is not timezone-bound", file=sys.stderr)
+            sys.exit(1)
+
+        observed_sha256 = None
+        observed_size = 0
+        try:
+            observed_bytes = target.read_bytes()
+            observed_sha256 = sha256_hex(observed_bytes)
+            observed_size = len(observed_bytes)
+        except (FileNotFoundError, IsADirectoryError, PermissionError, OSError):
+            observed_bytes = None
+        observed_at = now_iso()
+        observed_dt = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
+        if observed_dt <= executed_dt:
+            print("ERROR: observer reading is not fresh", file=sys.stderr)
+            sys.exit(1)
+
+        effect_id = record.get("effect_id") or result.get("effect_id")
+        observation = {
+            "mission_id": mission_id,
+            "effect_id": effect_id,
+            "act_id": planned_act.get("act_id"),
+            "expected_postcondition": predicate,
+            "observed_state": observed_sha256 == spec["expected_sha256"],
+            "observed_sha256": observed_sha256,
+            "observer_id": observer_id,
+            "observer_class": observer_class,
+            "observed_at": observed_at,
+            "freshness": "FRESH",
+            "evidence_ref": f"mission://{mission_id}/observation/{sha256_hex(predicate)}",
+            "verdict": "PASS" if observed_sha256 == spec["expected_sha256"] else "FAIL",
+            "target_binding": {
+                "mission_id": mission_id,
+                "effect_id": effect_id,
+                "act_id": planned_act.get("act_id"),
+                "relative_path": spec["relative_path"],
+                "target_path": str(target),
+                "observed_sha256": observed_sha256,
+            },
+            "target_type": "file" if observed_bytes is not None else "absent",
+            "size": observed_size,
+        }
+        observations[predicate] = observation
+
+    if len(observations) != len(required):
+        print("ERROR: observer did not cover every required postcondition", file=sys.stderr)
+        sys.exit(1)
+
+    capsule["observations"] = observations
+    capsule.setdefault("outcome", {})["observer_checkpoint"] = {
+        "observer_id": observer_id,
+        "observer_class": observer_class,
+        "observations_recorded": len(observations),
+        "observed_at": now_iso(),
+    }
+    completion = _completion_verification(capsule, effect_records)
+    capsule["outcome"]["completion_verification"] = completion
+    if not completion["eligible"]:
+        capsule["outcome"]["result"] = None
+        save_capsule(capsule)
+        print(f"ERROR: mission completion blocked: {completion['reason']}", file=sys.stderr)
+        sys.exit(1)
+
+    transition_state(capsule, contract, STATE_VALIDATED,
+                     "observed_postconditions_verified")
+    capsule["dod"]["predicates_passed"] = list(required)
+    capsule["outcome"]["result"] = "success"
+    transition_state(capsule, contract, STATE_RECEIPTED, "outcome_recorded")
+    capsule["outcome"]["wisdom_candidate"] = False
+    transition_state(capsule, contract, STATE_ARCHIVED, "mission_closed")
+    save_capsule(capsule)
+    print(f"mission {mission_id} archived after independent observation. state: {capsule['state']['current']}")
+    print(f"observations recorded: {len(observations)}")
+    print(f"receipts minted: {len(capsule['evidence']['receipts_minted'])}")
 
 
 def cmd_list():
@@ -863,6 +1106,12 @@ def main():
     sp.add_argument("mission_id")
 
     sp = sub.add_parser(
+        "observe",
+        help="independently observe a declared mission-relative filesystem postcondition",
+    )
+    sp.add_argument("mission_id")
+
+    sp = sub.add_parser(
         "run",
         help="execute acts; archive only after observed postconditions verify",
     )
@@ -887,6 +1136,8 @@ def main():
         cmd_status(args.mission_id)
     elif args.command == "run":
         cmd_run(args.mission_id)
+    elif args.command == "observe":
+        cmd_observe(args.mission_id)
     elif args.command == "list":
         cmd_list()
     elif args.command == "consent":

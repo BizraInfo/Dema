@@ -39,6 +39,7 @@ VALID_TRANSITIONS = {
     (STATE_READY, STATE_EXECUTING): "run_invoked",
     (STATE_EXECUTING, STATE_VALIDATED): "all_acts_succeeded",
     (STATE_EXECUTING, STATE_SUSPENDED): "interrupt_or_act_failed",
+    (STATE_SUSPENDED, STATE_VALIDATED): "observed_postconditions_verified",
     (STATE_VALIDATED, STATE_RECEIPTED): "outcome_recorded",
     (STATE_RECEIPTED, STATE_ARCHIVED): "mission_closed",
     (STATE_SUSPENDED, STATE_READY): "operator_resume",
