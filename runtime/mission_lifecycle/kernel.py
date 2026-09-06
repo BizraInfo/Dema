@@ -650,20 +650,29 @@ def cmd_consent(mission_id: str, phrase: str):
     capsule = load_capsule(mission_id)
     contract = load_agent_contract(capsule["agent_binding"]["agent_name"])
 
-    matched = False
-    for planned in capsule["authority"]["acts_planned"]:
-        if planned.get("tier") != "MUMO_GO_REQUIRED":
-            continue
-        if planned.get("consent_phrase_template") == phrase or phrase.startswith("GO: "):
-            planned["consent_received"] = True
-            planned["consent_received_phrase"] = phrase
-            planned["consent_received_at"] = now_iso()
-            matched = True
-            print(f"consent recorded for act {planned['act_id']}")
+    if capsule.get("mission_id") != mission_id:
+        print("WARNING: mission capsule identity does not match requested mission", file=sys.stderr)
+        return
 
-    if not matched:
-        print(f"WARNING: no MUMO_GO_REQUIRED act matched phrase '{phrase}'", file=sys.stderr)
+    if not isinstance(phrase, str):
+        print("WARNING: consent phrase must be a string", file=sys.stderr)
+        return
 
+    matches = [
+        planned for planned in capsule["authority"]["acts_planned"]
+        if planned.get("tier") == "MUMO_GO_REQUIRED"
+        and not planned.get("consent_received")
+        and planned.get("consent_phrase_template") == phrase
+    ]
+    if len(matches) != 1:
+        print(f"WARNING: expected one MUMO_GO_REQUIRED act matching phrase '{phrase}'", file=sys.stderr)
+        return
+
+    planned = matches[0]
+    planned["consent_received"] = True
+    planned["consent_received_phrase"] = phrase
+    planned["consent_received_at"] = now_iso()
+    print(f"consent recorded for act {planned['act_id']}")
     save_capsule(capsule)
 
 
