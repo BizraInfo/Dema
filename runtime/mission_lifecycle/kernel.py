@@ -11,7 +11,7 @@ USAGE
   python3 kernel.py preview <agent_name> "<task statement>"   # create mission, halt at preview
   python3 kernel.py status <mission_id>                        # show capsule state + receipts
   python3 kernel.py consent <mission_id> "<consent phrase>"    # record consent for MUMO_GO act
-  python3 kernel.py run <mission_id>                           # transition ready->executing->validated->receipted
+  python3 kernel.py run <mission_id>                           # run; completion requires observed postconditions
   python3 kernel.py list                                        # all missions
   python3 kernel.py --help
 
@@ -28,9 +28,10 @@ CONSTITUTIONAL GROUND
   - No external network. No canon mutation. No Node1 contact. No self-promotion.
 
 USAGE INVARIANT
-  At v0.1, this kernel proves the lifecycle works end-to-end on
-  EMPTY-ACTS-PLANNED missions. As act handlers register in v0.2, missions
-  become substantive. The receipt chain exists from day one.
+  At v0.1, this kernel proves preview and execution transitions with bounded
+  fixtures. A mission with an effect cannot complete without a fresh,
+  mission/effect/act-bound postcondition observation. The receipt chain exists
+  from day one.
 """
 from __future__ import annotations
 
@@ -540,6 +541,155 @@ def cmd_status(mission_id: str):
         print(f"  wisdom_candidate: TRUE (operator may type 'GO: promote wisdom {mission_id}')")
 
 
+def _validate_postcondition_observation(capsule: dict, predicate: str,
+                                       observation: dict, act_results: list):
+    """Require a fresh, mission/effect/act-bound observation before completion."""
+    required_fields = [
+        "mission_id", "effect_id", "act_id", "expected_postcondition",
+        "observed_state", "observer_id", "observer_class", "observed_at", "freshness",
+        "evidence_ref", "verdict",
+    ]
+    if not isinstance(observation, dict) or any(
+            field not in observation for field in required_fields):
+        return False, "observation_malformed", None
+    string_fields = [field for field in required_fields if field != "observed_state"]
+    if (not isinstance(observation["observed_state"], bool)
+            or any(not isinstance(observation[field], str) or not observation[field].strip()
+                   for field in string_fields)):
+        return False, "observation_malformed", None
+    if observation["mission_id"] != capsule.get("mission_id"):
+        return False, "observation_mission_mismatch", None
+    if observation["expected_postcondition"] != predicate:
+        return False, "observation_postcondition_mismatch", None
+    if observation["observed_state"] is not True:
+        return False, "postcondition_not_observed", None
+    if observation["freshness"] != "FRESH":
+        return False, "observation_stale", None
+    if observation["verdict"] != "PASS":
+        return False, "observation_verification_failed", None
+
+    try:
+        observed_at = datetime.fromisoformat(
+            observation["observed_at"].replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return False, "observation_timestamp_malformed", None
+    if observed_at.tzinfo is None:
+        return False, "observation_timestamp_not_timezone_bound", None
+
+    target_binding = observation.get("target_binding")
+    if not isinstance(target_binding, dict):
+        return False, "observation_target_binding_malformed", None
+
+    matches = [record for record in act_results
+               if isinstance(record, dict)
+               and record.get("act_id") == observation["act_id"]]
+    if len(matches) != 1:
+        return False, "observation_act_mismatch", None
+    record = matches[0]
+    result = record.get("result")
+    if not isinstance(result, dict) or result.get("passed") is not True:
+        return False, "observed_effect_not_successful", None
+
+    effect_id = record.get("effect_id") or result.get("effect_id")
+    producer_id = record.get("producer_id") or result.get("producer_id")
+    if not isinstance(effect_id, str) or not effect_id.strip():
+        return False, "effect_identity_missing", None
+    if not isinstance(producer_id, str) or not producer_id.strip():
+        return False, "effect_producer_identity_missing", None
+    if observation["effect_id"] != effect_id:
+        return False, "observation_effect_mismatch", None
+    if observation["observer_id"] == producer_id:
+        return False, "observer_is_effect_producer", None
+
+    expected_binding = {
+        "mission_id": capsule.get("mission_id"),
+        "effect_id": effect_id,
+        "act_id": observation["act_id"],
+    }
+    if any(target_binding.get(key) != value
+           for key, value in expected_binding.items()):
+        return False, "observation_target_mismatch", None
+    return True, "observation_accepted", observation["evidence_ref"]
+
+
+def _completion_verification(capsule: dict, act_results: list) -> dict:
+    """Return the narrow completion proof; no handler success can supply it."""
+    verification = {
+        "effect_executed": False,
+        "required_postcondition_observed": False,
+        "observation_fresh": False,
+        "observation_target_bound": False,
+        "verification_passed": False,
+        "completion_receipt_eligible": False,
+        "eligible": False,
+        "reason": None,
+        "evidence_refs": [],
+    }
+
+    required = capsule.get("dod", {}).get("predicates_required")
+    if not isinstance(required, list) or any(
+            not isinstance(predicate, str) or not predicate.strip()
+            for predicate in required):
+        verification["reason"] = "required_postconditions_malformed"
+        return verification
+    if not required:
+        verification["reason"] = "required_postconditions_missing"
+        return verification
+    if len(required) != len(set(required)):
+        verification["reason"] = "required_postconditions_ambiguous"
+        return verification
+
+    planned = capsule.get("authority", {}).get("acts_planned")
+    if not isinstance(planned, list) or not isinstance(act_results, list):
+        verification["reason"] = "effect_execution_records_malformed"
+        return verification
+    planned_ids = [act.get("act_id") for act in planned
+                   if isinstance(act, dict)]
+    result_ids = [record.get("act_id") for record in act_results
+                  if isinstance(record, dict)]
+    if (not planned or not act_results
+            or len(planned_ids) != len(planned)
+            or len(result_ids) != len(act_results)
+            or len(set(planned_ids)) != len(planned_ids)
+            or len(set(result_ids)) != len(result_ids)
+            or set(planned_ids) != set(result_ids)):
+        verification["reason"] = "effect_not_executed"
+        return verification
+    if not all(isinstance(record.get("result"), dict)
+               and record["result"].get("passed") is True
+               for record in act_results):
+        verification["reason"] = "effect_not_executed"
+        return verification
+    verification["effect_executed"] = True
+
+    observations = capsule.get("observations")
+    if not isinstance(observations, dict):
+        verification["reason"] = "observations_missing_or_malformed"
+        return verification
+    for predicate in required:
+        accepted, reason, evidence_ref = _validate_postcondition_observation(
+            capsule, predicate, observations.get(predicate), act_results)
+        if not accepted:
+            verification["reason"] = reason
+            return verification
+        verification["evidence_refs"].append(evidence_ref)
+
+    verification["required_postcondition_observed"] = True
+    verification["observation_fresh"] = True
+    verification["observation_target_bound"] = True
+    verification["verification_passed"] = True
+    evidence = capsule.get("evidence")
+    if not (isinstance(evidence, dict)
+            and isinstance(evidence.get("receipts_minted"), list)
+            and isinstance(evidence.get("blake3_chain_segment"), dict)):
+        verification["reason"] = "completion_receipt_not_eligible"
+        return verification
+    verification["completion_receipt_eligible"] = True
+    verification["eligible"] = True
+    verification["reason"] = "verified_observed_postconditions"
+    return verification
+
+
 def cmd_run(mission_id: str):
     capsule = load_capsule(mission_id)
     if capsule["state"]["current"] != STATE_PREVIEW and capsule["state"]["current"] != STATE_READY:
@@ -596,7 +746,13 @@ def cmd_run(mission_id: str):
             continue
 
         result = handler(planned_act, capsule, contract)
-        act_results.append({"act_id": planned_act["act_id"], "result": result})
+        # Handler success is execution evidence only; it is never a postcondition observation.
+        act_results.append({
+            "act_id": planned_act["act_id"],
+            "effect_id": planned_act.get("effect_id"),
+            "producer_id": planned_act.get("producer_id"),
+            "result": result,
+        })
         for out in result.get("outputs", []):
             capsule["evidence"]["outputs_written"].append(out)
         mint_act_handler_receipt(capsule, contract, planned_act, result)
@@ -609,12 +765,21 @@ def cmd_run(mission_id: str):
                   file=sys.stderr)
             sys.exit(1)
 
-    # all acts succeeded (vacuously for empty list, or all real acts passed)
+    completion = _completion_verification(capsule, act_results)
+    capsule["outcome"]["completion_verification"] = completion
+    if not completion["eligible"]:
+        capsule["outcome"]["result"] = None
+        transition_state(capsule, contract, STATE_SUSPENDED,
+                         f"completion_blocked:{completion['reason']}")
+        print(f"ERROR: mission completion blocked: {completion['reason']}",
+              file=sys.stderr)
+        sys.exit(1)
+
+    # all acts succeeded and every required postcondition was independently observed
     transition_state(capsule, contract, STATE_VALIDATED, "all_acts_succeeded")
 
-    # validate DoD (vacuously passes for empty predicates_required)
-    required = set(capsule["dod"]["predicates_required"])
-    capsule["dod"]["predicates_passed"] = list(required)  # at v0.1, all required pass trivially
+    required = capsule["dod"]["predicates_required"]
+    capsule["dod"]["predicates_passed"] = list(required)
 
     # validated -> receipted
     capsule["outcome"]["result"] = "success"
@@ -697,7 +862,10 @@ def main():
     sp = sub.add_parser("status", help="show mission state")
     sp.add_argument("mission_id")
 
-    sp = sub.add_parser("run", help="advance mission to archived (executing -> validated -> receipted -> archived)")
+    sp = sub.add_parser(
+        "run",
+        help="execute acts; archive only after observed postconditions verify",
+    )
     sp.add_argument("mission_id")
 
     sub.add_parser("list", help="list all missions")
