@@ -1,0 +1,124 @@
+{
+  "artifacts": [
+    {
+      "mode_octal": "0664",
+      "role": "mission_kernel",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/kernel.py",
+      "sha256": "84bfcea7f252924d3be41b94756b88adf5cbdd40c50f265b009cf52f81dd6fdb",
+      "size_bytes": 32164,
+      "source_relative_path": "kernel.py",
+      "stage_relative_path": "kernel.py"
+    },
+    {
+      "mode_octal": "0664",
+      "role": "lifecycle_state_table",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/lifecycle_states.py",
+      "sha256": "ad4b10d8b646931984f6f3281e844f4938a9e0a3dcfee4f57b4728387a377211",
+      "size_bytes": 2318,
+      "source_relative_path": "lifecycle_states.py",
+      "stage_relative_path": "lifecycle_states.py"
+    },
+    {
+      "mode_octal": "0664",
+      "role": "required_handler_module",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/handlers/__init__.py",
+      "sha256": "910e87405ce551a3562c1514b818c33c00719ae6d151ce173b6f1d1d56e7940b",
+      "size_bytes": 2766,
+      "source_relative_path": "handlers/__init__.py",
+      "stage_relative_path": "handlers/__init__.py"
+    },
+    {
+      "mode_octal": "0664",
+      "role": "required_handler_module",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/handlers/downloads_analyze.py",
+      "sha256": "956de0127da0d588bd834043096a62580eb08608e78afff47d6d95345e367607",
+      "size_bytes": 8260,
+      "source_relative_path": "handlers/downloads_analyze.py",
+      "stage_relative_path": "handlers/downloads_analyze.py"
+    },
+    {
+      "mode_octal": "0664",
+      "role": "required_handler_module",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/handlers/downloads_apply_organize.py",
+      "sha256": "2f9d7a4a0b1107f3ebf8d325da44260c051be5179d8211781c720f08b11b229b",
+      "size_bytes": 13716,
+      "source_relative_path": "handlers/downloads_apply_organize.py",
+      "stage_relative_path": "handlers/downloads_apply_organize.py"
+    },
+    {
+      "mode_octal": "0664",
+      "role": "required_handler_module",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/handlers/downloads_propose_organize.py",
+      "sha256": "6f2de84a8565d5dad574213f867f1b24e70f758ab323b88ade6c5e5828061783",
+      "size_bytes": 10619,
+      "source_relative_path": "handlers/downloads_propose_organize.py",
+      "stage_relative_path": "handlers/downloads_propose_organize.py"
+    },
+    {
+      "mode_octal": "0664",
+      "role": "required_handler_module",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/handlers/node0_awakening.py",
+      "sha256": "087711f10fc3f683835f94c0188bd623982dff5db038d9f3e3a0c9f3f74b6087",
+      "size_bytes": 21440,
+      "source_relative_path": "handlers/node0_awakening.py",
+      "stage_relative_path": "handlers/node0_awakening.py"
+    },
+    {
+      "mode_octal": "0664",
+      "role": "required_handler_module",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/handlers/read_file.py",
+      "sha256": "c021503982c597ec066688cb9a736d2e9dbfab90dd8fa36f21c645667fb49204",
+      "size_bytes": 4467,
+      "source_relative_path": "handlers/read_file.py",
+      "stage_relative_path": "handlers/read_file.py"
+    },
+    {
+      "mode_octal": "0664",
+      "role": "required_handler_module",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/handlers/sovereign_render.py",
+      "sha256": "77462bfe6a7dc994919e37b88749cafe3b8f2020756895dcf93f97fab4c2334c",
+      "size_bytes": 4410,
+      "source_relative_path": "handlers/sovereign_render.py",
+      "stage_relative_path": "handlers/sovereign_render.py"
+    },
+    {
+      "mode_octal": "0664",
+      "role": "required_handler_module",
+      "runtime_path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/handlers/write_file.py",
+      "sha256": "b419257945584dcd5483c08065ed5599fa2a0e9cb14f235e2cabee2841a86ad8",
+      "size_bytes": 6164,
+      "source_relative_path": "handlers/write_file.py",
+      "stage_relative_path": "handlers/write_file.py"
+    }
+  ],
+  "behavioral_status": {
+    "B2": "RED_FROZEN",
+    "B3": "RED_FROZEN"
+  },
+  "campaign_id": "BIZRA-NODE0-GENESIS-COMMISSIONING-1A",
+  "deployment_status": "NOT_DEPLOYED_FROM_VERSIONED_SOURCE",
+  "exclusions": [
+    "missions/",
+    "receipts/",
+    "__pycache__/",
+    "credentials",
+    "user_runtime_state",
+    "spec/"
+  ],
+  "external_runtime_dependencies_not_copied": [
+    "PyYAML==6.0.1",
+    "atlas",
+    "sovereign"
+  ],
+  "provenance": {
+    "gate7a0_evidence_sha256": "3aa749615fb41cf11f01248ad836ca6a61657ec90cd13d16147080bc6bf79254",
+    "gate7a0_receipt_sha256": "cc3bb1be56c9691a2b6eb94a8728dbfb819465c2230e39d4ee04e9c0a010e2c6"
+  },
+  "runtime_subject": {
+    "git_blob_sha1": "06ede640bde8992ea39a340330df7529fae82f16",
+    "path": "/home/bizra-operating-system/.dema/kernel/mission_lifecycle/kernel.py",
+    "sha256": "84bfcea7f252924d3be41b94756b88adf5cbdd40c50f265b009cf52f81dd6fdb"
+  },
+  "schema": "bizra.node0.mission_kernel_lineage.v1",
+  "source_role": "LOCAL_VERSIONED_VULNERABLE_BASELINE"
+}
