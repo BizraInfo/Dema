@@ -25,6 +25,7 @@ export const URP0_ID = "URP-0";
 export const URP0_MISSION_ID = "BIZRA-GENESIS-LOCAL-MISSION-0";
 export const URP0_RESOURCE_OFFER_ID = "NODE0-GENESIS-RESOURCE-OFFER-0";
 export const URP0_BLOCK0_ID = "BIZRA-BLOCK0-LOCAL-CANDIDATE";
+export const WORLD_CELL_MISSION_ID = "NODE0-STATE-BRIEF-MISSION-1A";
 
 // Existing lifecycle events plus the explicit World-Cell system-plane binding.
 export const URP0_EVENT_KINDS = Object.freeze([
@@ -39,6 +40,7 @@ export const URP0_EVENT_KINDS = Object.freeze([
   "MISSION_EXECUTED",
   "SAT_JUDGMENT_RECORDED",
   "RECEIPT_RECORDED",
+  "WORLD_CELL_MISSION_COMPLETED",
   "BLOCK0_CANDIDATE_SEALED",
 ]);
 
@@ -130,6 +132,7 @@ function genesisState() {
     consent_requests: Object.create(null),
     used_nonces: [],
     receipts: Object.create(null),
+    world_cell: null,
     block0: null,
     head: { seq: 0, event_id: URP0_GENESIS_EVENT_ID },
   };
@@ -154,6 +157,7 @@ function freezeState(state) {
     consent_requests: freezeMap(state.consent_requests),
     used_nonces: Object.freeze([...state.used_nonces].sort()),
     receipts: freezeMap(state.receipts),
+    world_cell: state.world_cell === null ? null : Object.freeze({ ...state.world_cell }),
     block0: state.block0 === null ? null : Object.freeze({ ...state.block0 }),
     head: Object.freeze({ ...state.head }),
   });
@@ -514,6 +518,47 @@ function applyUrp0Event(state, kind, payload, seq) {
     };
     m.status = "RECEIPTED";
     m.receipt_hash = payload.receipt_hash;
+    return null;
+  }
+
+  if (kind === "WORLD_CELL_MISSION_COMPLETED") {
+    if (state.world_cell !== null) return "world_cell_already_completed";
+    const required = [
+      "mission_id", "dema_mission_id", "dema_capsule_sha256", "output_sha256",
+      "observation_sha256", "dema_receipt_sha256", "pat7_evidence_sha256",
+      "pat7_count", "sat5_judgment_hash", "sat5_all_pass", "effect_count",
+      "duplicate_effects", "recovery_status", "authority_delta",
+      "public_gateway", "federation", "node1_admitted", "token_minted",
+      "completed_at", "urp_attempt_id", "urp_receipt_sha256",
+    ];
+    if (Object.keys(payload).some((key) => !required.includes(key))) return "world_cell_unknown_field";
+    if (payload.mission_id !== WORLD_CELL_MISSION_ID) return "world_cell_mission_id_invalid";
+    for (const key of [
+      "dema_capsule_sha256", "output_sha256", "observation_sha256",
+      "dema_receipt_sha256", "pat7_evidence_sha256", "sat5_judgment_hash",
+      "urp_receipt_sha256",
+    ]) {
+      if (!/^[a-f0-9]{64}$/.test(payload[key] ?? "")) return `world_cell_hash_invalid:${key}`;
+    }
+    if (!isNonEmptyString(payload.dema_mission_id)) return "world_cell_dema_mission_missing";
+    if (payload.pat7_count !== 7 || payload.sat5_all_pass !== true
+        || payload.effect_count !== 1 || payload.duplicate_effects !== 0
+        || payload.recovery_status !== "VERIFIED_PROCESS_REPLAY"
+        || payload.authority_delta !== 0
+        || payload.public_gateway !== false || payload.federation !== false
+        || payload.node1_admitted !== false || payload.token_minted !== false
+        || !isNonEmptyString(payload.completed_at)
+        || Number.isNaN(Date.parse(payload.completed_at))) {
+      return "world_cell_completion_claim_invalid";
+    }
+    const urpMission = Object.values(state.missions).find(
+      (mission) => mission.mission_id === payload.dema_mission_id && mission.attempt_id === payload.urp_attempt_id,
+    );
+    if (!urpMission || urpMission.status !== "RECEIPTED") return "world_cell_urp_mission_not_receipted";
+    const urpReceiptHash = urpMission.receipt_hash.replace(/^sha256:/, "");
+    if (urpReceiptHash !== payload.urp_receipt_sha256) return "world_cell_urp_receipt_mismatch";
+    if (!state.receipts[urpMission.receipt_hash]) return "world_cell_urp_receipt_missing";
+    state.world_cell = { ...payload, registered_at_seq: seq };
     return null;
   }
 

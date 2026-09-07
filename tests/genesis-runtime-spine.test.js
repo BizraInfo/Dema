@@ -30,7 +30,7 @@ import {
   sealBlock0,
   worldState,
 } from "../scripts/genesis/urp0-runtime.mjs";
-import { loadEvents, resolveStateRootDir, statePermissions } from "../scripts/genesis/urp0-store.mjs";
+import { appendEvent, loadEvents, resolveStateRootDir, statePermissions } from "../scripts/genesis/urp0-store.mjs";
 import { loopbackOrigins, startUrp0Server } from "../scripts/genesis/urp0-server.mjs";
 import { portFree, preflight } from "../scripts/genesis-node0.mjs";
 
@@ -135,6 +135,62 @@ test("restart reconstructs the identical state root from persisted evidence alon
     const perms = statePermissions(w.stateRootDir);
     assert.equal(perms[w.stateRootDir], "700");
     assert.equal(perms[join(w.stateRootDir, "journal.ndjson")], "600");
+  } finally {
+    w.cleanup();
+  }
+});
+
+test("world-cell completion binds one verified DEMA effect and refuses duplicates", () => {
+  const w = makeWorld();
+  try {
+    const { run } = runFullLoop(w);
+    assert.equal(run.ok, true, JSON.stringify(run.blocked_by));
+    // The completion contract uses the World-Cell mission id end to end.
+    // Rebind the fixture journal's otherwise fixed URP mission id before adding
+    // the completion event, preserving the kernel's hash chain.
+    const reboundMissionId = "NODE0-STATE-BRIEF-MISSION-1A";
+    let previousEvent = "GENESIS";
+    const rebound = loadEvents(w.stateRootDir).map((event, index) => {
+      const payload = ["MISSION_DECLARED", "CONSENT_REQUESTED", "MISSION_AUTHORIZED", "MISSION_EXECUTED", "SAT_JUDGMENT_RECORDED", "RECEIPT_RECORDED"].includes(event.kind)
+        ? { ...event.payload, mission_id: reboundMissionId }
+        : event.payload;
+      const next = makeUrp0Event({ seq: index + 1, kind: event.kind, payload, prev_event: previousEvent });
+      previousEvent = next.event_id;
+      return next;
+    });
+    writeFileSync(join(w.stateRootDir, "journal.ndjson"), `${rebound.map((event) => JSON.stringify(event)).join("\n")}\n`);
+    const mission = Object.values(worldState(w.stateRootDir).missions).find((m) => m.status === "RECEIPTED");
+    assert.ok(mission);
+    const hash = "a".repeat(64);
+    const payload = {
+      mission_id: "NODE0-STATE-BRIEF-MISSION-1A",
+      dema_mission_id: reboundMissionId,
+      dema_capsule_sha256: hash,
+      output_sha256: hash,
+      observation_sha256: hash,
+      dema_receipt_sha256: hash,
+      pat7_evidence_sha256: hash,
+      pat7_count: 7,
+      sat5_judgment_hash: run.judgment.judgment_hash.replace(/^sha256:/, ""),
+      sat5_all_pass: true,
+      effect_count: 1,
+      duplicate_effects: 0,
+      recovery_status: "VERIFIED_PROCESS_REPLAY",
+      authority_delta: 0,
+      public_gateway: false,
+      federation: false,
+      node1_admitted: false,
+      token_minted: false,
+      completed_at: new Date().toISOString(),
+      urp_attempt_id: mission.attempt_id,
+      urp_receipt_sha256: run.receipt_hash.replace(/^sha256:/, ""),
+    };
+    const completed = appendEvent(w.stateRootDir, "WORLD_CELL_MISSION_COMPLETED", payload);
+    assert.equal(completed.ok, true, JSON.stringify(completed.blocked_by));
+    assert.equal(worldState(w.stateRootDir).world_cell.mission_id, payload.mission_id);
+    const duplicate = appendEvent(w.stateRootDir, "WORLD_CELL_MISSION_COMPLETED", payload);
+    assert.equal(duplicate.ok, false);
+    assert.deepEqual(duplicate.blocked_by, ["world_cell_already_completed"]);
   } finally {
     w.cleanup();
   }
@@ -385,7 +441,7 @@ test("the SAT set is the constitutional five, not the obsolete council", () => {
   for (const obsolete of ["Guardian", "Reasoner", "Builder", "Critic", "Archivist"]) {
     assert.ok(!lanes.includes(obsolete), `obsolete council member leaked: ${obsolete}`);
   }
-  assert.equal(URP0_EVENT_KINDS.filter(kind => kind !== "SYSTEM_PLANE_BOUND").length, 11);
+  assert.equal(URP0_EVENT_KINDS.filter(kind => kind !== "SYSTEM_PLANE_BOUND").length, 12);
   assert.ok(URP0_EVENT_KINDS.includes("SYSTEM_PLANE_BOUND"));
 });
 

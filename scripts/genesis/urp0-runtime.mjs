@@ -533,6 +533,7 @@ export function sealBlock0(stateRootDir, { repository_base_commit, implementatio
 // journal on every request — never asserted, never cached into a snapshot.
 export function worldState(stateRootDir) {
   const { events, replay } = reconstruct(stateRootDir);
+  const worldCell = replay.state?.world_cell ?? null;
   return {
     schema: "bizra.genesis.world_state.v0.1",
     truth_label: URP0_TRUTH_LABEL,
@@ -548,8 +549,14 @@ export function worldState(stateRootDir) {
     ...(replay.state?.system_plane ? { system_plane: replay.state.system_plane } : {}),
     human: replay.state?.human ?? null,
     node: replay.state?.node ?? null,
-    dema: { role: "face", status: replay.state?.system_plane ? "HEALTH_UNPROVEN" : "ACTIVE_LOCAL" },
-    pat: { status: "DESIGNED_NOT_LIVE", autonomous_agent: false },
+    dema: {
+      role: "face",
+      status: worldCell ? "HEALTHY_LOCAL" : (replay.state?.system_plane ? "HEALTH_UNPROVEN" : "ACTIVE_LOCAL"),
+      ...(worldCell ? { mission_id: worldCell.mission_id, receipt_hash: `sha256:${worldCell.urp_receipt_sha256}` } : {}),
+    },
+    pat: worldCell
+      ? { status: "PAT7_OPERATIONAL_NODE0_LOCAL", autonomous_agent: false, count: worldCell.pat7_count, evidence_sha256: `sha256:${worldCell.pat7_evidence_sha256}` }
+      : { status: "DESIGNED_NOT_LIVE", autonomous_agent: false },
     fate: { status: "ACTIVE_LOCAL", mode: "EXACT_STRING_CONSENT_ONLY" },
     sat: {
       ...SAT5_STATUS,
@@ -557,16 +564,17 @@ export function worldState(stateRootDir) {
       registered: replay.state?.sat_set ?? null,
       ...(replay.state?.system_plane ? {
         owner: "BIZRA_SYSTEM", principal: "CONSTITUTIONAL_SYSTEM_PLANE", logical_home: "URP-0",
-        status: "REGISTERED_NOT_MISSION_QUALIFIED",
+        status: worldCell ? "SAT5_OPERATIONAL_URP_GENESIS" : "REGISTERED_NOT_MISSION_QUALIFIED",
         inventory: URP0_SAT_LANES.map(l => ({ role_id: l.id, instance_id: `URP-0/${l.id}`,
           verdict_contract: l.lane, owner: "BIZRA_SYSTEM", management: "SYSTEM_CONTRACT",
-          evidence_scope: "MISSION_CONTRACT_ONLY", status: "REGISTERED_NOT_MISSION_QUALIFIED" })),
+          evidence_scope: "MISSION_CONTRACT_ONLY", status: worldCell ? "MISSION_VERIFIED" : "REGISTERED_NOT_MISSION_QUALIFIED" })),
       } : {}),
     },
     resource_offer: replay.state?.resource_offer ?? null,
     missions: replay.state?.missions ?? {},
     receipts: replay.state?.receipts ?? {},
     block0: replay.state?.block0 ?? null,
+    world_cell: worldCell,
     boundary: urp0Boundary(),
     state_permissions: statePermissions(stateRootDir),
     journal: events.map((e) => ({ seq: e.seq, kind: e.kind, event_id: e.event_id, prev_event: e.prev_event })),
