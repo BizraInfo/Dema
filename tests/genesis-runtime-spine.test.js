@@ -23,6 +23,7 @@ import { judgeUrp0Mission, verifyBlock0Candidate, verifyUrp0Judgment } from "../
 import {
   admitHuman0,
   authorizeAndExecute,
+  bindWorldCellSystemPlane,
   conservativeOffer,
   measurePossessed,
   missionConsentCard,
@@ -145,6 +146,11 @@ test("world-cell completion binds one verified DEMA effect and refuses duplicate
   try {
     const { run } = runFullLoop(w);
     assert.equal(run.ok, true, JSON.stringify(run.blocked_by));
+    assert.equal(bindWorldCellSystemPlane(w.stateRootDir, {
+      authority_source_sha256: "a".repeat(64),
+      root_bindings: [{ path: "/fixture/root", sha256: "b".repeat(64) }],
+      now_iso: "2026-09-07T00:00:00Z",
+    }).ok, true);
     // The completion contract uses the World-Cell mission id end to end.
     // Rebind the fixture journal's otherwise fixed URP mission id before adding
     // the completion event, preserving the kernel's hash chain.
@@ -187,7 +193,24 @@ test("world-cell completion binds one verified DEMA effect and refuses duplicate
     };
     const completed = appendEvent(w.stateRootDir, "WORLD_CELL_MISSION_COMPLETED", payload);
     assert.equal(completed.ok, true, JSON.stringify(completed.blocked_by));
-    assert.equal(worldState(w.stateRootDir).world_cell.mission_id, payload.mission_id);
+    const completedState = worldState(w.stateRootDir);
+    assert.equal(completedState.world_cell.mission_id, payload.mission_id);
+    assert.deepEqual(completedState.sat.inventory.map((entry) => ({
+      role_id: entry.role_id,
+      verdict: entry.verdict,
+      evidence_ref: entry.evidence_ref,
+    })), URP0_SAT_LANES.map((lane) => ({
+      role_id: lane.id,
+      verdict: "PASS",
+      evidence_ref: {
+        schema: "bizra.genesis.sat_evidence_ref.v0.1",
+        mission_id: payload.dema_mission_id,
+        attempt_id: payload.urp_attempt_id,
+        source_event: "SAT_JUDGMENT_RECORDED",
+        judgment_sha256: `sha256:${payload.sat5_judgment_hash}`,
+        lane: lane.id,
+      },
+    })));
     const duplicate = appendEvent(w.stateRootDir, "WORLD_CELL_MISSION_COMPLETED", payload);
     assert.equal(duplicate.ok, false);
     assert.deepEqual(duplicate.blocked_by, ["world_cell_already_completed"]);

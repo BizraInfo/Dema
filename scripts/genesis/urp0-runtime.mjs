@@ -534,6 +534,15 @@ export function sealBlock0(stateRootDir, { repository_base_commit, implementatio
 export function worldState(stateRootDir) {
   const { events, replay } = reconstruct(stateRootDir);
   const worldCell = replay.state?.world_cell ?? null;
+  const satEvidence = worldCell
+    ? Object.freeze({
+        schema: "bizra.genesis.sat_evidence_ref.v0.1",
+        mission_id: worldCell.dema_mission_id,
+        attempt_id: worldCell.urp_attempt_id,
+        source_event: "SAT_JUDGMENT_RECORDED",
+        judgment_sha256: `sha256:${worldCell.sat5_judgment_hash}`,
+      })
+    : null;
   return {
     schema: "bizra.genesis.world_state.v0.1",
     truth_label: URP0_TRUTH_LABEL,
@@ -567,7 +576,8 @@ export function worldState(stateRootDir) {
         status: worldCell ? "SAT5_OPERATIONAL_URP_GENESIS" : "REGISTERED_NOT_MISSION_QUALIFIED",
         inventory: URP0_SAT_LANES.map(l => ({ role_id: l.id, instance_id: `URP-0/${l.id}`,
           verdict_contract: l.lane, owner: "BIZRA_SYSTEM", management: "SYSTEM_CONTRACT",
-          evidence_scope: "MISSION_CONTRACT_ONLY", status: worldCell ? "MISSION_VERIFIED" : "REGISTERED_NOT_MISSION_QUALIFIED" })),
+          evidence_scope: "MISSION_CONTRACT_ONLY", status: worldCell ? "MISSION_VERIFIED" : "REGISTERED_NOT_MISSION_QUALIFIED",
+          ...(worldCell ? { verdict: "PASS", evidence_ref: { ...satEvidence, lane: l.id } } : {}) })),
       } : {}),
     },
     resource_offer: replay.state?.resource_offer ?? null,
