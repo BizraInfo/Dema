@@ -385,7 +385,8 @@ test("the SAT set is the constitutional five, not the obsolete council", () => {
   for (const obsolete of ["Guardian", "Reasoner", "Builder", "Critic", "Archivist"]) {
     assert.ok(!lanes.includes(obsolete), `obsolete council member leaked: ${obsolete}`);
   }
-  assert.equal(URP0_EVENT_KINDS.length, 11);
+  assert.equal(URP0_EVENT_KINDS.filter(kind => kind !== "SYSTEM_PLANE_BOUND").length, 11);
+  assert.ok(URP0_EVENT_KINDS.includes("SYSTEM_PLANE_BOUND"));
 });
 
 test("the required phrase is bound to the root and the contract", () => {

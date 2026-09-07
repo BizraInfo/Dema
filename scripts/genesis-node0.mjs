@@ -102,6 +102,7 @@ async function serve() {
   // The API's CORS allowlist is derived from the port the UI will actually use.
   const { server, url } = await startUrp0Server({
     stateRootDir,
+    worldCell: process.argv.includes("--world-cell"),
     repoRoot: REPO_ROOT,
     port: API_PORT,
     uiPort: UI_PORT,

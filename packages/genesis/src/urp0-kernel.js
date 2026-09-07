@@ -26,8 +26,9 @@ export const URP0_MISSION_ID = "BIZRA-GENESIS-LOCAL-MISSION-0";
 export const URP0_RESOURCE_OFFER_ID = "NODE0-GENESIS-RESOURCE-OFFER-0";
 export const URP0_BLOCK0_ID = "BIZRA-BLOCK0-LOCAL-CANDIDATE";
 
-// The eleven URP-0 lifecycle events, in the only order the constitution admits.
+// Existing lifecycle events plus the explicit World-Cell system-plane binding.
 export const URP0_EVENT_KINDS = Object.freeze([
+  "SYSTEM_PLANE_BOUND",
   "HUMAN_REGISTERED",
   "NODE_REGISTERED",
   "SAT_SET_REGISTERED",
@@ -142,6 +143,7 @@ function freezeMap(map) {
 
 function freezeState(state) {
   return Object.freeze({
+    ...(state.system_plane ? { system_plane: Object.freeze({ ...state.system_plane }) } : {}),
     urp_id: state.urp_id,
     urp_state: state.urp_state,
     human: state.human === null ? null : Object.freeze({ ...state.human }),
@@ -233,6 +235,30 @@ export function reduceUrp0Events(events) {
 // Every step positively proves its precondition — absence of a block is never
 // validation.
 function applyUrp0Event(state, kind, payload, seq) {
+  if (kind === "SYSTEM_PLANE_BOUND") {
+    if (state.system_plane) return "system_plane_already_bound";
+    const expected = {
+      system_id: "BIZRA-GENESIS-SYSTEM", owner: "BIZRA_SYSTEM",
+      principal: "CONSTITUTIONAL_SYSTEM_PLANE", logical_home: "URP-0",
+      bootstrap_role: "FOUNDER_GENESIS_BOOTSTRAP_ROLE",
+      user_role: "NODE0_HUMAN_USER_ROLE", human_id: "HUMAN-0",
+      founder_authority_inherited: false,
+    };
+    if (Object.keys(payload).some(key => ![...Object.keys(expected), "authority_source_sha256", "root_bindings", "bound_at"].includes(key))) {
+      return "system_binding_unknown_field";
+    }
+    for (const [key, value] of Object.entries(expected)) {
+      if (payload[key] !== value) return `system_binding_invalid:${key}`;
+    }
+    if (!/^[a-f0-9]{64}$/.test(payload.authority_source_sha256 ?? "")) return "system_authority_reference_required";
+    if (!Array.isArray(payload.root_bindings) || payload.root_bindings.length === 0
+        || payload.root_bindings.some(root => !isNonEmptyString(root.path) || !/^[a-f0-9]{64}$/.test(root.sha256 ?? ""))) {
+      return "system_root_bindings_required";
+    }
+    if (!isNonEmptyString(payload.bound_at) || Number.isNaN(Date.parse(payload.bound_at))) return "system_binding_time_required";
+    state.system_plane = { ...payload, registered_at_seq: seq };
+    return null;
+  }
   if (kind === "HUMAN_REGISTERED") {
     if (state.human !== null) return "duplicate_human_registration";
     if (payload.human_id !== URP0_HUMAN_ID) return "human_id_unexpected";

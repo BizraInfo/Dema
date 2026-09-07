@@ -87,6 +87,7 @@ function gitCommit(cwd) {
 
 export function createUrp0Server({
   stateRootDir = resolveStateRootDir(),
+  worldCell = false,
   repoRoot = process.cwd(),
   now = () => new Date().toISOString(),
   uiPort = DEFAULT_UI_PORT,
@@ -100,6 +101,11 @@ export function createUrp0Server({
     if (req.method === "OPTIONS") return json(res, 204, {}, origin, allowedOrigins);
 
     try {
+      // The World-Cell human interface exposes no bootstrap/management route.
+      // Caller-supplied actor, origin, role, or copied consent cannot enable one.
+      if (worldCell && !["GET", "HEAD"].includes(req.method)) {
+        return json(res, 403, { ok: false, blocked_by: ["system_management_not_exposed"] }, origin, allowedOrigins);
+      }
       if (req.method === "GET" && path === "/readyz") {
         const disk = replayFromDisk(stateRootDir);
         return json(res, disk.ok ? 200 : 503, {

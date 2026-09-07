@@ -545,15 +545,23 @@ export function worldState(stateRootDir) {
       events_applied: replay.events_applied,
       journal_length: events.length,
     },
+    ...(replay.state?.system_plane ? { system_plane: replay.state.system_plane } : {}),
     human: replay.state?.human ?? null,
     node: replay.state?.node ?? null,
-    dema: { role: "face", status: "ACTIVE_LOCAL" },
+    dema: { role: "face", status: replay.state?.system_plane ? "HEALTH_UNPROVEN" : "ACTIVE_LOCAL" },
     pat: { status: "DESIGNED_NOT_LIVE", autonomous_agent: false },
     fate: { status: "ACTIVE_LOCAL", mode: "EXACT_STRING_CONSENT_ONLY" },
     sat: {
       ...SAT5_STATUS,
       lanes: URP0_SAT_LANES.map((l) => ({ ...l })),
       registered: replay.state?.sat_set ?? null,
+      ...(replay.state?.system_plane ? {
+        owner: "BIZRA_SYSTEM", principal: "CONSTITUTIONAL_SYSTEM_PLANE", logical_home: "URP-0",
+        status: "REGISTERED_NOT_MISSION_QUALIFIED",
+        inventory: URP0_SAT_LANES.map(l => ({ role_id: l.id, instance_id: `URP-0/${l.id}`,
+          verdict_contract: l.lane, owner: "BIZRA_SYSTEM", management: "SYSTEM_CONTRACT",
+          evidence_scope: "MISSION_CONTRACT_ONLY", status: "REGISTERED_NOT_MISSION_QUALIFIED" })),
+      } : {}),
     },
     resource_offer: replay.state?.resource_offer ?? null,
     missions: replay.state?.missions ?? {},
@@ -563,4 +571,16 @@ export function worldState(stateRootDir) {
     state_permissions: statePermissions(stateRootDir),
     journal: events.map((e) => ({ seq: e.seq, kind: e.kind, event_id: e.event_id, prev_event: e.prev_event })),
   };
+}
+
+// Operator bootstrap entry point; intentionally absent from the human HTTP API.
+// Root bytes and the human authority source are verified by the bootstrap caller.
+export function bindWorldCellSystemPlane(stateRootDir, { authority_source_sha256, root_bindings, now_iso }) {
+  return appendEvent(stateRootDir, "SYSTEM_PLANE_BOUND", {
+    system_id: "BIZRA-GENESIS-SYSTEM", owner: "BIZRA_SYSTEM",
+    principal: "CONSTITUTIONAL_SYSTEM_PLANE", logical_home: "URP-0",
+    bootstrap_role: "FOUNDER_GENESIS_BOOTSTRAP_ROLE", user_role: "NODE0_HUMAN_USER_ROLE",
+    human_id: "HUMAN-0", founder_authority_inherited: false,
+    authority_source_sha256, root_bindings, bound_at: now_iso,
+  });
 }
