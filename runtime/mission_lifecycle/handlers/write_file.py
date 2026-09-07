@@ -23,8 +23,8 @@ RETURNS:
 
 CONSTITUTIONAL GROUND:
   - This handler MAY write — that's the whole point of tier-2.
-  - It MUST validate path resolution (after symlink resolve) is under the
-    mission directory. Anything else: passed=False, finding="path_escapes_*".
+  - It MUST traverse directories without following symlinks and exclusively
+    create the leaf relative to the opened parent; unsupported platforms refuse.
   - It MUST refuse overwrites — one-shot per act. If the target exists:
     passed=False, finding="target_already_exists".
   - It MUST NOT contact external services, mutate canon, or touch Node1.
@@ -35,6 +35,7 @@ CONSTITUTIONAL GROUND:
 from __future__ import annotations
 
 import os
+from contextlib import ExitStack
 from pathlib import Path
 
 DEFAULT_MAX_BYTES = 1024 * 1024  # 1 MB
@@ -99,66 +100,126 @@ def handle(planned_act: dict, capsule: dict, contract: dict) -> dict:
     mission_dir = MISSIONS_ROOT / mission_id
     target = mission_dir / relative_path
 
-    # Symlink-aware boundary check: resolve both, ensure target is under mission_dir.
-    # Must NOT resolve target itself (it doesn't exist yet) — resolve its parent.
-    try:
-        target_parent_resolved = target.parent.resolve()
-        mission_resolved = mission_dir.resolve()
-    except (OSError, RuntimeError) as e:
+    # Descriptor-relative traversal rejects symlinks at each open, rather than
+    # checking a pathname and later following a substituted entry. The local
+    # contract detects/remediates moved directories at completion, not prevention.
+    # Residual window: another writer can move an inode after the final check.
+    # No namespace isolation, openat2, or crash-durability claim is made.
+    if (not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY")
+            or os.open not in os.supports_dir_fd
+            or os.mkdir not in os.supports_dir_fd
+            or os.unlink not in os.supports_dir_fd
+            or not Path("/proc/self/fd").is_dir()):
         return {
-            "passed": False,
-            "outputs": [],
-            "evidence": [f"path resolution failed: {type(e).__name__}: {e}"],
-            "finding": "path_resolution_error",
-            "content_excerpt": None,
+            "passed": False, "outputs": [],
+            "evidence": ["descriptor-relative no-symlink creation unavailable"],
+            "finding": "safe_creation_unavailable", "content_excerpt": None,
         }
 
-    if (target_parent_resolved != mission_resolved
-            and not str(target_parent_resolved).startswith(str(mission_resolved) + os.sep)):
+    final_target = target.absolute()
+    mission_resolved = mission_dir.absolute()
+    metadata = []
+    target_created = False
+    try:
+        data = content.encode("utf-8")
+        if len(data) > max_bytes:
+            return {
+                "passed": False, "outputs": [],
+                "evidence": [f"content {len(data)} bytes exceeds max_bytes {max_bytes}"],
+                "finding": "content_exceeds_max_bytes", "content_excerpt": None,
+            }
+        # Mission identity is supplied by the kernel, but never let it escape
+        # the configured root when this shared handler is invoked directly.
+        if (not isinstance(mission_id, str) or not mission_id
+                or Path(mission_id).parts != (mission_id,)
+                or mission_id in (".", "..")):
+            raise ValueError("invalid mission_id")
+        parts = Path(relative_path).parts
+        if not parts or "\x00" in relative_path:
+            raise ValueError("invalid relative_path")
+        directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        with ExitStack() as stack:
+            parent_fd = os.open(mission_resolved.anchor, directory_flags)
+            stack.callback(os.close, parent_fd)
+            # Existing mission ancestry must already exist and contain no links.
+            for part in mission_resolved.parts[1:]:
+                parent_fd = os.open(part, directory_flags, dir_fd=parent_fd)
+                stack.callback(os.close, parent_fd)
+            for part in parts[:-1]:
+                try:
+                    os.mkdir(part, mode=0o700, dir_fd=parent_fd)
+                    metadata.append(f"directory created under mission: {part}")
+                except FileExistsError:
+                    pass
+                parent_fd = os.open(part, directory_flags, dir_fd=parent_fd)
+                stack.callback(os.close, parent_fd)
+            fd = os.open(parts[-1], os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                         | os.O_NOFOLLOW, 0o600, dir_fd=parent_fd)
+            target_created = True
+            stack.callback(os.close, fd)
+            remaining = memoryview(data)
+            while remaining:
+                written = os.write(fd, remaining)
+                if written <= 0:
+                    raise OSError("write made no progress")
+                remaining = remaining[written:]
+            os.fsync(fd)
+            # OPERATOR RULING (W-06): completion-time detection and remediation.
+            # Bind to the original mission pathname, not a relocated root fd.
+            try:
+                current_parent = Path(os.readlink(f"/proc/self/fd/{parent_fd}"))
+                contained = (current_parent.is_absolute()
+                             and current_parent.is_relative_to(mission_resolved)
+                             and not str(current_parent).endswith(" (deleted)"))
+            except OSError as e:
+                contained = False
+                metadata.append(f"completion containment unavailable: {e}")
+            if not contained:
+                metadata.append("completion containment failed; parent moved or unavailable")
+                metadata.append("requested output transiently created; remediation required")
+                try:
+                    leaf = os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
+                    opened = os.fstat(fd)
+                    if (leaf.st_dev, leaf.st_ino) != (opened.st_dev, opened.st_ino):
+                        raise OSError("leaf replaced; refusing to unlink another object")
+                    os.unlink(parts[-1], dir_fd=parent_fd)
+                    os.fsync(parent_fd)
+                    try:
+                        os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
+                    except FileNotFoundError:
+                        metadata.append("remediation verified: written leaf absent via held directory")
+                    else:
+                        metadata.append("remediation residual: leaf present after unlink")
+                except OSError as e:
+                    metadata.append(f"remediation residual: {type(e).__name__}: {e}")
+                return {
+                    "passed": False, "outputs": [], "evidence": metadata,
+                    "finding": "completion_path_moved_or_unverifiable",
+                    "content_excerpt": None,
+                }
+        bytes_written = len(data)
+    except (OSError, UnicodeError, ValueError) as e:
         return {
             "passed": False,
             "outputs": [],
-            "evidence": [
-                f"resolved parent {target_parent_resolved} not under mission dir {mission_resolved}",
-                "symlink escape blocked",
+            "evidence": metadata + [
+                f"write failed: {type(e).__name__}: {e}",
+                f"requested output created: {target_created}; may be partial" if target_created
+                else "requested output not created",
             ],
-            "finding": "path_escapes_mission_directory_after_resolve",
-            "content_excerpt": None,
-        }
-
-    # Refuse overwrite — one-shot writes per act
-    final_target = target_parent_resolved / target.name
-    if final_target.exists():
-        return {
-            "passed": False,
-            "outputs": [],
-            "evidence": [f"target already exists: {final_target}"],
-            "finding": "target_already_exists",
-            "content_excerpt": None,
-        }
-
-    try:
-        final_target.parent.mkdir(parents=True, exist_ok=True)
-        final_target.write_text(content, encoding="utf-8")
-        bytes_written = len(content.encode("utf-8"))
-    except (OSError, UnicodeError) as e:
-        return {
-            "passed": False,
-            "outputs": [],
-            "evidence": [f"write failed: {type(e).__name__}: {e}"],
-            "finding": "write_error",
+            "finding": "target_already_exists" if isinstance(e, FileExistsError) else "write_error",
             "content_excerpt": None,
         }
 
     return {
         "passed": True,
         "outputs": [str(final_target)],
-        "evidence": [
-            f"target resolved: {final_target}",
-            f"path validated under mission dir {mission_resolved} (symlink-aware)",
+        "evidence": metadata + [
+            f"target requested: {final_target}",
+            f"descriptor-relative creation under mission dir {mission_resolved}; no symlinks",
             f"bytes written: {bytes_written}",
             f"max_bytes: {max_bytes}",
-            "no overwrite (target did not exist before write)",
+            "exclusive creation; existing leaf refused atomically",
         ],
         "finding": None,
         "content_excerpt": content[:200] if content else None,
