@@ -280,6 +280,7 @@ with tempfile.TemporaryDirectory(prefix="writer-scope-") as tmp:
     capsule = {"mission_id": "M-1"}
     real_open, real_write = os.open, os.write
     fired = []
+    write_paths = []
     if case not in ("fresh", "mkdir-race", "unsupported", "utf8-limit"):
         outputs.mkdir()
     if case == "existing": target.write_text("original")
@@ -301,7 +302,9 @@ with tempfile.TemporaryDirectory(prefix="writer-scope-") as tmp:
         return fd
 
     def intercept_write(fd, data):
-        fired.append(case)
+        if case != "parent-reparent-outside": fired.append(case)
+        if case == "parent-reparent-outside":
+            write_paths.append(os.readlink(f"/proc/self/fd/{fd}"))
         if case == "io-error": raise OSError("deterministic disk error")
         return real_write(fd, data[:1])
 
@@ -311,15 +314,16 @@ with tempfile.TemporaryDirectory(prefix="writer-scope-") as tmp:
     else:
         with patch.object(os, "open", intercept_open), \
              patch.object(os, "supports_dir_fd", os.supports_dir_fd | {intercept_open}), \
-             patch.object(os, "write", intercept_write if case in ("partial-write", "io-error") else real_write):
+             patch.object(os, "write", intercept_write if case in ("partial-write", "io-error", "parent-reparent-outside") else real_write):
             result = writer.handle(act, capsule, {})
     if case == "parent-reparent-outside":
         escaped = (outside / "moved/result.txt").exists()
-        print(json.dumps({"case": case, "outside_write": escaped, "handler_result": result}))
-        assert not escaped, "moved-parent output must be unlinked via held directory at completion"
+        print(json.dumps({"case": case, "outside_write": escaped, "write_paths": write_paths, "handler_result": result}))
+        assert write_paths == [], "moved-parent output must be refused before content write"
+        assert not escaped, "moved-parent output must not remain outside the mission"
         assert result["passed"] is False and result["outputs"] == [], result
-        assert result["finding"] == "completion_path_moved_or_unverifiable", result
-        assert any("remediation verified" in e for e in result["evidence"]), result
+        assert result["finding"] == "path_moved_before_write", result
+        assert any("pre-write containment failed" in e for e in result["evidence"]), result
         assert fired == [case], "directory-move seam must execute exactly once"
     else:
         assert list(outside.iterdir()) == [], (case, result)
@@ -392,8 +396,8 @@ with patch.object(os, "open", moved_open), patch.object(os, "supports_dir_fd", o
         assert.equal(capsule.outcome.result, null);
         const effect = capsule.evidence.effect_records[0].result;
         assert.equal(effect.passed, false);
-        assert.equal(effect.finding, "completion_path_moved_or_unverifiable");
-        assert.ok(effect.evidence.some(e => e.includes("remediation verified")));
+        assert.equal(effect.finding, "path_moved_before_write");
+        assert.ok(effect.evidence.some(e => e.includes("pre-write containment failed")));
         assert.ok(capsule.evidence.receipts_minted.length > 0);
         assert.equal(runKernel(home, ["observe", id]).status, 1);
         assert.equal((await readCapsule(home, id)).outcome.result, null);

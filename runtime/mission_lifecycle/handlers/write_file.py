@@ -46,6 +46,35 @@ DEMA_HOME = Path(os.environ.get("DEMA_HOME") or (Path.home() / ".dema"))
 MISSIONS_ROOT = DEMA_HOME / "kernel" / "mission_lifecycle" / "missions"
 
 
+def _fd_is_contained(fd: int, mission_resolved: Path) -> bool:
+    try:
+        current = Path(os.readlink(f"/proc/self/fd/{fd}"))
+    except OSError:
+        return False
+    return (current.is_absolute()
+            and current.is_relative_to(mission_resolved)
+            and not str(current).endswith(" (deleted)"))
+
+
+def _remediate_created_leaf(fd: int, parent_fd: int, leaf_name: str,
+                            metadata: list[str]) -> None:
+    try:
+        leaf = os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        opened = os.fstat(fd)
+        if (leaf.st_dev, leaf.st_ino) != (opened.st_dev, opened.st_ino):
+            raise OSError("leaf replaced; refusing to unlink another object")
+        os.unlink(leaf_name, dir_fd=parent_fd)
+        os.fsync(parent_fd)
+        try:
+            os.stat(leaf_name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            metadata.append("remediation verified: written leaf absent via held directory")
+        else:
+            metadata.append("remediation residual: leaf present after unlink")
+    except OSError as e:
+        metadata.append(f"remediation residual: {type(e).__name__}: {e}")
+
+
 def handle(planned_act: dict, capsule: dict, contract: dict) -> dict:
     args = planned_act.get("args", {}) or {}
     relative_path = args.get("relative_path")
@@ -101,10 +130,10 @@ def handle(planned_act: dict, capsule: dict, contract: dict) -> dict:
     target = mission_dir / relative_path
 
     # Descriptor-relative traversal rejects symlinks at each open, rather than
-    # checking a pathname and later following a substituted entry. The local
-    # contract detects/remediates moved directories at completion, not prevention.
-    # Residual window: another writer can move an inode after the final check.
-    # No namespace isolation, openat2, or crash-durability claim is made.
+    # checking a pathname and later following a substituted entry. Pre-write
+    # checks refuse a moved held directory before content is written; completion
+    # checks still remediate a later move. No namespace isolation, openat2, or
+    # crash-durability claim is made.
     if (not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY")
             or os.open not in os.supports_dir_fd
             or os.mkdir not in os.supports_dir_fd
@@ -145,6 +174,12 @@ def handle(planned_act: dict, capsule: dict, contract: dict) -> dict:
             for part in mission_resolved.parts[1:]:
                 parent_fd = os.open(part, directory_flags, dir_fd=parent_fd)
                 stack.callback(os.close, parent_fd)
+            if not _fd_is_contained(parent_fd, mission_resolved):
+                metadata.append("pre-write containment failed; mission ancestry moved or unavailable")
+                return {
+                    "passed": False, "outputs": [], "evidence": metadata,
+                    "finding": "path_moved_before_write", "content_excerpt": None,
+                }
             for part in parts[:-1]:
                 try:
                     os.mkdir(part, mode=0o700, dir_fd=parent_fd)
@@ -153,12 +188,36 @@ def handle(planned_act: dict, capsule: dict, contract: dict) -> dict:
                     pass
                 parent_fd = os.open(part, directory_flags, dir_fd=parent_fd)
                 stack.callback(os.close, parent_fd)
+                if not _fd_is_contained(parent_fd, mission_resolved):
+                    metadata.append("pre-write containment failed; parent moved or unavailable")
+                    return {
+                        "passed": False, "outputs": [], "evidence": metadata,
+                        "finding": "path_moved_before_write", "content_excerpt": None,
+                    }
             fd = os.open(parts[-1], os.O_WRONLY | os.O_CREAT | os.O_EXCL
                          | os.O_NOFOLLOW, 0o600, dir_fd=parent_fd)
             target_created = True
             stack.callback(os.close, fd)
+            if not _fd_is_contained(parent_fd, mission_resolved):
+                metadata.append("pre-write containment failed; parent moved or unavailable")
+                metadata.append("created leaf discarded before content write")
+                _remediate_created_leaf(fd, parent_fd, parts[-1], metadata)
+                return {
+                    "passed": False, "outputs": [], "evidence": metadata,
+                    "finding": "path_moved_before_write", "content_excerpt": None,
+                }
             remaining = memoryview(data)
             while remaining:
+                # ponytail: closes observed reparent seams; a rename between
+                # this check and os.write still needs namespace isolation.
+                if not _fd_is_contained(parent_fd, mission_resolved):
+                    metadata.append("pre-write containment failed; parent moved or unavailable")
+                    metadata.append("created leaf discarded before content write")
+                    _remediate_created_leaf(fd, parent_fd, parts[-1], metadata)
+                    return {
+                        "passed": False, "outputs": [], "evidence": metadata,
+                        "finding": "path_moved_before_write", "content_excerpt": None,
+                    }
                 written = os.write(fd, remaining)
                 if written <= 0:
                     raise OSError("write made no progress")
@@ -166,32 +225,10 @@ def handle(planned_act: dict, capsule: dict, contract: dict) -> dict:
             os.fsync(fd)
             # OPERATOR RULING (W-06): completion-time detection and remediation.
             # Bind to the original mission pathname, not a relocated root fd.
-            try:
-                current_parent = Path(os.readlink(f"/proc/self/fd/{parent_fd}"))
-                contained = (current_parent.is_absolute()
-                             and current_parent.is_relative_to(mission_resolved)
-                             and not str(current_parent).endswith(" (deleted)"))
-            except OSError as e:
-                contained = False
-                metadata.append(f"completion containment unavailable: {e}")
-            if not contained:
+            if not _fd_is_contained(parent_fd, mission_resolved):
                 metadata.append("completion containment failed; parent moved or unavailable")
                 metadata.append("requested output transiently created; remediation required")
-                try:
-                    leaf = os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
-                    opened = os.fstat(fd)
-                    if (leaf.st_dev, leaf.st_ino) != (opened.st_dev, opened.st_ino):
-                        raise OSError("leaf replaced; refusing to unlink another object")
-                    os.unlink(parts[-1], dir_fd=parent_fd)
-                    os.fsync(parent_fd)
-                    try:
-                        os.stat(parts[-1], dir_fd=parent_fd, follow_symlinks=False)
-                    except FileNotFoundError:
-                        metadata.append("remediation verified: written leaf absent via held directory")
-                    else:
-                        metadata.append("remediation residual: leaf present after unlink")
-                except OSError as e:
-                    metadata.append(f"remediation residual: {type(e).__name__}: {e}")
+                _remediate_created_leaf(fd, parent_fd, parts[-1], metadata)
                 return {
                     "passed": False, "outputs": [], "evidence": metadata,
                     "finding": "completion_path_moved_or_unverifiable",
