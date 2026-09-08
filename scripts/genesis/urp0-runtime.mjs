@@ -42,14 +42,18 @@ import {
   verifyBlock0Candidate,
   verifyUrp0Judgment,
 } from "../../packages/genesis/src/urp0-sat5.js";
+import { buildSatEvidencePacket } from "../../packages/genesis/src/urp0-sat-evidence.js";
 import { canonicaliseRoot, fingerprintTree, scanMetadataOnly } from "./urp0-scan.mjs";
 import {
   appendEvent,
   declaredWritePaths,
+  journalPrefixBinding,
   loadEvents,
+  persistSatEvidencePacket,
   readArtifact,
   reconstruct,
   statePermissions,
+  satEvidencePacketPath,
   writeArtifact,
   writeLogLength,
 } from "./urp0-store.mjs";
@@ -380,6 +384,28 @@ export function authorizeAndExecute(stateRootDir, { consent_context, phrase, now
     return refuse(["sat5_refused", ...judgment.failing_verifiers.map((v) => `failing:${v}`)], { judgment });
   }
 
+  // Persist the complete evidence packet before recording the SAT event. The
+  // effect-phase write set is frozen above; the packet path is control-plane
+  // evidence and must never silently become part of that effect set.
+  const journal = journalPrefixBinding(stateRootDir, events);
+  if (!journal.ok) return refuse(journal.blocked_by, { judgment });
+  const packetPath = satEvidencePacketPath(stateRootDir, {
+    mission_id: consent_context.mission_id,
+    attempt_id,
+  });
+  const packet = buildSatEvidencePacket({
+    mission_id: consent_context.mission_id,
+    attempt_id,
+    evidence,
+    judgment,
+    journal_binding: journal.binding,
+    effect_phase_declared_write_paths: evidence.declared_write_paths,
+    control_plane_write_paths: [packetPath],
+  });
+  if (!packet.ok) return refuse(packet.blocked_by, { judgment });
+  const persistedPacket = persistSatEvidencePacket(stateRootDir, packet.packet);
+  if (!persistedPacket.ok) return refuse(persistedPacket.blocked_by, { judgment });
+
   const judged = appendEvent(stateRootDir, "SAT_JUDGMENT_RECORDED", {
     mission_id: consent_context.mission_id,
     attempt_id,
@@ -445,6 +471,9 @@ export function authorizeAndExecute(stateRootDir, { consent_context, phrase, now
     resulting_state_root: receipted.replay.state_root,
     source_fingerprint_before,
     source_fingerprint_after,
+    sat_evidence_packet: persistedPacket.packet,
+    sat_evidence_packet_path: persistedPacket.path,
+    sat_evidence_packet_sha256: persistedPacket.byte_hash,
   };
 
   function refuse(codes, extra = {}) {
