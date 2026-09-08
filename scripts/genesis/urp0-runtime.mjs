@@ -24,6 +24,7 @@ import {
   URP0_SAT_LANES,
   URP0_TRUTH_LABEL,
   reduceUrp0Events,
+  urp0MissionKey,
   urp0Boundary,
 } from "../../packages/genesis/src/urp0-kernel.js";
 import {
@@ -51,6 +52,7 @@ import {
   loadEvents,
   persistSatEvidencePacket,
   readArtifact,
+  readSatEvidencePacket,
   reconstruct,
   statePermissions,
   satEvidencePacketPath,
@@ -558,20 +560,211 @@ export function sealBlock0(stateRootDir, { repository_base_commit, implementatio
   return { ok: true, blocked_by: [], block0: block0.body, block0_hash: block0.block0_hash, state_root: sealedEvent.replay.state_root };
 }
 
+function sameJson(a, b) {
+  try {
+    return sha256CanonicalJsonV1(a) === sha256CanonicalJsonV1(b);
+  } catch {
+    return false;
+  }
+}
+
+function typedJudgmentHash(value) {
+  return typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
+}
+
+function satIdentityFailures(state) {
+  const failures = [];
+  const systemPlane = state?.system_plane;
+  const satSet = state?.sat_set;
+  if (!systemPlane) failures.push("system_plane_missing");
+  else {
+    if (systemPlane.owner !== "BIZRA_SYSTEM") failures.push("system_plane_owner_invalid");
+    if (systemPlane.principal !== "CONSTITUTIONAL_SYSTEM_PLANE") failures.push("system_plane_principal_invalid");
+    if (systemPlane.logical_home !== "URP-0") failures.push("system_plane_home_invalid");
+    if (systemPlane.founder_authority_inherited !== false) failures.push("founder_authority_inherited");
+  }
+  if (!satSet) failures.push("sat_set_missing");
+  else {
+    const expected = URP0_SAT_LANES.map((lane) => `${lane.id}:${lane.lane}`);
+    if (satSet.count !== expected.length) failures.push("sat_identity_count_invalid");
+    if (!Array.isArray(satSet.lanes) || satSet.lanes.length !== expected.length || !satSet.lanes.every((lane, i) => lane === expected[i])) {
+      failures.push("sat_identity_set_invalid");
+    }
+    if (satSet.implementation !== "DETERMINISTIC_CONSTITUTIONAL_VERIFIERS") failures.push("sat_implementation_invalid");
+    if (satSet.autonomous_agents !== false) failures.push("autonomous_sat_claimed");
+  }
+  return failures;
+}
+
+function missionAttemptForSatEvidence(events, state, worldCell) {
+  if (worldCell) return { mission_id: worldCell.dema_mission_id, attempt_id: worldCell.urp_attempt_id };
+  const candidates = events
+    .filter((event) => event.kind === "SAT_JUDGMENT_RECORDED")
+    .map((event) => ({ mission_id: event.payload?.mission_id, attempt_id: event.payload?.attempt_id }))
+    .filter(({ mission_id, attempt_id }) => state?.missions?.[urp0MissionKey(mission_id, attempt_id)]?.status === "RECEIPTED");
+  return candidates.at(-1) ?? null;
+}
+
+// A realm projection is a read-side verifier, not a status renderer. The
+// historical World-Cell event and its carried PASS values are claims; current
+// SAT operationality is earned again from the durable evidence packet.
+function deriveSatOperationality(stateRootDir, events, replay, worldCell) {
+  const blocked_by = satIdentityFailures(replay.state);
+  if (blocked_by.length > 0) return { ok: false, blocked_by };
+
+  const target = missionAttemptForSatEvidence(events, replay.state, worldCell);
+  if (!target?.mission_id || !target?.attempt_id) return { ok: false, blocked_by: ["sat_evidence_scope_missing"] };
+  const mission = replay.state.missions[urp0MissionKey(target.mission_id, target.attempt_id)];
+  if (!mission || mission.status !== "RECEIPTED") return { ok: false, blocked_by: ["sat_evidence_mission_not_receipted"] };
+
+  const judgmentEvents = events.filter((event) =>
+    event.kind === "SAT_JUDGMENT_RECORDED" &&
+    event.payload?.mission_id === target.mission_id &&
+    event.payload?.attempt_id === target.attempt_id,
+  );
+  if (judgmentEvents.length !== 1) return { ok: false, blocked_by: ["sat_judgment_event_ambiguous"] };
+  const judgmentEvent = judgmentEvents[0];
+  const judgmentEventIndex = events.indexOf(judgmentEvent);
+
+  const packetRead = readSatEvidencePacket(stateRootDir, target);
+  if (!packetRead.ok) return { ok: false, blocked_by: packetRead.blocked_by };
+  const packet = packetRead.packet;
+  const evidence = packet.evidence;
+  const judgment = packet.judgment;
+  const blocked = [];
+
+  if (packet.mission_id !== target.mission_id || packet.attempt_id !== target.attempt_id) blocked.push("sat_evidence_identity_mismatch");
+  if (!typedJudgmentHash(packet.judgment_hash) || packet.judgment_hash !== judgment?.judgment_hash) blocked.push("sat_judgment_hash_invalid");
+  if (packet.judgment_hash !== judgmentEvent.payload?.judgment_hash) blocked.push("sat_judgment_event_hash_mismatch");
+  if (packet.judgment_hash !== mission.judgment_hash) blocked.push("sat_judgment_mission_hash_mismatch");
+  if (!evidence || evidence.contract?.mission_id !== target.mission_id || evidence.consent_context?.mission_id !== target.mission_id) {
+    blocked.push("sat_evidence_mission_binding_invalid");
+  }
+  if (evidence?.attempt_id !== undefined && evidence.attempt_id !== target.attempt_id) blocked.push("sat_evidence_attempt_binding_invalid");
+  if (!sameJson(evidence?.sat_set, replay.state.sat_set)) blocked.push("sat_evidence_sat_set_mismatch");
+
+  const prefixEvents = evidence?.events;
+  if (!Array.isArray(prefixEvents) || prefixEvents.length !== judgmentEventIndex) {
+    blocked.push("sat_evidence_journal_prefix_mismatch");
+  } else {
+    for (const [index, event] of prefixEvents.entries()) {
+      const current = events[index];
+      if (!current || event.event_id !== current.event_id || event.seq !== current.seq || event.kind !== current.kind) {
+        blocked.push("sat_evidence_journal_prefix_mismatch");
+        break;
+      }
+    }
+    const currentBinding = journalPrefixBinding(stateRootDir, prefixEvents);
+    if (!currentBinding.ok) blocked.push(...currentBinding.blocked_by);
+    else {
+      const expectedBinding = packet.journal_binding;
+      const actual = currentBinding.binding;
+      if (expectedBinding?.path !== actual.path || expectedBinding?.event_count !== actual.event_count
+          || expectedBinding?.head_event_id !== actual.head_event_id
+          || expectedBinding?.prefix_sha256 !== actual.prefix_sha256
+          || expectedBinding?.prefix_byte_length !== actual.prefix_byte_length) {
+        blocked.push("sat_evidence_journal_binding_not_current");
+      }
+    }
+  }
+
+  const executedIndex = prefixEvents?.findIndex((event) =>
+    event.kind === "MISSION_EXECUTED" &&
+    event.payload?.mission_id === target.mission_id &&
+    event.payload?.attempt_id === target.attempt_id,
+  ) ?? -1;
+  if (executedIndex < 0) blocked.push("sat_evidence_execution_missing");
+  else {
+    const before = reduceUrp0Events(prefixEvents.slice(0, executedIndex));
+    const after = reduceUrp0Events(prefixEvents);
+    if (!before.ok || before.state_root !== evidence.previous_state_root) blocked.push("sat_previous_state_root_not_rederivable");
+    if (!after.ok || after.state_root !== evidence.resulting_state_root) blocked.push("sat_resulting_state_root_not_rederivable");
+  }
+
+  let persistedJudgment = null;
+  try {
+    persistedJudgment = readArtifact(stateRootDir, "sat5-judgment.json");
+  } catch {
+    blocked.push("sat_judgment_artifact_unreadable");
+  }
+  if (!persistedJudgment) blocked.push("sat_judgment_artifact_missing");
+  else {
+    if (persistedJudgment.judgment_hash !== packet.judgment_hash) blocked.push("sat_judgment_artifact_hash_mismatch");
+    if (!sameJson(persistedJudgment, judgment)) blocked.push("sat_judgment_artifact_bytes_mismatch");
+  }
+
+  let rederived = null;
+  try {
+    rederived = judgeUrp0Mission(evidence);
+    const verification = verifyUrp0Judgment({ evidence, judgment });
+    if (!verification.ok) blocked.push(...verification.blocked_by);
+  } catch {
+    blocked.push("sat_verifier_rederivation_failed");
+  }
+  if (!rederived || rederived.admissible !== true) blocked.push("sat_judgment_not_admissible");
+  else {
+    const expectedLanes = URP0_SAT_LANES;
+    const verdicts = rederived.verifier_verdicts;
+    if (!Array.isArray(verdicts) || verdicts.length !== expectedLanes.length) blocked.push("sat_verdict_count_invalid");
+    else {
+      const seen = new Set();
+      for (const [index, expected] of expectedLanes.entries()) {
+        const actual = verdicts[index];
+        if (!actual || actual.id !== expected.id || actual.lane !== expected.lane || actual.verdict !== "PASS" || seen.has(actual.id)) {
+          blocked.push("sat_verdict_lane_not_rederived");
+          break;
+        }
+        seen.add(actual.id);
+      }
+      if (!sameJson(judgmentEvent.payload?.verifier_verdicts, verdicts.map(({ id, lane, verdict }) => ({ id, lane, verdict })))) {
+        blocked.push("sat_judgment_event_not_rederived");
+      }
+    }
+  }
+
+  if (judgment?.autonomous_ai_agent !== false) blocked.push("autonomous_agent_claimed");
+  if (judgment?.judges_node0 !== true || judgment?.serves_node0 !== false) blocked.push("sat_boundary_invalid");
+  if (worldCell) {
+    if (`sha256:${worldCell.sat5_judgment_hash}` !== packet.judgment_hash || worldCell.sat5_all_pass !== true) blocked.push("world_cell_sat_claim_mismatch");
+    if (worldCell.authority_delta !== 0 || worldCell.public_gateway !== false || worldCell.federation !== false
+        || worldCell.node1_admitted !== false || worldCell.token_minted !== false) blocked.push("world_cell_boundary_invalid");
+  }
+
+  if (blocked.length > 0) return { ok: false, blocked_by: [...new Set(blocked)] };
+  return {
+    ok: true,
+    blocked_by: [],
+    mission_id: target.mission_id,
+    attempt_id: target.attempt_id,
+    judgment_hash: packet.judgment_hash,
+    packet_sha256: packetRead.byte_hash,
+    source_event_seq: judgmentEvent.seq,
+    rederived_verdicts: rederived.verifier_verdicts.map(({ id, lane, verdict }) => ({ id, lane, verdict })),
+    state: "OPERATIONAL_VERIFIED",
+  };
+}
+
 // The authoritative world state the DEMA World Map renders. Generated from the
 // journal on every request — never asserted, never cached into a snapshot.
 export function worldState(stateRootDir) {
   const { events, replay } = reconstruct(stateRootDir);
   const worldCell = replay.state?.world_cell ?? null;
-  const satEvidence = worldCell
-    ? Object.freeze({
+  const satProof = replay.ok
+    ? deriveSatOperationality(stateRootDir, events, replay, worldCell)
+    : { ok: false, blocked_by: replay.blocked_by };
+  const satEvidence = satProof.ok
+    ? {
         schema: "bizra.genesis.sat_evidence_ref.v0.1",
-        mission_id: worldCell.dema_mission_id,
-        attempt_id: worldCell.urp_attempt_id,
+        mission_id: satProof.mission_id,
+        attempt_id: satProof.attempt_id,
         source_event: "SAT_JUDGMENT_RECORDED",
-        judgment_sha256: `sha256:${worldCell.sat5_judgment_hash}`,
-      })
+        source_event_seq: satProof.source_event_seq,
+        judgment_sha256: satProof.judgment_hash,
+        packet_sha256: satProof.packet_sha256,
+      }
     : null;
+  const satOperational = satProof.ok;
+  const satBlockedBy = satProof.blocked_by;
   return {
     schema: "bizra.genesis.world_state.v0.1",
     truth_label: URP0_TRUTH_LABEL,
@@ -602,11 +795,16 @@ export function worldState(stateRootDir) {
       registered: replay.state?.sat_set ?? null,
       ...(replay.state?.system_plane ? {
         owner: "BIZRA_SYSTEM", principal: "CONSTITUTIONAL_SYSTEM_PLANE", logical_home: "URP-0",
-        status: worldCell ? "SAT5_OPERATIONAL_URP_GENESIS" : "REGISTERED_NOT_MISSION_QUALIFIED",
+        status: satOperational ? "SAT5_OPERATIONAL_URP_GENESIS" : (worldCell ? "SAT5_EVIDENCE_UNVERIFIED" : "REGISTERED_NOT_MISSION_QUALIFIED"),
+        operational: satOperational,
+        verification_state: satOperational ? "OPERATIONAL_VERIFIED" : "EVIDENCE_REQUIRED",
+        verification_blocked_by: satBlockedBy,
+        ...(satOperational ? { operational_proof: satProof } : {}),
         inventory: URP0_SAT_LANES.map(l => ({ role_id: l.id, instance_id: `URP-0/${l.id}`,
-          verdict_contract: l.lane, owner: "BIZRA_SYSTEM", management: "SYSTEM_CONTRACT",
-          evidence_scope: "MISSION_CONTRACT_ONLY", status: worldCell ? "MISSION_VERIFIED" : "REGISTERED_NOT_MISSION_QUALIFIED",
-          ...(worldCell ? { verdict: "PASS", evidence_ref: { ...satEvidence, lane: l.id } } : {}) })),
+          verdict_contract: l.lane, owner: "BIZRA_SYSTEM", principal: "CONSTITUTIONAL_SYSTEM_PLANE", logical_home: "URP-0",
+          management: "SYSTEM_CONTRACT", serves_node0: false, judges_node0: true,
+          evidence_scope: "MISSION_CONTRACT_ONLY", status: satOperational ? "MISSION_VERIFIED" : (worldCell ? "EVIDENCE_UNVERIFIED" : "REGISTERED_NOT_MISSION_QUALIFIED"),
+          ...(satOperational ? { verdict: satProof.rederived_verdicts.find((v) => v.id === l.id)?.verdict, evidence_ref: { ...satEvidence, lane: l.id } } : {}) })),
       } : {}),
     },
     resource_offer: replay.state?.resource_offer ?? null,
