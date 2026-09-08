@@ -173,6 +173,11 @@ export function admitHuman0(stateRootDir, { phrase, now_iso }) {
 // One hashing rule everywhere: the canonical byte contract.
 const hashOf = sha256CanonicalJsonV1;
 
+function attemptArtifactName(prefix, attempt_id) {
+  if (typeof attempt_id !== "string" || attempt_id === "") throw new Error("attempt_id_missing");
+  return `${prefix}-${attempt_id}.json`;
+}
+
 // Derive the consent card. WRITES NOTHING. EXECUTES NOTHING. The nonce and the
 // window are minted here and handed to the operator; the journal only learns of
 // them when the operator comes back with the exact phrase.
@@ -437,12 +442,12 @@ export function authorizeAndExecute(stateRootDir, { consent_context, phrase, now
   });
   if (!receipted.ok) return refuse(receipted.blocked_by, { judgment });
 
-  writeArtifact(stateRootDir, "consent-receipt.json", consent_receipt);
-  writeArtifact(stateRootDir, "mission-contract.json", contract.body);
-  writeArtifact(stateRootDir, "mission-result.json", derived.result);
-  writeArtifact(stateRootDir, "sat5-judgment.json", judgment);
-  writeArtifact(stateRootDir, "mission-receipt.json", sealed.body);
-  writeArtifact(stateRootDir, "source-non-mutation-proof.json", {
+  writeArtifact(stateRootDir, attemptArtifactName("consent-receipt", attempt_id), consent_receipt);
+  writeArtifact(stateRootDir, attemptArtifactName("mission-contract", attempt_id), contract.body);
+  writeArtifact(stateRootDir, attemptArtifactName("mission-result", attempt_id), derived.result);
+  writeArtifact(stateRootDir, attemptArtifactName("sat5-judgment", attempt_id), judgment);
+  writeArtifact(stateRootDir, attemptArtifactName("mission-receipt", attempt_id), sealed.body);
+  writeArtifact(stateRootDir, attemptArtifactName("source-non-mutation-proof", attempt_id), {
     schema: "bizra.genesis.source_non_mutation_proof.v0.1",
     canonical_root: canon.canonical_root,
     fingerprint_before: source_fingerprint_before,
@@ -512,7 +517,8 @@ export function sealBlock0(stateRootDir, { repository_base_commit, implementatio
   if (receipted.length > 1) return { ok: false, blocked_by: ["multiple_receipted_attempts"] };
   const mission = receipted[0];
 
-  const judgment = readArtifact(stateRootDir, "sat5-judgment.json");
+  const judgment = readArtifact(stateRootDir, attemptArtifactName("sat5-judgment", mission.attempt_id))
+    ?? readArtifact(stateRootDir, "sat5-judgment.json");
   if (!judgment?.judgment_hash) return { ok: false, blocked_by: ["judgment_artifact_missing"] };
 
   const disk = replayFromDisk(stateRootDir);
@@ -597,12 +603,13 @@ function satIdentityFailures(state) {
 }
 
 function missionAttemptForSatEvidence(events, state, worldCell) {
-  if (worldCell) return { mission_id: worldCell.dema_mission_id, attempt_id: worldCell.urp_attempt_id };
   const candidates = events
     .filter((event) => event.kind === "SAT_JUDGMENT_RECORDED")
     .map((event) => ({ mission_id: event.payload?.mission_id, attempt_id: event.payload?.attempt_id }))
     .filter(({ mission_id, attempt_id }) => state?.missions?.[urp0MissionKey(mission_id, attempt_id)]?.status === "RECEIPTED");
-  return candidates.at(-1) ?? null;
+  return candidates.at(-1) ?? (worldCell
+    ? { mission_id: worldCell.dema_mission_id, attempt_id: worldCell.urp_attempt_id }
+    : null);
 }
 
 // A realm projection is a read-side verifier, not a status renderer. The
@@ -683,7 +690,7 @@ function deriveSatOperationality(stateRootDir, events, replay, worldCell) {
 
   let persistedJudgment = null;
   try {
-    persistedJudgment = readArtifact(stateRootDir, "sat5-judgment.json");
+    persistedJudgment = readArtifact(stateRootDir, attemptArtifactName("sat5-judgment", target.attempt_id));
   } catch {
     blocked.push("sat_judgment_artifact_unreadable");
   }
@@ -724,7 +731,7 @@ function deriveSatOperationality(stateRootDir, events, replay, worldCell) {
 
   if (judgment?.autonomous_ai_agent !== false) blocked.push("autonomous_agent_claimed");
   if (judgment?.judges_node0 !== true || judgment?.serves_node0 !== false) blocked.push("sat_boundary_invalid");
-  if (worldCell) {
+  if (worldCell && target?.mission_id === worldCell.dema_mission_id && target?.attempt_id === worldCell.urp_attempt_id) {
     if (`sha256:${worldCell.sat5_judgment_hash}` !== packet.judgment_hash || worldCell.sat5_all_pass !== true) blocked.push("world_cell_sat_claim_mismatch");
     if (worldCell.authority_delta !== 0 || worldCell.public_gateway !== false || worldCell.federation !== false
         || worldCell.node1_admitted !== false || worldCell.token_minted !== false) blocked.push("world_cell_boundary_invalid");

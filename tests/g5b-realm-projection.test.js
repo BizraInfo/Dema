@@ -169,12 +169,36 @@ test("a semantically tampered packet fails closed even when its JSON is canonica
 });
 
 test("missing persisted judgment fails closed instead of inheriting the journal PASS", () => {
-  const { world } = setupQualifiedMission();
+  const { world, run } = setupQualifiedMission();
   try {
-    rmSync(join(world.root, "artifacts", "sat5-judgment.json"));
+    rmSync(join(world.root, "artifacts", `sat5-judgment-${run.sat_evidence_packet.attempt_id}.json`));
     const projection = worldState(world.root);
     assert.equal(projection.sat.operational, false);
     assert.ok(projection.sat.verification_blocked_by.includes("sat_judgment_artifact_missing"));
+  } finally {
+    world.cleanup();
+  }
+});
+
+test("attempt artifacts do not overwrite prior generic evidence", () => {
+  const { world, run: first } = setupQualifiedMission();
+  try {
+    const genericPath = join(world.root, "artifacts", "sat5-judgment.json");
+    writeFileSync(genericPath, readFileSync(join(world.root, "artifacts", `sat5-judgment-${first.sat_evidence_packet.attempt_id}.json`)), { mode: 0o600 });
+    const genericBefore = readFileSync(genericPath);
+    const card = missionConsentCard(world.root, { root: world.source, now_iso: new Date().toISOString() });
+    const second = authorizeAndExecute(world.root, {
+      consent_context: card.consent_context,
+      phrase: card.card.required_phrase,
+      now_iso: new Date().toISOString(),
+    });
+    assert.equal(second.ok, true, JSON.stringify(second.blocked_by));
+    const scopedPath = join(world.root, "artifacts", `sat5-judgment-${second.sat_evidence_packet.attempt_id}.json`);
+    assert.notEqual(scopedPath, genericPath);
+    assert.deepEqual(readFileSync(genericPath), genericBefore);
+    assert.equal(JSON.parse(readFileSync(scopedPath, "utf8")).judgment_hash, second.judgment.judgment_hash);
+    assert.equal(worldState(world.root).sat.operational, true);
+    assert.notEqual(first.sat_evidence_packet.attempt_id, second.sat_evidence_packet.attempt_id);
   } finally {
     world.cleanup();
   }
