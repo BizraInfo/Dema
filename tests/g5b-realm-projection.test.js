@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { canonicalizeJsonV1 } from "../packages/canon/src/canonical-json-v1.js";
 import { buildAdmissionContract, admissionConsentPhrase } from "../packages/genesis/src/urp0-mission-kernel.js";
 import {
@@ -95,6 +96,42 @@ test("SAT operationality is derived from a persisted packet and five fresh verdi
       { role_id: "SAT-5", status: "MISSION_VERIFIED", verdict: "PASS", serves_node0: false, judges_node0: true },
     ]);
     assert.equal(projection.sat.operational_proof.packet_sha256, run.sat_evidence_packet_sha256);
+  } finally {
+    world.cleanup();
+  }
+});
+
+test("a fresh process re-derives SAT operationality from durable evidence", () => {
+  const { world } = setupQualifiedMission();
+  try {
+    const journalBefore = readFileSync(join(world.root, "journal.ndjson"));
+    const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      import { worldState } from "./scripts/genesis/urp0-runtime.mjs";
+      const state = worldState(process.argv[1]);
+      console.log(JSON.stringify({
+        status: state.sat.status,
+        operational: state.sat.operational,
+        verification_state: state.sat.verification_state,
+        lanes: state.sat.inventory.map(({ role_id, verdict }) => ({ role_id, verdict })),
+        proof_state: state.sat.operational_proof?.state,
+      }));
+    `, world.root], { cwd: process.cwd(), encoding: "utf8" });
+    assert.equal(child.status, 0, child.stderr);
+    const observed = JSON.parse(child.stdout);
+    assert.deepEqual(observed, {
+      status: "SAT5_OPERATIONAL_URP_GENESIS",
+      operational: true,
+      verification_state: "OPERATIONAL_VERIFIED",
+      lanes: [
+        { role_id: "SAT-1", verdict: "PASS" },
+        { role_id: "SAT-2", verdict: "PASS" },
+        { role_id: "SAT-3", verdict: "PASS" },
+        { role_id: "SAT-4", verdict: "PASS" },
+        { role_id: "SAT-5", verdict: "PASS" },
+      ],
+      proof_state: "OPERATIONAL_VERIFIED",
+    });
+    assert.deepEqual(readFileSync(join(world.root, "journal.ndjson")), journalBefore);
   } finally {
     world.cleanup();
   }
