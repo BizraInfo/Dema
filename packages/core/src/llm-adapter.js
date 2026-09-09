@@ -547,8 +547,6 @@ export async function invokeLocalLLM({
       signal: controller.signal,
     });
 
-    clearTimeout(timeoutHandle);
-
     if (!response.ok) {
       return buildInvocationResult({
         modelName: modelSafe,
@@ -569,6 +567,12 @@ export async function invokeLocalLLM({
     try {
       body = await response.json();
     } catch (parseErr) {
+      if (controller.signal.aborted) {
+        throw Object.assign(new Error("response body aborted"), {
+          name: "AbortError",
+          cause: parseErr,
+        });
+      }
       return buildInvocationResult({
         modelName: modelSafe,
         promptSubmitted: promptSafe,
@@ -626,7 +630,6 @@ export async function invokeLocalLLM({
       attemptN: freshness.attempt_n,
     });
   } catch (err) {
-    clearTimeout(timeoutHandle);
     const errorClass =
       err?.name === "AbortError"
         ? `timeout_after_${timeoutSafe}ms`
@@ -646,6 +649,8 @@ export async function invokeLocalLLM({
       promptSafetyVerdict: promptVerdict,
       attemptN: freshness.attempt_n,
     });
+  } finally {
+    clearTimeout(timeoutHandle);
   }
 }
 
