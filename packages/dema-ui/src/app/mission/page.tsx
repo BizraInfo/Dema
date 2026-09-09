@@ -5,21 +5,8 @@ import { useState } from "react";
 type Result = {
   ok: boolean;
   blocked_by?: string[];
-  proposal?: {
-    decision: string;
-    mission_id: string;
-    source_intent_hash: string;
-    claim_ceiling: string;
-    what_i_understood: { objective: string; recognized_operators: { term: string }[] };
-    what_i_know: string[];
-    what_i_am_inferencing: string[];
-    what_i_still_need: string[];
-    proposed_next_step: string;
-    requested_actions: { action: string; token: string }[];
-    authority: { authority: string; consent_required: boolean; authority_delta: number };
-    context_snapshot: { node_story: { status: string }; current_state: { status: string } };
-    bridge_hash: string;
-  };
+  proposal?: any;
+  [key: string]: any;
 };
 
 const GOLD = "#C9A962";
@@ -29,11 +16,17 @@ const MUTED = "#9FB3C8";
 export default function MissionPage() {
   const [text, setText] = useState("");
   const [result, setResult] = useState<Result | null>(null);
+  const [cardResult, setCardResult] = useState<any>(null);
+  const [phrase, setPhrase] = useState("");
+  const [execution, setExecution] = useState<any>(null);
   const [busy, setBusy] = useState(false);
 
   async function compile() {
     setBusy(true);
     setResult(null);
+    setCardResult(null);
+    setExecution(null);
+    setPhrase("");
     try {
       const response = await fetch("/api/mission/prepare", {
         method: "POST",
@@ -43,6 +36,47 @@ export default function MissionPage() {
       setResult(await response.json());
     } catch (error) {
       setResult({ ok: false, blocked_by: [String(error)] });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deriveConsentCard() {
+    if (!result?.proposal) return;
+    setBusy(true);
+    setCardResult(null);
+    setExecution(null);
+    try {
+      const response = await fetch("/api/mission/consent-card", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ proposal: result.proposal }),
+      });
+      setCardResult(await response.json());
+    } catch (error) {
+      setCardResult({ ok: false, blocked_by: [String(error)] });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function authorizeMission() {
+    if (!result?.proposal || !cardResult?.governed?.consent_context) return;
+    setBusy(true);
+    setExecution(null);
+    try {
+      const response = await fetch("/api/mission/execute", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          proposal: result.proposal,
+          consent_context: cardResult.governed.consent_context,
+          phrase,
+        }),
+      });
+      setExecution(await response.json());
+    } catch (error) {
+      setExecution({ ok: false, blocked_by: [String(error)] });
     } finally {
       setBusy(false);
     }
@@ -104,8 +138,48 @@ export default function MissionPage() {
                   <dt>Mission</dt><dd style={{ margin: 0, color: "#E8EDF4", wordBreak: "break-all" }}>{result.proposal.mission_id}</dd>
                 </dl>
                 <p style={{ color: GOLD, marginBottom: 0 }}>{result.proposal.proposed_next_step}</p>
+                {result.proposal.decision === "PROPOSE_ONLY" && (
+                  <div style={{ marginTop: "1.5rem", borderTop: "1px solid #C9A96233", paddingTop: "1.2rem" }}>
+                    <button onClick={deriveConsentCard} disabled={busy} style={{ background: "transparent", color: GOLD, border: `1px solid ${GOLD}88`, padding: "0.7rem 1rem", fontWeight: 600, cursor: busy ? "wait" : "pointer" }}>
+                      {busy ? "Preparing…" : "Prepare exact local consent"}
+                    </button>
+                    <p style={{ color: MUTED, fontSize: 13 }}>This prepares a bounded metadata-only observation. It does not authorize anything until you enter the exact phrase shown by the governed runtime.</p>
+                  </div>
+                )}
               </>
             ) : null}
+          </section>
+        )}
+
+        {cardResult && (
+          <section style={{ marginTop: "1rem", border: `1px solid ${cardResult.ok ? GOLD : "#D99191"}55`, padding: "1.3rem", lineHeight: 1.65 }}>
+            {!cardResult.ok ? (
+              <>
+                <h2 style={{ color: "#D99191", fontWeight: 500, marginTop: 0 }}>Consent card held</h2>
+                <pre style={{ whiteSpace: "pre-wrap", color: "#D99191", fontSize: 12 }}>{(cardResult.blocked_by ?? cardResult.governed?.blocked_by ?? []).join("\n")}</pre>
+              </>
+            ) : (
+              <>
+                <div style={{ color: GOLD, letterSpacing: "0.18em", fontSize: 11, textTransform: "uppercase" }}>EXACT CONSENT · LOCAL ONLY</div>
+                <h2 style={{ fontFamily: "Georgia, serif", fontWeight: 400, margin: "0.4rem 0 1.2rem" }}>Review before the bounded observation</h2>
+                <p style={{ color: MUTED }}>Operation: {cardResult.governed.card.permitted_operation}</p>
+                <p style={{ color: MUTED, wordBreak: "break-all", fontSize: 13 }}>Contract: {cardResult.governed.contract_hash}</p>
+                <p style={{ color: GOLD, fontWeight: 700, wordBreak: "break-word" }}>{cardResult.governed.consent_context.required_phrase}</p>
+                <label htmlFor="mission-consent" style={{ display: "block", color: GOLD, fontSize: 13, marginBottom: 8 }}>Enter the exact phrase</label>
+                <input id="mission-consent" value={phrase} onChange={(event) => setPhrase(event.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "0.8rem", background: "#050B14", border: "1px solid #C9A96255", color: "#E8EDF4", font: "inherit" }} />
+                <button onClick={authorizeMission} disabled={busy || !phrase} style={{ marginTop: "1rem", background: GOLD, color: "#050B14", border: 0, padding: "0.8rem 1.2rem", fontWeight: 700, cursor: busy ? "wait" : "pointer", opacity: busy || !phrase ? 0.55 : 1 }}>
+                  {busy ? "Verifying…" : "Authorize bounded observation"}
+                </button>
+              </>
+            )}
+          </section>
+        )}
+
+        {execution && (
+          <section style={{ marginTop: "1rem", border: `1px solid ${execution.ok ? TEAL : "#D99191"}55`, padding: "1.3rem", lineHeight: 1.65 }}>
+            <h2 style={{ color: execution.ok ? TEAL : "#D99191", fontWeight: 500, marginTop: 0 }}>{execution.ok ? "Mission recorded" : "Mission held"}</h2>
+            <p style={{ color: MUTED }}>{execution.ok ? "The governed runtime returned its receipt and verification result." : "No effect was admitted by the governed runtime."}</p>
+            <pre style={{ whiteSpace: "pre-wrap", overflowX: "auto", color: "#B8CADB", fontSize: 12 }}>{JSON.stringify(execution.governed ?? execution, null, 2)}</pre>
           </section>
         )}
       </div>
