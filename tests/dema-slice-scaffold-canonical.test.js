@@ -154,7 +154,10 @@ test("T8 adoption-freeze gate stays strict: every registered consumer is explici
       "packages/genesis/src/urp0-kernel.js",
       "packages/genesis/src/urp0-mission-kernel.js",
       "packages/genesis/src/urp0-sat5.js",
+      // G5B evidence-derived SAT state: packet contract and durable store.
+      "packages/genesis/src/urp0-sat-evidence.js",
       "scripts/genesis/urp0-runtime.mjs",
+      "scripts/genesis/urp0-store.mjs",
     ],
   );
   const result = runCanonicalJsonV1Check();
