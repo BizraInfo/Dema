@@ -358,7 +358,7 @@ function sat5(ev) {
 }
 
 // The required evidence surface. A missing key is a REFUSAL, never a default.
-const REQUIRED_EVIDENCE_KEYS = Object.freeze([
+export const REQUIRED_EVIDENCE_KEYS = Object.freeze([
   "events", "admission_contract", "sat_set", "resource_offer", "contract", "contract_hash",
   "consent_context", "consent_context_hash", "submitted_phrase", "authorized_at_iso",
   "observation", "result", "receipt_body", "receipt_hash",

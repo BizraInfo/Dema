@@ -44,7 +44,9 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/genesis/src/urp0-kernel.js",
   "packages/genesis/src/urp0-mission-kernel.js",
   "packages/genesis/src/urp0-sat5.js",
+  "packages/genesis/src/urp0-sat-evidence.js",
   "scripts/genesis/urp0-runtime.mjs",
+  "scripts/genesis/urp0-store.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

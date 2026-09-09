@@ -141,7 +141,7 @@ test("restart reconstructs the identical state root from persisted evidence alon
   }
 });
 
-test("world-cell completion binds one verified DEMA effect and refuses duplicates", () => {
+test("world-cell completion does not self-certify SAT and refuses duplicates", () => {
   const w = makeWorld();
   try {
     const { run } = runFullLoop(w);
@@ -195,21 +195,16 @@ test("world-cell completion binds one verified DEMA effect and refuses duplicate
     assert.equal(completed.ok, true, JSON.stringify(completed.blocked_by));
     const completedState = worldState(w.stateRootDir);
     assert.equal(completedState.world_cell.mission_id, payload.mission_id);
+    assert.equal(completedState.sat.status, "SAT5_EVIDENCE_UNVERIFIED");
+    assert.deepEqual(completedState.sat.verification_blocked_by, ["evidence_packet_missing"]);
     assert.deepEqual(completedState.sat.inventory.map((entry) => ({
       role_id: entry.role_id,
       verdict: entry.verdict,
       evidence_ref: entry.evidence_ref,
     })), URP0_SAT_LANES.map((lane) => ({
       role_id: lane.id,
-      verdict: "PASS",
-      evidence_ref: {
-        schema: "bizra.genesis.sat_evidence_ref.v0.1",
-        mission_id: payload.dema_mission_id,
-        attempt_id: payload.urp_attempt_id,
-        source_event: "SAT_JUDGMENT_RECORDED",
-        judgment_sha256: `sha256:${payload.sat5_judgment_hash}`,
-        lane: lane.id,
-      },
+      verdict: undefined,
+      evidence_ref: undefined,
     })));
     const duplicate = appendEvent(w.stateRootDir, "WORLD_CELL_MISSION_COMPLETED", payload);
     assert.equal(duplicate.ok, false);
