@@ -38,6 +38,22 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 
 ## Test surfaces
 
+### Node0 Genesis final-sprint candidate checks (2026-09-10)
+
+These rows cover the locally merged governed runtime and its DEMA bridge. They
+are focused candidate evidence; they do not by themselves prove Node0 closure,
+human usefulness, exact-consent effect completion, remote CI, or independent
+reproduction.
+
+| Test file | Surface covered |
+| --- | --- |
+| `tests/bizra-prompt-mission-bridge.test.js` | Proposal-only Prompt Compiler → MissionContract binding: source/compiler/ontology/context hashes, unknown preservation, tamper refusal, and no inferred consent. |
+| `tests/constitutional-attention-allocator.test.js` | CAA candidate ranking and hard gates: one frontier, deferred queue, priority/authority separation, `authority_delta=0`, and no effect execution. |
+| `tests/g5b-evidence-persistence-contract.test.js` | Governed URP evidence persistence and replay contract: bounded local state, content-addressed evidence, and fail-closed tamper behavior. |
+| `tests/g5b-realm-projection.test.js` | Local realm projection: human/node/system ownership, PAT/SAT/FATE boundaries, and honest federation/economy-off posture. |
+| `tests/genesis-runtime-spine.test.js` | URP-0 runtime spine: journal replay, mission/effect boundary, receipt reconstruction, and local recovery invariants. |
+| `tests/urp0-world-cell-boundary.test.js` | World-cell boundary: loopback/local scope, bounded resource offer, and no public federation or token/economy effects. |
+
 | Test file | Surface covered |
 | --- | --- |
 | `tests/dema-data-steward-scripts.test.js` | DEMA-DATA-STEWARD-INVENTORY-BOUNDARY-1A: temporary fixtures prove opt-in exact directory exclusions are recorded before descendants, normal paths stay included by default, symlinks are not followed, metadata-only mode reads no file contents, and sealed receipts bind producer path/bytes/SHA-256 while rejecting invalid, duplicate, or source-root-contained output paths. |

@@ -207,6 +207,17 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/core/src/drs-presence-reducer.js",
   "packages/core/src/drs-fixture-publisher.js",
   "packages/core/src/node0-fate-staged-effect.js",
+  // NODE0-GENESIS-FINAL-SPRINT-1A — governed proposal and local realm
+  // consumers. These hashes cross process boundaries in the mission bridge
+  // and URP journal, so canonical JSON adoption is load-bearing here.
+  "packages/core/src/bizra-prompt-mission-bridge.js",
+  "packages/core/src/constitutional-attention-allocator.js",
+  "packages/genesis/src/urp0-kernel.js",
+  "packages/genesis/src/urp0-mission-kernel.js",
+  "packages/genesis/src/urp0-sat-evidence.js",
+  "packages/genesis/src/urp0-sat5.js",
+  "scripts/genesis/urp0-runtime.mjs",
+  "scripts/genesis/urp0-store.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
