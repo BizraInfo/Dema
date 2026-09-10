@@ -143,8 +143,13 @@ export function writeArtifact(stateRootDir, name, body) {
 
 export function readArtifact(stateRootDir, name) {
   const path = join(stateRootDir, "artifacts", name);
-  if (!existsSync(path)) return null;
-  return JSON.parse(readFileSync(path, "utf8"));
+  try {
+    const { bytes } = readStableFileObject(path);
+    return JSON.parse(bytes.toString("utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "ENOTDIR") return null;
+    throw error;
+  }
 }
 
 function bytesSha256(bytes) {
@@ -160,12 +165,17 @@ function sameStat(a, b) {
     a.ctimeMs === b.ctimeMs;
 }
 
-function readStableFileObject(path) {
-  const link = lstatSync(path);
-  if (link.isSymbolicLink()) throw new Error("evidence_file_symlink");
-  if (!link.isFile()) throw new Error("evidence_file_not_regular");
+export function readStableFileObject(path) {
+  // Open the descriptor with O_NOFOLLOW before inspecting it. A separate
+  // lstat(path) followed by readFile(path) leaves a TOCTOU replacement window.
   const noFollow = FS_CONSTANTS.O_NOFOLLOW ?? 0;
-  const fd = openSync(path, FS_CONSTANTS.O_RDONLY | noFollow);
+  let fd;
+  try {
+    fd = openSync(path, FS_CONSTANTS.O_RDONLY | noFollow);
+  } catch (error) {
+    if (error?.code === "ELOOP") throw new Error("evidence_file_symlink");
+    throw error;
+  }
   try {
     const before = fstatSync(fd);
     if (!before.isFile()) throw new Error("evidence_file_not_regular");

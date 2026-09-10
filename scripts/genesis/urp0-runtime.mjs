@@ -10,7 +10,6 @@
 // It owns no law of its own: every decision is delegated to a pure kernel, and
 // every write goes through the store.
 
-import { lstatSync, readFileSync } from "node:fs";
 import { cpus, totalmem } from "node:os";
 import { createHash, randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
@@ -60,6 +59,7 @@ import {
   loadEvents,
   persistSatEvidencePacket,
   readArtifact,
+  readStableFileObject,
   readSatEvidencePacket,
   reconstruct,
   statePermissions,
@@ -200,21 +200,30 @@ function node0PrincipalBinding(stateRootDir) {
   try {
     const demaHome = dirname(dirname(stateRootDir));
     const paths = activeKeyPaths(demaHome);
-    const pointerStat = lstatSync(paths.activePointer);
-    if (!pointerStat.isFile() || pointerStat.isSymbolicLink()) {
-      return { status: "NOT_BOUND", verified: false, blocked_by: ["active_pointer_not_regular"], authority_delta: 0 };
+    let pointer;
+    try {
+      const { bytes } = readStableFileObject(paths.activePointer);
+      pointer = JSON.parse(bytes.toString("utf8"));
+    } catch (error) {
+      return {
+        status: "NOT_BOUND",
+        verified: false,
+        blocked_by: [error?.message === "evidence_file_symlink" ? "active_pointer_not_regular" : "active_pointer_read_failed"],
+        authority_delta: 0,
+      };
     }
-    const pointer = JSON.parse(readFileSync(paths.activePointer, "utf8"));
     const fingerprint = pointer.generation_fingerprint;
     if (!/^[a-f0-9]{64}$/.test(fingerprint)) {
       return { status: "NOT_BOUND", verified: false, blocked_by: ["active_fingerprint_invalid"], authority_delta: 0 };
     }
     const publicPath = join(paths.generationsDir, fingerprint, "public.pem");
-    const publicStat = lstatSync(publicPath);
-    if (!publicStat.isFile() || publicStat.isSymbolicLink()) {
+    let publicKeyPem;
+    try {
+      const { bytes } = readStableFileObject(publicPath);
+      publicKeyPem = bytes.toString("utf8");
+    } catch {
       return { status: "NOT_BOUND", verified: false, blocked_by: ["active_public_key_not_regular"], authority_delta: 0 };
     }
-    const publicKeyPem = readFileSync(publicPath, "utf8");
     const verification = verifyNode0IdentityProof({ proof, operatorPubkeyPem: publicKeyPem });
     if (!verification.verified) {
       return { status: "NOT_BOUND", verified: false, blocked_by: [`identity_proof_${verification.reason}`], authority_delta: 0 };
@@ -338,11 +347,10 @@ function sanitizeModelContext(text) {
 function loadNode0WisdomContext(stateRootDir) {
   const path = wisdomPath(stateRootDir);
   try {
-    const stat = lstatSync(path);
-    if (!stat.isFile() || stat.size > NODE0_WISDOM_MAX_BYTES) {
+    const { bytes: raw, stat } = readStableFileObject(path);
+    if (stat.size > NODE0_WISDOM_MAX_BYTES) {
       return { status: "UNAVAILABLE", hash: null, text: "No bounded Node0 wisdom capsule is available." };
     }
-    const raw = readFileSync(path);
     const parsed = JSON.parse(raw.toString("utf8"));
     const boundary = parsed?.boundary;
     const boundaryKeys = [

@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { proposal, verification } = verifySubmittedProposal(body?.proposal);
+    const { verification } = verifySubmittedProposal(body?.proposal);
     if (!verification.ok) {
       return NextResponse.json(
         { ok: false, truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL, verification },

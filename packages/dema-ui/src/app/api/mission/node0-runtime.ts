@@ -3,7 +3,6 @@ import { existsSync, linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSyn
 import { join } from "node:path";
 
 import {
-  compileMissionProposal,
   verifyMissionProposal,
 } from "@core/bizra-prompt-mission-bridge.js";
 import {
