@@ -145,6 +145,11 @@ if [ "$MODE" = "uninstall" ]; then
   exit 0
 fi
 
+if [ "$MODE" != "check" ] && ! command -v node >/dev/null 2>&1; then
+  echo "ERROR: Node.js is required before Dema setup; no files were written." >&2
+  exit 2
+fi
+
 # ─── Header banner ─────────────────────────────────────────────────────────
 
 echo "install.sh · $MODE mode"
