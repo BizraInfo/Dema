@@ -24,7 +24,7 @@
     "env-hygiene": "node scripts/review/env-hygiene-check.mjs",
     "env-hygiene:strict": "node scripts/review/env-hygiene-check.mjs --strict",
     "test": "node scripts/ci/run-with-classifier.mjs --log \"${TMPDIR:-/tmp}/bizra-test-output.$$.log\" -- node --test --test-reporter=tap tests/*.test.js",
-    "coverage": "node scripts/ci/run-with-classifier.mjs --log \"${TMPDIR:-/tmp}/bizra-coverage-output.$$.log\" -- node --test --test-reporter=tap --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=84 --test-coverage-functions=95 tests/*.test.js",
+    "coverage": "node scripts/ci/run-with-classifier.mjs --log \"${TMPDIR:-/tmp}/bizra-coverage-output.$$.log\" -- node --test --test-concurrency=1 --test-reporter=tap --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=84 --test-coverage-functions=95 tests/*.test.js",
     "llm:guidance": "node scripts/llm-guidance-check.mjs",
     "gtm:readiness": "node scripts/gtm-readiness-check.mjs",
     "urp:discovery": "node scripts/urp-shared-discovery.mjs",
@@ -57,7 +57,8 @@
     "delivery:perf-gate": "node scripts/review/performance-budget-gate.mjs",
     "artifact-011:preflight": "node scripts/artifact-011-ceremony-preflight.mjs --isolated --json",
     "pre-push:seal": "node scripts/pre-push-proof-seal.mjs",
-    "layer-a5:prep": "node scripts/layer-a5-operator-prep.mjs --json"
+    "layer-a5:prep": "node scripts/layer-a5-operator-prep.mjs --json",
+    "genesis:node0": "node scripts/genesis-node0.mjs"
   },
   "engines": {
     "node": ">=20"

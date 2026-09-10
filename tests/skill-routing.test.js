@@ -18,8 +18,9 @@ import {
 } from "../packages/core/src/skill-registry.js";
 
 import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const ROOT = "/home/bizra-operating-system/Downloads/Dema";
+const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const io = { readFileSync, existsSync, root: ROOT };
 
 import {

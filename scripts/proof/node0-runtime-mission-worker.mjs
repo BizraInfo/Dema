@@ -9,7 +9,7 @@
 // home path and a facts path. No mission id, no contract, no stage, no sequence.
 // If it can continue the mission, it can only have got that from the home.
 
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { sha256CanonicalJsonV1 } from "../../packages/canon/src/sha256-canonical-json-v1.js";
@@ -51,7 +51,11 @@ const BAD_OUTPUT = Object.freeze({ patch: "TODO: not really done" });
 const GOOD_OUTPUT = Object.freeze({ patch: "diff --git a b" });
 const EXEC_RELPATH = join("node0", "runtime-mission", "execution.json");
 
-const emit = (facts) => writeFileSync(factsPath, JSON.stringify(facts));
+const emit = (facts) => {
+  const tmpPath = `${factsPath}.tmp-${process.pid}`;
+  writeFileSync(tmpPath, JSON.stringify(facts));
+  renameSync(tmpPath, factsPath);
+};
 
 /// The authority envelope as it exists ON DISK. Measured, never carried.
 const authorityHash = (fields) =>

@@ -32,6 +32,43 @@ truth level, this page names it.
 > reused publicly, its sentence must receive exactly one canonical label from
 > the Claim Register.
 
+## Latest Node0 Genesis final-sprint candidate — 2026-09-10
+
+This is a **CURRENT_MEASURED / LOCAL_CANDIDATE** overlay for
+`NODE0-GENESIS-FINAL-SPRINT-1A`. It does not create a release and does not
+silently promote the historical rows below. Older statements remain
+time-scoped unless this section supplies current evidence for the same subject.
+
+| Subject | Current truth | Evidence ceiling |
+| --- | --- | --- |
+| Source candidate | `CURRENT_MEASURED`: final candidate is the clean `slice/node0-genesis-final-merged-1a` checkout; its exact HEAD/tree are bound by the campaign phase evidence and final manifest. | Exact local candidate; not remote exact-head proof or a release. |
+| DEMA front door | `CURRENT_MEASURED`: local service is serving `/mission` on loopback; source is the candidate `packages/dema-ui` tree. | Readiness is not human usefulness, production qualification, or Node0 closure. |
+| Governed URP adapter | `CURRENT_MEASURED`: local adapter is serving `/readyz` on loopback from the candidate `scripts/genesis-node0.mjs` path. | Local runtime evidence; no public listener, federation, or independent qualification claim. |
+| Prompt Compiler → MissionContract | `VERIFIED_LOCAL`: proposal-only path binds source intent, compiler, ontology, context and mission hashes; consequential intent remains `authority: NONE`. | Does not prove a real consequential effect or consent. |
+| Constitutional attention | `VERIFIED_LOCAL`: allocation receipt is content-bound, first-write idempotent, and reused after DEMA restart with `authority_delta: 0` and `effects_started: 0`. | Attention ranking does not authorize or verify an effect. |
+| Local realm projection | `CURRENT_MEASURED`: PAT-7, SAT-5, FATE and local URP state are projected by the governed candidate runtime. | Local candidate projection; ownership and boundaries are tested locally, not independently qualified. |
+| Candidate proof set | `CURRENT_MEASURED`: exact candidate aggregate suite reports `9,885` passing, `0` failures, `4` documented skips; repository check, LLM guidance, DEMA production build, and a detached clean checkout reproduce successfully; UI production audit reports zero findings. | Local/clean-checkout evidence only; remote exact-head CI, second physical environment, and release sealing remain open. |
+| Closure ledger | `CURRENT_MEASURED`: `9 SATISFIED / 0 VIOLATED / 1 UNKNOWN`; the remaining row is host-level `remote_write`. | The evaluator correctly remains `OPEN`; host observation is `INCOMPLETE` because non-loopback listeners are not correlated to Node0 write authority. |
+| Cross-repo provenance / key ceremony preflight | `CURRENT_MEASURED`: fresh path-level scan reports `1,070` artifacts, `0` secret-reference blockers, and next gate `NODE0-GENESIS-KEY-CEREMONY-1A`; `CROSS_REPO_SKIP_GH=1 node scripts/node0-genesis-key-ceremony-preflight.mjs --fresh-provenance --json` clears the read-only preflight without generating or reading a key. | Provenance blocker is cleared; the default historical-summary path remains fail-closed. This does not prove sovereign custody, principal binding, signing, Block0 sealing, or Node0 closure. |
+
+### Current claim ceiling
+
+The candidate may claim **local governed runtime composition and proposal-only
+attention/mission binding**. It may not claim:
+
+- `NODE0_GENESIS_V1_CLOSED`;
+- sovereign-root custody or private-key proof;
+- human usefulness for Momo;
+- exact-consent effect completion or exactly-once recovery on the full Momo path;
+- remote exact-head CI, canonical release, or independent clean reproduction;
+- Founder Exit completion or Lighthouse readiness;
+- public federation, global URP, or a production economy.
+
+The campaign evidence is retained outside this source tree under the authorized
+campaign root. Runtime PIDs and readiness responses are observations at their
+recorded timestamps, not durable component identities. No private profile,
+private key, or Momo Node Story is part of this candidate documentation.
+
 ---
 
 > **REMOTE-WRITE-DERIVATION-BINDING-1A — IMPLEMENTED_LOCAL:** schema-v0.2 deployment observations bind the normalized measured surface, `observed_at`, evaluator bytes, and exact collector bytes. The read-only adapter re-derives verdict, reason, exposure flag, findings, and facet counts from that surface before it can settle `remote_write`; a rehashed clean summary with deleted findings is refused. v0.1 artifacts are deliberately non-authoritative, future-dated observations beyond five minutes are refused, and observations older than 24 hours are refused. This repairs evidence admission only: it neither measures nor hardens the host, and it does not make the current `remote_write` row anything other than `UNKNOWN`. A fresh v0.2 host measurement remains a separate explicitly authorized action.

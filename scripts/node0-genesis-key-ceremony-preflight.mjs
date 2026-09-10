@@ -13,25 +13,47 @@ import {
   assessNode0GenesisKeyCeremonyPreflight,
   NODE0_GENESIS_KEY_CEREMONY_PREFLIGHT_SCHEMA,
 } from "../packages/genesis/src/node0-genesis-key-ceremony-preflight.js";
+import { buildCrossRepoGenesisProvenanceReport } from "./review/cross-repo-genesis-provenance.mjs";
 
 const JSON_MODE = process.argv.includes("--json");
 const HOME = process.env.DEMA_HOME || join(homedir(), ".dema");
 
-function loadProvenanceGate() {
+async function loadProvenanceGate() {
   const flagIdx = process.argv.indexOf("--provenance-json");
-  const path =
-    flagIdx >= 0 && process.argv[flagIdx + 1]
-      ? process.argv[flagIdx + 1]
-      : join(
-          process.cwd(),
-          "docs/08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.json",
-        );
+  if (flagIdx >= 0 && process.argv[flagIdx + 1]) {
+    const path = process.argv[flagIdx + 1];
 
-  // Fail closed: missing or unreadable provenance → BLOCKED rather than silently proceed.
-  if (!existsSync(path)) return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+    // Fail closed: missing or unreadable provenance → BLOCKED rather than silently proceed.
+    if (!existsSync(path)) return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+
+    try {
+      const doc = JSON.parse(readFileSync(path, "utf8"));
+      return doc.next_gate?.gate ?? "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+    } catch {
+      return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+    }
+  }
+
+  if (process.argv.includes("--fresh-provenance")) {
+    try {
+      const report = await buildCrossRepoGenesisProvenanceReport({
+        demaRoot: process.cwd(),
+        skipGh: process.env.CROSS_REPO_SKIP_GH === "1",
+      });
+      return report.next_gate?.gate ?? "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+    } catch {
+      return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+    }
+  }
+
+  const historicalPath = join(
+    process.cwd(),
+    "docs/08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.json",
+  );
+  if (!existsSync(historicalPath)) return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
 
   try {
-    const doc = JSON.parse(readFileSync(path, "utf8"));
+    const doc = JSON.parse(readFileSync(historicalPath, "utf8"));
     return doc.next_gate?.gate ?? "BLOCKED_BY_UNRESOLVED_PROVENANCE";
   } catch {
     return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
@@ -40,7 +62,7 @@ function loadProvenanceGate() {
 
 const report = await assessNode0GenesisKeyCeremonyPreflight({
   demaHome: HOME,
-  provenanceNextGate: loadProvenanceGate(),
+  provenanceNextGate: await loadProvenanceGate(),
 });
 
 if (JSON_MODE) {
