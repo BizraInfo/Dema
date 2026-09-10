@@ -94,7 +94,7 @@ export default function MissionPage() {
     <main style={{ minHeight: "100vh", background: "linear-gradient(180deg, #050B14 0%, #0A1628 100%)", color: "#E8EDF4", padding: "clamp(1.5rem, 5vw, 4rem)", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
         <header style={{ borderBottom: "1px solid #C9A96233", paddingBottom: "1.5rem" }}>
-          <div style={{ letterSpacing: "0.3em", fontSize: 11, color: GOLD, textTransform: "uppercase" }}>DEMA · Momo · local proposal</div>
+          <div style={{ letterSpacing: "0.3em", fontSize: 11, color: GOLD, textTransform: "uppercase" }}>DEMA · local proposal</div>
           <h1 style={{ fontFamily: "Georgia, serif", fontWeight: 400, fontSize: "clamp(2rem, 6vw, 3.6rem)", margin: "0.6rem 0" }}>What matters now?</h1>
           <p style={{ color: MUTED, lineHeight: 1.7, maxWidth: 680, margin: 0 }}>
             Speak naturally. DEMA will show what it understood before any planning, consent, or effect.

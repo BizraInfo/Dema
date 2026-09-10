@@ -46,18 +46,25 @@ function rootCanonContext() {
   }
 }
 
-function profileStoryContext() {
+function loadFounderProfile() {
   const home = process.env.BIZRA_FOUNDER_DEMA_HOME;
-  if (!home || !home.startsWith("/")) return { status: "UNKNOWN", source: "founder_profile_root_unbound" };
+  if (!home || !home.startsWith("/")) return null;
   try {
     const profilePath = join(home, "profile.json");
     const parsed = JSON.parse(readFileSync(profilePath, "utf8"));
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return { status: "UNKNOWN", source: "founder_profile_malformed" };
-    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return { parsed, profilePath };
+  } catch {
+    return null;
+  }
+}
+
+function profileStoryContext(profile: ReturnType<typeof loadFounderProfile>) {
+  if (!profile) return { status: "UNKNOWN", source: "founder_profile_unavailable" };
+  try {
     return {
       status: "DECLARED",
-      hash: `sha256:${sha256File(profilePath)}`,
+      hash: `sha256:${sha256File(profile.profilePath)}`,
       source: "founder_profile_json",
       user_confirmed: false,
     };
@@ -66,23 +73,28 @@ function profileStoryContext() {
   }
 }
 
+function displayNameContext(profile: ReturnType<typeof loadFounderProfile>) {
+  const configured = process.env.BIZRA_NODE0_DISPLAY_NAME?.trim();
+  const fromProfile = profile?.parsed?.preferred_name ?? profile?.parsed?.name;
+  const value = configured || (typeof fromProfile === "string" && fromProfile.trim() ? fromProfile.trim() : null);
+  return value
+    ? { status: "DECLARED", value, source: configured ? "node0_runtime_config" : "founder_profile_json", user_confirmed: true }
+    : { status: "UNKNOWN", source: "human_display_name_unbound", user_confirmed: false };
+}
+
 /**
  * Read the minimum non-secret context for the real DEMA mission input path.
  * Root DNA is measured from the immutable five-file canon; the private profile
  * contributes only a commitment. Missing current life context stays UNKNOWN.
  */
 export function loadNode0MissionContext() {
+  const profile = loadFounderProfile();
   return {
     root_dna: rootCanonContext(),
-    node_story: profileStoryContext(),
+    node_story: profileStoryContext(profile),
     current_state: { status: "UNKNOWN", source: "current_human_state_not_bound" },
     human_identity: {
-      display_name: {
-        status: "DECLARED",
-        value: process.env.BIZRA_NODE0_DISPLAY_NAME || "Momo",
-        source: "node0_campaign_user_facing_name",
-        user_confirmed: true,
-      },
+      display_name: displayNameContext(profile),
     },
     human_compass: {
       financial_freedom: "UNKNOWN",
