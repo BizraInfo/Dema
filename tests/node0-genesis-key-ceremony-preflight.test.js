@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
@@ -142,6 +142,52 @@ test("preflight CLI can derive the current provenance gate without the historica
   } finally {
     await rm(home, { recursive: true, force: true });
     await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test("preflight CLI fails closed when fresh provenance collection throws", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-fresh-fail-home-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dema-key-preflight-fresh-fail-cwd-"));
+  const bin = await mkdtemp(join(tmpdir(), "dema-key-preflight-fresh-fail-bin-"));
+  const fakeGh = join(bin, "gh");
+  try {
+    await writeFile(
+      fakeGh,
+      `#!/bin/sh
+if [ "$1" = "repo" ] && [ "$2" = "view" ]; then
+  printf '%s\\n' '{"name":"Dema","isArchived":false,"visibility":"PUBLIC","defaultBranchRef":{"name":"main"},"pushedAt":"2026-09-10T00:00:00Z"}'
+else
+  printf '%s\\n' '{not-json'
+fi
+`,
+      "utf8",
+    );
+    await chmod(fakeGh, 0o755);
+
+    await assert.rejects(
+      execFileAsync("node", [scriptPath, "--json", "--fresh-provenance"], {
+        cwd,
+        env: {
+          ...process.env,
+          DEMA_HOME: home,
+          CROSS_REPO_SKIP_GH: "0",
+          PATH: `${bin}:${process.env.PATH}`,
+        },
+      }),
+      (error) => {
+        assert.equal(error.code, 1);
+        const report = JSON.parse(error.stdout);
+        assert.equal(report.provenance_next_gate, "BLOCKED_BY_UNRESOLVED_PROVENANCE");
+        assert.equal(report.cleared_for_key_init, false);
+        assert.equal(report.boundary.private_key_read, false);
+        assert.equal(report.boundary.key_generated, false);
+        return true;
+      },
+    );
+  } finally {
+    await rm(home, { recursive: true, force: true });
+    await rm(cwd, { recursive: true, force: true });
+    await rm(bin, { recursive: true, force: true });
   }
 });
 
