@@ -223,9 +223,11 @@ test("preflight blocks with unknown_provenance_gate for unrecognized gate value"
 
 test("preflight CLI remains human-readable and fail-closed without provenance", async () => {
   const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-human-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dema-key-preflight-human-cwd-"));
   try {
     await assert.rejects(
       execFileAsync("node", [scriptPath], {
+        cwd,
         env: { ...process.env, DEMA_HOME: home },
       }),
       (error) => {
@@ -238,6 +240,7 @@ test("preflight CLI remains human-readable and fail-closed without provenance", 
     );
   } finally {
     await rm(home, { recursive: true, force: true });
+    await rm(cwd, { recursive: true, force: true });
   }
 });
 
