@@ -174,3 +174,124 @@ test("preflight blocks with unknown_provenance_gate for unrecognized gate value"
     await rm(home, { recursive: true, force: true });
   }
 });
+
+test("preflight CLI remains human-readable and fail-closed without provenance", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-human-"));
+  try {
+    await assert.rejects(
+      execFileAsync("node", [scriptPath], {
+        env: { ...process.env, DEMA_HOME: home },
+      }),
+      (error) => {
+        assert.equal(error.code, 1);
+        assert.match(error.stdout, /READ-ONLY/);
+        assert.match(error.stdout, /provenance_unresolved/);
+        assert.match(error.stdout, /pubkey=false ceremony=true signing_slots=11/);
+        return true;
+      },
+    );
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("preflight CLI blocks a missing explicit provenance file", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-missing-file-"));
+  try {
+    await assert.rejects(
+      execFileAsync(
+        "node",
+        [scriptPath, "--json", "--provenance-json", join(home, "missing.json")],
+        { env: { ...process.env, DEMA_HOME: home } },
+      ),
+      (error) => {
+        assert.equal(error.code, 1);
+        const report = JSON.parse(error.stdout);
+        assert.equal(report.provenance_next_gate, "BLOCKED_BY_UNRESOLVED_PROVENANCE");
+        assert.equal(report.cleared_for_key_init, false);
+        return true;
+      },
+    );
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("preflight CLI blocks malformed explicit provenance JSON", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-malformed-file-"));
+  const provDir = await mkdtemp(join(tmpdir(), "dema-key-preflight-malformed-prov-"));
+  const provFile = join(provDir, "provenance.json");
+  try {
+    await writeFile(provFile, "{not-json", "utf8");
+    await assert.rejects(
+      execFileAsync(
+        "node",
+        [scriptPath, "--json", "--provenance-json", provFile],
+        { env: { ...process.env, DEMA_HOME: home } },
+      ),
+      (error) => {
+        assert.equal(error.code, 1);
+        const report = JSON.parse(error.stdout);
+        assert.equal(report.provenance_next_gate, "BLOCKED_BY_UNRESOLVED_PROVENANCE");
+        assert.equal(report.cleared_for_key_init, false);
+        return true;
+      },
+    );
+  } finally {
+    await rm(home, { recursive: true, force: true });
+    await rm(provDir, { recursive: true, force: true });
+  }
+});
+
+test("preflight CLI human path shows the recommended key-init command", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-human-ready-"));
+  const provDir = await mkdtemp(join(tmpdir(), "dema-key-preflight-human-ready-prov-"));
+  const provFile = join(provDir, "provenance.json");
+  try {
+    await writeFile(
+      provFile,
+      JSON.stringify({ next_gate: { gate: "NODE0-GENESIS-KEY-CEREMONY-1A" } }),
+      "utf8",
+    );
+    const { stdout } = await execFileAsync(
+      "node",
+      [scriptPath, "--provenance-json", provFile],
+      { env: { ...process.env, DEMA_HOME: home } },
+    );
+    assert.match(stdout, /cleared:  YES/);
+    assert.match(stdout, /next:.*authorship key init/);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+    await rm(provDir, { recursive: true, force: true });
+  }
+});
+
+test("preflight CLI blocks malformed historical provenance JSON", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-historical-home-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dema-key-preflight-historical-cwd-"));
+  const provenanceDir = join(cwd, "docs", "08-quality");
+  try {
+    await mkdir(provenanceDir, { recursive: true });
+    await writeFile(
+      join(provenanceDir, "CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.json"),
+      "{not-json",
+      "utf8",
+    );
+    await assert.rejects(
+      execFileAsync("node", [scriptPath, "--json"], {
+        cwd,
+        env: { ...process.env, DEMA_HOME: home },
+      }),
+      (error) => {
+        assert.equal(error.code, 1);
+        const report = JSON.parse(error.stdout);
+        assert.equal(report.provenance_next_gate, "BLOCKED_BY_UNRESOLVED_PROVENANCE");
+        assert.equal(report.cleared_for_key_init, false);
+        return true;
+      },
+    );
+  } finally {
+    await rm(home, { recursive: true, force: true });
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
