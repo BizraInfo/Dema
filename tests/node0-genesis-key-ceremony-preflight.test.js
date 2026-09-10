@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
@@ -55,6 +55,42 @@ test("preflight blocks when provenance unresolved", async () => {
     });
     assert.equal(report.cleared_for_key_init, false);
     assert.equal(report.blockers[0].code, "provenance_unresolved");
+    assert.equal(report.recommended_command, null);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("preflight blocks second init when an active key pointer is present", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-existing-"));
+  try {
+    await mkdir(join(home, "keys"), { recursive: true });
+    await writeFile(join(home, "keys", "active-key.json"), "{}\n", "utf8");
+
+    const report = await assessNode0GenesisKeyCeremonyPreflight({
+      demaHome: home,
+      provenanceNextGate: "NODE0-GENESIS-KEY-CEREMONY-1A",
+    });
+
+    assert.equal(report.cleared_for_key_init, false);
+    assert.equal(report.authorship_key_present, true);
+    assert.ok(report.blockers.some((b) => b.code === "authorship_key_already_present"));
+    assert.equal(report.recommended_command, null);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("preflight requires operator review for historical migration gate", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-migrate-"));
+  try {
+    const report = await assessNode0GenesisKeyCeremonyPreflight({
+      demaHome: home,
+      provenanceNextGate: "MIGRATE-HISTORICAL-GENESIS-PROOF-1A",
+    });
+
+    assert.equal(report.cleared_for_key_init, false);
+    assert.equal(report.blockers[0].code, "migrate_review_required");
     assert.equal(report.recommended_command, null);
   } finally {
     await rm(home, { recursive: true, force: true });
