@@ -74,12 +74,13 @@ npm run build
 The fresh-node commands above are **instructions**, not current second-machine
 evidence. The root package has no package-lock because it has no declared
 dependencies, so root `npm ci` is not a valid preflight step. The latest
-measured candidate aggregate gate reported `9,884` passing tests, `0` failures,
-and `4` documented skips; a detached clean checkout at the same measured
-candidate also passed its UI install/build and aggregate gate. Reproduce and
-record the exact environment before promoting a claim. The UI production
-dependency audit is currently zero findings after the pinned security update;
-CodeQL and gitleaks availability remain separate release evidence questions.
+measured final candidate aggregate gate reported `9,885` passing tests, `0`
+failures, and `4` documented skips. A detached clean checkout at the same final
+SHA reproduced the root suite; the UI install/build and aggregate gate were
+independently exercised on the same source lineage. Reproduce and record the
+exact environment before promoting a claim. The UI production dependency audit
+is currently zero findings after the pinned security update; CodeQL and gitleaks
+availability remain separate release evidence questions.
 
 ## Local Genesis runtime
 
