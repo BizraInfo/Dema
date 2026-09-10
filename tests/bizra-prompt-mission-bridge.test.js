@@ -48,6 +48,7 @@ test("BPMB-01: deterministic intent-to-MissionContract proposal is hash-bound", 
   assert.equal(a.attention.effects_started, 0);
   assert.equal(a.context_snapshot.node_story.status, "UNKNOWN");
   assert.equal(a.context_snapshot.current_state.status, "UNKNOWN");
+  assert.equal(a.context_snapshot.human_identity.display_name.status, "UNKNOWN");
   assert.deepEqual(
     verifyMissionProposal(a, {
       expected_compiler_code_hash: COMPILER_CODE_HASH,
@@ -55,6 +56,28 @@ test("BPMB-01: deterministic intent-to-MissionContract proposal is hash-bound", 
     }),
     { ok: true, blocked_by: [], recomputed_bridge_hash: a.bridge_hash },
   );
+});
+
+test("BPMB-05: identity is explicit context, never inferred from arbitrary fields", () => {
+  const proposal = compileMissionProposal({
+    text: INTENT,
+    context: {
+      ...CONTEXT,
+      human_identity: {
+        display_name: {
+          status: "DECLARED",
+          value: "Momo",
+          source: "human_input",
+        },
+      },
+    },
+    now_iso: NOW,
+    compiler_code_hash: COMPILER_CODE_HASH,
+  });
+
+  assert.equal(proposal.context_snapshot.human_identity.display_name.status, "DECLARED");
+  assert.equal(proposal.context_snapshot.human_identity.display_name.value, "Momo");
+  assert.equal(proposal.authority.authority_delta, 0);
 });
 
 test("BPMB-02: understanding a consequential request holds for exact consent", () => {

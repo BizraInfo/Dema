@@ -80,14 +80,27 @@ function safeFact(value) {
   return out;
 }
 
+function safeNamedFact(value) {
+  const out = safeFact(value);
+  const source = isPlainObject(value) ? value : {};
+  if (typeof source.value === "string" && source.value.trim() && source.value.length <= 120) {
+    out.value = source.value.trim();
+  }
+  return out;
+}
+
 function normalizeContextCapsule(input) {
   const source = isPlainObject(input) ? input : {};
   const compassSource = isPlainObject(source.human_compass) ? source.human_compass : {};
+  const identitySource = isPlainObject(source.human_identity) ? source.human_identity : {};
   return deepFreeze({
     schema: "bizra.dema.context_capsule.proposal.v0.1",
     root_dna: safeFact(source.root_dna),
     node_story: safeFact(source.node_story),
     current_state: safeFact(source.current_state),
+    human_identity: {
+      display_name: safeNamedFact(identitySource.display_name),
+    },
     human_compass: {
       financial_freedom: safeStatus(compassSource.financial_freedom),
       mind_clarity: safeStatus(compassSource.mind_clarity),

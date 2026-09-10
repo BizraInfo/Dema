@@ -5,6 +5,7 @@ import {
   compileMissionProposal,
   verifyMissionProposal,
 } from "@core/bizra-prompt-mission-bridge.js";
+import { mergeNode0MissionContext } from "../node0-runtime";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -36,13 +37,13 @@ export async function POST(request: NextRequest) {
 
     const proposal = compileMissionProposal({
       text,
-      context: body?.context,
+      context: mergeNode0MissionContext(body?.context),
       now_iso: new Date().toISOString(),
       compiler_code_hash: compilerCodeHash,
     });
     const verification = verifyMissionProposal(proposal, {
       expected_compiler_code_hash: compilerCodeHash,
-      expected_context: body?.context,
+      expected_context: proposal.context_snapshot,
     });
 
     if (!verification.ok) {
