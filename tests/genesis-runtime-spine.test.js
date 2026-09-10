@@ -18,8 +18,26 @@ import {
   reduceUrp0Events,
   urp0MissionConsentPhrase,
 } from "../packages/genesis/src/urp0-kernel.js";
-import { buildAdmissionContract, admissionConsentPhrase } from "../packages/genesis/src/urp0-mission-kernel.js";
-import { judgeUrp0Mission, verifyBlock0Candidate, verifyUrp0Judgment } from "../packages/genesis/src/urp0-sat5.js";
+import {
+  admissionConsentPhrase,
+  buildAdmissionContract,
+  buildMissionContract,
+  classifyEntryName,
+  deriveMissionResult,
+  validateObservation,
+} from "../packages/genesis/src/urp0-mission-kernel.js";
+import {
+  buildBlock0Candidate,
+  judgeUrp0Mission,
+  verifyBlock0Candidate,
+  verifyUrp0Judgment,
+} from "../packages/genesis/src/urp0-sat5.js";
+import {
+  buildSatEvidencePacket,
+  isTypedSha256,
+  packetIdentityDigest,
+  verifySatEvidencePacket,
+} from "../packages/genesis/src/urp0-sat-evidence.js";
 import {
   admitHuman0,
   authorizeAndExecute,
@@ -533,4 +551,263 @@ test("CORS follows the UI port instead of hardcoding 3000", async () => {
 test("loopbackOrigins covers both loopback spellings and nothing else", () => {
   assert.deepEqual(loopbackOrigins(3000), ["http://127.0.0.1:3000", "http://localhost:3000"]);
   assert.deepEqual(loopbackOrigins(3117), ["http://127.0.0.1:3117", "http://localhost:3117"]);
+});
+
+// These are deliberately direct negative controls for the governed kernels.
+// The runtime tests prove the happy path; these controls prove that malformed
+// evidence cannot become a green mission merely because the caller supplied it.
+test("mission shape validators preserve UNKNOWN and refuse malformed evidence", () => {
+  const w = makeWorld();
+  try {
+    const { run } = runFullLoop(w);
+    assert.equal(classifyEntryName("README"), "no_extension");
+    assert.equal(classifyEntryName(".env"), "no_extension");
+    assert.equal(classifyEntryName("file."), "no_extension");
+    assert.equal(classifyEntryName("file.unknown"), "other");
+
+    const validBinding = Object.fromEntries([
+      "bridge_hash",
+      "source_intent_hash",
+      "compiler_identity_hash",
+      "compiled_contract_hash",
+      "context_hash",
+    ].map((key) => [key, "sha256:" + "a".repeat(64)]));
+    assert.equal(buildMissionContract({ canonical_root: w.source, limits: run.contract.limits, proposal_binding: validBinding }).body.proposal_binding.bridge_hash, validBinding.bridge_hash);
+    assert.throws(() => buildMissionContract({ canonical_root: w.source, proposal_binding: "invalid" }), /proposal_binding_invalid/);
+    assert.throws(() => buildMissionContract({ canonical_root: w.source, proposal_binding: { unexpected: true } }), /proposal_binding_shape_invalid/);
+    assert.throws(() => buildMissionContract({ canonical_root: w.source, proposal_binding: { ...validBinding, bridge_hash: "bad" } }), /proposal_binding_hash_invalid:bridge_hash/);
+
+    assert.deepEqual(validateObservation(null), ["observation_not_object"]);
+    const observation = run.observation;
+    for (const [mutate, expected] of [
+      [(o) => delete o.root_realpath, "root_realpath_missing"],
+      [(o) => { o.counts = null; }, "counts_missing"],
+      [(o) => { o.counts.files = -1; }, "count_invalid:files"],
+      [(o) => { o.total_file_bytes = -1; }, "total_file_bytes_invalid"],
+      [(o) => { o.type_histogram = null; }, "type_histogram_missing"],
+      [(o) => { o.type_histogram.unexpected = 1; }, "type_category_unknown:unexpected"],
+      [(o) => { o.type_histogram.document = -1; }, "type_count_invalid:document"],
+      [(o) => { o.skipped_reasons = null; }, "skipped_reasons_missing"],
+      [(o) => { o.skipped_reasons.unexpected = 1; }, "skip_reason_unknown:unexpected"],
+      [(o) => { o.skipped_reasons.permission_denied = -1; }, "skip_count_invalid:permission_denied"],
+      [(o) => { o.symlinks_followed = -1; }, "observation_invalid:symlinks_followed"],
+      [(o) => { o.contents_read = true; }, "observation_must_be_false:contents_read"],
+      [(o) => { o.limits_honored = "unknown"; }, "limits_honored_invalid"],
+    ]) {
+      const candidate = structuredClone(observation);
+      mutate(candidate);
+      assert.ok(validateObservation(candidate).includes(expected), expected);
+    }
+
+    const wrongContractHash = deriveMissionResult({ contract: run.contract, contract_hash: "sha256:" + "0".repeat(64), observation });
+    assert.ok(wrongContractHash.blocked_by.includes("contract_hash_mismatch"));
+    for (const [field, expected] of [
+      ["entries_outside_root", "root_containment_violated"],
+      ["symlinks_followed", "symlink_followed"],
+      ["limits_honored", "limits_exceeded"],
+      ["root_realpath", "root_realpath_mismatch"],
+    ]) {
+      const candidate = structuredClone(observation);
+      candidate[field] = field === "root_realpath" ? "/other-root" : (field === "limits_honored" ? false : 1);
+      const result = deriveMissionResult({ contract: run.contract, contract_hash: run.contract_hash, observation: candidate });
+      assert.ok(result.blocked_by.includes(expected), expected);
+    }
+  } finally {
+    w.cleanup();
+  }
+});
+
+test("SAT evidence and judgment kernels fail closed across tamper classes", () => {
+  const w = makeWorld();
+  try {
+    const { card, run } = runFullLoop(w);
+    const packet = run.sat_evidence_packet;
+    const packetInput = (overrides = {}) => ({
+      mission_id: overrides.mission_id ?? packet.mission_id,
+      attempt_id: overrides.attempt_id ?? packet.attempt_id,
+      evidence: overrides.evidence ?? structuredClone(packet.evidence),
+      judgment: overrides.judgment ?? structuredClone(packet.judgment),
+      journal_binding: overrides.journal_binding ?? structuredClone(packet.journal_binding),
+      effect_phase_declared_write_paths: overrides.effect_phase_declared_write_paths ?? structuredClone(packet.effects.effect_phase_declared_write_paths),
+      control_plane_write_paths: overrides.control_plane_write_paths ?? structuredClone(packet.control_plane_write_paths),
+    });
+    const evidence = packet.evidence;
+    const rebuild = (mutate) => {
+      const candidate = structuredClone(evidence);
+      mutate(candidate);
+      return candidate;
+    };
+    const refuse = (mutate, lane = null) => {
+      const judgment = judgeUrp0Mission(rebuild(mutate));
+      assert.equal(judgment.admissible, false);
+      if (lane) assert.ok(judgment.failing_verifiers.includes(lane), lane);
+      return judgment;
+    };
+
+    assert.equal(isTypedSha256("sha256:" + "a".repeat(64)), true);
+    assert.equal(isTypedSha256("sha256:bad"), false);
+    assert.match(packetIdentityDigest({ mission_id: packet.mission_id, attempt_id: packet.attempt_id }), /^sha256:[0-9a-f]{64}$/);
+    for (const input of [
+      {},
+      { mission_id: "m", attempt_id: "a", evidence: null, judgment: null, journal_binding: null, effect_phase_declared_write_paths: [], control_plane_write_paths: [] },
+      { mission_id: "m", attempt_id: "a", evidence: {}, judgment: {}, journal_binding: {}, effect_phase_declared_write_paths: ["/outside"], control_plane_write_paths: undefined },
+    ]) assert.equal(buildSatEvidencePacket(input).ok, false);
+
+    assert.equal(verifySatEvidencePacket(null).ok, false);
+    const invalidInputs = [
+      ["events", (e) => { e.events = []; }, "events_malformed"],
+      ["elapsed", (e) => { delete e.observation.elapsed_ms; }, "observation_elapsed_ms_missing_or_invalid"],
+      ["contract", (e) => { e.contract = null; }, "contract_mission_id_mismatch"],
+      ["consent", (e) => { e.consent_context = null; }, "consent_mission_id_mismatch"],
+      ["receipt body", (e) => { e.receipt_body = null; }, "provisional_result_hash_missing"],
+      ["write set", (e) => { e.declared_write_paths = ["/different"]; }, "effect_write_set_mismatch"],
+      ["state root", (e) => { e.state_root_dir = ""; }, "state_root_dir_missing"],
+      ["attempt events", (e) => { e.events = e.events.map((event) => ({ ...event, payload: { ...event.payload, attempt_id: "other" } })); }, "attempt_events_missing"],
+      ["event mission", (e) => { e.events[4].payload.mission_id = "other"; }, "event_mission_id_mismatch"],
+      ["judgment binding", (e) => { e.judgment_hash = "sha256:" + "0".repeat(64); }, "judgment_hash_binding_mismatch"],
+    ];
+    for (const [label, mutate, expected] of invalidInputs) {
+      const result = buildSatEvidencePacket(packetInput({ evidence: rebuild(mutate) }));
+      assert.equal(result.ok, false, label);
+      assert.ok(result.blocked_by.includes(expected), label + ": " + expected);
+    }
+
+    for (const [label, mutate, expected] of [
+      ["effect path", (input) => { input.effect_phase_declared_write_paths = ["/outside"]; }, "effect_write_path_outside_state_root"],
+      ["control path", (input) => { input.control_plane_write_paths = ["/outside"]; }, "control_write_path_outside_state_root"],
+      ["event count", (input) => { input.journal_binding.event_count = 0; }, "journal_event_count_mismatch"],
+      ["event head", (input) => { input.journal_binding.head_event_id = "bad"; }, "journal_head_event_mismatch"],
+      ["journal path", (input) => { input.journal_binding.path = "/outside/journal"; }, "journal_path_outside_state_root"],
+      ["prefix digest", (input) => { input.journal_binding.prefix_sha256 = "bad"; }, "digest_malformed:journal_binding.prefix_sha256"],
+      ["judgment digest", (input) => { input.judgment.judgment_hash = "bad"; }, "digest_malformed:judgment.judgment_hash"],
+      ["empty journal", (input) => { input.journal_binding.event_count = 0; }, "journal_event_count_empty"],
+      ["bad head digest", (input) => { input.evidence.events.at(-1).event_id = "bad"; input.journal_binding.head_event_id = "bad"; }, "journal_head_event_id_malformed"],
+    ]) {
+      const input = packetInput({ evidence: structuredClone(evidence) });
+      mutate(input);
+      const result = buildSatEvidencePacket(input);
+      assert.equal(result.ok, false, label);
+      assert.ok(result.blocked_by.includes(expected), label + ": " + expected);
+    }
+
+    assert.equal(buildSatEvidencePacket(packetInput({ evidence: rebuild((e) => { e.result = { bad: 1n }; }) })).ok, false);
+    assert.equal(verifySatEvidencePacket({ ...packet, semantic_commitment: "bad" }).ok, false);
+    assert.equal(verifySatEvidencePacket({ ...packet, evidence: { ...packet.evidence, result: { bad: 1n } } }).ok, false);
+
+    refuse((e) => { e.events[0].prev_event = "wrong"; }, "SAT-1");
+    refuse((e) => { e.events[0].event_id = "wrong"; }, "SAT-1");
+    refuse((e) => { e.events[0].payload = { bad: 1n }; }, "SAT-1");
+    refuse((e) => { e.events = e.events.filter((event) => event.kind !== "MISSION_EXECUTED"); }, "SAT-1");
+    refuse((e) => { e.receipt_body.contract_hash = "bad"; }, "SAT-1");
+    refuse((e) => { e.consent_context_hash = "bad"; }, "SAT-2");
+    refuse((e) => { e.consent_context.canonical_root = "/other"; }, "SAT-2");
+    refuse((e) => { e.consent_context.permitted_operation = "BAD"; }, "SAT-2");
+    refuse((e) => { e.consent_context.nonce = ""; }, "SAT-2");
+    refuse((e) => { e.authorized_at_iso = "9999-01-01T00:00:00.000Z"; }, "SAT-2");
+    refuse((e) => { e.authorized_at_iso = "0000-01-01T00:00:00.000Z"; }, "SAT-2");
+    refuse((e) => { e.events = e.events.filter((event) => event.kind !== "CONSENT_REQUESTED"); }, "SAT-2");
+    refuse((e) => { e.result = { bad: 1n }; }, "SAT-3");
+    refuse((e) => { e.result.token_price = "1"; }, "SAT-3");
+    refuse((e) => { e.receipt_body.token_minted = true; }, "SAT-3");
+    refuse((e) => { e.contract.type = "UNBOUNDED"; }, "SAT-3");
+    refuse((e) => { e.contract.metadata_only = false; }, "SAT-3");
+    refuse((e) => { e.contract.limits.max_entries = 0; }, "SAT-3");
+    refuse((e) => { e.result.counts.files = 0; e.result.total_file_bytes = 1; }, "SAT-3");
+    refuse((e) => { e.result.type_histogram.document += 1; }, "SAT-3");
+    refuse((e) => { e.resource_offer.network = true; }, "SAT-4");
+    refuse((e) => { e.contract.network = true; }, "SAT-4");
+    refuse((e) => { e.observation.network_used = true; }, "SAT-4");
+    refuse((e) => { e.resource_offer.unrestricted_shell = true; }, "SAT-4");
+    refuse((e) => { e.resource_offer.unrestricted_filesystem = true; }, "SAT-4");
+    refuse((e) => { e.observation.entries_outside_root = 1; }, "SAT-4");
+    refuse((e) => { e.observation.symlinks_followed = 1; }, "SAT-4");
+    refuse((e) => { e.observation.contents_read = true; }, "SAT-4");
+    refuse((e) => { e.observation.contents_hashed = true; }, "SAT-4");
+    refuse((e) => { e.source_fingerprint_before = ""; }, "SAT-4");
+    refuse((e) => { e.source_fingerprint_after = ""; }, "SAT-4");
+    refuse((e) => { e.source_fingerprint_after = "different"; }, "SAT-4");
+    refuse((e) => { e.contract.limits.max_entries = undefined; }, "SAT-4");
+    refuse((e) => { e.contract.limits.max_entries = 0; }, "SAT-4");
+    refuse((e) => { e.contract.limits.wall_clock_seconds = undefined; }, "SAT-4");
+    refuse((e) => { e.contract.limits.wall_clock_seconds = 0; e.observation.elapsed_ms = 1; }, "SAT-4");
+    refuse((e) => { e.observation.limits_honored = false; }, "SAT-4");
+    refuse((e) => { e.declared_write_paths = undefined; }, "SAT-4");
+    refuse((e) => { e.declared_write_paths = ["/outside"]; }, "SAT-4");
+    refuse((e) => { e.result.entries = ["private-path"]; }, "SAT-4");
+    refuse((e) => { e.admission_contract.founder_bypass = true; }, "SAT-5");
+    refuse((e) => { e.events[0].payload.founder_bypass = true; }, "SAT-5");
+    refuse((e) => { e.events[0].kind = "NODE_REGISTERED"; }, "SAT-5");
+    refuse((e) => { e.events.push(e.events[0]); }, "SAT-5");
+    refuse((e) => { e.consent_context.nonce = ""; }, "SAT-5");
+    refuse((e) => { e.events[5].kind = "MISSION_AUTHORIZED"; }, "SAT-5");
+    for (const field of ["implementation", "autonomous_agents", "count", "status"]) {
+      refuse((e) => { e.sat_set[field] = field === "count" ? 4 : (field === "autonomous_agents" ? true : "WRONG"); }, "SAT-5");
+    }
+    refuse((e) => { e.result = { bad: 1n }; }, "SAT-5");
+    refuse((e) => {
+      Object.assign(e.result, {
+        federation_used: true,
+        public_gateway_enabled: true,
+        node1_admitted: true,
+        network_used: true,
+        autonomous_ai_agent: true,
+        live_sat_agent: true,
+      });
+    }, "SAT-5");
+
+    const sealed = sealBlock0(w.stateRootDir, {
+      repository_base_commit: "badb1c18e3fffae8fa26083e8e8d3bb9d96fdc1b",
+      implementation_commit: "test",
+      constitution_source_hash: "sha256:test",
+      topology_source_hash: "sha256:test",
+    });
+    const badBlock = structuredClone(sealed.block0);
+    Object.assign(badBlock, {
+      schema: "bad",
+      truth_label: "MAINNET",
+      sources: { ...badBlock.sources, implementation_commit: "MAINNET PUBLIC_GENESIS FINAL_NETWORK_BLOCK0" },
+      economy: { ...badBlock.economy, live_mint: true, token_created: true, founder_asset_valuation: "STARTED", urp_treasury_balance: 1 },
+      network: { internet_gateway: true, node1_admission: true },
+      human: { ...badBlock.human, founder_bypass: true },
+      sat5: { ...badBlock.sat5, admissible: false, autonomous_ai_agent: true },
+      boundary: {},
+    });
+    const badBlockVerdict = verifyBlock0Candidate({ body: badBlock, block0_hash: sealed.block0_hash });
+    assert.equal(badBlockVerdict.ok, false);
+    for (const expected of [
+      "block0_hash_not_rederivable", "schema_mismatch", "truth_label_not_local_candidate",
+      "forbidden_label:MAINNET", "forbidden_label:PUBLIC_GENESIS", "forbidden_label:FINAL_NETWORK_BLOCK0",
+      "mint_claimed", "treasury_nonzero", "founder_valuation_started", "gateway_claimed",
+      "node1_claimed", "founder_bypass_claimed", "sealed_without_admissible_judgment",
+      "autonomous_sat_claimed", "boundary_not_canonical_all_false",
+    ]) assert.ok(badBlockVerdict.blocked_by.includes(expected), expected);
+    assert.equal(verifyBlock0Candidate({ body: null, block0_hash: null }).ok, false);
+    const candidate = buildBlock0Candidate({
+      constitution_source_hash: "sha256:test",
+      topology_source_hash: "sha256:test",
+      repository_base_commit: "base",
+      implementation_commit: "impl",
+      human: worldState(w.stateRootDir).human,
+      node: worldState(w.stateRootDir).node,
+      urp_state_root: worldState(w.stateRootDir).urp.state_root,
+      judgment: run.judgment,
+      resource_offer_receipt_hash: "sha256:test",
+      contract_hash: run.contract_hash,
+      consent_receipt_hash: run.consent_receipt_hash,
+      result_hash: run.result_hash,
+      receipt_hash: run.receipt_hash,
+      restart_replay: {
+        state_root_preserved: true,
+        receipt_replay_verified: true,
+        duplicate_human_registration: false,
+        duplicate_node_registration: false,
+        duplicate_mission_admission: false,
+      },
+    });
+    assert.equal(verifyBlock0Candidate(candidate).ok, true);
+    assert.equal(verifyUrp0Judgment({ evidence, judgment: run.judgment }).ok, true);
+    assert.equal(card.card.writes_performed, false);
+  } finally {
+    w.cleanup();
+  }
 });
