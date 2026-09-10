@@ -86,6 +86,44 @@ test("journal lock fails closed for a malformed unique predecessor", () => {
   }
 });
 
+test("journal lock treats a reused PID with a different start token as stale", () => {
+  const base = mkdtempSync(join(tmpdir(), "genesis-journal-lock-pid-reuse-"));
+  const stateRoot = join(base, "dema-home", "genesis", "urp0");
+  const lockDir = join(stateRoot, ".journal.ndjson.locks");
+  const predecessor = join(lockDir, `lock-1-${process.pid}-deadbeef.json`);
+  try {
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(predecessor, JSON.stringify({
+      pid: process.pid,
+      token: "stale-process-instance",
+      start_token: "not-the-current-process-start-token",
+      created_mono_ns: "1",
+    }));
+    const result = admissionResult(stateRoot);
+    assert.equal(result.ok, true, JSON.stringify(result.blocked_by));
+    assert.equal(readFileSync(join(stateRoot, "journal.ndjson"), "utf8").includes("HUMAN_REGISTERED"), true);
+    assert.equal(readFileSync(predecessor, "utf8").includes("stale-process-instance"), true);
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("journal lock ignores unrelated files without deleting them", () => {
+  const base = mkdtempSync(join(tmpdir(), "genesis-journal-lock-unrelated-"));
+  const stateRoot = join(base, "dema-home", "genesis", "urp0");
+  const lockDir = join(stateRoot, ".journal.ndjson.locks");
+  const unrelated = join(lockDir, "README");
+  try {
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(unrelated, "not a lock entry\n");
+    const result = admissionResult(stateRoot);
+    assert.equal(result.ok, true, JSON.stringify(result.blocked_by));
+    assert.equal(readFileSync(unrelated, "utf8"), "not a lock entry\n");
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
 test("journal lock respects the retired live singleton during cutover", () => {
   const base = mkdtempSync(join(tmpdir(), "genesis-journal-lock-legacy-"));
   const stateRoot = join(base, "dema-home", "genesis", "urp0");
@@ -113,6 +151,43 @@ test("journal lock fails closed for a malformed retired singleton", () => {
     assert.equal(result.ok, false);
     assert.deepEqual(result.blocked_by, ["journal_lock_busy"]);
     assert.equal(readFileSync(legacy, "utf8"), "not-a-lock\n");
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("journal lock ignores a dead retired singleton and preserves it", () => {
+  const base = mkdtempSync(join(tmpdir(), "genesis-journal-lock-legacy-dead-"));
+  const stateRoot = join(base, "dema-home", "genesis", "urp0");
+  const legacy = join(stateRoot, ".journal.ndjson.lock");
+  try {
+    mkdirSync(stateRoot, { recursive: true });
+    writeFileSync(legacy, "999999999:legacy-dead\n");
+    const result = admissionResult(stateRoot);
+    assert.equal(result.ok, true, JSON.stringify(result.blocked_by));
+    assert.equal(readFileSync(join(stateRoot, "journal.ndjson"), "utf8").includes("HUMAN_REGISTERED"), true);
+    assert.equal(readFileSync(legacy, "utf8"), "999999999:legacy-dead\n");
+  } finally {
+    rmSync(base, { recursive: true, force: true });
+  }
+});
+
+test("journal lock fails closed for a structurally invalid unique predecessor", () => {
+  const base = mkdtempSync(join(tmpdir(), "genesis-journal-lock-invalid-"));
+  const stateRoot = join(base, "dema-home", "genesis", "urp0");
+  const lockDir = join(stateRoot, ".journal.ndjson.locks");
+  const predecessor = join(lockDir, "lock-1-2-badc0de.json");
+  try {
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(predecessor, JSON.stringify({
+      pid: 2,
+      token: "",
+      created_mono_ns: "1",
+    }));
+    const result = admissionResult(stateRoot);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.blocked_by, ["journal_lock_busy"]);
+    assert.equal(readFileSync(predecessor, "utf8").includes('"token":""'), true);
   } finally {
     rmSync(base, { recursive: true, force: true });
   }
