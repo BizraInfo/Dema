@@ -41,7 +41,7 @@ time-scoped unless this section supplies current evidence for the same subject.
 
 | Subject | Current truth | Evidence ceiling |
 | --- | --- | --- |
-| Source candidate | `53f44a2c3eba92f5f53ef7bd15c6fb9fed9022af` · tree `5d1798b6b7962903c6561b9ac19a1af7d0ae2a02` | Exact local candidate; not remote exact-head proof or a release. |
+| Source candidate | `ed4f701ce6c046edb83f779622849c3acec33e36` · tree `73a3ad843e28d768c4ab7c3e4614470010174d6a` | Exact local candidate; not remote exact-head proof or a release. |
 | DEMA front door | `CURRENT_MEASURED`: local service is serving `/mission` on loopback; source is the candidate `packages/dema-ui` tree. | Readiness is not human usefulness, production qualification, or Node0 closure. |
 | Governed URP adapter | `CURRENT_MEASURED`: local adapter is serving `/readyz` on loopback from the candidate `scripts/genesis-node0.mjs` path. | Local runtime evidence; no public listener, federation, or independent qualification claim. |
 | Prompt Compiler → MissionContract | `VERIFIED_LOCAL`: proposal-only path binds source intent, compiler, ontology, context and mission hashes; consequential intent remains `authority: NONE`. | Does not prove a real consequential effect or consent. |
@@ -49,7 +49,7 @@ time-scoped unless this section supplies current evidence for the same subject.
 | Local realm projection | `CURRENT_MEASURED`: PAT-7, SAT-5, FATE and local URP state are projected by the governed candidate runtime. | Local candidate projection; ownership and boundaries are tested locally, not independently qualified. |
 | Candidate proof set | `CURRENT_MEASURED`: exact candidate aggregate suite reports `9,884` passing, `0` failures, `4` documented skips; repository check, LLM guidance, DEMA production build, and a detached clean checkout reproduce successfully; UI production audit reports zero findings. | Local/clean-checkout evidence only; remote exact-head CI, second physical environment, and release sealing remain open. |
 | Closure ledger | `CURRENT_MEASURED`: `9 SATISFIED / 0 VIOLATED / 1 UNKNOWN`; the remaining row is host-level `remote_write`. | The evaluator correctly remains `OPEN`; host observation is `INCOMPLETE` because non-loopback listeners are not correlated to Node0 write authority. |
-| Cross-repo provenance / key ceremony preflight | `CURRENT_MEASURED`: fresh path-level scan reports `1,070` artifacts, `0` secret-reference blockers, and next gate `NODE0-GENESIS-KEY-CEREMONY-1A`; read-only preflight is cleared for the separate exact-consent ceremony, with no key generated or read. | Provenance blocker is cleared; this does not prove sovereign custody, principal binding, signing, Block0 sealing, or Node0 closure. |
+| Cross-repo provenance / key ceremony preflight | `CURRENT_MEASURED`: fresh path-level scan reports `1,070` artifacts, `0` secret-reference blockers, and next gate `NODE0-GENESIS-KEY-CEREMONY-1A`; `CROSS_REPO_SKIP_GH=1 node scripts/node0-genesis-key-ceremony-preflight.mjs --fresh-provenance --json` clears the read-only preflight without generating or reading a key. | Provenance blocker is cleared; the default historical-summary path remains fail-closed. This does not prove sovereign custody, principal binding, signing, Block0 sealing, or Node0 closure. |
 
 ### Current claim ceiling
 
