@@ -3,7 +3,7 @@
 // no fake filesystem, no stubbed verifier, no asserted booleans.
 
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync, unlinkSync, readFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -62,6 +62,7 @@ import {
   initAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
   loadPublicKey,
+  activeKeyPaths,
 } from "../packages/receipts/src/authorship-key-store.js";
 import {
   appendEvent,
@@ -211,6 +212,28 @@ test("world state binds the governed Node0 principal from the verified disk proo
     const forged = worldState(w.stateRootDir);
     assert.equal(forged.node.principal, null);
     assert.equal(forged.node.principal_binding.status, "NOT_BOUND");
+
+    // The runtime must fail closed on pointer and public-key path substitution;
+    // these are host-bound identity checks, not caller-provided status fields.
+    writeFileSync(join(w.stateRootDir, "artifacts", "node0-identity-proof.json"), `${JSON.stringify(proof.proof)}\n`);
+    const paths = activeKeyPaths(w.demaHome);
+    const pointer = JSON.parse(readFileSync(paths.activePointer, "utf8"));
+    rmSync(paths.activePointer);
+    symlinkSync(w.source, paths.activePointer);
+    const pointerLink = worldState(w.stateRootDir);
+    assert.deepEqual(pointerLink.node.principal_binding.blocked_by, ["active_pointer_not_regular"]);
+
+    unlinkSync(paths.activePointer);
+    writeFileSync(paths.activePointer, `${JSON.stringify({ ...pointer, generation_fingerprint: "bad" })}\n`);
+    const badFingerprint = worldState(w.stateRootDir);
+    assert.deepEqual(badFingerprint.node.principal_binding.blocked_by, ["active_fingerprint_invalid"]);
+
+    writeFileSync(paths.activePointer, `${JSON.stringify(pointer)}\n`);
+    const publicPath = join(paths.generationsDir, pointer.generation_fingerprint, "public.pem");
+    rmSync(publicPath);
+    symlinkSync(w.source, publicPath);
+    const publicLink = worldState(w.stateRootDir);
+    assert.deepEqual(publicLink.node.principal_binding.blocked_by, ["active_public_key_not_regular"]);
   } finally {
     w.cleanup();
   }
@@ -460,9 +483,183 @@ test("PAT consent binds the bounded Node0 wisdom capsule and refuses stale reuse
     assert.ok(stale.blocked_by.includes("pat_consent_context_mismatch"));
     assert.equal(stale.authority_delta, 0);
     assert.equal(stale.effect_started, false);
+
+    // The same exact PAT card reaches each window guard without invoking a
+    // model: invalid, future, expired, and near-match consent are all refused
+    // before any model call or effect.
+    writeFileSync(wisdomPath, `${JSON.stringify(capsule)}\n`);
+    const invalidTime = await patProposal(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      consent_context: card.consent_context,
+      phrase: card.card.required_phrase,
+      now_iso: "not-an-iso-date",
+    });
+    assert.ok(invalidTime.blocked_by.includes("consent_timestamps_unparseable"));
+
+    const future = await patProposal(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      consent_context: card.consent_context,
+      phrase: card.card.required_phrase,
+      now_iso: "2026-09-10T13:10:59.000Z",
+    });
+    assert.ok(future.blocked_by.includes("consent_issued_in_future"));
+
+    const expired = await patProposal(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      consent_context: card.consent_context,
+      phrase: card.card.required_phrase,
+      now_iso: "2026-09-10T13:16:01.000Z",
+    });
+    assert.ok(expired.blocked_by.includes("consent_expired"));
+
+    const wrongPhrase = await patProposal(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      consent_context: card.consent_context,
+      phrase: "not-the-required-phrase",
+      now_iso: "2026-09-10T13:11:30.000Z",
+    });
+    assert.ok(wrongPhrase.blocked_by.includes("exact_pat_consent_not_matched"));
+    assert.equal(wrongPhrase.authority_delta, 0);
+
+    const missingContext = await patProposal(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      consent_context: null,
+      phrase: card.card.required_phrase,
+      now_iso: "2026-09-10T13:11:30.000Z",
+    });
+    assert.ok(missingContext.blocked_by.includes("pat_consent_context_missing"));
+
+    writeFileSync(wisdomPath, "x".repeat(32 * 1024 + 1));
+    const oversizedWisdom = patProposalCard(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      now_iso: "2026-09-10T13:11:00.000Z",
+    });
+    assert.equal(oversizedWisdom.card.wisdom_context_status, "UNAVAILABLE");
+
+    writeFileSync(wisdomPath, "{");
+    const malformedWisdom = patProposalCard(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      now_iso: "2026-09-10T13:11:00.000Z",
+    });
+    assert.equal(malformedWisdom.card.wisdom_context_status, "UNAVAILABLE");
+
+    writeFileSync(wisdomPath, `${JSON.stringify({ ...capsule, boundary: { ...boundary, authority_changed: true } })}\n`);
+    const inadmissibleWisdom = patProposalCard(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      now_iso: "2026-09-10T13:11:00.000Z",
+    });
+    assert.equal(inadmissibleWisdom.card.wisdom_context_status, "UNAVAILABLE");
+
+    rmSync(wisdomPath);
+    const absentWisdom = patProposalCard(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      now_iso: "2026-09-10T13:11:00.000Z",
+    });
+    assert.equal(absentWisdom.card.wisdom_context_status, "UNAVAILABLE");
   } finally {
     if (previousWisdomPath === undefined) delete process.env.BIZRA_NODE0_WISDOM_PATH;
     else process.env.BIZRA_NODE0_WISDOM_PATH = previousWisdomPath;
+    w.cleanup();
+  }
+});
+
+test("runtime boundary refusals stay proposal-only and authority-free", () => {
+  const w = makeWorld();
+  try {
+    const refusedAdmission = admitHuman0(w.stateRootDir, {
+      phrase: "not-the-admission-phrase",
+      now_iso: new Date().toISOString(),
+    });
+    assert.equal(refusedAdmission.ok, false);
+    assert.deepEqual(refusedAdmission.blocked_by, ["exact_consent_not_matched"]);
+
+    const noOffer = missionConsentCard(w.stateRootDir, {
+      root: w.source,
+      now_iso: new Date().toISOString(),
+    });
+    assert.deepEqual(noOffer.blocked_by, ["resource_offer_not_registered"]);
+    assert.deepEqual(
+      missionConsentCard(w.stateRootDir, {
+        root: w.source,
+        mission_id: "bad mission id",
+        now_iso: new Date().toISOString(),
+      }).blocked_by,
+      ["mission_id_invalid"],
+    );
+    assert.deepEqual(
+      authorizeAndExecute(w.stateRootDir, {
+        consent_context: null,
+        phrase: "ignored",
+        now_iso: new Date().toISOString(),
+      }).blocked_by,
+      ["consent_context_missing"],
+    );
+    assert.deepEqual(
+      authorizeAndExecute(w.stateRootDir, {
+        consent_context: { mission_id: "bad mission id" },
+        phrase: "ignored",
+        now_iso: new Date().toISOString(),
+      }).blocked_by,
+      ["mission_id_invalid"],
+    );
+    assert.deepEqual(sealBlock0(w.stateRootDir, {
+      repository_base_commit: "x",
+      implementation_commit: "y",
+      constitution_source_hash: "h",
+      topology_source_hash: "h",
+    }).blocked_by, ["mission_not_receipted"]);
+
+    const admitted = admitHuman0(w.stateRootDir, {
+      phrase: admitPhrase(),
+      now_iso: "2026-09-10T14:00:00.000Z",
+    });
+    assert.equal(admitted.ok, true, JSON.stringify(admitted.blocked_by));
+    assert.deepEqual(
+      missionConsentCard(w.stateRootDir, {
+        root: join(w.base, "missing-root"),
+        now_iso: "2026-09-10T14:00:00.000Z",
+      }).blocked_by,
+      ["root_unresolvable"],
+    );
+
+    const card = missionConsentCard(w.stateRootDir, {
+      root: w.source,
+      now_iso: "2026-09-10T14:00:00.000Z",
+    });
+    for (const [field, value, expected] of [
+      ["created_at_iso", "not-an-iso-date", "consent_timestamps_unparseable"],
+      ["expires_at_iso", "2026-09-11T14:00:01.000Z", "consent_window_too_wide"],
+      ["created_at_iso", "2026-09-10T15:00:00.000Z", "consent_issued_in_future"],
+      ["expires_at_iso", "2026-09-10T13:59:59.000Z", "consent_expired"],
+    ]) {
+      const consent_context = { ...card.consent_context, [field]: value };
+      const refused = authorizeAndExecute(w.stateRootDir, {
+        consent_context,
+        phrase: card.card.required_phrase,
+        now_iso: "2026-09-10T14:00:00.000Z",
+      });
+      assert.ok(refused.blocked_by.includes(expected), `${field}: ${expected}`);
+      assert.equal(refused.ok, false);
+    }
+  } finally {
     w.cleanup();
   }
 });
