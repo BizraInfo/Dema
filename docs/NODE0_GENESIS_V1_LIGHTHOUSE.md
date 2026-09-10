@@ -73,14 +73,11 @@ npm run build
 
 The fresh-node commands above are **instructions**, not current second-machine
 evidence. The root package has no package-lock because it has no declared
-dependencies, so root `npm ci` is not a valid preflight step. The latest
-measured final candidate aggregate gate reported `9,885` passing tests, `0`
-failures, and `4` documented skips. A detached clean checkout at the same final
-SHA reproduced the root suite; the UI install/build and aggregate gate were
-independently exercised on the same source lineage. Reproduce and record the
-exact environment before promoting a claim. The UI production dependency audit
-is currently zero findings after the pinned security update; CodeQL and gitleaks
-availability remain separate release evidence questions.
+dependencies, so root `npm ci` is not a valid preflight step. Exact test counts,
+environment identity, and dependency-audit results belong in the final release
+manifest; copying them into this changing handoff would make them stale.
+Reproduce and record the exact environment before promoting a claim. CodeQL and
+gitleaks availability remain separate release evidence questions.
 
 ## Local Genesis runtime
 
@@ -92,9 +89,27 @@ npm run genesis:node0 -- --no-ui
 ```
 
 The current installed candidate uses a user-owned service pair: DEMA on the
-human-facing port and the governed URP adapter on its loopback API port. Service
-installation is host-specific and is not yet a portable installer claim. Do
-not revive the retired JavaScript gateway as a production executor.
+human-facing port and the governed URP adapter on its loopback API port. The
+portable installer renders only those existing owners; it creates no new
+runtime, identity, consent, or authority path. The sealed Lighthouse package
+must include the five exact public Root DNA files under `root-dna/`.
+
+```bash
+# First create identity-neutral local state (or provide a local display name).
+bash scripts/install/install.sh --operator "Your name"
+
+# Build the pinned human-facing application.
+(cd packages/dema-ui && npm ci && npm run build)
+
+# Inspect the exact units first, then install and start them.
+bash scripts/install/install-node0-user-services.sh --render
+bash scripts/install/install-node0-user-services.sh --install
+```
+
+Both services bind loopback only. The installer verifies Node.js, the existing
+UI build, the five Root DNA hashes, and the Prompt Compiler identity before it
+writes service units. It refuses to overwrite different pre-existing units.
+Do not revive the retired JavaScript gateway as a production executor.
 
 Readiness is only readiness:
 
@@ -166,11 +181,18 @@ ambiguous effect; never automatically retry an effect whose commit status is
 unknown. A controlled service restart must preserve mission identity, contract
 binding, receipt validity, and duplicate-effect count.
 
-The current candidate service switch is reversible by removing the sprint
-drop-ins under the human user systemd configuration, running
-`systemctl --user daemon-reload`, and restarting the original user services.
-Record the pre-switch unit files before applying this procedure. Do not delete
-campaign evidence or historical receipts during rollback.
+For a clean Lighthouse install, this removes only units carrying the installer
+ownership marker and preserves all local state:
+
+```bash
+bash scripts/install/install-node0-user-services.sh --uninstall
+```
+
+The current Node0 host predates that installer and still uses campaign-specific
+drop-ins. Its rollback remains: remove only the sprint drop-ins, run
+`systemctl --user daemon-reload`, and restart the original user services after
+recording their pre-switch contents. Do not delete campaign evidence or
+historical receipts during rollback.
 
 ## Incoming-human handshake
 
