@@ -21,3 +21,10 @@ bd21b536d00ada72867021275df0810d540aa156:backlog/docs/audits/bizra-pdmlc-baselin
 #    credential in the same file went undetected), so the narrow form is the
 #    only safe one here.
 5da3cd562a75149962cdf5521fa80d9afe1d9f03:tests/repo-claude-secret-pattern.test.js:generic-api-key:58
+
+# 4) Historical evidence records a public Ed25519 verification key in two
+#    frozen session documents. These exact findings are public key material,
+#    not private credentials. Fingerprint-scoped so all other occurrences and
+#    all other rules remain scanned.
+797810e58c48fac0d423a1da6b6b550b1935c74a:eval season plan e.md:generic-api-key:5360
+797810e58c48fac0d423a1da6b6b550b1935c74a:sessionlast.md:generic-api-key:2531
