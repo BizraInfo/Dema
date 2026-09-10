@@ -221,5 +221,5 @@ systemctl --user enable --now bizra-urp-genesis-dema-bridge.service dema-homebas
       await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
-' 
+'
 echo "Node0 user services installed and loopback readiness observed"
