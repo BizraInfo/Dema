@@ -5,6 +5,8 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { existsSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -60,6 +62,48 @@ test("install.sh --dry-run default path bootstraps Node0", async () => {
     false,
     "dry-run must not create directory",
   );
+});
+
+test("install.sh creates a clean Node0 without cloning Momo identity and JSON-escapes explicit identity fields", async () => {
+  const unnamedHome = await mkdtemp(join(tmpdir(), "dema-install-unnamed-"));
+  const namedHome = await mkdtemp(join(tmpdir(), "dema-install-named-"));
+  try {
+    await execFileAsync("bash", [INSTALL_SCRIPT], {
+      cwd: REPO_ROOT,
+      env: { ...process.env, DEMA_HOME: unnamedHome },
+    });
+    const unnamed = JSON.parse(
+      await readFile(join(unnamedHome, "profile.json"), "utf8"),
+    );
+    assert.equal(unnamed.preferred_name, null);
+    assert.equal(unnamed.name, null);
+
+    await execFileAsync(
+      "bash",
+      [
+        INSTALL_SCRIPT,
+        "--operator",
+        'A "Quoted" Name',
+        "--ordinal",
+        "1",
+        "--paired-receipt-id",
+        'receipt-"quoted"',
+        "--paired-receipt-hash",
+        "hash",
+      ],
+      { cwd: REPO_ROOT, env: { ...process.env, DEMA_HOME: namedHome } },
+    );
+    const named = JSON.parse(
+      await readFile(join(namedHome, "profile.json"), "utf8"),
+    );
+    assert.equal(named.name, 'A "Quoted" Name');
+    assert.equal(named.paired_with_node0_receipt_id, 'receipt-"quoted"');
+  } finally {
+    await Promise.all([
+      rm(unnamedHome, { recursive: true, force: true }),
+      rm(namedHome, { recursive: true, force: true }),
+    ]);
+  }
 });
 
 test("install.sh --dry-run candidate path bootstraps Node-N with paired receipt", async () => {
