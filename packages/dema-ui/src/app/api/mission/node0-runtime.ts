@@ -18,7 +18,8 @@ import {
 
 const HASH_RE = /^sha256:[0-9a-f]{64}$/;
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
-const RUNTIME_ROUTES = new Set(["/api/consent-card", "/api/authorize"]);
+const RUNTIME_ROUTES = new Set(["/api/consent-card", "/api/pat-card", "/api/pat-proposal", "/api/authorize"]);
+const GOVERNED_RUNTIME_TIMEOUT_MS = 70_000;
 export const MAX_INTENT_BYTES = 64 * 1024;
 
 function sha256File(path: string) {
@@ -207,7 +208,7 @@ export async function callGovernedRuntime(path: string, body: unknown) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(GOVERNED_RUNTIME_TIMEOUT_MS),
     cache: "no-store",
   });
   let data: any;

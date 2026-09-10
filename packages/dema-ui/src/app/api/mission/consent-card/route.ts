@@ -44,6 +44,19 @@ export async function POST(request: NextRequest) {
       mission_id: body.proposal.mission_id,
       proposal_binding: binding,
     });
+    let pat = { ok: false, blocked_by: ["pat_card_not_requested"] };
+    if (governed.data?.ok === true) {
+      try {
+        const patResponse = await callGovernedRuntime("/api/pat-card", {
+          mission_id: body.proposal.mission_id,
+          prompt: body.proposal.source_text,
+          proposal_binding: binding,
+        });
+        pat = patResponse.data;
+      } catch (error) {
+        pat = { ok: false, blocked_by: [`pat_card_failed:${String((error as Error)?.message ?? error)}`] };
+      }
+    }
     return NextResponse.json(
       {
         ok: governed.data?.ok === true,
@@ -52,6 +65,7 @@ export async function POST(request: NextRequest) {
         verification,
         binding,
         governed: governed.data,
+        pat,
       },
       { status: governed.status },
     );

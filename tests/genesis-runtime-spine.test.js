@@ -45,6 +45,8 @@ import {
   conservativeOffer,
   measurePossessed,
   missionConsentCard,
+  patProposal,
+  patProposalCard,
   replayFromDisk,
   sealBlock0,
   worldState,
@@ -319,6 +321,118 @@ test("a near-match consent phrase is refused and grants no authority", () => {
     assert.equal(Object.values(after.missions).filter((m) => m.status === "CONSENT_REQUESTED").length, 1);
     assert.equal(Object.values(after.missions).filter((m) => m.status === "RECEIPTED").length, 1);
   } finally {
+    w.cleanup();
+  }
+});
+
+test("PAT proposal card and act fail closed when the Node0 principal is not bound", async () => {
+  const w = makeWorld();
+  try {
+    admitHuman0(w.stateRootDir, { phrase: admitPhrase(), now_iso: new Date().toISOString() });
+    const binding = {
+      bridge_hash: "sha256:" + "a".repeat(64),
+      source_intent_hash: "sha256:" + "b".repeat(64),
+      compiler_identity_hash: "sha256:" + "c".repeat(64),
+      compiled_contract_hash: "sha256:" + "d".repeat(64),
+      context_hash: "sha256:" + "e".repeat(64),
+    };
+    const card = patProposalCard(w.stateRootDir, {
+      mission_id: "MISSION-PAT-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      now_iso: new Date().toISOString(),
+    });
+    assert.equal(card.ok, false);
+    assert.ok(card.blocked_by.includes("node0_principal_not_bound"));
+    const act = await patProposal(w.stateRootDir, {
+      mission_id: "MISSION-PAT-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      consent_context: null,
+      phrase: "GO: invoke local LLM at qwen3:4b",
+      now_iso: new Date().toISOString(),
+    });
+    assert.equal(act.ok, false);
+    assert.ok(act.blocked_by.includes("node0_principal_not_bound"));
+    assert.equal(act.authority_delta, 0);
+  } finally {
+    w.cleanup();
+  }
+});
+
+test("PAT consent binds the bounded Node0 wisdom capsule and refuses stale reuse", async () => {
+  const w = makeWorld();
+  const previousWisdomPath = process.env.BIZRA_NODE0_WISDOM_PATH;
+  try {
+    admitHuman0(w.stateRootDir, { phrase: admitPhrase(), now_iso: "2026-09-10T13:09:00.000Z" });
+    await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: w.demaHome });
+    const publicKeyPem = await loadPublicKey(w.demaHome);
+    const createdAtIso = "2026-09-10T13:10:00.000Z";
+    const identityId = node0IdentityCommitment({ operatorPubkeyPem: publicKeyPem, createdAtIso });
+    const consent = await buildConsentProof({
+      phrase: PROVE_NODE0_IDENTITY_CONSENT_PHRASE,
+      actionScope: { action_type: PROVE_NODE0_IDENTITY_ACTION_TYPE, target_hash: identityId },
+      demaHome: w.demaHome,
+      nonce: "pat-wisdom-test-nonce",
+      createdAtIso,
+      expiresAtIso: "2026-09-10T13:15:00.000Z",
+    });
+    const proof = await buildNode0IdentityProof({ demaHome: w.demaHome, consentProof: consent.consent_proof, createdAtIso });
+    assert.equal(proof.built, true, proof.error);
+    mkdirSync(join(w.stateRootDir, "artifacts"), { recursive: true });
+    writeFileSync(join(w.stateRootDir, "artifacts", "node0-identity-proof.json"), `${JSON.stringify(proof.proof)}\n`);
+
+    const wisdomPath = join(w.demaHome, "memory", "node0-morning-closure-wisdom.json");
+    mkdirSync(join(w.demaHome, "memory"), { recursive: true });
+    const boundary = Object.fromEntries([
+      "raw_chat_forwarded", "private_key_read", "private_key_emitted", "public_network_used",
+      "federation_used", "economic_action_performed", "authority_changed", "consent_inferred",
+      "house_acceptance_performed", "model_invocation_performed", "current_runtime_claimed",
+    ].map((key) => [key, false]));
+    const capsule = {
+      schema: "bizra.dema.node0_morning_closure_wisdom.v0.1",
+      status: "LOCAL_RETRIEVAL_CANDIDATE",
+      admission_status: "CANDIDATE_NOT_ADMITTED",
+      share_status: "local_only",
+      knowledge: [{ id: "K-TEST", title: "Bound knowledge", claim: "Use evidence.", scope: "test", do_not_infer: "This is not authority." }],
+      wisdom: [{ id: "W-TEST", title: "Scoped wisdom", rule: "Keep proposals local.", counterexample: "High priority is not permission.", scope: "test", authority_effect: "NONE" }],
+      human_service_instructions: ["Address HUMAN-0 as Momo."],
+      boundary,
+    };
+    writeFileSync(wisdomPath, `${JSON.stringify(capsule)}\n`);
+    process.env.BIZRA_NODE0_WISDOM_PATH = wisdomPath;
+
+    const binding = Object.fromEntries([
+      "bridge_hash", "source_intent_hash", "compiler_identity_hash", "compiled_contract_hash", "context_hash",
+    ].map((key) => [key, "sha256:" + "a".repeat(64)]));
+    const card = patProposalCard(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      now_iso: "2026-09-10T13:11:00.000Z",
+    });
+    assert.equal(card.ok, true, JSON.stringify(card.blocked_by));
+    assert.equal(card.card.wisdom_context_status, "BOUND_CANDIDATE");
+    assert.match(card.card.wisdom_context_hash, /^sha256:[0-9a-f]{64}$/);
+    assert.match(card.card.model_prompt_hash, /^sha256:[0-9a-f]{64}$/);
+    assert.equal(card.consent_context.authority_delta, 0);
+
+    writeFileSync(wisdomPath, `${JSON.stringify({ ...capsule, wisdom: [{ ...capsule.wisdom[0], rule: "Changed after card issuance." }] })}\n`);
+    const stale = await patProposal(w.stateRootDir, {
+      mission_id: "MISSION-PAT-WISDOM-TEST",
+      prompt: "Suggest a safe local next step.",
+      proposal_binding: binding,
+      consent_context: card.consent_context,
+      phrase: card.card.required_phrase,
+      now_iso: "2026-09-10T13:12:00.000Z",
+    });
+    assert.equal(stale.ok, false);
+    assert.ok(stale.blocked_by.includes("pat_consent_context_mismatch"));
+    assert.equal(stale.authority_delta, 0);
+    assert.equal(stale.effect_started, false);
+  } finally {
+    if (previousWisdomPath === undefined) delete process.env.BIZRA_NODE0_WISDOM_PATH;
+    else process.env.BIZRA_NODE0_WISDOM_PATH = previousWisdomPath;
     w.cleanup();
   }
 });

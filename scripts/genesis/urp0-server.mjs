@@ -14,6 +14,8 @@ import {
   admitHuman0,
   authorizeAndExecute,
   missionConsentCard,
+  patProposal,
+  patProposalCard,
   replayFromDisk,
   sealBlock0,
   worldState,
@@ -27,6 +29,8 @@ export const DEMA_BRIDGE_ALLOWED_ROUTES = Object.freeze([
   "GET /readyz",
   "GET /api/realm",
   "POST /api/consent-card",
+  "POST /api/pat-card",
+  "POST /api/pat-proposal",
   "POST /api/authorize",
 ]);
 
@@ -151,6 +155,30 @@ export function createUrp0Server({
           root: body.root,
           mission_id: body.mission_id,
           proposal_binding: body.proposal_binding,
+          now_iso: now(),
+        });
+        return json(res, out.ok ? 200 : 400, out, origin, allowedOrigins);
+      }
+
+      if (req.method === "POST" && path === "/api/pat-card") {
+        const body = await readBody(req);
+        const out = patProposalCard(stateRootDir, {
+          mission_id: body.mission_id,
+          prompt: body.prompt,
+          proposal_binding: body.proposal_binding,
+          now_iso: now(),
+        });
+        return json(res, out.ok ? 200 : 400, out, origin, allowedOrigins);
+      }
+
+      if (req.method === "POST" && path === "/api/pat-proposal") {
+        const body = await readBody(req);
+        const out = await patProposal(stateRootDir, {
+          mission_id: body.mission_id,
+          prompt: body.prompt,
+          proposal_binding: body.proposal_binding,
+          consent_context: body.consent_context,
+          phrase: body.phrase,
           now_iso: now(),
         });
         return json(res, out.ok ? 200 : 400, out, origin, allowedOrigins);

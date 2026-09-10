@@ -47,6 +47,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, blocked_by: ["exact_consent_required"] }, { status: 400 });
     }
 
+    let pat: any = null;
+    if (body?.pat_consent_context || body?.pat_phrase !== undefined) {
+      if (!body?.pat_consent_context || typeof body?.pat_phrase !== "string") {
+        return NextResponse.json({ ok: false, blocked_by: ["exact_pat_consent_required"] }, { status: 400 });
+      }
+      const patCall = await callGovernedRuntime("/api/pat-proposal", {
+        mission_id: proposal.mission_id,
+        prompt: proposal.source_text,
+        proposal_binding: expectedBinding,
+        consent_context: body.pat_consent_context,
+        phrase: body.pat_phrase,
+      });
+      pat = patCall.data;
+      if (pat?.ok !== true) {
+        return NextResponse.json(
+          { ok: false, truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL, proposal, verification, pat, governed: null },
+          { status: patCall.status },
+        );
+      }
+    }
+
     const governed = await callGovernedRuntime("/api/authorize", {
       consent_context: consentContext,
       phrase: body.phrase,
@@ -57,6 +78,7 @@ export async function POST(request: NextRequest) {
         truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
         proposal,
         verification,
+        pat,
         governed: governed.data,
       },
       { status: governed.status },

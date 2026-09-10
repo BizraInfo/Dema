@@ -18,6 +18,7 @@ export default function MissionPage() {
   const [result, setResult] = useState<Result | null>(null);
   const [cardResult, setCardResult] = useState<any>(null);
   const [phrase, setPhrase] = useState("");
+  const [patPhrase, setPatPhrase] = useState("");
   const [execution, setExecution] = useState<any>(null);
   const [busy, setBusy] = useState(false);
 
@@ -27,6 +28,7 @@ export default function MissionPage() {
     setCardResult(null);
     setExecution(null);
     setPhrase("");
+    setPatPhrase("");
     try {
       const response = await fetch("/api/mission/prepare", {
         method: "POST",
@@ -46,6 +48,7 @@ export default function MissionPage() {
     setBusy(true);
     setCardResult(null);
     setExecution(null);
+    setPatPhrase("");
     try {
       const response = await fetch("/api/mission/consent-card", {
         method: "POST",
@@ -72,6 +75,8 @@ export default function MissionPage() {
           proposal: result.proposal,
           consent_context: cardResult.governed.consent_context,
           phrase,
+          pat_consent_context: cardResult.pat?.consent_context,
+          pat_phrase: patPhrase,
         }),
       });
       setExecution(await response.json());
@@ -176,9 +181,20 @@ export default function MissionPage() {
                 <p style={{ color: MUTED }}>Operation: {cardResult.governed.card.permitted_operation}</p>
                 <p style={{ color: MUTED, wordBreak: "break-all", fontSize: 13 }}>Contract: {cardResult.governed.contract_hash}</p>
                 <p style={{ color: GOLD, fontWeight: 700, wordBreak: "break-word" }}>{cardResult.governed.consent_context.required_phrase}</p>
+                {cardResult.pat?.ok ? (
+                  <div style={{ margin: "1.2rem 0", padding: "1rem", border: "1px solid #2DD4BF55" }}>
+                    <div style={{ color: TEAL, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase" }}>PAT · SUGGESTION ONLY</div>
+                    <p style={{ color: MUTED, margin: "0.35rem 0" }}>This is a separate local model-consent card. It may propose; it cannot authorize or execute the mission.</p>
+                    <p style={{ color: GOLD, fontWeight: 700, wordBreak: "break-word" }}>{cardResult.pat.consent_context.required_phrase}</p>
+                    <label htmlFor="pat-consent" style={{ display: "block", color: GOLD, fontSize: 13, marginBottom: 8 }}>Exact PAT consent</label>
+                    <input id="pat-consent" value={patPhrase} onChange={(event) => setPatPhrase(event.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "0.8rem", background: "#050B14", border: "1px solid #2DD4BF55", color: "#E8EDF4", font: "inherit" }} />
+                  </div>
+                ) : (
+                  <p style={{ color: "#D99191", fontSize: 13 }}>PAT suggestion is held: {(cardResult.pat?.blocked_by ?? ["pat_card_unavailable"]).join("\n")}</p>
+                )}
                 <label htmlFor="mission-consent" style={{ display: "block", color: GOLD, fontSize: 13, marginBottom: 8 }}>Enter the exact phrase</label>
                 <input id="mission-consent" value={phrase} onChange={(event) => setPhrase(event.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "0.8rem", background: "#050B14", border: "1px solid #C9A96255", color: "#E8EDF4", font: "inherit" }} />
-                <button onClick={authorizeMission} disabled={busy || !phrase} style={{ marginTop: "1rem", background: GOLD, color: "#050B14", border: 0, padding: "0.8rem 1.2rem", fontWeight: 700, cursor: busy ? "wait" : "pointer", opacity: busy || !phrase ? 0.55 : 1 }}>
+                <button onClick={authorizeMission} disabled={busy || !phrase || !patPhrase || !cardResult.pat?.ok} style={{ marginTop: "1rem", background: GOLD, color: "#050B14", border: 0, padding: "0.8rem 1.2rem", fontWeight: 700, cursor: busy ? "wait" : "pointer", opacity: busy || !phrase || !patPhrase || !cardResult.pat?.ok ? 0.55 : 1 }}>
                   {busy ? "Verifying…" : "Authorize bounded observation"}
                 </button>
               </>
