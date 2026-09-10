@@ -140,12 +140,12 @@ test("packet persistence is write-once, idempotent for identical bytes, and conf
     const ids = { mission_id: packet.mission_id, attempt_id: packet.attempt_id };
     const before = readSatEvidencePacket(world.stateRootDir, ids);
     assert.equal(before.ok, true, JSON.stringify(before.blocked_by));
-    const beforeStat = lstatSync(before.path);
+    const beforeStat = lstatSync(before.path, { bigint: true });
 
     const identical = persistSatEvidencePacket(world.stateRootDir, packet);
     assert.equal(identical.ok, true, JSON.stringify(identical.blocked_by));
     assert.equal(identical.idempotent, true);
-    const afterStat = lstatSync(before.path);
+    const afterStat = lstatSync(before.path, { bigint: true });
     assert.equal(afterStat.ino, beforeStat.ino);
     assert.equal(afterStat.mtimeNs, beforeStat.mtimeNs);
 

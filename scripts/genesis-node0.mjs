@@ -73,7 +73,8 @@ async function waitForUi(url, child, timeoutMs = 90_000) {
   while (Date.now() < deadline) {
     if (child.exitCode !== null) return `ui_exited_code_${child.exitCode}`;
     try {
-      const res = await fetch(url);
+      const remainingMs = Math.max(1, deadline - Date.now());
+      const res = await fetch(url, { signal: AbortSignal.timeout(remainingMs) });
       if (res.status < 500) return "ready";
     } catch { /* not up yet */ }
     await new Promise((r) => setTimeout(r, 500));
@@ -93,7 +94,7 @@ async function serve() {
 
   // 2 — initialize or reconstruct URP-0 from persisted evidence alone.
   const disk = replayFromDisk(stateRootDir);
-  if (!disk.ok && disk.events_applied > 0) {
+  if (!disk.ok) {
     console.error(`[genesis] BLOCKED — journal will not replay: ${JSON.stringify(disk.blocked_by)}`);
     console.error(`[genesis] evidence preserved at ${stateRootDir} — nothing was reset.`);
     process.exit(1);
@@ -126,7 +127,11 @@ async function serve() {
     ui = spawn(join(UI_DIR, "node_modules", ".bin", "next"), ["dev", "-p", String(UI_PORT), "-H", BIND_HOST], {
       cwd: UI_DIR,
       stdio: "inherit",
-      env: { ...process.env, NEXT_PUBLIC_URP0_API: url },
+      env: {
+        ...process.env,
+        NEXT_PUBLIC_URP0_API: url,
+        BIZRA_NODE0_GOVERNED_RUNTIME_URL: url,
+      },
     });
     ui.on("error", (e) => shutdown(1, `[genesis] BLOCKED — UI failed to start: ${e.message}`));
     // A dead UI takes the whole runtime down. Leaving the API up while the World

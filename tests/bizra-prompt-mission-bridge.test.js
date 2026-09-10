@@ -80,6 +80,28 @@ test("BPMB-05: identity is explicit context, never inferred from arbitrary field
   assert.equal(proposal.authority.authority_delta, 0);
 });
 
+test("BPMB-06: normalized fact reasons remain stable across re-derivation", () => {
+  const context = {
+    ...CONTEXT,
+    current_state: { status: "BOUND", reason: "current_state_not_measured" },
+  };
+  const proposal = compileMissionProposal({
+    text: INTENT,
+    context,
+    now_iso: NOW,
+    compiler_code_hash: COMPILER_CODE_HASH,
+  });
+  assert.equal(proposal.context_snapshot.current_state.status, "UNKNOWN");
+  assert.equal(proposal.context_snapshot.current_state.reason, "bound_status_requires_sha256_hash");
+  const rebound = compileMissionProposal({
+    text: INTENT,
+    context: proposal.context_snapshot,
+    now_iso: NOW,
+    compiler_code_hash: COMPILER_CODE_HASH,
+  });
+  assert.deepEqual(rebound.context_snapshot.current_state, proposal.context_snapshot.current_state);
+});
+
 test("BPMB-02: understanding a consequential request holds for exact consent", () => {
   const proposal = compileMissionProposal({
     text: "Transfer 500 USDT to the supplied wallet and publish the result.",

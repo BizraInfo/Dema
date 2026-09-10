@@ -5,12 +5,10 @@ import {
   compileMissionProposal,
   verifyMissionProposal,
 } from "@core/bizra-prompt-mission-bridge.js";
-import { mergeNode0MissionContext, persistAttentionAllocation } from "../node0-runtime";
+import { MAX_INTENT_BYTES, mergeNode0MissionContext, persistAttentionAllocation } from "../node0-runtime";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-const MAX_INTENT_BYTES = 64 * 1024;
 
 export async function POST(request: NextRequest) {
   const compilerCodeHash = process.env.BIZRA_PROMPT_COMPILER_CODE_HASH;

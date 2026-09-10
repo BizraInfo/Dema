@@ -28,8 +28,8 @@
 //
 // I/O tier by design (allowlisted). All paths under DEMA_HOME. No network.
 
-import { createHash } from "node:crypto";
-import { mkdir, writeFile, readFile, access } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { access, link, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -220,9 +220,26 @@ export async function claimConsentNonce(p = {}) {
   const path = claimPath(home, digest);
   await mkdir(claimDir(home), { recursive: true, mode: 0o700 });
 
+  let claimed = false;
   try {
-    // THE claim. One exclusive create; the filesystem picks the winner.
-    await writeFile(path, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+    // Publish the complete record with an exclusive hard-link. Creating the
+    // final path with O_EXCL and writing it afterwards leaves a brief window in
+    // which a loser can read a truncated JSON claim. The temp-file + link pair
+    // makes the winner visible only after its bytes are complete.
+    const temp = `${path}.tmp-${process.pid}-${randomUUID()}`;
+    await writeFile(temp, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+    try {
+      await link(temp, path);
+      claimed = true;
+    } catch (err) {
+      if (err?.code !== "EEXIST") throw err;
+    } finally {
+      try { await unlink(temp); } catch (err) { if (err?.code !== "ENOENT") throw err; }
+    }
+    if (claimed) return Object.freeze({ claimed: true, claim: Object.freeze(record) });
+    const existingClaim = new Error("claim_path_already_exists");
+    existingClaim.code = "EEXIST";
+    throw existingClaim;
   } catch (err) {
     if (err?.code !== "EEXIST") {
       // Cannot prove unused ⇒ never grant. An unwritable registry is not an empty one.

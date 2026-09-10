@@ -216,7 +216,7 @@ export function allocateAttention({ mission = {}, current_state: currentState = 
         block_execution: gates.execution,
       }),
       evidence_class: evidenceClass,
-      execution_blocked: gates.execution.length > 0 || object(source.authority).action_required === true,
+      execution_blocked: gates.execution.length > 0 || gates.human.length > 0 || object(source.authority).action_required === true,
       human_requested: object(source.source).human_requested === true || object(source.source).origin === "HUMAN",
       selected: false,
       reason: denied
@@ -351,6 +351,7 @@ export function verifyAttentionAllocationReceipt(receipt) {
   if (receipt.applied !== false) blockedBy.push("allocation_receipt_applied");
   if (receipt.authority?.authority !== "NONE") blockedBy.push("allocation_receipt_authority_not_none");
   if (receipt.authority?.authority_delta !== 0) blockedBy.push("allocation_receipt_authority_delta_nonzero");
+  if (receipt.authority?.execution_allowed !== false) blockedBy.push("allocation_receipt_execution_boundary_open");
   if (receipt.effects_started !== 0) blockedBy.push("allocation_receipt_effect_boundary_open");
   if (typeof receipt.allocation_receipt_hash !== "string") blockedBy.push("allocation_receipt_hash_missing");
   else if (sha256CanonicalJsonV1(body) !== receipt.allocation_receipt_hash) blockedBy.push("allocation_receipt_hash_mismatch");

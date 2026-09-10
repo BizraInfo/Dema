@@ -12,7 +12,7 @@
 // No local serializer copy. Arrays are capped at 1024 by that contract, so this
 // kernel folds observations into counters and never inlines per-entry lists.
 
-import { CANONICAL_JSON_V1_ALGORITHM } from "../../canon/src/canonical-json-v1.js";
+import { CANONICAL_JSON_V1_ALGORITHM, MAX_ARRAY_LENGTH } from "../../canon/src/canonical-json-v1.js";
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
 
 export const URP0_KERNEL_SCHEMA = "bizra.genesis.urp0_kernel.v0.1";
@@ -417,6 +417,7 @@ function applyUrp0Event(state, kind, payload, seq) {
     }
     // A nonce may be OFFERED once. Reuse is a replay attempt.
     if (state.used_nonces.includes(payload.nonce)) return "consent_nonce_replayed";
+    if (state.used_nonces.length >= MAX_ARRAY_LENGTH) return "used_nonces_limit_exceeded";
     state.used_nonces.push(payload.nonce);
     state.consent_requests[payload.consent_context_hash] = {
       consent_context_hash: payload.consent_context_hash,

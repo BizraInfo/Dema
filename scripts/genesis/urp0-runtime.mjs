@@ -644,6 +644,7 @@ export function authorizeAndExecute(stateRootDir, { consent_context, phrase, now
   }
   if (expires - issued > CONSENT_WINDOW_SECONDS * 1000) return refuse(["consent_window_too_wide"]);
   if (issued > acting) return refuse(["consent_issued_in_future"]);
+  if (acting > expires) return refuse(["consent_expired"]);
 
   const fate = evaluateConsent({ phrase, requiredPhrase: consent.required_phrase });
 

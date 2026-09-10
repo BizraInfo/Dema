@@ -73,6 +73,9 @@ function safeFact(value) {
     out.confidence = Math.max(0, Math.min(1, source.confidence));
   }
   if (typeof source.user_confirmed === "boolean") out.user_confirmed = source.user_confirmed;
+  if (typeof source.reason === "string" && source.reason.trim() && source.reason.length <= 256) {
+    out.reason = source.reason.trim();
+  }
   if (out.status === "BOUND" && !out.hash) {
     out.status = UNKNOWN;
     out.reason = "bound_status_requires_sha256_hash";

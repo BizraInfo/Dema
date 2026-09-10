@@ -5,6 +5,7 @@ import {
 } from "@core/bizra-prompt-mission-bridge.js";
 import {
   callGovernedRuntime,
+  configuredMissionRoot,
   proposalBinding,
   verifySubmittedProposal,
 } from "../node0-runtime";
@@ -46,6 +47,14 @@ export async function POST(request: NextRequest) {
     if (typeof body?.phrase !== "string") {
       return NextResponse.json({ ok: false, blocked_by: ["exact_consent_required"] }, { status: 400 });
     }
+    const missionRoot = configuredMissionRoot();
+    if (!missionRoot) {
+      return NextResponse.json({ ok: false, blocked_by: ["mission_root_unbound"] }, { status: 503 });
+    }
+    if (consentContext?.canonical_root !== missionRoot) {
+      return NextResponse.json({ ok: false, blocked_by: ["consent_context_root_mismatch"] }, { status: 403 });
+    }
+    const governedConsentContext = { ...consentContext, canonical_root: missionRoot };
 
     let pat: any = null;
     if (body?.pat_consent_context || body?.pat_phrase !== undefined) {
@@ -69,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     const governed = await callGovernedRuntime("/api/authorize", {
-      consent_context: consentContext,
+      consent_context: governedConsentContext,
       phrase: body.phrase,
     });
     return NextResponse.json(

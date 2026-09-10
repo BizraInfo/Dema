@@ -68,16 +68,19 @@ export default function MissionPage() {
     setBusy(true);
     setExecution(null);
     try {
+      const payload: Record<string, unknown> = {
+        proposal: result.proposal,
+        consent_context: cardResult.governed.consent_context,
+        phrase,
+      };
+      if (cardResult.pat?.ok && patPhrase.trim()) {
+        payload.pat_consent_context = cardResult.pat.consent_context;
+        payload.pat_phrase = patPhrase;
+      }
       const response = await fetch("/api/mission/execute", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          proposal: result.proposal,
-          consent_context: cardResult.governed.consent_context,
-          phrase,
-          pat_consent_context: cardResult.pat?.consent_context,
-          pat_phrase: patPhrase,
-        }),
+        body: JSON.stringify(payload),
       });
       setExecution(await response.json());
     } catch (error) {
@@ -194,7 +197,7 @@ export default function MissionPage() {
                 )}
                 <label htmlFor="mission-consent" style={{ display: "block", color: GOLD, fontSize: 13, marginBottom: 8 }}>Enter the exact phrase</label>
                 <input id="mission-consent" value={phrase} onChange={(event) => setPhrase(event.target.value)} style={{ width: "100%", boxSizing: "border-box", padding: "0.8rem", background: "#050B14", border: "1px solid #C9A96255", color: "#E8EDF4", font: "inherit" }} />
-                <button onClick={authorizeMission} disabled={busy || !phrase || !patPhrase || !cardResult.pat?.ok} style={{ marginTop: "1rem", background: GOLD, color: "#050B14", border: 0, padding: "0.8rem 1.2rem", fontWeight: 700, cursor: busy ? "wait" : "pointer", opacity: busy || !phrase || !patPhrase || !cardResult.pat?.ok ? 0.55 : 1 }}>
+                <button onClick={authorizeMission} disabled={busy || !phrase} style={{ marginTop: "1rem", background: GOLD, color: "#050B14", border: 0, padding: "0.8rem 1.2rem", fontWeight: 700, cursor: busy ? "wait" : "pointer", opacity: busy || !phrase ? 0.55 : 1 }}>
                   {busy ? "Verifying…" : "Authorize bounded observation"}
                 </button>
               </>

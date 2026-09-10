@@ -44,6 +44,10 @@ async function loadProvenanceNextGate(argv) {
         demaRoot: process.cwd(),
         skipGh: process.env.CROSS_REPO_SKIP_GH === "1",
       });
+      if (process.env.CROSS_REPO_SKIP_GH !== "1"
+        && report.repos?.some((repo) => repo.ghError || repo.ghSearchRateLimited)) {
+        return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+      }
       return report.next_gate?.gate ?? "BLOCKED_BY_UNRESOLVED_PROVENANCE";
     } catch {
       return "BLOCKED_BY_UNRESOLVED_PROVENANCE";

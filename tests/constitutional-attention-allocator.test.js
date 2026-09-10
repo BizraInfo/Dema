@@ -81,7 +81,7 @@ test("CAA-04: duplicates, superseded candidates, and invalid lineage suppress at
 
 test("CAA-05: low evidence becomes investigation, not false certainty", () => {
   const allocation = allocateAttention({
-    candidates: [human("unknown", { evidence_strength: 1 })],
+    candidates: [human("unknown", { impact: { evidence_strength: 1 } })],
   });
   assert.equal(allocation.frontier_decision, "INVESTIGATE");
   assert.equal(allocation.ranked_candidates[0].reason, "evidence_insufficient_for_default_focus");

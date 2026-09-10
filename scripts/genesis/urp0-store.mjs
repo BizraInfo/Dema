@@ -27,6 +27,7 @@ import {
   realpathSync,
   renameSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
@@ -41,6 +42,7 @@ import {
 } from "../../packages/genesis/src/urp0-sat-evidence.js";
 
 export const JOURNAL_FILENAME = "journal.ndjson";
+const JOURNAL_LOCK_FILENAME = `.${JOURNAL_FILENAME}.lock`;
 
 // Append-only log of every path this process wrote, in order. An ARRAY, not a
 // Set: callers snapshot the length and diff, so "what did THIS mission write"
@@ -79,8 +81,8 @@ function ensureDir(dir) {
 // ever grows past a few thousand, segment it — do not switch to raw append.
 function atomicWrite(path, text) {
   ensureDir(dirname(path));
-  const tmp = `${path}.tmp`;
-  writeFileSync(tmp, text, { mode: 0o600 });
+  const tmp = `${path}.tmp.${process.pid}.${randomUUID()}`;
+  writeFileSync(tmp, text, { mode: 0o600, flag: "wx" });
   const fd = openSync(tmp, "r+");
   try {
     fsyncSync(fd);
@@ -89,6 +91,70 @@ function atomicWrite(path, text) {
   }
   renameSync(tmp, path);
   writeLog.push(path);
+}
+
+function processAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === "EPERM";
+  }
+}
+
+function acquireJournalLock(stateRootDir) {
+  ensureDir(stateRootDir);
+  const path = join(stateRootDir, JOURNAL_LOCK_FILENAME);
+  const token = randomUUID();
+  try {
+    const fd = openSync(path, FS_CONSTANTS.O_WRONLY | FS_CONSTANTS.O_CREAT | FS_CONSTANTS.O_EXCL, 0o600);
+    try {
+      writeFileSync(fd, `${process.pid}:${token}\n`);
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+    writeLog.push(path);
+    return { path, token };
+  } catch (error) {
+    if (error?.code !== "EEXIST") throw error;
+    let ownerPid = null;
+    try {
+      ownerPid = Number(readFileSync(path, "utf8").trim().split(":", 1)[0]);
+    } catch {
+      return null;
+    }
+    // Fail closed while a live writer owns the lock. A dead owner is safe to
+    // clear so a crashed process cannot strand the journal forever.
+    if (!Number.isInteger(ownerPid) || ownerPid <= 0 || processAlive(ownerPid)) return null;
+    try {
+      unlinkSync(path);
+    } catch {
+      return null;
+    }
+    try {
+      const fd = openSync(path, FS_CONSTANTS.O_WRONLY | FS_CONSTANTS.O_CREAT | FS_CONSTANTS.O_EXCL, 0o600);
+      try {
+        writeFileSync(fd, `${process.pid}:${token}\n`);
+        fsyncSync(fd);
+      } finally {
+        closeSync(fd);
+      }
+      writeLog.push(path);
+      return { path, token };
+    } catch {
+      return null;
+    }
+  }
+}
+
+function releaseJournalLock(lock) {
+  if (!lock) return;
+  try {
+    if (readFileSync(lock.path, "utf8").trim() === `${process.pid}:${lock.token}`) unlinkSync(lock.path);
+  } catch {
+    // The journal result is already determined; a missing lock is harmless.
+  }
 }
 
 export function loadEvents(stateRootDir) {
@@ -117,20 +183,26 @@ export function reconstruct(stateRootDir) {
 // Append one event. The kernel validates the WHOLE resulting journal before a
 // single byte is written, so an invalid transition can never reach disk.
 export function appendEvent(stateRootDir, kind, payload) {
-  const events = loadEvents(stateRootDir);
-  const current = reduceUrp0Events(events);
-  if (!current.ok) {
-    return { ok: false, blocked_by: current.blocked_by, event: null, replay: current };
+  const lock = acquireJournalLock(stateRootDir);
+  if (!lock) return { ok: false, blocked_by: ["journal_lock_busy"], event: null, replay: null };
+  try {
+    const events = loadEvents(stateRootDir);
+    const current = reduceUrp0Events(events);
+    if (!current.ok) {
+      return { ok: false, blocked_by: current.blocked_by, event: null, replay: current };
+    }
+    const head = current.state?.head ?? { seq: 0, event_id: URP0_GENESIS_EVENT_ID };
+    const event = makeUrp0Event({ seq: head.seq + 1, kind, payload, prev_event: head.event_id });
+    const candidate = [...events, event];
+    const next = reduceUrp0Events(candidate);
+    if (!next.ok) {
+      return { ok: false, blocked_by: next.blocked_by, event: null, replay: next };
+    }
+    atomicWrite(journalPath(stateRootDir), `${candidate.map((e) => JSON.stringify(e)).join("\n")}\n`);
+    return { ok: true, blocked_by: [], event, replay: next };
+  } finally {
+    releaseJournalLock(lock);
   }
-  const head = current.state?.head ?? { seq: 0, event_id: URP0_GENESIS_EVENT_ID };
-  const event = makeUrp0Event({ seq: head.seq + 1, kind, payload, prev_event: head.event_id });
-  const candidate = [...events, event];
-  const next = reduceUrp0Events(candidate);
-  if (!next.ok) {
-    return { ok: false, blocked_by: next.blocked_by, event: null, replay: next };
-  }
-  atomicWrite(journalPath(stateRootDir), `${candidate.map((e) => JSON.stringify(e)).join("\n")}\n`);
-  return { ok: true, blocked_by: [], event, replay: next };
 }
 
 // A named side artifact (receipt, judgment, block0) written beside the journal.
