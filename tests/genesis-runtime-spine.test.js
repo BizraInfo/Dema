@@ -49,6 +49,18 @@ import {
   sealBlock0,
   worldState,
 } from "../scripts/genesis/urp0-runtime.mjs";
+import {
+  buildNode0IdentityProof,
+  node0IdentityCommitment,
+  PROVE_NODE0_IDENTITY_ACTION_TYPE,
+  PROVE_NODE0_IDENTITY_CONSENT_PHRASE,
+} from "../packages/genesis/src/node0-identity-proof.js";
+import { buildConsentProof } from "../packages/receipts/src/consent-proof.js";
+import {
+  initAuthorshipKey,
+  KEY_INIT_CONSENT_PHRASE,
+  loadPublicKey,
+} from "../packages/receipts/src/authorship-key-store.js";
 import { appendEvent, loadEvents, resolveStateRootDir, statePermissions } from "../scripts/genesis/urp0-store.mjs";
 import { loopbackOrigins, startUrp0Server } from "../scripts/genesis/urp0-server.mjs";
 import { portFree, preflight } from "../scripts/genesis-node0.mjs";
@@ -129,6 +141,44 @@ test("URP-0 closes the full genesis loop and seals a Block0 local candidate", ()
     assert.equal(sealed.block0.economy.urp_treasury_balance, 0);
     assert.equal(sealed.block0.network.internet_gateway, false);
     assert.equal(verifyBlock0Candidate({ body: sealed.block0, block0_hash: sealed.block0_hash }).ok, true);
+  } finally {
+    w.cleanup();
+  }
+});
+
+test("world state binds the governed Node0 principal from the verified disk proof", async () => {
+  const w = makeWorld();
+  try {
+    const admitted = admitHuman0(w.stateRootDir, { phrase: admitPhrase(), now_iso: "2026-09-10T12:59:00.000Z" });
+    assert.equal(admitted.ok, true, JSON.stringify(admitted.blocked_by));
+    await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: w.demaHome });
+    const publicKeyPem = await loadPublicKey(w.demaHome);
+    const createdAtIso = "2026-09-10T13:00:00.000Z";
+    const identityId = node0IdentityCommitment({ operatorPubkeyPem: publicKeyPem, createdAtIso });
+    const consent = await buildConsentProof({
+      phrase: PROVE_NODE0_IDENTITY_CONSENT_PHRASE,
+      actionScope: { action_type: PROVE_NODE0_IDENTITY_ACTION_TYPE, target_hash: identityId },
+      demaHome: w.demaHome,
+      nonce: "runtime-principal-test-nonce",
+      createdAtIso,
+      expiresAtIso: "2026-09-10T13:05:00.000Z",
+    });
+    assert.equal(consent.built, true);
+    const proof = await buildNode0IdentityProof({ demaHome: w.demaHome, consentProof: consent.consent_proof, createdAtIso });
+    assert.equal(proof.built, true, proof.error);
+    mkdirSync(join(w.stateRootDir, "artifacts"), { recursive: true });
+    writeFileSync(join(w.stateRootDir, "artifacts", "node0-identity-proof.json"), `${JSON.stringify(proof.proof)}\n`);
+
+    const state = worldState(w.stateRootDir);
+    assert.equal(state.node.principal_binding.status, "BOUND");
+    assert.equal(state.node.principal, proof.proof.genesis_node_id);
+    assert.equal(state.node.principal_binding.identity_proof_hash, `sha256:${proof.proof.node0_identity_proof_hash}`);
+    assert.equal(state.node.principal_binding.authority_delta, 0);
+
+    writeFileSync(join(w.stateRootDir, "artifacts", "node0-identity-proof.json"), `${JSON.stringify({ ...proof.proof, genesis_node_id: "0".repeat(64) })}\n`);
+    const forged = worldState(w.stateRootDir);
+    assert.equal(forged.node.principal, null);
+    assert.equal(forged.node.principal_binding.status, "NOT_BOUND");
   } finally {
     w.cleanup();
   }

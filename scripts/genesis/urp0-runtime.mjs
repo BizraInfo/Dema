@@ -10,8 +10,10 @@
 // It owns no law of its own: every decision is delegated to a pure kernel, and
 // every write goes through the store.
 
+import { lstatSync, readFileSync } from "node:fs";
 import { cpus, totalmem } from "node:os";
 import { randomUUID } from "node:crypto";
+import { dirname, join } from "node:path";
 
 import { sha256CanonicalJsonV1 } from "../../packages/canon/src/sha256-canonical-json-v1.js";
 import { evaluateConsent } from "../../packages/fate/src/fate.js";
@@ -44,6 +46,8 @@ import {
   verifyUrp0Judgment,
 } from "../../packages/genesis/src/urp0-sat5.js";
 import { buildSatEvidencePacket } from "../../packages/genesis/src/urp0-sat-evidence.js";
+import { verifyNode0IdentityProof } from "../../packages/genesis/src/node0-identity-proof.js";
+import { activeKeyPaths } from "../../packages/receipts/src/authorship-key-store.js";
 import { canonicaliseRoot, fingerprintTree, scanMetadataOnly } from "./urp0-scan.mjs";
 import {
   appendEvent,
@@ -172,6 +176,58 @@ export function admitHuman0(stateRootDir, { phrase, now_iso }) {
 
 // One hashing rule everywhere: the canonical byte contract.
 const hashOf = sha256CanonicalJsonV1;
+
+// Public-only runtime identity projection. The journal's HUMAN-0/NODE0 record
+// is historical registration; principal binding is earned again from the
+// proof artifact and the externally resolved active public key on every realm
+// read. This path never opens, hashes, or emits private-key material.
+function node0PrincipalBinding(stateRootDir) {
+  const proof = readArtifact(stateRootDir, "node0-identity-proof.json");
+  if (!proof) {
+    return { status: "NOT_BOUND", verified: false, blocked_by: ["identity_proof_missing"], authority_delta: 0 };
+  }
+  try {
+    const demaHome = dirname(dirname(stateRootDir));
+    const paths = activeKeyPaths(demaHome);
+    const pointerStat = lstatSync(paths.activePointer);
+    if (!pointerStat.isFile() || pointerStat.isSymbolicLink()) {
+      return { status: "NOT_BOUND", verified: false, blocked_by: ["active_pointer_not_regular"], authority_delta: 0 };
+    }
+    const pointer = JSON.parse(readFileSync(paths.activePointer, "utf8"));
+    const fingerprint = pointer.generation_fingerprint;
+    if (!/^[a-f0-9]{64}$/.test(fingerprint)) {
+      return { status: "NOT_BOUND", verified: false, blocked_by: ["active_fingerprint_invalid"], authority_delta: 0 };
+    }
+    const publicPath = join(paths.generationsDir, fingerprint, "public.pem");
+    const publicStat = lstatSync(publicPath);
+    if (!publicStat.isFile() || publicStat.isSymbolicLink()) {
+      return { status: "NOT_BOUND", verified: false, blocked_by: ["active_public_key_not_regular"], authority_delta: 0 };
+    }
+    const publicKeyPem = readFileSync(publicPath, "utf8");
+    const verification = verifyNode0IdentityProof({ proof, operatorPubkeyPem: publicKeyPem });
+    if (!verification.verified) {
+      return { status: "NOT_BOUND", verified: false, blocked_by: [`identity_proof_${verification.reason}`], authority_delta: 0 };
+    }
+    if (proof.genesis_node_id !== fingerprint) {
+      return { status: "NOT_BOUND", verified: false, blocked_by: ["identity_proof_active_generation_mismatch"], authority_delta: 0 };
+    }
+    return {
+      status: "BOUND",
+      verified: true,
+      principal: proof.genesis_node_id,
+      principal_kind: "NODE0_OPERATIONAL_ED25519_IDENTITY",
+      human_id: URP0_HUMAN_ID,
+      node_id: URP0_NODE_ID,
+      public_key_fingerprint: fingerprint,
+      identity_proof_hash: `sha256:${proof.node0_identity_proof_hash}`,
+      consent_proof_hash: `sha256:${proof.consent_proof_hash}`,
+      claim_boundary: proof.claim_boundary,
+      authority_delta: 0,
+    };
+  } catch (error) {
+    return { status: "NOT_BOUND", verified: false, blocked_by: [`identity_binding_unreadable:${error?.message ?? "unknown"}`], authority_delta: 0 };
+  }
+}
 
 function attemptArtifactName(prefix, attempt_id) {
   if (typeof attempt_id !== "string" || attempt_id === "") throw new Error("attempt_id_missing");
@@ -765,6 +821,9 @@ function deriveSatOperationality(stateRootDir, events, replay, worldCell) {
 // journal on every request — never asserted, never cached into a snapshot.
 export function worldState(stateRootDir) {
   const { events, replay } = reconstruct(stateRootDir);
+  const principalBinding = replay.ok
+    ? node0PrincipalBinding(stateRootDir)
+    : { status: "NOT_BOUND", verified: false, blocked_by: replay.blocked_by, authority_delta: 0 };
   const worldCell = replay.state?.world_cell ?? null;
   const satProof = replay.ok
     ? deriveSatOperationality(stateRootDir, events, replay, worldCell)
@@ -796,7 +855,13 @@ export function worldState(stateRootDir) {
     },
     ...(replay.state?.system_plane ? { system_plane: replay.state.system_plane } : {}),
     human: replay.state?.human ?? null,
-    node: replay.state?.node ?? null,
+    node: replay.state?.node
+      ? {
+          ...replay.state.node,
+          principal: principalBinding.principal ?? null,
+          principal_binding: principalBinding,
+        }
+      : null,
     dema: {
       role: "face",
       status: worldCell ? "HEALTHY_LOCAL" : (replay.state?.system_plane ? "HEALTH_UNPROVEN" : "ACTIVE_LOCAL"),
