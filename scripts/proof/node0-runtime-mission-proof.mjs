@@ -66,7 +66,16 @@ async function until(predicate, label, ms = 30_000) {
 function spawnWorker(role, home, factsPath) {
   return spawn(process.execPath, [WORKER, role, home, factsPath], { stdio: "ignore" });
 }
-const readFacts = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null);
+const readFacts = (p) => {
+  if (!existsSync(p)) return null;
+  try {
+    return JSON.parse(readFileSync(p, "utf8"));
+  } catch {
+    // The worker writes its small facts file directly. During polling, seeing
+    // the path before the write completes is not evidence of a bad run.
+    return null;
+  }
+};
 
 /// One kill-and-replace measurement. `persistHome` is the home the predecessor
 /// may write to; the control passes a role that writes nothing.
