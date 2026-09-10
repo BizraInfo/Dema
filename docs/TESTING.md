@@ -52,7 +52,7 @@ reproduction.
 | `tests/g5b-evidence-persistence-contract.test.js` | Governed URP evidence persistence and replay contract: bounded local state, content-addressed evidence, and fail-closed tamper behavior. |
 | `tests/g5b-realm-projection.test.js` | Local realm projection: human/node/system ownership, PAT/SAT/FATE boundaries, and honest federation/economy-off posture. |
 | `tests/genesis-runtime-spine.test.js` | URP-0 runtime spine: journal replay, mission/effect boundary, receipt reconstruction, local recovery invariants, and fail-closed SAT/Block0 tamper controls. |
-| `tests/genesis-journal-lock.test.js` | Journal ownership boundary: unique lock election, stale predecessor handling, live/malformed predecessor fail-closed behavior, legacy singleton cutover, and release-token validation. |
+| `tests/genesis-journal-lock.test.js` | Cross-process journal ownership boundary: unique lock election, stale/live/malformed predecessor handling, legacy singleton cutover, unrelated-file preservation, and token-validated release. |
 | `tests/urp0-world-cell-boundary.test.js` | World-cell boundary: loopback/local scope, bounded resource offer, and no public federation or token/economy effects. |
 
 | Test file | Surface covered |
