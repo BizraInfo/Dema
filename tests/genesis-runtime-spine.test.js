@@ -63,7 +63,14 @@ import {
   KEY_INIT_CONSENT_PHRASE,
   loadPublicKey,
 } from "../packages/receipts/src/authorship-key-store.js";
-import { appendEvent, loadEvents, resolveStateRootDir, statePermissions } from "../scripts/genesis/urp0-store.mjs";
+import {
+  appendEvent,
+  loadEvents,
+  readArtifact,
+  readStableFileObject,
+  resolveStateRootDir,
+  statePermissions,
+} from "../scripts/genesis/urp0-store.mjs";
 import { loopbackOrigins, startUrp0Server } from "../scripts/genesis/urp0-server.mjs";
 import { portFree, preflight } from "../scripts/genesis-node0.mjs";
 
@@ -86,6 +93,29 @@ function admitPhrase() {
   const contract = buildAdmissionContract({ human_id: "HUMAN-0", node_id: "NODE0", roles: ["ARCHITECT", "FIRST_USER"] });
   return admissionConsentPhrase({ human_id: "HUMAN-0", node_id: "NODE0", contract_hash: contract.contract_hash });
 }
+
+test("stable artifact reads reject path races and non-regular files", () => {
+  const w = makeWorld();
+  try {
+    const artifacts = join(w.stateRootDir, "artifacts");
+    mkdirSync(artifacts, { recursive: true });
+    const file = join(artifacts, "stable.json");
+    writeFileSync(file, '{"ok":true}\n');
+
+    const stable = readStableFileObject(file);
+    assert.equal(stable.bytes.toString("utf8"), '{"ok":true}\n');
+    assert.equal(stable.stat.isFile(), true);
+
+    assert.equal(readArtifact(w.stateRootDir, "missing.json"), null);
+    assert.throws(() => readStableFileObject(artifacts), /evidence_file_not_regular/);
+
+    const link = join(artifacts, "link.json");
+    symlinkSync(file, link);
+    assert.throws(() => readStableFileObject(link), /evidence_file_symlink/);
+  } finally {
+    w.cleanup();
+  }
+});
 
 // Drive the whole loop the way the browser does.
 function runFullLoop(w, { root = w.source } = {}) {
