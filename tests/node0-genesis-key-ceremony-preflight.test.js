@@ -85,6 +85,30 @@ test("preflight CLI emits JSON on fresh home with explicit key-ceremony provenan
   }
 });
 
+test("preflight CLI can derive the current provenance gate without the historical summary", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-fresh-home-"));
+  const cwd = await mkdtemp(join(tmpdir(), "dema-key-preflight-fresh-cwd-"));
+  try {
+    const { stdout } = await execFileAsync(
+      "node",
+      [scriptPath, "--json", "--fresh-provenance"],
+      {
+        cwd,
+        env: { ...process.env, DEMA_HOME: home, CROSS_REPO_SKIP_GH: "1" },
+      },
+    );
+    const report = JSON.parse(stdout);
+    assert.equal(report.schema, NODE0_GENESIS_KEY_CEREMONY_PREFLIGHT_SCHEMA);
+    assert.equal(report.provenance_next_gate, "NODE0-GENESIS-KEY-CEREMONY-1A");
+    assert.equal(report.cleared_for_key_init, true);
+    assert.equal(report.boundary.private_key_read, false);
+    assert.equal(report.boundary.key_generated, false);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
 test("preflight blocks when provenance gate is missing (no default)", async () => {
   const home = await mkdtemp(join(tmpdir(), "dema-key-preflight-missing-"));
   try {
