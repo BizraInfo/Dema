@@ -8,12 +8,14 @@ is closed. The private pilot/operator policy remains in [`LIGHTHOUSE.md`](LIGHTH
 
 ## Current release identity
 
-The locally qualified candidate is:
+The exact candidate identity is bound in the campaign evidence and final
+manifest; it is not duplicated here where this document's own commit would
+make a copied SHA stale:
 
 ```text
 campaign: NODE0-GENESIS-FINAL-SPRINT-1A
-commit:   b0e984904563158253a7e3a17b5ac624cf7e1959
-tree:     cafe3e6476c2df926f445b5de6546ded26d7e0d6
+commit:   BOUND_IN_CAMPAIGN_EVIDENCE_AND_FINAL_MANIFEST
+tree:     BOUND_IN_CAMPAIGN_EVIDENCE_AND_FINAL_MANIFEST
 release:  NOT_CREATED
 truth:    CURRENT_MEASURED / LOCAL_CANDIDATE
 ```
@@ -60,20 +62,24 @@ For candidate developer/runtime qualification, install the pinned repository
 dependencies according to the lockfiles, then run:
 
 ```bash
-npm ci
 npm test
 npm run check
 npm run llm:guidance
 cd packages/dema-ui
 npm ci
+npm audit --omit=dev
 npm run build
 ```
 
 The fresh-node commands above are **instructions**, not current second-machine
-evidence. The current candidate's combined closure-required proof was
-`80/80`; its DEMA build passed while repository type validation was skipped by
-configuration. Reproduce and record the exact environment before promoting a
-claim.
+evidence. The root package has no package-lock because it has no declared
+dependencies, so root `npm ci` is not a valid preflight step. The latest
+measured candidate aggregate gate reported `9,884` passing tests, `0` failures,
+and `4` documented skips; a detached clean checkout at the same measured
+candidate also passed its UI install/build and aggregate gate. Reproduce and
+record the exact environment before promoting a claim. The UI production
+dependency audit is currently zero findings after the pinned security update;
+CodeQL and gitleaks availability remain separate release evidence questions.
 
 ## Local Genesis runtime
 
