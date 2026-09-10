@@ -228,15 +228,22 @@ export async function claimConsentNonce(p = {}) {
     // makes the winner visible only after its bytes are complete.
     const temp = `${path}.tmp-${process.pid}-${randomUUID()}`;
     await writeFile(temp, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+    let linkError = null;
     try {
       await link(temp, path);
       claimed = true;
     } catch (err) {
-      if (err?.code !== "EEXIST") throw err;
-    } finally {
-      try { await unlink(temp); } catch (err) { if (err?.code !== "ENOENT") throw err; }
+      linkError = err;
     }
+    let cleanupError = null;
+    try {
+      await unlink(temp);
+    } catch (err) {
+      cleanupError = err;
+    }
+    if (linkError && linkError?.code !== "EEXIST") throw linkError;
     if (claimed) return Object.freeze({ claimed: true, claim: Object.freeze(record) });
+    if (cleanupError && cleanupError?.code !== "ENOENT") throw cleanupError;
     const existingClaim = new Error("claim_path_already_exists");
     existingClaim.code = "EEXIST";
     throw existingClaim;

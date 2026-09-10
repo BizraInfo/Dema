@@ -23,6 +23,7 @@ import {
   lstatSync,
   mkdirSync,
   openSync,
+  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -42,7 +43,9 @@ import {
 } from "../../packages/genesis/src/urp0-sat-evidence.js";
 
 export const JOURNAL_FILENAME = "journal.ndjson";
-const JOURNAL_LOCK_FILENAME = `.${JOURNAL_FILENAME}.lock`;
+const JOURNAL_LOCK_DIRNAME = `.${JOURNAL_FILENAME}.locks`;
+const LEGACY_JOURNAL_LOCK_FILENAME = `.${JOURNAL_FILENAME}.lock`;
+const JOURNAL_LOCK_ENTRY_RE = /^lock-[0-9]+-[0-9]+-[0-9a-f-]+\.json$/;
 
 // Append-only log of every path this process wrote, in order. An ARRAY, not a
 // Set: callers snapshot the length and diff, so "what did THIS mission write"
@@ -93,65 +96,120 @@ function atomicWrite(path, text) {
   writeLog.push(path);
 }
 
-function processAlive(pid) {
+function processStartToken(pid) {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+    const endOfComm = stat.lastIndexOf(")");
+    return stat.slice(endOfComm + 2).trim().split(/\s+/)[19] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function processAlive(pid, startToken = null) {
   try {
     process.kill(pid, 0);
-    return true;
   } catch (error) {
     return error?.code === "EPERM";
+  }
+  if (typeof startToken !== "string" || startToken === "") return true;
+  const currentStartToken = processStartToken(pid);
+  return currentStartToken === null || currentStartToken === startToken;
+}
+
+function readJournalLockEntry(path) {
+  try {
+    const entry = JSON.parse(readFileSync(path, "utf8"));
+    if (!Number.isInteger(entry?.pid) || entry.pid <= 0) return null;
+    if (typeof entry.token !== "string" || entry.token === "") return null;
+    if (!/^\d+$/.test(entry.created_mono_ns ?? "")) return null;
+    return Object.freeze({
+      path,
+      pid: entry.pid,
+      token: entry.token,
+      start_token: typeof entry.start_token === "string" ? entry.start_token : null,
+      created_mono_ns: BigInt(entry.created_mono_ns),
+    });
+  } catch {
+    return null;
   }
 }
 
 function acquireJournalLock(stateRootDir) {
   ensureDir(stateRootDir);
-  const path = join(stateRootDir, JOURNAL_LOCK_FILENAME);
+  const lockDir = join(stateRootDir, JOURNAL_LOCK_DIRNAME);
+  ensureDir(lockDir);
+
+  // A pre-cutover writer may still hold the old singleton lock. A dead legacy
+  // entry is ignored but never removed here: no contender may delete a path
+  // that another writer could have reacquired between liveness checks.
+  const legacyPath = join(stateRootDir, LEGACY_JOURNAL_LOCK_FILENAME);
+  if (existsSync(legacyPath)) {
+    let legacyPid = null;
+    try { legacyPid = Number(readFileSync(legacyPath, "utf8").trim().split(":", 1)[0]); } catch { return null; }
+    if (!Number.isInteger(legacyPid) || legacyPid <= 0 || processAlive(legacyPid)) return null;
+  }
+
   const token = randomUUID();
+  const createdMonoNs = process.hrtime.bigint();
+  const path = join(lockDir, `lock-${createdMonoNs}-${process.pid}-${token}.json`);
   try {
     const fd = openSync(path, FS_CONSTANTS.O_WRONLY | FS_CONSTANTS.O_CREAT | FS_CONSTANTS.O_EXCL, 0o600);
     try {
-      writeFileSync(fd, `${process.pid}:${token}\n`);
+      writeFileSync(fd, `${JSON.stringify({
+        pid: process.pid,
+        token,
+        start_token: processStartToken(process.pid),
+        created_mono_ns: createdMonoNs.toString(),
+      })}\n`);
       fsyncSync(fd);
     } finally {
       closeSync(fd);
     }
     writeLog.push(path);
-    return { path, token };
   } catch (error) {
     if (error?.code !== "EEXIST") throw error;
-    let ownerPid = null;
-    try {
-      ownerPid = Number(readFileSync(path, "utf8").trim().split(":", 1)[0]);
-    } catch {
-      return null;
-    }
-    // Fail closed while a live writer owns the lock. A dead owner is safe to
-    // clear so a crashed process cannot strand the journal forever.
-    if (!Number.isInteger(ownerPid) || ownerPid <= 0 || processAlive(ownerPid)) return null;
-    try {
-      unlinkSync(path);
-    } catch {
-      return null;
-    }
-    try {
-      const fd = openSync(path, FS_CONSTANTS.O_WRONLY | FS_CONSTANTS.O_CREAT | FS_CONSTANTS.O_EXCL, 0o600);
-      try {
-        writeFileSync(fd, `${process.pid}:${token}\n`);
-        fsyncSync(fd);
-      } finally {
-        closeSync(fd);
+    return null;
+  }
+
+  try {
+    const liveEntries = [];
+    for (const name of readdirSync(lockDir)) {
+      if (!JOURNAL_LOCK_ENTRY_RE.test(name)) continue;
+      const entry = readJournalLockEntry(join(lockDir, name));
+      if (!entry) {
+        releaseJournalLock({ path, token });
+        return null;
       }
-      writeLog.push(path);
-      return { path, token };
-    } catch {
+      if (processAlive(entry.pid, entry.start_token)) liveEntries.push(entry);
+    }
+    liveEntries.sort((a, b) => a.created_mono_ns < b.created_mono_ns ? -1 :
+      a.created_mono_ns > b.created_mono_ns ? 1 : a.path.localeCompare(b.path));
+    if (liveEntries[0]?.path !== path) {
+      releaseJournalLock({ path, token });
       return null;
     }
+    return { path, token };
+  } catch (error) {
+    releaseJournalLock({ path, token });
+    throw error;
   }
 }
 
 function releaseJournalLock(lock) {
   if (!lock) return;
   try {
-    if (readFileSync(lock.path, "utf8").trim() === `${process.pid}:${lock.token}`) unlinkSync(lock.path);
+    const contents = readFileSync(lock.path, "utf8").trim();
+    let owned = contents === `${process.pid}:${lock.token}`;
+    if (!owned) {
+      try {
+        const entry = JSON.parse(contents);
+        owned = entry?.pid === process.pid && entry?.token === lock.token;
+      } catch {
+        owned = false;
+      }
+    }
+    if (owned) unlinkSync(lock.path);
   } catch {
     // The journal result is already determined; a missing lock is harmless.
   }
