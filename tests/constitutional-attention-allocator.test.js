@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   allocateAttention,
+  reduceAttentionAllocation,
+  verifyAttentionAllocationReceipt,
   CAA_POLICY_VERSION,
 } from "../packages/core/src/constitutional-attention-allocator.js";
 
@@ -93,4 +95,22 @@ test("CAA-06: identical current state rederives exactly and changed state change
   assert.equal(first.allocation_proposal_hash, second.allocation_proposal_hash);
   assert.equal(first.input_state_hash, second.input_state_hash);
   assert.notEqual(first.input_state_hash, changed.input_state_hash);
+});
+
+test("CAA-07: reducer creates a non-authorizing receipt and rejects proposal tamper", () => {
+  const proposal = allocateAttention({
+    mission: { mission_id: "MOMO-MISSION" },
+    current_state: { status: "CURRENT" },
+    candidates: [human("one")],
+  });
+  const reduced = reduceAttentionAllocation(proposal);
+  assert.equal(reduced.ok, true);
+  assert.equal(reduced.receipt.applied, false);
+  assert.equal(reduced.receipt.authority.authority, "NONE");
+  assert.equal(reduced.receipt.authority.authority_delta, 0);
+  assert.equal(reduced.receipt.effects_started, 0);
+  assert.deepEqual(verifyAttentionAllocationReceipt(reduced.receipt), { ok: true, blocked_by: [] });
+
+  const tampered = { ...proposal, frontier: "forged" };
+  assert.equal(reduceAttentionAllocation(tampered).ok, false);
 });

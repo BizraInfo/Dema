@@ -5,7 +5,7 @@ import {
   compileMissionProposal,
   verifyMissionProposal,
 } from "@core/bizra-prompt-mission-bridge.js";
-import { mergeNode0MissionContext } from "../node0-runtime";
+import { mergeNode0MissionContext, persistAttentionAllocation } from "../node0-runtime";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -52,11 +52,24 @@ export async function POST(request: NextRequest) {
         { status: 422 },
       );
     }
+    const allocation = persistAttentionAllocation(proposal);
+    if (!allocation.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
+          blocked_by: allocation.blocked_by,
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({
       ok: true,
       truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
       proposal,
       verification,
+      allocation_receipt: allocation.receipt,
+      allocation_receipt_reused: allocation.reused,
     });
   } catch (error) {
     return NextResponse.json(

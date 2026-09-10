@@ -1,11 +1,15 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
   compileMissionProposal,
   verifyMissionProposal,
 } from "@core/bizra-prompt-mission-bridge.js";
+import {
+  reduceAttentionAllocation,
+  verifyAttentionAllocationReceipt,
+} from "@core/constitutional-attention-allocator.js";
 import {
   buildDemaIdentityRootCanon,
   DEFAULT_IDENTITY_ROOTS_DIR,
@@ -103,6 +107,52 @@ export function mergeNode0MissionContext(requested: unknown) {
       ...(candidate.human_compass && typeof candidate.human_compass === "object" ? candidate.human_compass : {}),
     },
   };
+}
+
+export function persistAttentionAllocation(proposal: any) {
+  const reduced = reduceAttentionAllocation(proposal?.attention ?? proposal);
+  if (!reduced.ok) return reduced;
+  const root = process.env.BIZRA_GENESIS_CAMPAIGN_ROOT;
+  if (!root || !root.startsWith("/") || root === "/") {
+    return { ok: false, blocked_by: ["campaign_root_unbound"] };
+  }
+
+  const directory = join(root, "receipts", "attention");
+  const filename = `${reduced.receipt.allocation_id}.json`;
+  const target = join(directory, filename);
+  const content = `${JSON.stringify(reduced.receipt, null, 2)}\n`;
+  const existing = () => {
+    if (!existsSync(target)) return null;
+    try {
+      const raw = readFileSync(target, "utf8");
+      const parsed = JSON.parse(raw);
+      const verified = verifyAttentionAllocationReceipt(parsed);
+      if (!verified.ok || raw !== content) return { ok: false, blocked_by: ["allocation_receipt_collision"] };
+      return { ok: true, blocked_by: [], receipt: parsed, reused: true };
+    } catch {
+      return { ok: false, blocked_by: ["allocation_receipt_existing_invalid"] };
+    }
+  };
+
+  const prior = existing();
+  if (prior) return prior;
+  try {
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const temp = join(directory, `.${filename}.${process.pid}.${Date.now()}.tmp`);
+    writeFileSync(temp, content, { encoding: "utf8", flag: "wx", mode: 0o600 });
+    try {
+      linkSync(temp, target);
+      unlinkSync(temp);
+    } catch (error) {
+      try { unlinkSync(temp); } catch { /* best effort cleanup */ }
+      const raced = existing();
+      if (raced) return raced;
+      return { ok: false, blocked_by: [`allocation_receipt_persist_failed:${String((error as Error)?.message ?? error)}`] };
+    }
+    return { ok: true, blocked_by: [], receipt: reduced.receipt, reused: false };
+  } catch (error) {
+    return { ok: false, blocked_by: [`allocation_receipt_persist_failed:${String((error as Error)?.message ?? error)}`] };
+  }
 }
 
 export function requireCompilerCodeHash() {

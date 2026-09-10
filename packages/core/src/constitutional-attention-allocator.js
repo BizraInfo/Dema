@@ -5,6 +5,8 @@ import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.
 
 export const CAA_SCHEMA = "bizra.dema.constitutional_attention_allocator.v0.1";
 export const CAA_POLICY_VERSION = "CAA-NODE0-v1";
+export const CAA_RECEIPT_SCHEMA = "bizra.dema.constitutional_attention_allocation_receipt.v0.1";
+export const CAA_REDUCER_VERSION = "CAA-REDUCER-NODE0-v1";
 export const ATTENTION_DECISIONS = Object.freeze([
   "FOCUS",
   "INVESTIGATE",
@@ -289,4 +291,68 @@ export function allocateAttention({ mission = {}, current_state: currentState = 
     claim_ceiling: "ATTENTION_PROPOSAL_ONLY",
   };
   return freeze({ ...proposal, allocation_proposal_hash: sha256CanonicalJsonV1(proposal) });
+}
+
+/**
+ * Reduce one verified allocation proposal into a durable, non-authorizing
+ * receipt. The reducer is pure; filesystem persistence belongs to the adapter.
+ */
+export function reduceAttentionAllocation(proposal) {
+  const blockedBy = [];
+  if (!proposal || typeof proposal !== "object" || Array.isArray(proposal)) {
+    return freeze({ ok: false, blocked_by: ["allocation_proposal_not_object"] });
+  }
+  if (proposal.schema !== CAA_SCHEMA) blockedBy.push("allocation_schema_invalid");
+  if (typeof proposal.allocation_proposal_hash !== "string") {
+    blockedBy.push("allocation_proposal_hash_missing");
+  } else {
+    const { allocation_proposal_hash: ignored, ...body } = proposal;
+    if (sha256CanonicalJsonV1(body) !== proposal.allocation_proposal_hash) {
+      blockedBy.push("allocation_proposal_hash_mismatch");
+    }
+  }
+  if (proposal.authority?.authority !== "NONE") blockedBy.push("allocation_authority_not_none");
+  if (proposal.authority?.authority_delta !== 0) blockedBy.push("allocation_authority_delta_nonzero");
+  if (proposal.authority?.execution_allowed !== false) blockedBy.push("allocation_execution_boundary_open");
+  if (proposal.effects_started !== 0) blockedBy.push("allocation_effect_boundary_open");
+  if (blockedBy.length) return freeze({ ok: false, blocked_by: [...new Set(blockedBy)] });
+
+  const receiptBody = {
+    schema: CAA_RECEIPT_SCHEMA,
+    truth_label: "CONSTITUTIONAL_ATTENTION_ALLOCATION_RECORDED",
+    reducer_version: CAA_REDUCER_VERSION,
+    allocation_id: proposal.allocation_id,
+    allocation_proposal_hash: proposal.allocation_proposal_hash,
+    input_state_hash: proposal.input_state_hash,
+    policy_version: proposal.policy_version,
+    frontier: proposal.frontier,
+    frontier_decision: proposal.frontier_decision,
+    ranked_candidates: proposal.ranked_candidates,
+    deferred: proposal.deferred,
+    authority: proposal.authority,
+    effects_started: 0,
+    applied: false,
+    claim_ceiling: "ATTENTION_ALLOCATION_RECEIPT_ONLY",
+  };
+  const receipt = freeze({
+    ...receiptBody,
+    allocation_receipt_hash: sha256CanonicalJsonV1(receiptBody),
+  });
+  return freeze({ ok: true, blocked_by: [], receipt });
+}
+
+export function verifyAttentionAllocationReceipt(receipt) {
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) {
+    return freeze({ ok: false, blocked_by: ["allocation_receipt_not_object"] });
+  }
+  const { allocation_receipt_hash: ignored, ...body } = receipt;
+  const blockedBy = [];
+  if (receipt.schema !== CAA_RECEIPT_SCHEMA) blockedBy.push("allocation_receipt_schema_invalid");
+  if (receipt.applied !== false) blockedBy.push("allocation_receipt_applied");
+  if (receipt.authority?.authority !== "NONE") blockedBy.push("allocation_receipt_authority_not_none");
+  if (receipt.authority?.authority_delta !== 0) blockedBy.push("allocation_receipt_authority_delta_nonzero");
+  if (receipt.effects_started !== 0) blockedBy.push("allocation_receipt_effect_boundary_open");
+  if (typeof receipt.allocation_receipt_hash !== "string") blockedBy.push("allocation_receipt_hash_missing");
+  else if (sha256CanonicalJsonV1(body) !== receipt.allocation_receipt_hash) blockedBy.push("allocation_receipt_hash_mismatch");
+  return freeze({ ok: blockedBy.length === 0, blocked_by: [...new Set(blockedBy)] });
 }
