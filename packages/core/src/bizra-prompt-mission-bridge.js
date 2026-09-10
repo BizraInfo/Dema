@@ -12,6 +12,7 @@ import {
   MISSION_CONTRACT_GO_PHRASE,
   createMissionContract,
 } from "./mission-contract-state.js";
+import { allocateAttention } from "./constitutional-attention-allocator.js";
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
 
 export const BIZRA_PROMPT_MISSION_BRIDGE_SCHEMA =
@@ -203,6 +204,45 @@ export function compileMissionProposal({
   });
 
   const blockedBy = actions.length > 0 ? ["exact_consequential_consent_required"] : [];
+  const attention = allocateAttention({
+    mission: {
+      mission_id: missionId,
+      active_human_mission_id: missionId,
+      source_intent_hash: sourceIntentHash,
+    },
+    current_state: {
+      mission_contract: "BOUND",
+      root_dna: contextSnapshot.root_dna.status,
+      node_story: contextSnapshot.node_story.status,
+      current_state: contextSnapshot.current_state.status,
+    },
+    candidates: [{
+      candidate_id: missionId,
+      mission_id: missionId,
+      source: {
+        origin: "HUMAN",
+        human_requested: true,
+        source_refs: [sourceIntentHash],
+      },
+      claim: { evidence_class: "SOURCE_BOUND" },
+      impact: {
+        mission_relevance: 5,
+        risk_reduction: actions.length ? 3 : 2,
+        evidence_strength: 3,
+        leverage: 3,
+        human_burden_removed: 4,
+        urgency: 1,
+        ambiguity: actions.length ? 2 : 1,
+        blast_radius: actions.length ? 3 : 1,
+        cost: 1,
+      },
+      human_decision_required: actions.length > 0,
+      authority: {
+        action_required: actions.length > 0,
+        hard_gates: actions.length > 0 ? ["authority_missing"] : [],
+      },
+    }],
+  });
   const body = {
     schema: BIZRA_PROMPT_MISSION_BRIDGE_SCHEMA,
     truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
@@ -219,6 +259,7 @@ export function compileMissionProposal({
     context_hash: contextHash,
     mission_id: missionId,
     mission_contract: missionContract,
+    attention,
     requested_actions: actions,
     decision: actions.length > 0 ? "WAIT_FOR_HUMAN" : "PROPOSE_ONLY",
     what_i_understood: {

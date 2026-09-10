@@ -127,6 +127,17 @@ export default function MissionPage() {
                 <div style={{ color: TEAL, letterSpacing: "0.18em", fontSize: 11, textTransform: "uppercase" }}>{result.proposal.decision}</div>
                 <h2 style={{ fontFamily: "Georgia, serif", fontWeight: 400, margin: "0.4rem 0 1.2rem" }}>What I understood</h2>
                 <p>{result.proposal.what_i_understood.objective}</p>
+                {result.proposal.attention && (
+                  <div style={{ borderLeft: `2px solid ${TEAL}`, paddingLeft: "1rem", margin: "1.2rem 0", color: MUTED }}>
+                    <div style={{ color: TEAL, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase" }}>What matters now</div>
+                    <p style={{ margin: "0.35rem 0" }}>
+                      {result.proposal.attention.frontier_decision === "WAIT_FOR_HUMAN"
+                        ? "A human decision is required before any consequential step."
+                        : "This is the current bounded frontier for your mission."}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 13 }}>Priority selects attention only; it does not authorize an effect.</p>
+                  </div>
+                )}
                 <Info title="What I know" items={result.proposal.what_i_know} />
                 <Info title="What I am inferring" items={result.proposal.what_i_am_inferencing} />
                 <Info title="What I still need" items={result.proposal.what_i_still_need} />

@@ -42,6 +42,10 @@ test("BPMB-01: deterministic intent-to-MissionContract proposal is hash-bound", 
   assert.equal(a.boundary.execution_allowed, false);
   assert.equal(a.boundary.model_invocation_performed, false);
   assert.equal(a.boundary.effect_started, false);
+  assert.equal(a.attention.frontier, a.mission_id);
+  assert.equal(a.attention.frontier_decision, "FOCUS");
+  assert.equal(a.attention.authority.authority_delta, 0);
+  assert.equal(a.attention.effects_started, 0);
   assert.equal(a.context_snapshot.node_story.status, "UNKNOWN");
   assert.equal(a.context_snapshot.current_state.status, "UNKNOWN");
   assert.deepEqual(
@@ -65,6 +69,8 @@ test("BPMB-02: understanding a consequential request holds for exact consent", (
   assert.equal(proposal.authority.consent_required, true);
   assert.equal(proposal.authority.authority_delta, 0);
   assert.equal(proposal.decision, "WAIT_FOR_HUMAN");
+  assert.equal(proposal.attention.frontier, proposal.mission_id);
+  assert.equal(proposal.attention.frontier_decision, "WAIT_FOR_HUMAN");
   assert.ok(proposal.requested_actions.some((a) => a.action === "transfer"));
   assert.ok(proposal.requested_actions.some((a) => a.action === "publish"));
   assert.ok(proposal.blocked_by.includes("exact_consequential_consent_required"));
