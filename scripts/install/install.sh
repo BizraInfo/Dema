@@ -11,9 +11,9 @@
 #   scripts/install/samy-bootstrap.sh  (Samy-only · was identity-baked)
 #
 # DEFAULT BEHAVIOR (no identity flags):
-#   Bootstraps Node0 for the operator running the script. Creates ~/.dema/
-#   skeleton (memory, receipts, logs, skills) + profile.json + config.local.json.
-#   Idempotent · preserves existing files · never overwrites.
+#   Bootstraps a clean Node0 with identity unset unless --operator is supplied.
+#   Creates ~/.dema/ skeleton (memory, receipts, logs, skills) + profile.json +
+#   config.local.json. Idempotent · preserves existing files · never overwrites.
 #
 # CANDIDATE BEHAVIOR (with --ordinal N >= 1):
 #   Bootstraps a Node-N candidate device, paired with the Node0 receipt the
@@ -23,7 +23,8 @@
 #   candidate sends back to Node0.
 #
 # Usage:
-#   ./install.sh                                         # Node0 default
+#   ./install.sh                                         # Node0, identity unset
+#   ./install.sh --operator "Your name"                  # Node0, named locally
 #   ./install.sh --dry-run                               # preview · no writes
 #   ./install.sh --check                                 # report state · no writes
 #   ./install.sh --uninstall                             # remove ~/.dema/ (with confirm)
@@ -122,11 +123,6 @@ if [ "$ORDINAL" -ge 1 ]; then
   fi
 fi
 
-# Default operator for Node0 when omitted
-if [ -z "$OPERATOR" ]; then
-  OPERATOR="MoMo"
-fi
-
 # ─── Uninstall mode ────────────────────────────────────────────────────────
 
 if [ "$MODE" = "uninstall" ]; then
@@ -149,11 +145,16 @@ if [ "$MODE" = "uninstall" ]; then
   exit 0
 fi
 
+if [ "$MODE" != "check" ] && ! command -v node >/dev/null 2>&1; then
+  echo "ERROR: Node.js is required before Dema setup; no files were written." >&2
+  exit 2
+fi
+
 # ─── Header banner ─────────────────────────────────────────────────────────
 
 echo "install.sh · $MODE mode"
 echo "  DEMA_HOME : $DEMA_HOME"
-echo "  operator  : $OPERATOR"
+echo "  operator  : ${OPERATOR:-<not set>}"
 echo "  ordinal   : $ORDINAL"
 echo "  node      : Node$ORDINAL"
 if [ "$IS_CANDIDATE" = "true" ]; then
@@ -222,17 +223,23 @@ do_dir skills
 # ─── Profile body · Node0 vs candidate paths ───────────────────────────────
 
 ISO_NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+json_string() { node -e 'process.stdout.write(JSON.stringify(process.argv[1]))' "$1"; }
+OPERATOR_JSON="null"
+[ -n "$OPERATOR" ] && OPERATOR_JSON=$(json_string "$OPERATOR")
 LANGUAGE_JSON="null"
-[ -n "$LANGUAGE" ] && LANGUAGE_JSON="\"$LANGUAGE\""
+[ -n "$LANGUAGE" ] && LANGUAGE_JSON=$(json_string "$LANGUAGE")
 DEVICE_LABEL_JSON="null"
-[ -n "$DEVICE_LABEL" ] && DEVICE_LABEL_JSON="\"$DEVICE_LABEL\""
+[ -n "$DEVICE_LABEL" ] && DEVICE_LABEL_JSON=$(json_string "$DEVICE_LABEL")
+PAIRED_RECEIPT_ID_JSON=$(json_string "$PAIRED_RECEIPT_ID")
+PAIRED_RECEIPT_HASH_JSON=$(json_string "$PAIRED_RECEIPT_HASH")
+PAIRED_RECEIPT_DATE_JSON=$(json_string "$PAIRED_RECEIPT_DATE")
 
 if [ "$IS_CANDIDATE" = "true" ]; then
   PROFILE_BODY=$(cat <<PROFILE_EOF
 {
   "schema": "bizra.dema.profile.v0.1",
-  "preferred_name": "$OPERATOR",
-  "name": "$OPERATOR",
+  "preferred_name": $OPERATOR_JSON,
+  "name": $OPERATOR_JSON,
   "node": "Node$ORDINAL",
   "node_ordinal": $ORDINAL,
   "language": $LANGUAGE_JSON,
@@ -241,9 +248,9 @@ if [ "$IS_CANDIDATE" = "true" ]; then
   "created_at": "$ISO_NOW",
   "memory_consent": "local",
   "hidden_autonomy": false,
-  "paired_with_node0_receipt_id": "$PAIRED_RECEIPT_ID",
-  "paired_with_node0_receipt_evidence_hash": "$PAIRED_RECEIPT_HASH",
-  "paired_with_node0_receipt_date": "$PAIRED_RECEIPT_DATE",
+  "paired_with_node0_receipt_id": $PAIRED_RECEIPT_ID_JSON,
+  "paired_with_node0_receipt_evidence_hash": $PAIRED_RECEIPT_HASH_JSON,
+  "paired_with_node0_receipt_date": $PAIRED_RECEIPT_DATE_JSON,
   "phase_c_bootstrap_version": "v1.0"
 }
 PROFILE_EOF
@@ -253,7 +260,7 @@ else
 {
   "schema": "bizra.dema.profile.v0.1",
   "preferred_name": null,
-  "name": "$OPERATOR",
+  "name": $OPERATOR_JSON,
   "node": "Node0",
   "node_ordinal": 0,
   "language": $LANGUAGE_JSON,
@@ -285,18 +292,19 @@ do_file "$DEMA_HOME/config.local.json" "$CONFIG_BODY"
 
 if [ "$IS_CANDIDATE" = "true" ]; then
   WITNESS_FILE="$DEMA_HOME/memory/node${ORDINAL}-self-witness.json"
+  BOUNDARY_NOTE_JSON=$(json_string "consent_collected: false because this device bootstrap honors prior typed consent at Node0 receipt $PAIRED_RECEIPT_ID · the in-person ceremony there is the binding consent record")
   WITNESS_BODY=$(cat <<WITNESS_EOF
 {
   "schema": "bizra.dema.node${ORDINAL}_self_witness.v0.1",
   "truth_label": "NODE0_LOCAL_SEED",
   "mode": "ceremony_record_on_candidate_device",
   "ceremony": "node${ORDINAL}_self_bootstrap_v1.0",
-  "candidate_name": "$OPERATOR",
+  "candidate_name": $OPERATOR_JSON,
   "node_ordinal": $ORDINAL,
   "bootstrap_completed_utc": "$ISO_NOW",
-  "paired_with_node0_receipt_id": "$PAIRED_RECEIPT_ID",
-  "paired_with_node0_receipt_evidence_hash": "$PAIRED_RECEIPT_HASH",
-  "paired_with_node0_ceremony_date_gst": "$PAIRED_RECEIPT_DATE",
+  "paired_with_node0_receipt_id": $PAIRED_RECEIPT_ID_JSON,
+  "paired_with_node0_receipt_evidence_hash": $PAIRED_RECEIPT_HASH_JSON,
+  "paired_with_node0_ceremony_date_gst": $PAIRED_RECEIPT_DATE_JSON,
   "phase_c_status": "device_profile_written_no_pat7_runtime",
   "next_steps_for_candidate": [
     "Send the contents of this file back to Node0 operator",
@@ -321,7 +329,7 @@ if [ "$IS_CANDIDATE" = "true" ]; then
     "public_network_used": false,
     "consent_collected": false
   },
-  "boundary_note": "consent_collected: false because this device bootstrap honors prior typed consent at Node0 receipt $PAIRED_RECEIPT_ID · the in-person ceremony there is the binding consent record"
+  "boundary_note": $BOUNDARY_NOTE_JSON
 }
 WITNESS_EOF
 )
