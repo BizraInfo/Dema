@@ -15,7 +15,7 @@ function readerFor(world) {
 const sha = (s) => createHash("sha256").update(s).digest("hex");
 
 const WORLD = {
-  "receipts/gate-a.json": '{"gate":"claims:register","exit":0}',
+  "receipts/gate-a.json": '{"gate":"claims-register","exit":0}',
   "receipts/gate-b.json": '{"gate":"integration-check","exit":0}',
   "receipts/gate-c.json": '{"gate":"kernel-purity","exit":0}',
 };
@@ -25,7 +25,7 @@ const CANDIDATES = [
   { id: "kernel-purity", type: "gate_passed", source_ref: "receipts/gate-c.json" },
 ];
 
-test("PEG-01: an existing source yields an event bound to its real content hash", () => {
+test("PEG-01: an existing gate receipt yields a semantically verified event bound to its real content hash", () => {
   const out = gatherEvidenceSignals({
     candidates: [CANDIDATES[0]],
     readSource: readerFor(WORLD),
@@ -34,6 +34,7 @@ test("PEG-01: an existing source yields an event bound to its real content hash"
   const e = out.events[0];
   assert.equal(e.truth_label, "MEASURED");
   assert.equal(e.source_sha256, sha(WORLD["receipts/gate-a.json"]));
+  assert.equal(e.semantic_verifier, "gate_receipt_exit_0_v1");
   assert.equal(e.weight, 1);
 });
 
@@ -47,7 +48,7 @@ test("PEG-02: a missing source is excluded, never emitted — fail closed", () =
   assert.equal(out.excluded[0].gap, "source_unreadable");
 });
 
-test("PEG-03: verify re-derives from content and passes on an untampered world", () => {
+test("PEG-03: verify re-derives content and semantic gate proof on an untampered world", () => {
   const { events } = gatherEvidenceSignals({
     candidates: CANDIDATES,
     readSource: readerFor(WORLD),
@@ -79,6 +80,7 @@ test("PEG-05: a hand-forged sha256 fails verify against real content", () => {
       truth_label: "MEASURED",
       source_ref: "receipts/gate-a.json",
       source_sha256: "f".repeat(64),
+      semantic_verifier: "gate_receipt_exit_0_v1",
     },
   ];
   const v = verifyEvidenceSignals({ events: forged, readSource: readerFor(WORLD) });
@@ -86,7 +88,7 @@ test("PEG-05: a hand-forged sha256 fails verify against real content", () => {
   assert.equal(v.mismatches[0].gap, "sha256_mismatch");
 });
 
-test("PEG-06: gathered evidence flips peak-self-loop from HOLD to CONTINUE", () => {
+test("PEG-06: semantically proven gathered evidence flips peak-self-loop from HOLD to CONTINUE", () => {
   const held = buildPeakSelfLoopPreview();
   assert.equal(held.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
   assert.equal(held.snr_framework.verified_signal_count, 0);
@@ -112,4 +114,95 @@ test("PEG-07: the gatherer imports no I/O module", async () => {
     (m) => m[1],
   );
   assert.deepEqual(imported, ["node:crypto"]);
+});
+
+test("PEG-08: readable source code relabelled gate_passed is excluded, not promoted to MEASURED", () => {
+  const world = {
+    "packages/core/src/fake-gate.js": "export function runGate() { return true; }",
+  };
+  const out = gatherEvidenceSignals({
+    candidates: [
+      {
+        id: "fake-gate",
+        type: "gate_passed",
+        source_ref: "packages/core/src/fake-gate.js",
+      },
+    ],
+    readSource: readerFor(world),
+  });
+  assert.equal(out.events.length, 0);
+  assert.equal(out.excluded[0].gap, "gate_receipt_json_required");
+});
+
+test("PEG-09: a real receipt whose gate failed cannot become a positive signal", () => {
+  const world = {
+    "receipts/failed.json": '{"gate":"integration-check","exit":1}',
+  };
+  const out = gatherEvidenceSignals({
+    candidates: [
+      {
+        id: "integration-check",
+        type: "gate_passed",
+        source_ref: "receipts/failed.json",
+      },
+    ],
+    readSource: readerFor(world),
+  });
+  assert.equal(out.events.length, 0);
+  assert.equal(out.excluded[0].gap, "gate_receipt_exit_not_zero");
+});
+
+test("PEG-10: a passing receipt for another gate cannot be relabelled as this gate", () => {
+  const world = {
+    "receipts/wrong-gate.json": '{"gate":"some-other-gate","exit":0}',
+  };
+  const out = gatherEvidenceSignals({
+    candidates: [
+      {
+        id: "claims-register",
+        type: "gate_passed",
+        source_ref: "receipts/wrong-gate.json",
+      },
+    ],
+    readSource: readerFor(world),
+  });
+  assert.equal(out.events.length, 0);
+  assert.equal(out.excluded[0].gap, "gate_receipt_id_mismatch");
+});
+
+test("PEG-11: unsupported positive event classes fail closed until they have a semantic verifier", () => {
+  const world = {
+    "source/commit.js": "export const shipped = true;",
+  };
+  const out = gatherEvidenceSignals({
+    candidates: [
+      {
+        id: "some-clean-commit",
+        type: "clean_commit",
+        source_ref: "source/commit.js",
+      },
+    ],
+    readSource: readerFor(world),
+  });
+  assert.equal(out.events.length, 0);
+  assert.equal(out.excluded[0].gap, "semantic_evidence_unsupported:clean_commit");
+});
+
+test("PEG-12: verify rejects a hash-correct forged event whose receipt semantically says failure", () => {
+  const content = '{"gate":"claims-register","exit":1}';
+  const world = { "receipts/forged.json": content };
+  const forged = [
+    {
+      id: "claims-register",
+      type: "gate_passed",
+      weight: 1,
+      truth_label: "MEASURED",
+      source_ref: "receipts/forged.json",
+      source_sha256: sha(content),
+      semantic_verifier: "gate_receipt_exit_0_v1",
+    },
+  ];
+  const v = verifyEvidenceSignals({ events: forged, readSource: readerFor(world) });
+  assert.equal(v.ok, false);
+  assert.equal(v.mismatches[0].gap, "gate_receipt_exit_not_zero");
 });
