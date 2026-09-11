@@ -10,13 +10,16 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-test("Lighthouse archives exclude the operator-session transcript", async () => {
+test("Lighthouse archives exclude operator-session transcripts", async () => {
   const { stdout } = await execFileAsync(
     "git",
-    ["check-attr", "export-ignore", "--", "sessionlast.md"],
+    ["check-attr", "export-ignore", "--", "sessionlast.md", "eval season plan e.md"],
     { cwd: root },
   );
-  assert.equal(stdout.trim(), "sessionlast.md: export-ignore: set");
+  assert.deepEqual(stdout.trim().split("\n"), [
+    "sessionlast.md: export-ignore: set",
+    "eval season plan e.md: export-ignore: set",
+  ]);
 });
 
 test("Lighthouse front door has no hard-coded Momo identity fallback", async () => {
