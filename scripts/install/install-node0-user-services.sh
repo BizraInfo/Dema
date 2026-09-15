@@ -216,7 +216,7 @@ systemctl --user enable --now bizra-urp-genesis-dema-bridge.service dema-homebas
   const deadline = Date.now() + 90000;
   for (const url of urls) {
     for (;;) {
-      try { const response = await fetch(url); if (response.status < 500) break; } catch {}
+      try { const response = await fetch(url); if (response.status >= 200 && response.status < 300) break; } catch {}
       if (Date.now() >= deadline) throw new Error(`readiness_timeout:${url}`);
       await new Promise(resolve => setTimeout(resolve, 500));
     }

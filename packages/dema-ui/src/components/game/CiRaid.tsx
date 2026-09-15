@@ -25,12 +25,14 @@ export function CiRaid() {
   const [states, setStates] = useState<GateState[]>(CI_GATES.map(() => "idle"));
   const [running, setRunning] = useState<number | null>(null);
   const raidDone = useRef(false);
+  const runGeneration = useRef(0);
 
   const allPassed = states.every((s) => s === "passed");
   const anyFailed = states.some((s) => s === "failed");
   const canRun = (i: number) => i === 0 || states[i - 1] === "passed";
 
-  const finishRaid = () => {
+  const finishRaid = (generation: number) => {
+    if (generation !== runGeneration.current) return;
     if (raidDone.current) return;
     raidDone.current = true;
     const rec = forgeReceipt({
@@ -57,16 +59,19 @@ export function CiRaid() {
     setRunning(i);
     setStates((s) => s.map((v, idx) => (idx === i ? "running" : v)));
     cur.spendResources({ compute: GATE_COST });
+    const generation = runGeneration.current;
     setTimeout(() => {
+      if (generation !== runGeneration.current) return;
       setStates((s) => s.map((v, idx) => (idx === i ? "passed" : v)));
       setRunning(null);
       toast.success(`${CI_GATES[i].name} ✓`, { description: CI_GATES[i].desc });
-      if (i === CI_GATES.length - 1) finishRaid();
+      if (i === CI_GATES.length - 1) finishRaid(generation);
     }, CI_GATES[i].weight);
   };
 
   const runAll = async () => {
     if (running !== null) return;
+    const generation = runGeneration.current;
     const working = [...states];
     for (let i = 0; i < CI_GATES.length; i++) {
       if (working[i] === "passed") continue;
@@ -81,15 +86,17 @@ export function CiRaid() {
       setStates((s) => s.map((v, idx) => (idx === i ? "running" : v)));
       cur.spendResources({ compute: GATE_COST });
       await new Promise((res) => setTimeout(res, CI_GATES[i].weight));
+      if (generation !== runGeneration.current) return;
       working[i] = "passed";
       setStates((s) => s.map((v, idx) => (idx === i ? "passed" : v)));
       setRunning(null);
       toast.success(`${CI_GATES[i].name} ✓`, { description: CI_GATES[i].desc });
     }
-    if (working.every((state) => state === "passed")) finishRaid();
+    if (working.every((state) => state === "passed")) finishRaid(generation);
   };
 
   const reset = () => {
+    runGeneration.current += 1;
     setStates(CI_GATES.map(() => "idle"));
     raidDone.current = false;
     setRunning(null);

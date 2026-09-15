@@ -95,7 +95,10 @@ runtime, identity, consent, or authority path. The sealed Lighthouse package
 must include the five exact public Root DNA files under `root-dna/`.
 
 ```bash
-# First create identity-neutral local state (or provide a local display name).
+# First create identity-neutral local state.
+bash scripts/install/install.sh
+
+# Optional: provide a local display name after the neutral setup.
 bash scripts/install/install.sh --operator "Your name"
 
 # Build the pinned human-facing application.

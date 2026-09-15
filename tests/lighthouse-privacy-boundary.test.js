@@ -66,3 +66,24 @@ test("Lighthouse user-service installer refuses incomplete Root DNA before writi
     await rm(fixture, { recursive: true, force: true });
   }
 });
+
+test("review regression: installer readiness accepts only successful HTTP responses", async () => {
+  const script = await readFile(join(root, "scripts/install/install-node0-user-services.sh"), "utf8");
+  assert.match(script, /response\.status >= 200 && response\.status < 300/);
+  assert.doesNotMatch(script, /response\.status < 500/);
+});
+
+test("review regression: mission profile uses one byte read and safe name fallback", async () => {
+  const runtime = await readFile(join(root, "packages/dema-ui/src/app/api/mission/node0-runtime.ts"), "utf8");
+  assert.match(runtime, /const profileBytes = readFileSync\(profilePath\);/);
+  assert.match(runtime, /profileHash: createHash\("sha256"\)\.update\(profileBytes\)/);
+  assert.match(runtime, /\[profile\?\.parsed\?\.preferred_name, profile\?\.parsed\?\.name\]/);
+  assert.doesNotMatch(runtime, /sha256File\(profile\.profilePath\)/);
+});
+
+test("review regression: interrupted raids fence stale callbacks", async () => {
+  const raid = await readFile(join(root, "packages/dema-ui/src/components/game/CiRaid.tsx"), "utf8");
+  assert.match(raid, /const runGeneration = useRef\(0\);/);
+  assert.match(raid, /generation !== runGeneration\.current/);
+  assert.match(raid, /runGeneration\.current \+= 1/);
+});

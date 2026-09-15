@@ -51,9 +51,14 @@ function loadFounderProfile() {
   if (!home || !home.startsWith("/")) return null;
   try {
     const profilePath = join(home, "profile.json");
-    const parsed = JSON.parse(readFileSync(profilePath, "utf8"));
+    const profileBytes = readFileSync(profilePath);
+    const parsed = JSON.parse(profileBytes.toString("utf8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    return { parsed, profilePath };
+    return {
+      parsed,
+      profilePath,
+      profileHash: createHash("sha256").update(profileBytes).digest("hex"),
+    };
   } catch {
     return null;
   }
@@ -64,7 +69,7 @@ function profileStoryContext(profile: ReturnType<typeof loadFounderProfile>) {
   try {
     return {
       status: "DECLARED",
-      hash: `sha256:${sha256File(profile.profilePath)}`,
+      hash: `sha256:${profile.profileHash}`,
       source: "founder_profile_json",
       user_confirmed: false,
     };
@@ -75,8 +80,10 @@ function profileStoryContext(profile: ReturnType<typeof loadFounderProfile>) {
 
 function displayNameContext(profile: ReturnType<typeof loadFounderProfile>) {
   const configured = process.env.BIZRA_NODE0_DISPLAY_NAME?.trim();
-  const fromProfile = profile?.parsed?.preferred_name ?? profile?.parsed?.name;
-  const value = configured || (typeof fromProfile === "string" && fromProfile.trim() ? fromProfile.trim() : null);
+  const fromProfile = [profile?.parsed?.preferred_name, profile?.parsed?.name]
+    .find((value) => typeof value === "string" && value.trim())
+    ?.trim() ?? null;
+  const value = configured || fromProfile;
   return value
     ? { status: "DECLARED", value, source: configured ? "node0_runtime_config" : "founder_profile_json", user_confirmed: true }
     : { status: "UNKNOWN", source: "human_display_name_unbound", user_confirmed: false };
