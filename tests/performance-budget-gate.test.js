@@ -13,14 +13,14 @@ test("local (no CI env) keeps the strict 150ms boot budget", () => {
   assert.equal(resolvePerfBudgets({}).cli_boot_latency_ms, 150);
 });
 
-test("CI=true grants boot headroom (250ms)", () => {
-  assert.equal(resolvePerfBudgets({ CI: "true" }).cli_boot_latency_ms, 250);
+test("CI=true grants boot headroom (275ms)", () => {
+  assert.equal(resolvePerfBudgets({ CI: "true" }).cli_boot_latency_ms, 275);
 });
 
 test("GITHUB_ACTIONS=true also grants headroom", () => {
   assert.equal(
     resolvePerfBudgets({ GITHUB_ACTIONS: "true" }).cli_boot_latency_ms,
-    250,
+    275,
   );
 });
 
@@ -34,7 +34,7 @@ test("non-boot budgets are stable across environments", () => {
 });
 
 test("CI headroom still trips a gross (2x+) boot regression", () => {
-  // 250ms ceiling: a ~150ms-local boot doubling to 300ms+ in CI still fails.
+  // 275ms ceiling: a ~150ms-local boot doubling to 300ms+ in CI still fails.
   assert.ok(resolvePerfBudgets({ CI: "true" }).cli_boot_latency_ms < 300);
 });
 

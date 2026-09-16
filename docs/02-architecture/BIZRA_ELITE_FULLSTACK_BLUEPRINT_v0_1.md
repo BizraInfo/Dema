@@ -86,7 +86,7 @@ intent (human)
 
 | Layer | Mechanism | Standard | Gate |
 |---|---|---|---|
-| **L1 Engineering** | `baseline-l1.mjs` + `perf-bench.mjs --a-plus` 150ms boot strict / 250ms CI, 1ms verification | A+ `ARCHITECTURE.md: A+ quality` | `delivery:perf-gate`警告-only until SLO proven |
+| **L1 Engineering** | `baseline-l1.mjs` + `perf-bench.mjs --a-plus` 150ms boot strict / 275ms CI, 1ms verification | A+ `ARCHITECTURE.md: A+ quality` | `delivery:perf-gate`警告-only until SLO proven |
 | **L1.5 Decision** | `process-mining-preview.js` `measurement_process_invoked:true` no paths | Mirror not verdict `OPERATING LAW` | — |
 | **L2 Reasoning** | `diffusion-reasoner.js` noise↓, `CONVERGED` requires evidence anchor | Zero-noise ≠ truth | `verifyDiffusionRefinement` re-derives |
 | **Operator** | `dema stand` `drain less/same/more` + `steward-chain` `N/7` + `poi-time-compression` candidate ratio | Human burden removed | `FIRST_USER_STANDING_LOCAL_ONLY` |

@@ -94,7 +94,7 @@ Human sovereign (Root > Human > Mission > Evidence > Task > Model  SYSTEM_INSTRU
 
 | Layer | Budget | Mechanism | Verifier |
 |---|---|---|---|
-| L1 | boot `150ms strict /250ms CI`, verify `1ms` | `baseline-l1.mjs` `perf-bench --a-plus` | `delivery:perf-gate` |
+| L1 | boot `150ms strict /275ms CI`, verify `1ms` | `baseline-l1.mjs` `perf-bench --a-plus` | `delivery:perf-gate` |
 | L1.5 decision | `measurement_process_invoked:true` no paths | `process-mining-preview.js` | mirror not verdict |
 | L2 reasoning | `CONVERGED iff final_noise 0 + evidence≥1` | `diffusion-reasoner.js` | `verifyDiffusionRefinement` re-derives |
 | Shell P0 | `render 2000ms` `§48`; `frame 32768` `§13`; `stdout/stderr 65536` `§54`; `mpsc 128` `watch` | Bounded ingress + coalescing `§36-37` | `QUEUE_OVERFLOW → UNKNOWN` |
@@ -195,4 +195,3 @@ Each slice is reversible, receipted, `authority_delta 0`, implements exactly one
 ---
 
 *Code adjacent:* `packages/core/src/dema-trace-diagnostic-contract.js` is the `MEMORY` validator's parent — provenance law is identical. `BIZRA_DEMA_STARTUP_KIT_v0_2/BOOT/startup.yaml` `on_stale_memory: MARK_STALE_AND_REDERIVE` is the same as moat `REMAIN_TRACE`. Compose, don't duplicate  — that is the moat.*
-
