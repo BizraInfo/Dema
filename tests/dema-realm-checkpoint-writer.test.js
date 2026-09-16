@@ -254,6 +254,44 @@ describe("saveDemaRealmCheckpoint — validation + failure paths", () => {
       rmSync(home, { recursive: true, force: true });
     }
   });
+
+  it("checkpoint publication failure is reported without claiming a save", async () => {
+    const home = freshHome();
+    try {
+      const { mkdirSync } = await import("node:fs");
+      mkdirSync(join(home, "realm", "last-checkpoint.json"), { recursive: true });
+      const r = await saveDemaRealmCheckpoint(
+        { label: "checkpoint failure" },
+        { demaHome: home, now: FIXED_NOW },
+      );
+      assert.equal(r.saved, false);
+      assert.equal(r.error, "checkpoint_write_failed");
+      assert.equal(r.boundary.file_write_performed, false);
+      assert.equal(r.boundary.mutation_performed, false);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("timeline publication failure preserves the checkpoint evidence and fails closed", async () => {
+    const home = freshHome();
+    try {
+      const { mkdirSync } = await import("node:fs");
+      mkdirSync(join(home, "realm", "timeline.json"), { recursive: true });
+      const r = await saveDemaRealmCheckpoint(
+        { label: "timeline failure" },
+        { demaHome: home, now: FIXED_NOW },
+      );
+      assert.equal(r.saved, false);
+      assert.equal(r.error, "timeline_append_failed");
+      assert.equal(r.checkpoint_written, true);
+      assert.equal(r.boundary.file_write_performed, false);
+      assert.equal(r.boundary.mutation_performed, false);
+      assert.equal(existsSync(join(home, "realm", "last-checkpoint.json")), true);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("saveDemaRealmCheckpoint — boundary + no leaks", () => {

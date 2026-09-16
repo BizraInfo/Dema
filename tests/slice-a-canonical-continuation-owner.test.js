@@ -156,6 +156,36 @@ test("Slice A owner map: verified owner remains authoritative when projections a
   }
 });
 
+test("Slice A owner map: an empty canonical season is absence, not fabricated continuity", async () => {
+  const home = await newHome();
+  try {
+    await seedProjection(home);
+    await mkdir(join(home, "seasons", SEASON), { recursive: true });
+    const result = await gatherFirstLookContext({ demaHome: home });
+    assert.equal(result.continuation.status, "ABSENT");
+    assert.equal(result.continuation.reason, "canonical_continuation_absent");
+    assert.equal(result.continuation.projection_only, true);
+    assert.equal(result.continuation.authority_delta, 0);
+    assert.deepEqual(result.continuation.projections.mission_pointer.status, "PRESENT_UNBOUND");
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("Slice A owner map: an unreadable season listing is blocked, not treated as absence", async () => {
+  const home = await newHome();
+  try {
+    await seedProjection(home);
+    await writeFile(join(home, "seasons"), "not a directory");
+    const result = await gatherFirstLookContext({ demaHome: home });
+    assert.equal(result.continuation.status, "BLOCKED");
+    assert.equal(result.continuation.reason, "season_listing_failed");
+    assert.equal(result.continuation.authority_delta, 0);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
 test("Slice A continuation: natural language records C1 through the existing Season writer and survives a fresh process", async () => {
   const home = await newHome();
   try {
@@ -269,6 +299,83 @@ test("Slice A owner matrix: malformed Realm projection is visible without displa
   } finally {
     await rm(home, { recursive: true, force: true });
   }
+});
+
+test("Slice A owner matrix: malformed profile fails soft without inventing identity", async () => {
+  const home = await newHome();
+  try {
+    await writeFile(join(home, "profile.json"), "{ malformed profile");
+    const result = await gatherFirstLookContext({ demaHome: home });
+    assert.equal(result.profile.source_present, false);
+    assert.equal(result.profile.name, null);
+    assert.equal(result.greeting, undefined);
+    assert.equal(result.continuation.status, "ABSENT");
+    assert.equal(result.continuation.authority_delta, 0);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("Slice A identity restore: the existing memory profile projection is read when the root profile is absent", async () => {
+  const home = await newHome();
+  try {
+    await mkdir(join(home, "memory"), { recursive: true });
+    await writeFile(
+      join(home, "memory", "profile.json"),
+      JSON.stringify({ preferred_name: "Mumu", language_code: "en" }),
+    );
+    const result = await gatherFirstLookContext({ demaHome: home });
+    assert.equal(result.profile.source_present, true);
+    assert.equal(result.profile.name, "Mumu");
+    assert.equal(result.profile.language_code, "en");
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("Slice A owner matrix: blocked and contradictory continuation states remain explicit in the home", () => {
+  for (const continuation of [
+    {
+      status: "CONTRADICTION",
+      reason: "mission_id_mismatch",
+      contradictions: [{ reason: "mission_id_mismatch" }],
+    },
+    {
+      status: "BLOCKED",
+      reason: "malformed_head",
+      contradictions: [],
+    },
+  ]) {
+    const view = buildFirstLookHome({
+      profile: { source_present: true, name: "Mumu", language_code: "en" },
+      key_present: true,
+      mission: null,
+      checkpoint: null,
+      continuation,
+      now: new Date("2026-09-16T00:00:00Z"),
+    });
+    assert.match(view.recommended_next_step, /Resolve|blocked/i);
+    assert.match(view.rendered_text, new RegExp(continuation.status));
+    assert.match(view.rendered_text, /recovery is read-only/);
+  }
+});
+
+test("Slice A owner matrix: verified continuation supplies the canonical next action", () => {
+  const view = buildFirstLookHome({
+    profile: { source_present: true, name: "Mumu", language_code: "en" },
+    key_present: true,
+    mission: null,
+    checkpoint: null,
+    continuation: {
+      status: "VERIFIED",
+      next_safe_action: "CONTINUE_FROM_CANONICAL_HEAD",
+    },
+    now: new Date("2026-09-16T00:00:00Z"),
+  });
+  assert.equal(
+    view.recommended_next_step,
+    "Continue the canonical mission: CONTINUE_FROM_CANONICAL_HEAD",
+  );
 });
 
 test("Slice A owner matrix: repository mismatch refuses continuation without mutating the owner", async () => {

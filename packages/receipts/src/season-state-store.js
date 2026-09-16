@@ -515,8 +515,15 @@ export async function listSeasons({ demaHome } = {}) {
         entries.filter((e) => e.isDirectory() && SEASON_ID_RE.test(e.name)).map((e) => e.name).sort(),
       ),
     });
-  } catch {
-    return Object.freeze({ ok: true, season_ids: Object.freeze([]) });
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      return Object.freeze({ ok: true, season_ids: Object.freeze([]) });
+    }
+    return Object.freeze({
+      ok: false,
+      season_ids: Object.freeze([]),
+      reason: `season_listing_failed:${error?.code ?? "unknown"}`,
+    });
   }
 }
 

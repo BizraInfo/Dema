@@ -1088,3 +1088,10 @@ and every push to main. Invariants:
 
 The gate is independent of `check.yml` and `bizra-review.yml` — a secret
 finding fails its own workflow without blocking unrelated CI runs.
+
+### Slice A persistent journey controls (2026-09-16)
+
+| Test file | Surface covered |
+| --- | --- |
+| `tests/slice-a-canonical-continuation-owner.test.js` | Canonical Season continuation owner, descriptive projections, contradiction and malformed-state fail-closed controls, and read-only recovery immutability. |
+| `tests/slice-a-persistent-journey.test.js` | Natural-language mission continuation, canonical checkpoint advancement, and fresh-process restoration of identity, mission, checkpoint, and authority boundaries. |
