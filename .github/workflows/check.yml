@@ -23,7 +23,8 @@ jobs:
       # `npm run coverage` and `npm run check` (which internally calls coverage
       # via scripts/check.mjs) both depend on --test-coverage-{lines,branches,
       # functions} threshold flags that require Node 22+. Skip both on 20.x;
-      # tests still run on both versions.
+      # Root tests run on both versions; the cross-package founder suite
+      # declares its Node 20 loader limitation in the test output/docs.
       - if: matrix.node-version == '22.x'
         run: npm run coverage
       - if: matrix.node-version == '22.x'

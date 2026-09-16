@@ -4,7 +4,11 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
+const nodeMajor = Number.parseInt(process.versions.node, 10);
+const founderModule = nodeMajor >= 22
+  ? await import("../packages/core/src/founder-useful-system.js")
+  : null;
+const {
   groundPatOutput,
   projectSituationForCommitment,
   readFounderSituation,
@@ -15,10 +19,21 @@ import {
   SITUATION_COMMITMENT_SCHEMA,
   situationCommitment,
   synthesizeGroundedPatProposals,
-} from "../packages/core/src/founder-useful-system.js";
-import { validateSituationState } from "../packages/dema-ui/src/lib/situation/situation-state.ts";
+} = founderModule ?? {};
 
-test("Situation commitment ignores read timestamps but changes with semantics", () => {
+// Node 20 is a supported root-test runtime but cannot load this cross-package
+// TypeScript dependency graph without a loader. Node 22 runs this suite;
+// the UI package's native test surface covers its validators independently.
+let validateSituationState;
+if (founderModule) {
+  ({ validateSituationState } = await import("../packages/dema-ui/src/lib/situation/situation-state.ts"));
+}
+
+const founderTest = (name, fn) => test(name, {
+  skip: founderModule ? false : "requires Node 22 for the UI TypeScript dependency graph",
+}, fn);
+
+founderTest("Situation commitment ignores read timestamps but changes with semantics", () => {
   const base = { schema: "s", observation: { observedAt: "2026-01-01T00:00:00.000Z", status: "CURRENT" }, mission: { state: "OPEN" } };
   assert.equal(situationCommitment(base), situationCommitment({ ...base, observation: { ...base.observation, observedAt: "2026-01-01T00:01:00.000Z" } }));
   assert.notEqual(situationCommitment(base), situationCommitment({ ...base, mission: { state: "CLOSED" } }));
@@ -47,7 +62,7 @@ function situationFixture() {
   };
 }
 
-test("canonical Situation commitment is live on semantics, not read churn", () => {
+founderTest("canonical Situation commitment is live on semantics, not read churn", () => {
   assert.equal(SITUATION_COMMITMENT_SCHEMA, "bizra.dema.situation_commitment.v0.2");
   const base = situationFixture();
   const readAgain = structuredClone(base);
@@ -84,16 +99,18 @@ test("canonical Situation commitment is live on semantics, not read churn", () =
   const keyOrderChanged = structuredClone(base);
   keyOrderChanged.situation.mission = { currentState: "OPEN", truth: "OBSERVED", missionId: "m-1", freshness: base.situation.mission.freshness };
   assert.equal(situationCommitment(base), situationCommitment(keyOrderChanged));
-  assert.equal(validateSituationState(null).ok, false);
-  assert.equal(validateSituationState({ schema: "bizra.dema.situation_state.v0.1", mission: null }).ok, false);
+  if (validateSituationState) {
+    assert.equal(validateSituationState(null).ok, false);
+    assert.equal(validateSituationState({ schema: "bizra.dema.situation_state.v0.1", mission: null }).ok, false);
+  }
 });
 
-test("five no-mutation canonical reads converge on one commitment", () => {
+founderTest("five no-mutation canonical reads converge on one commitment", () => {
   const commitments = Array.from({ length: 5 }, () => readFounderSituation().commitment);
   assert.equal(new Set(commitments).size, 1, commitments.join("\n"));
 });
 
-test("isolated candidate mission and authority projections render both founder views", () => {
+founderTest("isolated candidate mission and authority projections render both founder views", () => {
   const root = mkdtempSync(path.join(tmpdir(), "dema-founder-situation-"));
   const previous = {
     closure: process.env.DEMA_FOUNDER_CLOSURE,
@@ -130,7 +147,7 @@ test("isolated candidate mission and authority projections render both founder v
   }
 });
 
-test("founder situation stays truthful when runtime probes are unavailable", () => {
+founderTest("founder situation stays truthful when runtime probes are unavailable", () => {
   const root = mkdtempSync(path.join(tmpdir(), "dema-founder-probes-"));
   const previousPath = process.env.PATH;
   try {
@@ -150,7 +167,7 @@ test("founder situation stays truthful when runtime probes are unavailable", () 
   }
 });
 
-test("candidate FATE effect commits once and resume is idempotent", () => {
+founderTest("candidate FATE effect commits once and resume is idempotent", () => {
   const root = mkdtempSync(path.join(tmpdir(), "dema-founder-effect-"));
   const previous = { campaign: process.env.DEMA_FOUNDER_CAMPAIGN_ROOT, sandbox: process.env.DEMA_FOUNDER_SANDBOX };
   process.env.DEMA_FOUNDER_SANDBOX = root;
@@ -169,7 +186,7 @@ test("candidate FATE effect commits once and resume is idempotent", () => {
   }
 });
 
-test("candidate effect replay stays idempotent across process restart", () => {
+founderTest("candidate effect replay stays idempotent across process restart", () => {
   const root = mkdtempSync(path.join(tmpdir(), "dema-founder-restart-"));
   const modulePath = path.resolve("packages/core/src/founder-useful-system.js");
   const env = { ...process.env, DEMA_FOUNDER_SANDBOX: root };
@@ -188,7 +205,7 @@ test("candidate effect replay stays idempotent across process restart", () => {
   assert.equal(second.effect_execution_count, 1);
 });
 
-test("PAT grounding admits mission-shaped proposals and quarantines unrelated entities", () => {
+founderTest("PAT grounding admits mission-shaped proposals and quarantines unrelated entities", () => {
   const admitted = groundPatOutput({
     role: "Scout",
     missionId: "founder-useful-local-closure",
@@ -205,7 +222,7 @@ test("PAT grounding admits mission-shaped proposals and quarantines unrelated en
   assert.equal(quarantined.unsupportedEntityDetected, true);
 });
 
-test("PAT grounding quarantines a plausible claim without a permitted evidence reference", () => {
+founderTest("PAT grounding quarantines a plausible claim without a permitted evidence reference", () => {
   const result = groundPatOutput({
     role: "Engineer",
     missionId: "founder-useful-local-closure",
@@ -215,7 +232,7 @@ test("PAT grounding quarantines a plausible claim without a permitted evidence r
   assert.equal(result.reason, "permitted_evidence_ref_missing");
 });
 
-test("PAT synthesis preserves only admitted evidence references", () => {
+founderTest("PAT synthesis preserves only admitted evidence references", () => {
   const text = synthesizeGroundedPatProposals([
     { evidenceRef: "pat:Scout:invocation", grounding: { groundedRefs: ["mission:founder-useful-local-closure"] } },
     { evidenceRef: "pat:Engineer:invocation", grounding: { groundedRefs: ["mission:founder-useful-local-closure"] } },
@@ -226,7 +243,7 @@ test("PAT synthesis preserves only admitted evidence references", () => {
   assert.match(text, /pat:Engineer:invocation/);
 });
 
-test("PAT grounding and synthesis fail closed when identity or evidence is absent", () => {
+founderTest("PAT grounding and synthesis fail closed when identity or evidence is absent", () => {
   const empty = groundPatOutput({ role: "Scribe", missionId: "founder-useful-local-closure", text: "" });
   assert.equal(empty.verdict, "QUARANTINED_PROPOSAL");
   assert.equal(empty.reason, "permitted_evidence_ref_missing");
