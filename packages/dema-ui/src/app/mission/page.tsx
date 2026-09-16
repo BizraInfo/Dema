@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Result = {
   ok: boolean;
@@ -20,7 +20,33 @@ export default function MissionPage() {
   const [phrase, setPhrase] = useState("");
   const [patPhrase, setPatPhrase] = useState("");
   const [execution, setExecution] = useState<any>(null);
+  const [recentMissions, setRecentMissions] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void loadRecentMissions();
+  }, []);
+
+  async function loadRecentMissions() {
+    try {
+      const response = await fetch("/api/mission/estate", { cache: "no-store" });
+      const data = await response.json();
+      if (data.ok) setRecentMissions(data.missions ?? []);
+    } catch {
+      // History is a convenience; the mission path remains usable if it is unavailable.
+    }
+  }
+
+  async function reopenMission(missionId: string) {
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/mission/estate?mission_id=${encodeURIComponent(missionId)}`, { cache: "no-store" });
+      const data = await response.json();
+      if (data.ok) setExecution(data);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function compile() {
     setBusy(true);
@@ -38,6 +64,26 @@ export default function MissionPage() {
       setResult(await response.json());
     } catch (error) {
       setResult({ ok: false, blocked_by: [String(error)] });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runEstateObservation() {
+    if (!result?.proposal?.capability?.id) return;
+    setBusy(true);
+    setExecution(null);
+    try {
+      const response = await fetch("/api/mission/estate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ proposal: result.proposal }),
+      });
+      const data = await response.json();
+      setExecution(data);
+      if (data.ok) await loadRecentMissions();
+    } catch (error) {
+      setExecution({ ok: false, blocked_by: [String(error)] });
     } finally {
       setBusy(false);
     }
@@ -122,6 +168,18 @@ export default function MissionPage() {
           </p>
         </section>
 
+        {recentMissions.length > 0 && (
+          <section style={{ marginTop: "1.5rem", border: "1px solid #2DD4BF44", padding: "1rem" }}>
+            <div style={{ color: TEAL, letterSpacing: "0.16em", fontSize: 11, textTransform: "uppercase" }}>Recent read-only missions</div>
+            {recentMissions.map((mission) => (
+              <button key={mission.mission_id} onClick={() => reopenMission(mission.mission_id)} disabled={busy} style={{ display: "block", width: "100%", textAlign: "left", marginTop: "0.7rem", padding: "0.7rem", background: "transparent", border: "1px solid #C9A96244", color: "#E8EDF4", cursor: busy ? "wait" : "pointer" }}>
+                <span style={{ color: GOLD, display: "block" }}>{mission.mission_id}</span>
+                <span style={{ color: MUTED, fontSize: 13 }}>{mission.source_text}</span>
+              </button>
+            ))}
+          </section>
+        )}
+
         {result && (
           <section style={{ marginTop: "2rem", border: `1px solid ${result.ok ? TEAL : "#D99191"}55`, padding: "1.3rem", lineHeight: 1.65 }}>
             {!result.ok ? (
@@ -149,6 +207,16 @@ export default function MissionPage() {
                 <Info title="What I know" items={result.proposal.what_i_know} />
                 <Info title="What I am inferring" items={result.proposal.what_i_am_inferencing} />
                 <Info title="What I still need" items={result.proposal.what_i_still_need} />
+                {result.proposal.capability?.id === "OBSERVE_BIZRA_ESTATE_METADATA" && (
+                  <div style={{ margin: "1.2rem 0", border: "1px solid #2DD4BF55", padding: "1rem" }}>
+                    <div style={{ color: TEAL, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase" }}>Bounded estate scope</div>
+                    <p style={{ color: MUTED, fontSize: 13 }}>Metadata only · no content reads · no network · no move, rename or delete.</p>
+                    <ul style={{ color: "#B8CADB", fontSize: 13 }}>
+                      {result.proposal.capability.roots.map((root: any) => <li key={root.path}>{root.path}</li>)}
+                    </ul>
+                    <p style={{ color: MUTED, fontSize: 13, marginBottom: 0 }}>Limits: depth {result.proposal.capability.limits.max_depth}, entries per root {result.proposal.capability.limits.max_entries}.</p>
+                  </div>
+                )}
                 <dl style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "0.4rem 1rem", fontSize: 13, color: MUTED }}>
                   <dt>Authority</dt><dd style={{ margin: 0, color: "#E8EDF4" }}>{result.proposal.authority.authority}</dd>
                   <dt>Consent</dt><dd style={{ margin: 0, color: "#E8EDF4" }}>{result.proposal.authority.consent_required ? "required for the requested action" : "not inferred"}</dd>
@@ -159,10 +227,21 @@ export default function MissionPage() {
                 <p style={{ color: GOLD, marginBottom: 0 }}>{result.proposal.proposed_next_step}</p>
                 {result.proposal.decision === "PROPOSE_ONLY" && (
                   <div style={{ marginTop: "1.5rem", borderTop: "1px solid #C9A96233", paddingTop: "1.2rem" }}>
-                    <button onClick={deriveConsentCard} disabled={busy} style={{ background: "transparent", color: GOLD, border: `1px solid ${GOLD}88`, padding: "0.7rem 1rem", fontWeight: 600, cursor: busy ? "wait" : "pointer" }}>
-                      {busy ? "Preparing…" : "Prepare exact local consent"}
-                    </button>
-                    <p style={{ color: MUTED, fontSize: 13 }}>This prepares a bounded metadata-only observation. It does not authorize anything until you enter the exact phrase shown by the governed runtime.</p>
+                    {result.proposal.capability?.id === "OBSERVE_BIZRA_ESTATE_METADATA" ? (
+                      <>
+                        <button onClick={runEstateObservation} disabled={busy} style={{ background: GOLD, color: "#050B14", border: 0, padding: "0.7rem 1rem", fontWeight: 700, cursor: busy ? "wait" : "pointer" }}>
+                          {busy ? "Observing…" : "Run read-only estate observation"}
+                        </button>
+                        <p style={{ color: MUTED, fontSize: 13 }}>This is a bounded local metadata observation. It does not require consequential consent and cannot mutate the estate.</p>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={deriveConsentCard} disabled={busy} style={{ background: "transparent", color: GOLD, border: `1px solid ${GOLD}88`, padding: "0.7rem 1rem", fontWeight: 600, cursor: busy ? "wait" : "pointer" }}>
+                          {busy ? "Preparing…" : "Prepare exact local consent"}
+                        </button>
+                        <p style={{ color: MUTED, fontSize: 13 }}>This prepares a bounded metadata-only observation. It does not authorize anything until you enter the exact phrase shown by the governed runtime.</p>
+                      </>
+                    )}
                   </div>
                 )}
               </>
@@ -207,13 +286,34 @@ export default function MissionPage() {
 
         {execution && (
           <section style={{ marginTop: "1rem", border: `1px solid ${execution.ok ? TEAL : "#D99191"}55`, padding: "1.3rem", lineHeight: 1.65 }}>
-            <h2 style={{ color: execution.ok ? TEAL : "#D99191", fontWeight: 500, marginTop: 0 }}>{execution.ok ? "Mission recorded" : "Mission held"}</h2>
-            <p style={{ color: MUTED }}>{execution.ok ? "The governed runtime returned its receipt and verification result." : "No effect was admitted by the governed runtime."}</p>
-            <pre style={{ whiteSpace: "pre-wrap", overflowX: "auto", color: "#B8CADB", fontSize: 12 }}>{JSON.stringify(execution.governed ?? execution, null, 2)}</pre>
+            <h2 style={{ color: execution.ok ? TEAL : "#D99191", fontWeight: 500, marginTop: 0 }}>{execution.ok ? "Estate mission recorded" : "Mission held"}</h2>
+            {execution.report ? <EstateReport report={execution.report} /> : <p style={{ color: MUTED }}>{execution.ok ? "The governed runtime returned its receipt and verification result." : "No effect was admitted by the governed runtime."}</p>}
+            {!execution.report && <pre style={{ whiteSpace: "pre-wrap", overflowX: "auto", color: "#B8CADB", fontSize: 12 }}>{JSON.stringify(execution.governed ?? execution, null, 2)}</pre>}
           </section>
         )}
       </div>
     </main>
+  );
+}
+
+function EstateReport({ report }: { report: any }) {
+  const totals = report.what_i_found?.totals ?? {};
+  return (
+    <div style={{ color: "#B8CADB", fontSize: 14 }}>
+      <h3 style={{ color: GOLD, fontWeight: 600 }}>What I looked at</h3>
+      <p>{(report.what_i_looked_at?.roots ?? []).map((root: any) => root.path).join(" · ")}</p>
+      <h3 style={{ color: GOLD, fontWeight: 600 }}>What I found</h3>
+      <p>{totals.files_count ?? 0} files · {totals.dirs_count ?? 0} directories · {totals.denied_count ?? 0} excluded/denied entries · truncated: {String(totals.truncated ?? false)}</p>
+      <p>{(report.what_i_found?.categories && Object.entries(report.what_i_found.categories).map(([key, value]) => `${key}: ${value}`).join(" · ")) || "No visible categories"}</p>
+      <h3 style={{ color: GOLD, fontWeight: 600 }}>What I could not see</h3>
+      <p>{(report.what_i_could_not_see?.missing_roots ?? []).length ? report.what_i_could_not_see.missing_roots.join(" · ") : "Excluded and denied paths remain outside the observation."}</p>
+      <h3 style={{ color: GOLD, fontWeight: 600 }}>What I did</h3>
+      <p>{report.what_i_did}. No move, rename, delete, content read, network or model call.</p>
+      <h3 style={{ color: GOLD, fontWeight: 600 }}>Proof</h3>
+      <p style={{ wordBreak: "break-word" }}>Observation: {report.proof?.observation_hash} · claim ceiling: {report.proof?.claim_ceiling}</p>
+      <h3 style={{ color: GOLD, fontWeight: 600 }}>Next</h3>
+      <p>{report.next}</p>
+    </div>
   );
 }
 

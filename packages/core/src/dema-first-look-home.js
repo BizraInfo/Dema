@@ -6,6 +6,8 @@ import { readFile, access, constants as fsConstants } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { hasAuthorshipKey } from "../../receipts/src/authorship-key-store.js";
+import { listSeasons, loadSeasonHead } from "../../receipts/src/season-state-store.js";
+import { gatherDemaRealmCheckpoint } from "./dema-realm-checkpoint.js";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
@@ -98,12 +100,25 @@ function buildGreeting(profile) {
   });
 }
 
-function buildRecommendedNextStep(profile, keyPresent, mission) {
+function buildRecommendedNextStep(profile, keyPresent, mission, checkpoint, continuation) {
   if (!profile.source_present) {
     return "Complete first setup with dema setup — your local companion stays preview-only until you choose.";
   }
   if (!keyPresent) {
     return "Initialize your authorship key with dema authorship init when you are ready to sign local work.";
+  }
+  if (continuation?.status === "CONTRADICTION") {
+    const reasons = continuation.contradictions
+      .map((entry) => entry.reason)
+      .filter(Boolean)
+      .join(", ");
+    return "Resolve the continuation contradiction" + (reasons ? ": " + reasons : "") + ".";
+  }
+  if (continuation?.status === "BLOCKED") {
+    return "Canonical continuation is blocked: " + continuation.reason + ".";
+  }
+  if (continuation?.status === "VERIFIED" && continuation.next_safe_action) {
+    return "Continue the canonical mission: " + continuation.next_safe_action;
   }
   // A live mission outranks the generic suggestion. Without this the home
   // screen greets you and recommends reading receipts while a real mission is
@@ -111,6 +126,9 @@ function buildRecommendedNextStep(profile, keyPresent, mission) {
   // exists to carry.
   if (mission?.next_safe_action) {
     return `Continue the open mission: ${mission.next_safe_action}`;
+  }
+  if (checkpoint?.checkpoint?.resume_command) {
+    return `Resume from your last checkpoint: ${checkpoint.checkpoint.resume_command}`;
   }
   return "Review your latest receipts with dema receipts — proof stays local until you explicitly share.";
 }
@@ -141,21 +159,257 @@ function buildMissionView(mission, now) {
   });
 }
 
+function buildCheckpointView(checkpoint) {
+  if (!checkpoint?.checkpoint_present || !checkpoint.checkpoint) {
+    return Object.freeze({
+      present: false,
+      truth_label: checkpoint?.truth_label ?? "CHECKPOINT_ABSENT",
+      authority: "descriptive_only",
+    });
+  }
+  const cp = checkpoint.checkpoint;
+  return Object.freeze({
+    present: true,
+    label: cp.label,
+    stage: cp.stage,
+    next_gear: cp.next_gear,
+    resume_command: cp.resume_command,
+    sealed_at_iso: cp.sealed_at_iso,
+    truth_label: checkpoint.truth_label,
+    authority: "descriptive_only",
+  });
+}
+
 /// Read-only, fail-soft. An unreadable or malformed pointer must never break
 /// the home screen: absence degrades to the generic next step, it does not
 /// throw and it does not invent a mission.
-async function readMissionPointer(explicitPath) {
-  const path =
-    explicitPath ||
-    process.env.BIZRA_ACTIVE_MISSION ||
-    "/data/bizra/ACTIVE_MISSION.json";
-  try {
-    const raw = await readFile(path, "utf8");
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
+async function readMissionPointer(explicitPath, home) {
+  const localPath = join(home, "active-mission.json");
+  const candidates = explicitPath
+    ? [explicitPath]
+    : [process.env.BIZRA_ACTIVE_MISSION, "/data/bizra/ACTIVE_MISSION.json"];
+  if (!explicitPath) {
+    try {
+      const raw = await readFile(localPath, "utf8");
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (error) {
+      // A present but malformed home-local projection is a visible absence;
+      // do not hide it by falling through to an ambient pointer.
+      if (error?.code !== "ENOENT") return null;
+    }
   }
+  for (const path of candidates.filter(Boolean)) {
+    try {
+      const raw = await readFile(path, "utf8");
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch {
+      // Try the next descriptive projection only when no explicit path was
+      // supplied. A malformed explicit fixture must remain malformed.
+      if (explicitPath) return null;
+    }
+  }
+  return null;
+}
+
+function compareProjection({ mission, checkpoint, savedAt, missionId, nextSafeAction }) {
+  const savedMs = Date.parse(savedAt ?? "");
+  const compare = (kind, present, projectionMissionId, projectionNext, updatedAt) => {
+    if (!present) return Object.freeze({
+      status: "ABSENT",
+      stale: false,
+      reason: null,
+      contradictions: Object.freeze([]),
+    });
+    const contradictions = [];
+    const ownerBound =
+      missionId !== undefined &&
+      missionId !== null &&
+      nextSafeAction !== undefined &&
+      nextSafeAction !== null;
+    if (!ownerBound) {
+      return Object.freeze({
+        status: "PRESENT_UNBOUND",
+        stale: false,
+        reason: "projection_without_canonical_owner",
+        contradictions: Object.freeze([]),
+      });
+    }
+    if (
+      projectionMissionId !== undefined &&
+      projectionMissionId !== null &&
+      projectionMissionId !== missionId
+    ) {
+      contradictions.push({
+        kind,
+        reason: "mission_id_mismatch",
+        expected: missionId,
+        observed: projectionMissionId,
+      });
+    }
+    if (
+      projectionNext !== undefined &&
+      projectionNext !== null &&
+      projectionNext !== nextSafeAction
+    ) {
+      contradictions.push({
+        kind,
+        reason: "next_safe_action_mismatch",
+        expected: nextSafeAction,
+        observed: projectionNext,
+      });
+    }
+    const observedMs = Date.parse(updatedAt ?? "");
+    const stale =
+      Number.isFinite(savedMs) &&
+      Number.isFinite(observedMs) &&
+      observedMs < savedMs;
+    return Object.freeze({
+      status: contradictions.length
+        ? "CONTRADICTION"
+        : stale
+          ? "STALE"
+          : "MATCHING",
+      stale,
+      reason:
+        contradictions[0]?.reason ??
+        (stale ? "projection_older_than_canonical" : null),
+      contradictions: Object.freeze(contradictions),
+    });
+  };
+
+  return Object.freeze({
+    mission_pointer: compare(
+      "mission_pointer",
+      Boolean(mission),
+      mission?.mission_id,
+      mission?.next_safe_action,
+      mission?.updated_at_utc,
+    ),
+    realm_checkpoint: compare(
+      "realm_checkpoint",
+      Boolean(checkpoint?.checkpoint_present && checkpoint.checkpoint),
+      undefined,
+      checkpoint?.checkpoint?.next_gear,
+      checkpoint?.checkpoint?.sealed_at_iso,
+    ),
+  });
+}
+
+/**
+ * Resolve continuation from the existing durable Season owner. The mission
+ * pointer and Realm checkpoint remain projections: they can match, be absent,
+ * or contradict the owner, but they never win and are never repaired here.
+ */
+export async function resolveCanonicalContinuation({
+  demaHome,
+  mission = null,
+  checkpoint = null,
+} = {}) {
+  const listed = await listSeasons({ demaHome });
+  const owner = "season-state-store/HEAD.json";
+  if (!listed.ok) {
+    return Object.freeze({
+      status: "BLOCKED",
+      present: false,
+      owner,
+      reason: "season_listing_failed",
+      projections: compareProjection({ mission, checkpoint }),
+      contradictions: Object.freeze([]),
+      authority_delta: 0,
+    });
+  }
+  if (listed.season_ids.length > 1) {
+    return Object.freeze({
+      status: "CONTRADICTION",
+      present: false,
+      owner,
+      reason: "season_ambiguous",
+      season_ids: listed.season_ids,
+      contradictions: Object.freeze([
+        { kind: "owner", reason: "season_ambiguous", observed: listed.season_ids },
+      ]),
+      projections: compareProjection({ mission, checkpoint }),
+      authority_delta: 0,
+    });
+  }
+  if (listed.season_ids.length === 0) {
+    return Object.freeze({
+      status: "ABSENT",
+      present: false,
+      owner,
+      reason: "canonical_continuation_absent",
+      projection_only: Boolean(mission || checkpoint?.checkpoint_present),
+      projections: compareProjection({ mission, checkpoint }),
+      contradictions: Object.freeze([]),
+      authority_delta: 0,
+    });
+  }
+
+  const seasonId = listed.season_ids[0];
+  const loaded = await loadSeasonHead({ demaHome, seasonId });
+  if (!loaded.ok) {
+    return Object.freeze({
+      status: "BLOCKED",
+      present: false,
+      owner,
+      season_id: seasonId,
+      reason: loaded.reason,
+      projections: compareProjection({ mission, checkpoint }),
+      contradictions: Object.freeze([]),
+      authority_delta: 0,
+    });
+  }
+  if (loaded.outcome === "EMPTY") {
+    return Object.freeze({
+      status: "ABSENT",
+      present: false,
+      owner,
+      season_id: seasonId,
+      reason: "canonical_continuation_absent",
+      projection_only: Boolean(mission || checkpoint?.checkpoint_present),
+      projections: compareProjection({ mission, checkpoint }),
+      contradictions: Object.freeze([]),
+      authority_delta: 0,
+    });
+  }
+
+  const state = loaded.state;
+  const projections = compareProjection({
+    mission,
+    checkpoint,
+    savedAt: loaded.receipt.saved_at,
+    missionId: state.mission_id,
+    nextSafeAction: state.next_safe_action,
+  });
+  const contradictions = Object.freeze([
+    ...(projections.mission_pointer.contradictions ?? []),
+    ...(projections.realm_checkpoint.contradictions ?? []),
+  ]);
+  const status = contradictions.length > 0 ? "CONTRADICTION" : "VERIFIED";
+  return Object.freeze({
+    status,
+    present: status === "VERIFIED",
+    owner,
+    truth_label:
+      status === "VERIFIED"
+        ? "SEASON_HEAD_VERIFIED"
+        : "CONTINUATION_CONTRADICTION",
+    season_id: state.season_id,
+    mission_id: state.mission_id,
+    mission_phase: state.mission_phase,
+    next_safe_action: state.next_safe_action,
+    state_sequence: state.state_sequence,
+    state_hash: state.state_hash,
+    receipt_hash: loaded.receipt.receipt_hash,
+    receipt_verified: true,
+    pending_consent_count: state.pending_consent.length,
+    consent_granted: false,
+    authority_delta: 0,
+    projections,
+    contradictions,
+  });
 }
 
 export async function gatherFirstLookContext({
@@ -166,12 +420,20 @@ export async function gatherFirstLookContext({
   const home = demaHome || process.env.DEMA_HOME || join(homedir(), ".dema");
   const profile = await readProfile(home);
   const keyPresent = await hasAuthorshipKey(home);
-  const mission = await readMissionPointer(missionPointerPath);
+  const mission = await readMissionPointer(missionPointerPath, home);
+  const checkpoint = await gatherDemaRealmCheckpoint({ demaHome: home, now });
+  const continuation = await resolveCanonicalContinuation({
+    demaHome: home,
+    mission,
+    checkpoint,
+  });
   return Object.freeze({
     dema_home: home,
     profile,
     key_present: keyPresent,
     mission,
+    checkpoint,
+    continuation,
     now,
   });
 }
@@ -199,11 +461,21 @@ function buildNodeView(constellation, council) {
 export function buildFirstLookHome(ctx) {
   const greeting = buildGreeting(ctx.profile);
   const mission = buildMissionView(ctx.mission ?? null, ctx.now);
+  const checkpoint = buildCheckpointView(ctx.checkpoint ?? null);
+  const continuation = ctx.continuation ?? Object.freeze({
+    status: "NOT_OBSERVED",
+    present: false,
+    owner: "season-state-store/HEAD.json",
+    reason: "not_supplied",
+    authority_delta: 0,
+  });
   const node = buildNodeView(ctx.constellation ?? null, ctx.council ?? null);
   const recommended_next_step = buildRecommendedNextStep(
     ctx.profile,
     ctx.key_present,
     ctx.mission ?? null,
+    ctx.checkpoint ?? null,
+    continuation,
   );
   const boundary = Object.freeze({
     mode: "preview_only",
@@ -227,6 +499,8 @@ export function buildFirstLookHome(ctx) {
     greeting,
     recommended_next_step,
     mission,
+    checkpoint,
+    continuation,
     node,
     simple_actions: SIMPLE_ACTIONS,
     preview_boundary:
@@ -249,11 +523,44 @@ export function renderFirstLookHome(envelope, { noColor = false, useColor } = {}
   const bold = (s) => (colorOn ? `\x1b[1m${s}\x1b[0m` : s);
   const dim = (s) => (colorOn ? `\x1b[2m${s}\x1b[0m` : s);
 
+  const continuityLines =
+    envelope.continuation?.status === "VERIFIED"
+      ? [
+          bold("Journey continuity"),
+          "  " +
+            envelope.continuation.mission_id +
+            " · sequence " +
+            envelope.continuation.state_sequence,
+          dim("  canonical Season state · receipt verified"),
+          "",
+        ]
+      : envelope.continuation?.status === "CONTRADICTION"
+        ? [
+            bold("Journey continuity"),
+            "  CONTRADICTION · " +
+              (envelope.continuation.contradictions
+                ?.map((entry) => entry.reason)
+                .filter(Boolean)
+                .join(", ") || envelope.continuation.reason),
+            dim("  recovery is read-only; no state was rewritten"),
+            "",
+          ]
+        : envelope.continuation?.status === "BLOCKED"
+          ? [
+              bold("Journey continuity"),
+              "  BLOCKED · " + envelope.continuation.reason,
+              dim("  recovery is read-only; no state was rewritten"),
+              "",
+            ]
+          : [];
+
   const lines = [
     bold("Dema"),
     dim(`companion · v${envelope.dema_version}`),
     "",
     envelope.greeting.text,
+    "",
+    ...continuityLines,
     "",
     bold("Recommended next step"),
     `  ${envelope.recommended_next_step}`,
@@ -264,6 +571,19 @@ export function renderFirstLookHome(envelope, { noColor = false, useColor } = {}
           `  ${envelope.mission.status ?? "(no status)"}`,
           dim(
             `  observed ${envelope.mission.age_hours ?? "?"}h ago · descriptive only, not authority`,
+          ),
+          "",
+        ]
+      : []),
+    ...(envelope.checkpoint?.present
+      ? [
+          bold("Last checkpoint"),
+          `  ${envelope.checkpoint.label}` +
+            (envelope.checkpoint.stage
+              ? ` · ${envelope.checkpoint.stage}`
+              : ""),
+          dim(
+            `  resume: ${envelope.checkpoint.resume_command} · descriptive only, not authority`,
           ),
           "",
         ]

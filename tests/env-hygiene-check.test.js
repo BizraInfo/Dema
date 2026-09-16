@@ -127,6 +127,8 @@ test("T-13 env-hygiene KNOWN_DEMA_ENV_VARS is complete vs source-tree references
     "grep",
     [
       "-rhE",
+      "--exclude-dir=node_modules",
+      "--exclude-dir=.next",
       "process\\.env\\.DEMA_[A-Z0-9_]+",
       "tests/",
       "packages/",

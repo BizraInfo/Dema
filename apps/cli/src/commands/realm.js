@@ -49,6 +49,13 @@ function argValue(argv, name) {
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
+// Command handlers are also called by `dema chat`. A child command must return
+// to that shell; only the direct CLI boundary should terminate the process.
+function finishCommand(ctx, code = 0) {
+  if (!ctx.interactive) process.exit(process.exitCode ?? code);
+  return { handled: true, exit_code: code };
+}
+
 export async function cmd_realm(ctx) {
   const { argv } = ctx;
   const realmSub = argv[1] ?? "";
@@ -62,8 +69,7 @@ export async function cmd_realm(ctx) {
       console.error(
         `Unknown menu key: ${pick ?? "(missing)"}. Use dema realm go <n> where n is 1–5.`,
       );
-      process.exitCode = 1;
-      process.exit(process.exitCode ?? 1);
+      return finishCommand(ctx, 1);
     }
     if (item.realm_sub) {
       return cmd_realm({
@@ -72,48 +78,47 @@ export async function cmd_realm(ctx) {
       });
     }
     console.error(`Menu item ${item.key} has no dispatch target.`);
-    process.exitCode = 1;
-    process.exit(process.exitCode ?? 1);
+    return finishCommand(ctx, 1);
   }
 
   if (realmSub === "board") {
     const board = await gatherDemaRealmBoard();
     if (wantJsonR) {
       console.log(JSON.stringify(board, null, 2));
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
     console.log(renderDemaRealmBoard(board, { useColor: !noColor }));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
 
   if (realmSub === "status") {
     const status = await gatherDemaRealmStatus();
     if (wantJsonR) {
       console.log(JSON.stringify(status, null, 2));
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
     console.log(renderDemaRealmStatus(status, { useColor: !noColor }));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
 
   if (realmSub === "world-map") {
     const worldMap = await gatherDemaRealmWorldMap();
     if (wantJsonR) {
       console.log(JSON.stringify(worldMap, null, 2));
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
     console.log(renderDemaRealmWorldMap(worldMap, { useColor: !noColor }));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
 
   if (realmSub === "asset-graph") {
     const graph = await gatherHomebaseAssetGraph();
     if (wantJsonR) {
       console.log(JSON.stringify(graph, null, 2));
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
     console.log(renderHomebaseAssetGraph(graph, { useColor: !noColor }));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
 
   if (realmSub === "council-route") {
@@ -121,10 +126,10 @@ export async function cmd_realm(ctx) {
     const preview = buildCouncilSeatPatRoutingPreview({ seat });
     if (wantJsonR) {
       console.log(JSON.stringify(preview, null, 2));
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
     console.log(formatCouncilSeatPatRoutingResponse(preview));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
 
   if (realmSub === "council-dispatch") {
@@ -136,30 +141,30 @@ export async function cmd_realm(ctx) {
     });
     if (wantJsonR) {
       console.log(JSON.stringify(preview, null, 2));
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
     console.log(formatCouncilSeatPatDispatchResponse(preview));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
 
   if (realmSub === "council") {
     const council = gatherDemaRealmCouncil();
     if (wantJsonR) {
       console.log(JSON.stringify(council, null, 2));
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
     console.log(renderDemaRealmCouncil(council, { useColor: !noColor }));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
 
   if (realmSub === "wallet") {
     const wallet = await gatherDemaRealmWallet();
     if (wantJsonR) {
       console.log(JSON.stringify(wallet, null, 2));
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
     console.log(renderDemaRealmWallet(wallet, { useColor: !noColor }));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
 
   if (realmSub === "proof-studio") {
@@ -209,18 +214,18 @@ export async function cmd_realm(ctx) {
               ? ` (max ${result.max_length}, received ${result.received_length})`
               : ""),
         );
-        process.exitCode = 1;
+        return finishCommand(ctx, 1);
       }
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
 
     const cp = await gatherDemaRealmCheckpoint();
     if (wantJsonR) {
       console.log(JSON.stringify(cp, null, 2));
-      process.exit(process.exitCode ?? 0);
+      return finishCommand(ctx);
     }
     console.log(renderDemaRealmCheckpoint(cp, { useColor: !noColor }));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
 
   const state = await gatherDemaRealmState();
@@ -235,7 +240,7 @@ export async function cmd_realm(ctx) {
       payload.debug_status = status;
     }
     console.log(JSON.stringify(payload, null, 2));
-    process.exit(process.exitCode ?? 0);
+    return finishCommand(ctx);
   }
   console.log(renderDemaRealmHome(state, { useColor: !noColor }));
   if (debugMode) {
@@ -251,5 +256,5 @@ export async function cmd_realm(ctx) {
     console.log("");
     console.log(renderNode0MumuCockpit(mumu, { useColor: !noColor }));
   }
-  process.exit(process.exitCode ?? 0);
+  return finishCommand(ctx);
 }

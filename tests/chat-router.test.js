@@ -161,7 +161,20 @@ test("multiple concepts 'compare ihsan and adl' → first match (ihsan)", () => 
 test("'hello dema' → intent: greeting", () => {
   const r = routeChatInput("hello dema", DI);
   assert.equal(r.intent, "greeting");
-  assert.match(r.response, /I'm not a chat agent yet/);
+  assert.match(r.response, /I'm Dema/);
+  assert.doesNotMatch(r.response, /not a chat agent yet/);
+});
+
+test("natural-language Node0 continuation selects the existing recovery home", () => {
+  const r = routeChatInput("Help me continue Node0 closure.", DI);
+  assert.equal(r.intent, "dispatch-intent");
+  assert.deepEqual(r.dispatchCommand, ["--safe"]);
+});
+
+test("PRD return question selects the existing recovery home", () => {
+  const r = routeChatInput("DEMA, where were we?", DI);
+  assert.equal(r.intent, "dispatch-intent");
+  assert.deepEqual(r.dispatchCommand, ["--safe"]);
 });
 
 test("'salam' alone → intent: greeting (Arabic-aware)", () => {

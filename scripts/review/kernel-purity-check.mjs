@@ -59,6 +59,8 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "reads ~/.dema receipts/checkpoint/timeline for the read-only live status view",
   "dema-realm-council.js":
     "reads ~/.dema state to render the read-only council view",
+  "founder-useful-system.js":
+    "candidate-only founder closure adapter: reads existing local DEMA sources and localhost model/runtime observations, and writes only the explicitly supplied campaign sandbox; staged effects are bounded by the existing FATE kernel and never touch installed DEMA_HOME or Node0 runtime",
   "first-encounter-scan.js":
     "metadata-only walk for the first-encounter admission gate; streams bytes to hash but retains none",
   "node0-library-safe-plan.js":

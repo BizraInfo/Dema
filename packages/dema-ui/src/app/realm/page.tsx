@@ -1,13 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { NowSurface } from "@/components/situation/NowSurface";
 
 const GameShell = dynamic(
   () => import("@/components/game/GameShell").then((module) => module.GameShell),
-  { ssr: false },
-);
-const SovereignBoot = dynamic(
-  () => import("@/components/game/SovereignBoot").then((module) => module.SovereignBoot),
   { ssr: false },
 );
 
@@ -19,8 +16,8 @@ const SovereignBoot = dynamic(
 export default function Realm() {
   return (
     <>
+      <NowSurface />
       <GameShell />
-      <SovereignBoot />
     </>
   );
 }

@@ -12,7 +12,6 @@ import {
   Menu,
   Users,
   Cpu,
-  Sparkles,
   ShieldAlert,
   Wand2,
 } from "lucide-react";
@@ -23,7 +22,6 @@ import type { SceneId } from "@/lib/game/types";
 const MODE_TABS: { id: SceneId; label: string; icon: React.ElementType }[] = [
   { id: "corridor", label: "Corridor", icon: Compass },
   { id: "world", label: "World", icon: MapIcon },
-  { id: "ecosystem", label: "Ecosystem", icon: Sparkles },
   { id: "melae", label: "MELAE", icon: Wand2 },
   { id: "diagnostics", label: "Doxology", icon: ShieldAlert },
   { id: "nodeStatus", label: "Node", icon: Cpu },

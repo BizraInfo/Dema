@@ -34,6 +34,14 @@ const JSON_MODE = process.argv.includes("--json");
 // generated kernels at the anchor below. Any canon importer NOT in this list
 // (outside tests and this gate) still fails the scan.
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
+  // NODE0-1D FATE effect admission — verdict refs bind policy/authority
+  // semantics with the same canonical bytes as Situation and Action commitments.
+  "packages/fate/src/fate.js",
+  // Founder closure candidate: Situation and Action commitments use the
+  // canonical bytes; registration is adoption review only and does not
+  // promote the candidate or grant runtime authority.
+  "packages/core/src/founder-useful-system.js",
+  "packages/core/src/founder-pat-harness.js",
   "packages/mission/src/mission-corridor.js",
   // Gate C, C3 — the disk-bound closure orchestrator and CLI derive the exact
   // prepared-effect / transaction identity with canonical JSON v1. Registration
@@ -211,6 +219,10 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // consumers. These hashes cross process boundaries in the mission bridge
   // and URP journal, so canonical JSON adoption is load-bearing here.
   "packages/core/src/bizra-prompt-mission-bridge.js",
+  // FOUNDER-ESTATE-WORKFLOW-1B — the read-only estate observation/report
+  // identity crosses the durable mission receipt boundary, so its result hash
+  // uses the same canonical bytes as the receipt verifier.
+  "packages/core/src/founder-estate-workflow.js",
   "packages/core/src/constitutional-attention-allocator.js",
   "packages/genesis/src/urp0-kernel.js",
   "packages/genesis/src/urp0-mission-kernel.js",
@@ -395,6 +407,9 @@ function scanForForbiddenImporters() {
       if (!/\.(js|mjs|cjs)$/.test(e.name)) continue;
       const abs = join(e.parentPath ?? e.path, e.name);
       const rel = relative(REPO_ROOT, abs).replaceAll("\\", "/");
+      // Build output is not a production source surface; scanning generated
+      // Next chunks would report transitive imports as unreviewed consumers.
+      if (rel.includes("/.next/")) continue;
       if (rel.startsWith("packages/canon/")) continue;
       if (allowed.has(rel)) continue;
       const src = readFileSync(abs, "utf8");

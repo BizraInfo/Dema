@@ -6,11 +6,15 @@ import {
   verifyMissionProposal,
 } from "@core/bizra-prompt-mission-bridge.js";
 import { MAX_INTENT_BYTES, mergeNode0MissionContext, persistAttentionAllocation } from "../node0-runtime";
+import { requireLocalSession } from "@/lib/auth/session-boundary";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const denied = await requireLocalSession(request);
+  if (denied) return denied;
+
   const compilerCodeHash = process.env.BIZRA_PROMPT_COMPILER_CODE_HASH;
   if (!compilerCodeHash) {
     return NextResponse.json(

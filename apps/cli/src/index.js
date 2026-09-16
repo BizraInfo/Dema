@@ -152,7 +152,8 @@ function argValue(argv, name) {
 const HELP = `Dema CLI
 
 Usage:
-  dema              Active kernel — banner + setup-or-status + next safe task
+  dema              Sovereign Homebase — orientation + one safe next step
+  dema --safe       Sovereign Recovery Shell — read-only local orientation
   dema chat         Interactive shell (same surface as the bare CLI)
 
 Orientation:
@@ -1378,7 +1379,12 @@ const COMMAND_TABLE = {
   help: cmd_help,
 };
 
-async function dispatch(argv) {
+function finishDispatch(interactive, code = 0) {
+  if (!interactive) process.exit(process.exitCode ?? code);
+  return { handled: true, exit_code: code };
+}
+
+async function dispatch(argv, { interactive = false } = {}) {
   const command = argv[0] ?? "active";
   const subcommand = argv[1];
 
@@ -1403,22 +1409,26 @@ async function dispatch(argv) {
     } else {
       console.log(`dema ${version}`);
     }
-    process.exit(process.exitCode ?? 0);
+    return finishDispatch(interactive);
   }
 
   // First-look companion home (DEMA-QUALITY-DELIVERY-SPINE-1A).
   // Bare `dema` routes to human-first companion output.
   // Technical homebase preview: `dema homebase` (JSON/TUI · phase-5 legacy surface).
   const isBareInvocation =
-    (command === "active" || command === "" || command === "--json") &&
+    (command === "active" ||
+      command === "" ||
+      command === "--json" ||
+      command === "--safe") &&
     !argv.includes("--chat") &&
     !argv.includes("--interactive");
   if (isBareInvocation) {
     const wantJson =
       argv.includes("--json") ||
-      !process.stdout.isTTY ||
-      Boolean(process.env.DEMA_NO_TUI) ||
-      process.env.NODE_ENV === "test";
+      (!interactive &&
+        (!process.stdout.isTTY ||
+          Boolean(process.env.DEMA_NO_TUI) ||
+          process.env.NODE_ENV === "test"));
     const { join: pathJoin } = await import("node:path");
     const { homedir } = await import("node:os");
     const demaHome = process.env.DEMA_HOME || pathJoin(homedir(), ".dema");
@@ -1436,19 +1446,19 @@ async function dispatch(argv) {
     const envelope = buildFirstLookHome(ctx);
     if (wantJson) {
       process.stdout.write(JSON.stringify(envelope, null, 2) + "\n");
-      process.exit(process.exitCode ?? 0);
+      return finishDispatch(interactive);
     }
     const opts = resolveFormatterOptsFromEnv(process.env);
     process.stdout.write(
       renderFirstLookHome(envelope, { noColor: opts.noColor }) + "\n",
     );
-    process.exit(process.exitCode ?? 0);
+    return finishDispatch(interactive);
   }
 
   // Route through the command table (Track 2 dispatcher refactor). Each command
   // token maps to a named handler in COMMAND_TABLE; the switch was replaced by
   // this O(1) lookup. Unknown commands fall through to the suggester below.
-  const ctx = { argv, command, subcommand };
+  const ctx = { argv, command, subcommand, interactive };
   const handler = Object.hasOwn(COMMAND_TABLE, command)
     ? COMMAND_TABLE[command]
     : null;
@@ -1482,7 +1492,7 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
   if (interactive) {
     await runShell({
       greeting: banner,
-      dispatchCommand: dispatch,
+      dispatchCommand: (argv) => dispatch(argv, { interactive: true }),
       statusProvider: () => statusWithLocalIdentity(),
       councilPatDispatchFormatter: (chatResult) => {
         const preview = buildCouncilSeatPatDispatchPreview({

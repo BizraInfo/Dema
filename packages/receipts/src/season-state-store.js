@@ -465,6 +465,45 @@ export async function resumeSeason({ demaHome, seasonId, repositoryCommit, repos
   });
 }
 
+/**
+ * Record one bounded local continuation checkpoint through the canonical Season
+ * writer. This does not execute next_safe_action, consume consent, or touch an
+ * external system; it only advances the verified Season chain so a return can
+ * distinguish C1 from C0. The store remains the only byte owner.
+ */
+export async function continueSeason({ demaHome, seasonId, savedAt } = {}) {
+  const loaded = await loadSeasonHead({ demaHome, seasonId });
+  if (!loaded.ok) return loaded;
+  if (loaded.outcome === "EMPTY") return loaded;
+
+  const s = loaded.state;
+  const nextInput = {
+    season_id: s.season_id,
+    mission_id: s.mission_id,
+    mission_contract_hash: s.mission_contract_hash,
+    mission_phase: s.mission_phase,
+    completed_steps: [...s.completed_steps],
+    next_safe_action: s.next_safe_action,
+    must_not_repeat: [...s.must_not_repeat],
+    pending_consent: s.pending_consent.map((entry) => ({ ...entry })),
+    last_receipt_hash: loaded.receipt.receipt_hash,
+    repository_commit: s.repository_commit,
+    repository_tree: s.repository_tree,
+    saved_at: savedAt ?? new Date().toISOString(),
+    ...(s.pending_effect ? { pending_effect: { ...s.pending_effect } } : {}),
+  };
+  const saved = await saveSeasonState({ demaHome, state: nextInput });
+  if (!saved.ok) return saved;
+  return Object.freeze({
+    ...saved,
+    transition: "CONTINUATION_CHECKPOINT_RECORDED",
+    executed: false,
+    external_effect_count: 0,
+    consent_granted: false,
+    authority_delta: 0,
+  });
+}
+
 /** List season ids present under DEMA_HOME. Read-only; EMPTY is not an error. */
 export async function listSeasons({ demaHome } = {}) {
   const home = resolveDemaHome(demaHome);

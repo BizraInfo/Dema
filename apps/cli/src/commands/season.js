@@ -8,6 +8,7 @@ import {
   saveSeasonState,
   seasonStatus,
   resumeSeason,
+  continueSeason,
   listSeasons,
 } from "../../../../packages/receipts/src/season-state-store.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
@@ -108,6 +109,31 @@ export async function cmd_season(ctx) {
     return emit(result);
   }
 
+  if (sub === "continue") {
+    const picked = await pickSeason(argv, demaHome);
+    if (!picked.ok) {
+      if (!json) console.error("season continue refused: " + picked.reason + " (" + picked.season_ids.join(", ") + ")");
+      return emit({ ok: false, outcome: "REFUSED", reason: picked.reason, season_ids: picked.season_ids });
+    }
+    if (picked.none) {
+      const r = { ok: true, outcome: "EMPTY", reason: null, season_id: null };
+      if (!json) console.log("No canonical Season continuation exists (EMPTY).");
+      return emit(r);
+    }
+    const result = await continueSeason({ demaHome, seasonId: picked.seasonId });
+    if (!json) {
+      if (result.outcome === "EMPTY") console.log("Season " + picked.seasonId + ": EMPTY");
+      else if (result.ok) {
+        console.log("Canonical continuation checkpoint recorded");
+        console.log("  season:   " + result.season_id);
+        console.log("  sequence: " + result.state_sequence);
+        console.log("  external effects: 0");
+        console.log("  consent granted: false");
+      } else console.error("season continue refused: " + result.reason);
+    }
+    return emit(result);
+  }
+
   if (sub === "status" || sub === "resume") {
     const picked = await pickSeason(argv, demaHome);
     if (!picked.ok) {
@@ -164,16 +190,17 @@ export async function cmd_season(ctx) {
 
   const usage = {
     ok: false, outcome: "REFUSED", reason: "unknown_subcommand",
-    subcommands: ["save", "status", "resume"],
+    subcommands: ["save", "continue", "status", "resume"],
   };
   if (json) console.log(JSON.stringify(usage, null, 2));
   else {
-    console.error("Usage: dema season save|status|resume [--json]");
+    console.error("Usage: dema season save|continue|status|resume [--json]");
     console.error("  dema season save --season <id> --mission <id> --phase <PHASE> --next <ACTION> \\");
     console.error("       --repo-commit <sha40> --repo-tree <sha40> [--step <s>]... [--must-not-repeat <s>]... \\");
     console.error("       [--pending-consent none|<phrase>::<scope>]... [--from <state.json>] [--dema-home <path>]");
     console.error("  dema season status [--season <id>] [--dema-home <path>]");
     console.error("  dema season resume [--season <id>] [--repo-commit <sha40>] [--repo-tree <sha40>]");
+    console.error("  dema season continue [--season <id>] [--dema-home <path>] [--json]");
   }
   return { ...usage, refused: true };
 }

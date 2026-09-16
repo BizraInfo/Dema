@@ -23,7 +23,11 @@
 
 import { CANONICAL_JSON_V1_ALGORITHM } from "../../canon/src/canonical-json-v1.js";
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
-import { evaluateConsent } from "../../fate/src/fate.js";
+import {
+  evaluateConsent,
+  evaluateEffectAdmission,
+  validateEffectAdmissionForExecution,
+} from "../../fate/src/fate.js";
 import {
   NODE0_REVERSIBLE_EXECUTE_ACTION_TYPE,
   NODE0_REVERSIBLE_EXECUTE_GO_PHRASE,
@@ -269,6 +273,7 @@ function completeStaged(fs, scopeDir, stageRec, { simulateFaultAfterEffect = fal
     before_sha256: stageRec.before_sha256,
     after_sha256: afterPrediction,
     effect_receipt_hash: effectRec.effect_receipt_hash,
+    fate_verdict_ref: stageRec.fate_admission?.verdict_ref ?? null,
     effect_execution_count: 1,
     authority_delta: 0,
     boundary: node0FateStagedEffectBoundary(),
@@ -279,6 +284,7 @@ function completeStaged(fs, scopeDir, stageRec, { simulateFaultAfterEffect = fal
     before_sha256: envelope.before_sha256,
     after_sha256: envelope.after_sha256,
     effect_receipt_hash: envelope.effect_receipt_hash,
+    fate_verdict_ref: envelope.fate_verdict_ref,
     effect_execution_count: 1,
     authority_delta: 0,
   };
@@ -306,6 +312,7 @@ export function startFateStagedEffect({
   operatorPhrase,
   fileName,
   newName,
+  effectAdmission = null,
 } = {}) {
   const plan = planNode0FateStagedEffect({
     consent: NODE0_FATE_STAGED_EFFECT_GO_PHRASE,
@@ -320,15 +327,30 @@ export function startFateStagedEffect({
     return res(false, { phase: "REFUSED_PLAN", blocked_by: ["journal_already_open"] });
   }
 
-  // FATE first: decided BEFORE anything is written. Refusal persists nothing
-  // except the honest halt marker.
-  const fate = evaluateConsent({
-    phrase: operatorPhrase,
-    requiredPhrase: NODE0_FATE_STAGED_EFFECT_REQUIRED_PHRASE,
-  });
-  if (fate.accepted !== true) {
-    appendLinked(fs, scopeDir, { type: "phase", phase: "HALTED_FATE", reason: "fate_refusal" });
-    return res(false, { phase: "HALTED_FATE", blocked_by: ["fate_refusal"] });
+  // FATE first: decided BEFORE any effect is written. A protected admission
+  // must pass both policy admission and execute-phase correspondence; a
+  // TEST_ONLY verdict can prove the route but can never authorize mutation.
+  let fateAdmission = null;
+  if (effectAdmission !== null) {
+    fateAdmission = evaluateEffectAdmission(effectAdmission);
+    if (fateAdmission.status !== "ADMITTED") {
+      appendLinked(fs, scopeDir, { type: "phase", phase: "HALTED_FATE", reason: "fate_admission_refused" });
+      return res(false, { phase: "HALTED_FATE", blocked_by: ["fate_admission_refused", ...(fateAdmission.blocked_by ?? [])], fate_admission: fateAdmission });
+    }
+    const executeAdmission = validateEffectAdmissionForExecution({ admission: fateAdmission, proposal: effectAdmission });
+    if (!executeAdmission.ok) {
+      appendLinked(fs, scopeDir, { type: "phase", phase: "HALTED_FATE", reason: "fate_execute_admission_refused" });
+      return res(false, { phase: "HALTED_FATE", blocked_by: ["fate_execute_admission_refused", ...executeAdmission.blocked_by], fate_admission: fateAdmission });
+    }
+  } else {
+    const fate = evaluateConsent({
+      phrase: operatorPhrase,
+      requiredPhrase: NODE0_FATE_STAGED_EFFECT_REQUIRED_PHRASE,
+    });
+    if (fate.accepted !== true) {
+      appendLinked(fs, scopeDir, { type: "phase", phase: "HALTED_FATE", reason: "fate_refusal" });
+      return res(false, { phase: "HALTED_FATE", blocked_by: ["fate_refusal"] });
+    }
   }
 
   // Before-image measured from world bytes; dst must be absent to begin.
@@ -351,12 +373,13 @@ export function startFateStagedEffect({
     type: "stage",
     phase: "STAGED",
     fate_required_phrase: NODE0_FATE_STAGED_EFFECT_REQUIRED_PHRASE, // bound INSIDE the hashed subject
+    fate_admission: fateAdmission,
     action: { fileName, newName },
     before_sha256: beforeSha,
     after_prediction: beforeSha, // rename preserves bytes: predictable after-image
   });
 
-  return completeStaged(fs, scopeDir, { action: { fileName, newName }, before_sha256: beforeSha, fate_required_phrase: NODE0_FATE_STAGED_EFFECT_REQUIRED_PHRASE });
+  return completeStaged(fs, scopeDir, { action: { fileName, newName }, before_sha256: beforeSha, fate_required_phrase: NODE0_FATE_STAGED_EFFECT_REQUIRED_PHRASE, fate_admission: fateAdmission });
 }
 
 export function resumeFateStagedEffect({ fs, scopeDir } = {}) {
@@ -483,6 +506,7 @@ export function runNode0FateStagedEffect({ consent, input } = {}) {
     operatorPhrase: input.operatorPhrase,
     fileName: input.fileName,
     newName: input.newName,
+    effectAdmission: input.effectAdmission ?? null,
   });
   if (!started.ok) blocked_by.push(`start_failed:${started.phase}`);
 
@@ -528,6 +552,7 @@ export function verifyNode0FateStagedEffect(envelope) {
     before_sha256: envelope.before_sha256,
     after_sha256: envelope.after_sha256,
     effect_receipt_hash: envelope.effect_receipt_hash,
+    fate_verdict_ref: envelope.fate_verdict_ref ?? null,
     effect_execution_count: envelope.effect_execution_count,
     authority_delta: envelope.authority_delta,
   });

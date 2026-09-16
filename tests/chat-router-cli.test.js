@@ -29,9 +29,10 @@ function runChat(stdinLines, demaHome) {
       {
         env: {
           ...process.env,
-          DEMA_BANNER_INTERACTIVE: "0",
-          DEMA_HOME: demaHome,
-          NODE_ENV: "test",
+        DEMA_BANNER_INTERACTIVE: "0",
+        DEMA_HOME: demaHome,
+        BIZRA_ACTIVE_MISSION: join(demaHome, "active-mission.json"),
+        NODE_ENV: "test",
         },
         timeout: 10000,
       },
@@ -64,10 +65,31 @@ test("'stauts\\nexit' → stdout contains 'Did you mean' and 'status'", async ()
   assert.match(stdout, /status/);
 });
 
-test("'hello\\nexit' → stdout contains 'not a chat agent yet'", async () => {
+test("'hello\\nexit' → stdout presents Dema as the companion", async () => {
   const demaHome = await makeDemaHome();
   const { stdout } = await runChat(["hello", "exit"], demaHome);
-  assert.match(stdout, /not a chat agent yet/);
+  assert.match(stdout, /I'm Dema/);
+  assert.doesNotMatch(stdout, /not a chat agent yet/);
+});
+
+test("natural-language Node0 continuation opens the existing recovery home", async () => {
+  const demaHome = await makeDemaHome();
+  const { stdout } = await runChat(
+    ["Help me continue Node0 closure.", "exit"],
+    demaHome,
+  );
+  assert.match(stdout, /Routing your request to: dema --safe/);
+  assert.match(stdout, /Dema/);
+});
+
+test("routed read-only commands return to the Dema prompt", async () => {
+  const demaHome = await makeDemaHome();
+  const { stdout } = await runChat(
+    ["Help me continue Node0 closure.", "hello", "exit"],
+    demaHome,
+  );
+  assert.match(stdout, /I'm Dema/);
+  assert.match(stdout, /Goodbye\./);
 });
 
 test("'what should I do next\\nexit' → stdout contains 'next safe action'", async () => {

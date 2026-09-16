@@ -9,6 +9,7 @@ import {
   proposalBinding,
   verifySubmittedProposal,
 } from "../node0-runtime";
+import { requireLocalSession } from "@/lib/auth/session-boundary";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,6 +20,9 @@ function sameBinding(left: any, right: any) {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await requireLocalSession(request);
+  if (denied) return denied;
+
   try {
     const body = await request.json();
     const proposal = body?.proposal;

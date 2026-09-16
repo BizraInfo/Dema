@@ -54,6 +54,10 @@ reproduction.
 | `tests/genesis-runtime-spine.test.js` | URP-0 runtime spine: journal replay, mission/effect boundary, receipt reconstruction, local recovery invariants, and fail-closed SAT/Block0 tamper controls. |
 | `tests/genesis-journal-lock.test.js` | Cross-process journal ownership boundary: unique lock election, stale/live/malformed predecessor handling, legacy singleton cutover, unrelated-file preservation, and token-validated release. |
 | `tests/urp0-world-cell-boundary.test.js` | World-cell boundary: loopback/local scope, bounded resource offer, and no public federation or token/economy effects. |
+| `tests/founder-useful-system.test.js` | Candidate founder Situation commitment, grounded PAT proposal quarantine, and candidate-sandbox FATE replay idempotence; no installed-runtime promotion. |
+| `tests/bizra-estate-workflow.test.js` | Founder Estate bounded read-only intent classification, negation safety, metadata-only observation, evidence-bound reporting, and persistent/reopenable mission results. |
+| `tests/founder-pat-harness.test.js` | PAT seat receipts, structured claim classes, permitted evidence binding, and unsupported-claim quarantine. |
+| `tests/fate-effect-admission.test.js` | Deterministic FATE effect-admission policy, fail-closed protected-action checks, and pre-effect execution correspondence. |
 
 | Test file | Surface covered |
 | --- | --- |

@@ -79,6 +79,22 @@ test("dema bare invocation (no args · non-TTY) emits first-look companion JSON"
   assert.equal(parsed.boundary.runtime_execution_performed, false);
 });
 
+test("dema --safe uses the read-only first-look recovery surface", async () => {
+  const { demaRoot } = await makeFixtureDownloads();
+  const { stdout } = await execFileAsync("node", [cliPath, "--safe"], {
+    env: {
+      ...process.env,
+      DEMA_HOME: demaRoot,
+      DEMA_NODE0_ADAPTER: "",
+    },
+  });
+  const parsed = JSON.parse(stdout);
+  assert.equal(parsed.schema, "bizra.dema.first_look_home.v1");
+  assert.equal(parsed.mode, "preview_only");
+  assert.equal(parsed.boundary.runtime_execution_performed, false);
+  assert.equal(parsed.boundary.network_used, false);
+});
+
 // `dema help` (no args) now emits the topic-based root per the hierarchical
 // help system (Task #6). Full flat list is preserved at `dema help --all`.
 test("dema help (no args) emits hierarchical topic root after active-kernel refactor", async () => {

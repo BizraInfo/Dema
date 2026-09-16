@@ -14,6 +14,11 @@ import {
 } from "./mission-contract-state.js";
 import { allocateAttention } from "./constitutional-attention-allocator.js";
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
+import {
+  buildEstateCapability,
+  classifyConsequentialLanguage,
+  isBizraEstateIntent,
+} from "./founder-estate-workflow.js";
 
 export const BIZRA_PROMPT_MISSION_BRIDGE_SCHEMA =
   "bizra.dema.prompt_mission_bridge.v0.1";
@@ -23,20 +28,6 @@ export const BIZRA_PROMPT_MISSION_BRIDGE_VERSION = "1A";
 
 const HASH_RE = /^sha256:[0-9a-f]{64}$/;
 const UNKNOWN = "UNKNOWN";
-
-// The bridge is intentionally conservative. A token that may cause a
-// consequential effect becomes a human decision, never an inferred permit.
-const CONSEQUENTIAL_ACTIONS = Object.freeze([
-  ["transfer", /\b(?:transfer|send|pay|withdraw)\b/gi],
-  ["purchase", /\b(?:purchase|buy|sell)\b/gi],
-  ["delete", /\b(?:delete|remove|destroy)\b/gi],
-  ["publish", /\b(?:publish|post|deploy)\b/gi],
-  ["repository_write", /\b(?:push|merge)\b/gi],
-  ["key_operation", /\b(?:sign|rotate\s+(?:the\s+)?key|mint)\b/gi],
-  ["execute", /\b(?:execute|run)\b/gi],
-]);
-const UNKNOWN_CONSEQUENTIAL =
-  /\b(?:irreversible|external\s+side\s+effect|real[- ]world\s+action)\b/gi;
 
 function isPlainObject(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
@@ -112,31 +103,6 @@ function normalizeContextCapsule(input) {
   });
 }
 
-function findConsequentialActions(text) {
-  const matches = [];
-  for (const [action, expression] of CONSEQUENTIAL_ACTIONS) {
-    expression.lastIndex = 0;
-    for (const match of text.matchAll(expression)) {
-      matches.push({
-        action,
-        token: match[0],
-        index: match.index ?? 0,
-        consent_required: true,
-      });
-    }
-  }
-  UNKNOWN_CONSEQUENTIAL.lastIndex = 0;
-  for (const match of text.matchAll(UNKNOWN_CONSEQUENTIAL)) {
-    matches.push({
-      action: "unknown_consequential_action",
-      token: match[0],
-      index: match.index ?? 0,
-      consent_required: true,
-    });
-  }
-  return matches.sort((a, b) => a.index - b.index || a.action.localeCompare(b.action));
-}
-
 function buildMissionFields({ missionId, text, nowIso, actions }) {
   return {
     mission_id: missionId,
@@ -206,7 +172,11 @@ export function compileMissionProposal({
   const ontologyHash = sha256CanonicalJsonV1(OPERATOR_TABLE);
   const identity = compilerIdentity({ compilerCodeHash, ontologyHash });
   const identityHash = sha256CanonicalJsonV1(identity);
-  const actions = findConsequentialActions(sourceText);
+  const semantics = classifyConsequentialLanguage(sourceText);
+  const actions = [...semantics.requested_actions, ...semantics.ambiguous_actions]
+    .sort((a, b) => a.index - b.index || a.action.localeCompare(b.action));
+  const estateCapability = isBizraEstateIntent(sourceText) ? buildEstateCapability() : null;
+  const safeEstateObservation = Boolean(estateCapability && actions.length === 0);
   const missionId = `MISSION-${sourceIntentHash.slice("sha256:".length, "sha256:".length + 16)}`;
 
   const missionContract = createMissionContract({
@@ -219,7 +189,10 @@ export function compileMissionProposal({
     consent: MISSION_CONTRACT_GO_PHRASE,
   });
 
-  const blockedBy = actions.length > 0 ? ["exact_consequential_consent_required"] : [];
+  const blockedBy = [
+    ...(actions.length > 0 ? ["exact_consequential_consent_required"] : []),
+    ...(semantics.ambiguous_actions.length > 0 ? ["ambiguous_consequential_language"] : []),
+  ];
   const attention = allocateAttention({
     mission: {
       mission_id: missionId,
@@ -271,6 +244,7 @@ export function compileMissionProposal({
       compiled_prompt: compiledPrompt,
       boundary: compiledPrompt.boundary,
     },
+    ...(estateCapability ? { capability: estateCapability } : {}),
     context_snapshot: contextSnapshot,
     context_hash: contextHash,
     mission_id: missionId,
@@ -281,25 +255,35 @@ export function compileMissionProposal({
     what_i_understood: {
       objective: sourceText,
       recognized_operators: compiledPrompt.operators,
+      ...(estateCapability ? {
+        mission_kind: "BIZRA_ESTATE_READ_ONLY",
+        capability: estateCapability.id,
+      } : {}),
     },
     what_i_know: [
       "The existing Prompt Compiler produced a deterministic typed structure.",
       "The existing MissionContract owner accepted a proposal-only contract.",
       "No model, network, or effect was used by this bridge.",
+      ...(estateCapability ? ["The bounded estate capability is metadata-only and read-only."] : []),
     ],
     what_i_am_inferencing: [
       "Compilation is structure, not proof that the mission will succeed.",
     ],
     what_i_still_need: [
-      "Human review of the proposal before any consequential action.",
+      ...(safeEstateObservation
+        ? ["Nothing consequential is requested; review the bounded scope before the read-only observation."]
+        : ["Human review of the proposal before any consequential action."]),
       ...(contextSnapshot.node_story.status === UNKNOWN ? ["A consent-bound Node Story if personal context is needed."] : []),
       ...(contextSnapshot.current_state.status === UNKNOWN ? ["Current human state if the mission depends on it."] : []),
     ],
     proposed_next_step: actions.length
       ? "Show the request and wait for exact human consent; do not execute."
-      : "Show the proposal to the human and wait for bounded planning or consent.",
+      : estateCapability
+        ? "Show the exact estate roots and limits, then run the bounded read-only metadata observation."
+        : "Show the proposal to the human and wait for bounded planning or consent.",
     authority: {
       requested_effects: actions.map(({ action, token }) => ({ action, token })),
+      prohibited_effects: semantics.prohibited_actions.map(({ action, token, prohibition }) => ({ action, token, prohibition })),
       authority: "NONE",
       consent_required: actions.length > 0,
       authority_delta: 0,
@@ -314,7 +298,8 @@ export function compileMissionProposal({
     },
     effects_started: 0,
     blocked_by: blockedBy,
-    claim_ceiling: "LOCAL_PROPOSAL_ONLY",
+    prohibited_actions: semantics.prohibited_actions,
+    claim_ceiling: estateCapability ? "LOCAL_ESTATE_METADATA_PROPOSAL" : "LOCAL_PROPOSAL_ONLY",
   };
   return deepFreeze({ ...body, bridge_hash: sha256CanonicalJsonV1(body) });
 }
