@@ -28,8 +28,8 @@ const CANDIDATE_PATHS = [
   "/data/bizra/bizra-omega/bizra-cli/src/theme.rs",
 ];
 
-function findRustSource() {
-  for (const p of CANDIDATE_PATHS) {
+function findRustSource(paths = CANDIDATE_PATHS) {
+  for (const p of paths) {
     if (existsSync(p)) return p;
   }
   return null;
@@ -47,6 +47,27 @@ function parseRustColors(src) {
     out.set(name, [Number(r), Number(g), Number(b)]);
   }
   return out;
+}
+
+function compareRustColors(rustColors) {
+  const missing = [];
+  const mismatched = [];
+  for (const [name, rustRgb] of rustColors) {
+    const jsColor = COLORS[name];
+    if (!jsColor) {
+      missing.push(name);
+      continue;
+    }
+    const jsRgb = jsColor.rgb;
+    if (
+      jsRgb[0] !== rustRgb[0] ||
+      jsRgb[1] !== rustRgb[1] ||
+      jsRgb[2] !== rustRgb[2]
+    ) {
+      mismatched.push(`${name}: rust=[${rustRgb}] js=[${jsRgb}]`);
+    }
+  }
+  return { missing, mismatched };
 }
 
 test(
@@ -75,23 +96,7 @@ test(
       "parser must find at least one Color::Rgb in Rust source",
     );
 
-    const missing = [];
-    const mismatched = [];
-    for (const [name, rustRgb] of rustColors) {
-      const jsColor = COLORS[name];
-      if (!jsColor) {
-        missing.push(name);
-        continue;
-      }
-      const jsRgb = jsColor.rgb;
-      if (
-        jsRgb[0] !== rustRgb[0] ||
-        jsRgb[1] !== rustRgb[1] ||
-        jsRgb[2] !== rustRgb[2]
-      ) {
-        mismatched.push(`${name}: rust=[${rustRgb}] js=[${jsRgb}]`);
-      }
-    }
+    const { missing, mismatched } = compareRustColors(rustColors);
 
     assert.equal(
       missing.length,
@@ -130,3 +135,23 @@ test("SYNC-04: skip is reported clearly when Rust source absent (CI safe)", () =
     findRustSource() === null ? "object" : "string",
   );
 });
+
+test(
+  "SYNC-05: parser comparison branches are deterministic without Rust checkout",
+  () => {
+    assert.equal(findRustSource(["/dev/null/bizra-theme.rs"]), null);
+
+    const rustColors = parseRustColors(
+      [
+        "pub const GOLD: Color = Color::Rgb(1, 2, 3);",
+        "pub const UNKNOWN_FIXTURE: Color = Color::Rgb(4, 5, 6);",
+      ].join("\n"),
+    );
+    const { missing, mismatched } = compareRustColors(rustColors);
+
+    assert.deepEqual(missing, ["UNKNOWN_FIXTURE"]);
+    assert.deepEqual(mismatched, [
+      "GOLD: rust=[1,2,3] js=[212,175,55]",
+    ]);
+  },
+);
