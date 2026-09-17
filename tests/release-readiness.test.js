@@ -142,21 +142,22 @@ test("release process promotes installer dry-run/check verification into the rel
 });
 
 test("buildReleaseReadinessReport keeps zero-dependency audit posture when npm install creates a transient lockfile", async () => {
-  const lockfilePath = join(repoRoot, "package-lock.json");
-  let previousLockfile = null;
+  const root = await mkdtemp("/data/bizra-release-readiness-transient-lock-");
   try {
-    previousLockfile = await readFile(lockfilePath, "utf8");
-  } catch (err) {
-    if (err.code !== "ENOENT") throw err;
-  }
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({ name: "@bizra/dema-root", scripts: {} }),
+    );
+    await writeFile(
+      join(root, "package-lock.json"),
+      JSON.stringify({ name: "@bizra/dema-root", lockfileVersion: 3 }) + "\n",
+    );
 
-  await writeFile(
-    lockfilePath,
-    JSON.stringify({ name: "@bizra/dema-root", lockfileVersion: 3 }) + "\n",
-  );
-
-  try {
-    const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
+    const report = await buildCleanReleaseReadinessReport({
+      root,
+      now: fixedNow,
+      workflowStatusText: "",
+    });
 
     assert.equal(
       report.dependency_management.audit_policy.status,
@@ -168,11 +169,7 @@ test("buildReleaseReadinessReport keeps zero-dependency audit posture when npm i
     );
     assert.equal(report.dependency_management.audit_policy.lockfile_required, false);
   } finally {
-    if (previousLockfile === null) {
-      await rm(lockfilePath, { force: true });
-    } else {
-      await writeFile(lockfilePath, previousLockfile);
-    }
+    await rm(root, { recursive: true, force: true });
   }
 });
 
@@ -262,6 +259,30 @@ jobs:
   ]);
 });
 
+test("workflow parsers fail closed on absent matrices and tolerate empty/commented run blocks", () => {
+  const workflow = `
+on:
+  schedule:
+  workflow_dispatch:
+steps:
+  - uses: local/action
+  - run:
+  - run: |
+
+      # comment-only command
+      npm test
+  - name: next step
+`;
+
+  assert.deepEqual(findActionRefs(workflow), [
+    { ref: "local/action", pinned: false },
+  ]);
+  assert.deepEqual(findNodeMatrix(workflow), []);
+  assert.deepEqual(findRunCommands(workflow), ["npm test"]);
+  assert.deepEqual(findRunCommands(null), []);
+  assert.deepEqual(findWorkflowEvents(workflow), ["schedule", "workflow_dispatch"]);
+  assert.deepEqual(parseWorkflowWorktreeChanges(null), []);
+});
 test("parseWorkflowWorktreeChanges extracts only workflow YAML changes", () => {
   const changes = parseWorkflowWorktreeChanges(`
  M .github/workflows/check.yml
@@ -348,6 +369,193 @@ test("buildReleaseReadinessReport reports missing primary workflow accurately", 
   }
 });
 
+test("buildReleaseReadinessReport reports unavailable worktree status without a git checkout", async () => {
+  const root = await mkdtemp("/data/bizra-release-readiness-no-git-");
+  try {
+    await writeFile(join(root, "package.json"), JSON.stringify({ scripts: {} }));
+
+    const report = await buildReleaseReadinessReport({
+      root,
+      now: fixedNow,
+    });
+
+    assert.equal(report.ci.workflow.worktree_status_available, false);
+    assert.deepEqual(report.ci.workflow.worktree_changes, []);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("buildReleaseReadinessReport handles a package without a scripts object", async () => {
+  const root = await mkdtemp("/data/bizra-release-readiness-no-scripts-");
+  try {
+    await writeFile(join(root, "package.json"), JSON.stringify({ name: "empty" }));
+
+    const report = await buildReleaseReadinessReport({
+      root,
+      now: fixedNow,
+      workflowStatusText: "",
+    });
+
+    assert.equal(report.traceability.package_scripts.length, 0);
+    assert.equal(
+      report.performance_qa.mechanisms.find((m) => m.id === "zero_build_step")
+        .status,
+      "observed",
+    );
+    assert.equal(
+      report.performance_qa.mechanisms.find(
+        (m) => m.id === "bounded_cli_smoke_checks",
+      ).status,
+      "missing",
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("buildReleaseReadinessReport keeps coverage advisory when the aggregate owner omits coverage", async () => {
+  const scratchRoot = join(
+    repoRoot,
+    ".artifacts",
+    "release-readiness-test-runs",
+  );
+  await mkdir(scratchRoot, { recursive: true });
+  const root = await mkdtemp(join(scratchRoot, "dema-release-readiness-owner-"));
+  try {
+    await mkdir(join(root, ".github/workflows"), { recursive: true });
+    await mkdir(join(root, "scripts"), { recursive: true });
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        scripts: {
+          check: "node scripts/check.mjs",
+          coverage:
+            "node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=84 --test-coverage-functions=95 tests/*.test.js",
+        },
+      }),
+    );
+    await writeFile(
+      join(root, ".github/workflows/check.yml"),
+      "on:\n  push:\njobs:\n  check:\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm run check\n",
+    );
+    await writeFile(join(root, "scripts/check.mjs"), "export function runChecks() {}\n");
+
+    const report = await buildCleanReleaseReadinessReport({
+      root,
+      now: fixedNow,
+      workflowStatusText: "",
+    });
+
+    assert.equal(report.pipeline_automation.coverage_owner, null);
+    assert.equal(report.quality_assurance.coverage_threshold.enforced, false);
+    assert.equal(hasRisk(report, "qa.coverage_threshold_missing"), true);
+    assert.equal(hasRisk(report, "ci.actions_not_sha_pinned"), true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(scratchRoot, { recursive: true, force: true });
+  }
+});
+
+test("buildReleaseReadinessReport recognizes coverage owned by the aggregate check script", async () => {
+  const root = await mkdtemp("/data/bizra-release-readiness-owner-positive-");
+  try {
+    await mkdir(join(root, ".github/workflows"), { recursive: true });
+    await mkdir(join(root, "scripts"), { recursive: true });
+    await writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        scripts: {
+          check: "node scripts/check.mjs",
+          coverage:
+            "node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=84 --test-coverage-functions=95 tests/*.test.js",
+        },
+      }),
+    );
+    await writeFile(
+      join(root, ".github/workflows/check.yml"),
+      "on:\n  push:\njobs:\n  check:\n    steps:\n      - run: npm run check\n",
+    );
+    await writeFile(
+      join(root, "scripts/check.mjs"),
+      'const command = ["npm", ["run", "coverage"]];\n',
+    );
+
+    const report = await buildCleanReleaseReadinessReport({
+      root,
+      now: fixedNow,
+      workflowStatusText: "",
+    });
+
+    assert.equal(
+      report.pipeline_automation.coverage_owner,
+      "scripts/check.mjs via npm run check",
+    );
+    assert.equal(
+      report.pipeline_automation.ci_gate_observations.find(
+        (gate) => gate.command === "npm run coverage",
+      ).observed_in_ci,
+      true,
+    );
+    assert.equal(report.quality_assurance.coverage_threshold.enforced, true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("buildReleaseReadinessReport distinguishes dependency lockfile states", async () => {
+  const scratchRoot = join(
+    repoRoot,
+    ".artifacts",
+    "release-readiness-test-runs",
+  );
+  await mkdir(scratchRoot, { recursive: true });
+  const root = await mkdtemp(join(scratchRoot, "dema-release-readiness-deps-"));
+  const packageJson = {
+    scripts: {
+      check: "node scripts/check.mjs",
+      coverage:
+        "node --test --experimental-test-coverage --test-coverage-lines=95 --test-coverage-branches=84 --test-coverage-functions=95 tests/*.test.js",
+    },
+    dependencies: { example: "1.0.0" },
+  };
+  try {
+    await writeFile(join(root, "package.json"), JSON.stringify(packageJson));
+    await writeFile(
+      join(root, "package-lock.json"),
+      JSON.stringify({ lockfileVersion: 3, packages: {} }),
+    );
+
+    const locked = await buildCleanReleaseReadinessReport({
+      root,
+      now: fixedNow,
+      workflowStatusText: "",
+    });
+    assert.equal(
+      locked.dependency_management.audit_policy.status,
+      "auditable_lockfile_present",
+    );
+    assert.equal(locked.dependency_management.audit_policy.lockfile_required, true);
+
+    await rm(join(root, "package-lock.json"));
+    const unlocked = await buildCleanReleaseReadinessReport({
+      root,
+      now: fixedNow,
+      workflowStatusText: "",
+    });
+    assert.equal(
+      unlocked.dependency_management.audit_policy.status,
+      "review_no_lockfile_with_dependencies",
+    );
+    assert.equal(
+      unlocked.dependency_management.audit_policy.npm_audit_command,
+      "blocked_requires_lockfile",
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(scratchRoot, { recursive: true, force: true });
+  }
+});
 test("buildReleaseReadinessReport models automation and quality gates without overclaiming", async () => {
   const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
   const gates = new Map(
@@ -485,6 +693,25 @@ test("formatReleaseReadinessReport renders explicit workflow authorization", asy
   assert.match(output, /workflow authorization: explicit/);
 });
 
+test("formatReleaseReadinessReport renders sparse and missing evidence states", async () => {
+  const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  report.ci.matrix = [];
+  report.dependency_management.audit_policy.lockfile_required = true;
+  report.installer_artifacts.required = [
+    { path: "scripts/install/missing.sh", exists: false },
+  ];
+  report.installer_artifacts.capabilities = [];
+  report.risks = [];
+  report.next_actions = [];
+
+  const output = formatReleaseReadinessReport(report);
+
+  assert.match(output, /node matrix: $/m);
+  assert.match(output, /lockfile required: yes/);
+  assert.match(output, /missing: scripts\/install\/missing\.sh/);
+  assert.match(output, /capabilities: none/);
+});
+
 test("release-readiness script supports --json", async () => {
   const { stdout } = await execFileAsync("node", [scriptPath, "--json"]);
   const report = JSON.parse(stdout);
@@ -554,6 +781,11 @@ test("evaluateReleaseReadiness FAILS closed on a malformed report (no risks arra
   assert.match(verdict.reasons.join(" "), /risks/);
 });
 
+test("evaluateReleaseReadiness FAILS closed on a non-object report", () => {
+  const verdict = evaluateReleaseReadiness(null, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /not_object/);
+});
 test("evaluateReleaseReadiness FAILS when readiness_score is below the configured threshold", () => {
   const report = {
     readiness_score: 50,
@@ -570,4 +802,5 @@ test("extractReportJson recovers the report object even with leading log noise",
   const parsed = extractReportJson(noisy);
   assert.equal(parsed.readiness_score, 97);
   assert.equal(extractReportJson("no json here"), null);
+  assert.equal(extractReportJson('{"broken":}'), null);
 });
