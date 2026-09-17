@@ -102,6 +102,15 @@ function extractCoverageThresholds(command = "") {
   };
 }
 
+function hasAggregateCoverageOwner(checkScript = "", checkOwnerText = "") {
+  return (
+    checkScript.includes("scripts/check.mjs") &&
+    /\[\s*"npm"\s*,\s*\[\s*"run"\s*,\s*"coverage"\s*\]\s*\]/.test(
+      checkOwnerText,
+    )
+  );
+}
+
 function buildCoverageThreshold(packageJson, pipelineAutomation) {
   const command = packageJson.scripts?.coverage ?? "";
   const configured = hasCoverageThresholdCommand(command);
@@ -271,7 +280,12 @@ function buildDependencyAuditPolicy({ root, runtimeDeps, devDeps }) {
   };
 }
 
-function buildPipelineAutomation({ workflowFiles, packageJson, nodeMatrix }) {
+function buildPipelineAutomation({
+  workflowFiles,
+  packageJson,
+  nodeMatrix,
+  checkOwnerText = "",
+}) {
   const workflows = workflowFiles.map((workflow) => ({
     path: workflow.path,
     events: findWorkflowEvents(workflow.text),
@@ -280,6 +294,10 @@ function buildPipelineAutomation({ workflowFiles, packageJson, nodeMatrix }) {
   }));
   const ciRunCommands = workflows.flatMap((workflow) => workflow.run_commands);
   const packageScripts = Object.keys(packageJson.scripts ?? {}).sort();
+  const aggregateCoverageOwner = hasAggregateCoverageOwner(
+    packageJson.scripts?.check,
+    checkOwnerText,
+  );
 
   return {
     posture: "advisory_read_only_pipeline_audit",
@@ -290,11 +308,18 @@ function buildPipelineAutomation({ workflowFiles, packageJson, nodeMatrix }) {
       packageScripts.includes("release:readiness"),
     ci_gate_observations: REQUIRED_GATES.map((command) => ({
       command,
-      observed_in_ci: ciRunCommands.includes(command),
+      observed_in_ci:
+        ciRunCommands.includes(command) ||
+        (command === "npm run coverage" &&
+          ciRunCommands.includes("npm run check") &&
+          aggregateCoverageOwner),
       observed_as_package_script: packageScripts.includes(
         command === "npm test" ? "test" : command.replace(/^npm run /, ""),
       ),
     })),
+    coverage_owner: aggregateCoverageOwner
+      ? "scripts/check.mjs via npm run check"
+      : null,
     node_matrix: nodeMatrix,
     deployment_automation: "not_configured_no_external_deploy",
   };
@@ -641,6 +666,9 @@ export async function buildReleaseReadinessReport({
   const workflowText =
     workflowFiles.find((workflow) => workflow.path === workflowPath)?.text ??
     "";
+  const checkOwnerText = existsSync(join(root, "scripts/check.mjs"))
+    ? await readText(root, "scripts/check.mjs")
+    : "";
   const actionRefs = workflowFiles.flatMap((workflow) =>
     findActionRefs(workflow.text).map((action) => ({
       ...action,
@@ -684,6 +712,7 @@ export async function buildReleaseReadinessReport({
     workflowFiles,
     packageJson,
     nodeMatrix,
+    checkOwnerText,
   });
   const coverageThreshold = buildCoverageThreshold(
     packageJson,
