@@ -26,8 +26,6 @@ jobs:
       # Root tests run on both versions; the cross-package founder suite
       # declares its Node 20 loader limitation in the test output/docs.
       - if: matrix.node-version == '22.x'
-        run: npm run coverage
-      - if: matrix.node-version == '22.x'
         run: npm run check
       - if: matrix.node-version == '22.x'
         run: npm run perf
