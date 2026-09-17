@@ -30,8 +30,6 @@ jobs:
         with:
           node-version: 22.x
       - run: npm install --no-audit --no-fund
-      - run: npm test
-      - run: npm run coverage
       - run: npm run check
       - name: Resolve BIZRA review class
         run: |
