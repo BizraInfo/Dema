@@ -140,10 +140,12 @@ test(
   "SYNC-05: parser comparison branches are deterministic without Rust checkout",
   () => {
     assert.equal(findRustSource(["/dev/null/bizra-theme.rs"]), null);
+    assert.equal(findRustSource([process.execPath]), process.execPath);
 
     const rustColors = parseRustColors(
       [
-        "pub const GOLD: Color = Color::Rgb(1, 2, 3);",
+        "pub const GOLD: Color = Color::Rgb(212, 175, 56);",
+        "pub const EMERALD: Color = Color::Rgb(80, 200, 120);",
         "pub const UNKNOWN_FIXTURE: Color = Color::Rgb(4, 5, 6);",
       ].join("\n"),
     );
@@ -151,7 +153,7 @@ test(
 
     assert.deepEqual(missing, ["UNKNOWN_FIXTURE"]);
     assert.deepEqual(mismatched, [
-      "GOLD: rust=[1,2,3] js=[212,175,55]",
+      "GOLD: rust=[212,175,56] js=[212,175,55]",
     ]);
   },
 );
