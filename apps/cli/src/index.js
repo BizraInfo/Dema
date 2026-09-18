@@ -1436,7 +1436,7 @@ async function dispatch(argv, { interactive = false } = {}) {
     if (showIntro) {
       const introStream = wantJson ? process.stderr : process.stdout;
       introStream.write(renderIntroLine() + "\n\n");
-      await recordIntroSeen({ home: demaHome });
+      if (command !== "--safe") await recordIntroSeen({ home: demaHome });
     }
     const { gatherFirstLookContext, buildFirstLookHome, renderFirstLookHome } =
       await import("../../../packages/core/src/dema-first-look-home.js");

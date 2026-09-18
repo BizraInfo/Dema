@@ -93,6 +93,11 @@ test("dema --safe uses the read-only first-look recovery surface", async () => {
   assert.equal(parsed.mode, "preview_only");
   assert.equal(parsed.boundary.runtime_execution_performed, false);
   assert.equal(parsed.boundary.network_used, false);
+  const stateFiles = await readdir(join(demaRoot, "state")).catch((error) => {
+    assert.equal(error.code, "ENOENT");
+    return [];
+  });
+  assert.deepEqual(stateFiles, []);
 });
 
 // `dema help` (no args) now emits the topic-based root per the hierarchical
