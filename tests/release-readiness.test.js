@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -142,7 +143,9 @@ test("release process promotes installer dry-run/check verification into the rel
 });
 
 test("buildReleaseReadinessReport keeps zero-dependency audit posture when npm install creates a transient lockfile", async () => {
-  const root = await mkdtemp("/data/bizra-release-readiness-transient-lock-");
+  const root = await mkdtemp(
+    join(tmpdir(), "bizra-release-readiness-transient-lock-"),
+  );
   try {
     await writeFile(
       join(root, "package.json"),
@@ -370,7 +373,9 @@ test("buildReleaseReadinessReport reports missing primary workflow accurately", 
 });
 
 test("buildReleaseReadinessReport reports unavailable worktree status without a git checkout", async () => {
-  const root = await mkdtemp("/data/bizra-release-readiness-no-git-");
+  const root = await mkdtemp(
+    join(tmpdir(), "bizra-release-readiness-no-git-"),
+  );
   try {
     await writeFile(join(root, "package.json"), JSON.stringify({ scripts: {} }));
 
@@ -387,7 +392,9 @@ test("buildReleaseReadinessReport reports unavailable worktree status without a 
 });
 
 test("buildReleaseReadinessReport handles a package without a scripts object", async () => {
-  const root = await mkdtemp("/data/bizra-release-readiness-no-scripts-");
+  const root = await mkdtemp(
+    join(tmpdir(), "bizra-release-readiness-no-scripts-"),
+  );
   try {
     await writeFile(join(root, "package.json"), JSON.stringify({ name: "empty" }));
 
@@ -458,7 +465,9 @@ test("buildReleaseReadinessReport keeps coverage advisory when the aggregate own
 });
 
 test("buildReleaseReadinessReport recognizes coverage owned by the aggregate check script", async () => {
-  const root = await mkdtemp("/data/bizra-release-readiness-owner-positive-");
+  const root = await mkdtemp(
+    join(tmpdir(), "bizra-release-readiness-owner-positive-"),
+  );
   try {
     await mkdir(join(root, ".github/workflows"), { recursive: true });
     await mkdir(join(root, "scripts"), { recursive: true });
