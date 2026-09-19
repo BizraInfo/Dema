@@ -153,7 +153,13 @@ export function draftCodeChangePlan({
   const pathAnalysis = paths.map((path) => {
     const forbidden = isPathInForbiddenZone(path);
     const outsideScope =
-      safeScopeRoot.length > 0 && !path.startsWith(safeScopeRoot);
+      safeScopeRoot.length > 0 &&
+      !(
+        path === safeScopeRoot ||
+        path.startsWith(
+          safeScopeRoot.endsWith("/") ? safeScopeRoot : `${safeScopeRoot}/`,
+        )
+      );
     return Object.freeze({
       path,
       in_forbidden_zone: forbidden,
