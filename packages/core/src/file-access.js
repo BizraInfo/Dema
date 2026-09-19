@@ -57,7 +57,8 @@ function isPathWithinScope(path, scopeRoot) {
     scopeRoot.length === 0
   )
     return false;
-  return path.startsWith(scopeRoot);
+  const root = scopeRoot.endsWith("/") ? scopeRoot.slice(0, -1) : scopeRoot;
+  return path === root || path.startsWith(`${root}/`);
 }
 
 export function buildFileAccessPreview({ declared_scope_root = "" } = {}) {
