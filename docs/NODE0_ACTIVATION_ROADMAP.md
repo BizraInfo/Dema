@@ -329,7 +329,7 @@ Reachable only after Stage B is fully MEASURED. Each step here is sketch-level; 
 **Requirements:** Stage B complete.
 **Definition of Done:** A second physical machine (or VM) runs Dema + a fresh Node0, completes Steps A1–A5, and produces its own ARTIFACT-011.
 
-### Step C2 — First Node0 ↔ Node1 federation handshake (PRIVATE_PILOT_URP)
+### Step C2 — First private pilot handshake with a second node (PRIVATE_PILOT_URP)
 
 **Requirements:** C1 complete; a documented handshake protocol; mutual consent on both sides.
 **KPI:** Both nodes' bizra-omega instances accept each other's receipt schemas; one cross-node receipt round-trips without modification.
