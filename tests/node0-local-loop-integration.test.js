@@ -80,12 +80,14 @@ describe("NODE0-LOCAL-LOOP-INTEGRATION-1A — one node, really functioning", () 
     missionResult = result;
   });
 
-  it("adapter shows mission executed, chain length=1", async () => {
+  it("adapter does not infer ARTIFACT-011 execution from chain length", async () => {
     const state = await fetchGatewayState(baseUrl, { timeoutMs: 5000 });
     const status = composeNode0StatusFromGateway(state);
 
     assert.equal(status.chain.length, 1);
-    assert.equal(status.missionExecuted, true);
+    assert.equal(status.missionExecuted, false);
+    assert.equal(status.missionExecutedTruth, "UNKNOWN");
+    assert.equal(status.artifact011Issued, "UNKNOWN");
     assert.ok(status.chain.head !== null);
     assert.ok(status.chain.latestTimestamp !== null);
     assert.equal(status.truth_label, "MEASURED_PARTIAL");

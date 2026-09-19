@@ -12,10 +12,10 @@
 // extended with `gateway`, `chain`, `poi`, `resources`, `principal`, `unknown`,
 // `truth_label`, and `source` for honest gateway-derived state.
 //
-// `ready` is false until a real mission/receipt exists (chain.length > 0
-// alone is not sufficient — ARTIFACT-011's first issuance is what
-// flips Node0 into the SPROUT readiness state, and that lives upstream
-// of this adapter).
+// `ready` is false until a measured ARTIFACT-011 witness exists. The generic
+// chain head/length is deliberately not that witness: the gateway chain also
+// contains principal and other receipts. Before that witness, the adapter
+// exposes `preactivationReady` for the bounded one-shot request path.
 
 const DEFAULT_GATEWAY_URL = "http://127.0.0.1:7421";
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -54,6 +54,7 @@ const VERIFIED_PRINCIPAL_IDENTITY_FIELDS = Object.freeze([
   "timestampNs",
   "prevChain",
 ]);
+const ARTIFACT_011_ID = "ARTIFACT-011";
 const GATEWAY_ENDPOINTS = Object.freeze([
   ["health", "/health"],
   ["chain", "/chain"],
@@ -221,6 +222,41 @@ function inspectPrincipalStatus(principal) {
   };
 }
 
+function inspectArtifact011Evidence(artifact011) {
+  if (artifact011 === undefined) {
+    return {
+      issued: "UNKNOWN",
+      observation: "NOT_EXPOSED_BY_GATEWAY",
+      contractValid: false,
+      contractIssues: ["artifact011_discriminator_not_exposed_by_gateway"],
+      _truth: "NOT_EXPOSED_BY_GATEWAY",
+    };
+  }
+
+  if (
+    !isRecord(artifact011) ||
+    artifact011.artifactId !== ARTIFACT_011_ID ||
+    typeof artifact011.issued !== "boolean" ||
+    artifact011.verified !== true
+  ) {
+    return {
+      issued: "UNKNOWN",
+      observation: "INVALID",
+      contractValid: false,
+      contractIssues: ["artifact011_evidence_invalid_or_unverified"],
+      _truth: "INVALID_ARTIFACT011_EVIDENCE",
+    };
+  }
+
+  return {
+    issued: artifact011.issued,
+    observation: "MEASURED",
+    contractValid: true,
+    contractIssues: [],
+    _truth: "MEASURED",
+  };
+}
+
 function isLocalGatewayUrl(baseUrl) {
   try {
     const url = new URL(baseUrl);
@@ -307,6 +343,11 @@ export function composeNode0StatusFromGateway(state) {
     label: "principal",
     error: "principal_status_not_requested",
   };
+  const artifact011 =
+    state.artifact011 ??
+    (principal.ok && isRecord(principal.json)
+      ? principal.json.artifact011
+      : undefined);
   const findings = [];
 
   const gatewayReachable =
@@ -359,14 +400,45 @@ export function composeNode0StatusFromGateway(state) {
     findings.push("Gateway live, first mission/receipt has not been issued.");
   }
 
+  const artifact011Status = inspectArtifact011Evidence(artifact011);
+  if (gatewayReachable && artifact011Status.observation === "NOT_EXPOSED_BY_GATEWAY") {
+    findings.push(
+      "Gateway does not expose a canonical ARTIFACT-011 discriminator.",
+    );
+  } else if (gatewayReachable && artifact011Status.observation === "INVALID") {
+    findings.push(
+      `Gateway ARTIFACT-011 evidence rejected: ${artifact011Status.contractIssues.join(", ")}`,
+    );
+  }
+
+  const artifact011Issued = artifact011Status.issued;
+  const principalReady =
+    principalStatus.observation === "MEASURED" &&
+    principalStatus.identityVerified === true &&
+    principalStatus.bridgeEligible === true;
+  const consoleReady = gatewayReachable;
+  const activationGate = "EXPLICIT_GO_REQUIRED";
+  const daemonStatus = "n/a-via-gateway";
+  const runtimePulse = { fired: false };
+  const preactivationReady = Boolean(
+    consoleReady &&
+      principalReady &&
+      activationGate === "EXPLICIT_GO_REQUIRED" &&
+      daemonStatus !== "running" &&
+      artifact011Issued !== true &&
+      artifact011Status.observation !== "INVALID" &&
+      runtimePulse.fired !== true,
+  );
+
   const truthLabel =
     gatewayReachable && principalStatus.observation !== "INVALID"
       ? "MEASURED_PARTIAL"
       : "DEGRADED";
-  // `ready` remains false until ARTIFACT-011 is issued by the governed
-  // bounded-diagnostic runtime path — the gateway being live is necessary
-  // but not sufficient.
-  const ready = false;
+  // The generic chain is not an ARTIFACT-011 witness. `ready` and
+  // `missionExecuted` remain conservative until the gateway exposes and
+  // verifies the explicit artifact evidence.
+  const ready = artifact011Issued === true;
+  const missionExecuted = artifact011Issued === true;
 
   return {
     schema: "bizra.dema.node0_status.v0.2",
@@ -375,11 +447,16 @@ export function composeNode0StatusFromGateway(state) {
     node: "Node0",
     human: null,
     ready,
-    consoleReady: gatewayReachable,
-    activationGate: "EXPLICIT_GO_REQUIRED",
-    daemonStatus: "n/a-via-gateway",
-    missionExecuted: chainLength > 0,
-    runtimePulse: { fired: false },
+    preactivationReady,
+    artifact011Issued,
+    artifact011Observation: artifact011Status.observation,
+    missionExecuted,
+    missionExecutedTruth:
+      artifact011Issued === "UNKNOWN" ? "UNKNOWN" : "MEASURED",
+    consoleReady,
+    activationGate,
+    daemonStatus,
+    runtimePulse,
     findings,
     model: {
       connected: false,
@@ -404,6 +481,14 @@ export function composeNode0StatusFromGateway(state) {
       length: chainLength,
       latestTimestamp,
     },
+    artifact011: {
+      id: ARTIFACT_011_ID,
+      issued: artifact011Issued,
+      observation: artifact011Status.observation,
+      contractValid: artifact011Status.contractValid,
+      contractIssues: artifact011Status.contractIssues,
+      _truth: artifact011Status._truth,
+    },
     poi: {
       totalEntries: poiTotalEntries,
       totalImpact: poiTotalImpact,
@@ -418,6 +503,12 @@ export function composeNode0StatusFromGateway(state) {
       "pyO3_bridge_status_not_exposed_by_gateway",
       "preferred_name_not_exposed_by_gateway",
       "rust_bus_health_inferred_from_gateway_uptime",
+      ...(artifact011Status.observation === "NOT_EXPOSED_BY_GATEWAY"
+        ? ["artifact011_discriminator_not_exposed_by_gateway"]
+        : []),
+      ...(artifact011Status.observation === "INVALID"
+        ? ["artifact011_evidence_invalid_or_unverified"]
+        : []),
       ...(principalStatus.observation === "UNAVAILABLE"
         ? ["principal_identity_not_exposed_by_gateway"]
         : []),

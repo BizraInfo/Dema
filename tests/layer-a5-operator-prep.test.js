@@ -44,10 +44,31 @@ function makePreflight(overrides = {}) {
   };
 }
 
-test("buildLayerA5Checklist marks doctor exit non-zero as not ready", () => {
+test("buildLayerA5Checklist accepts a parseable preactivation doctor report", () => {
   const checklist = buildLayerA5Checklist(makePreflight());
-  const doctorItem = checklist.find((c) => c.id === "doctor_exit_zero");
-  assert.equal(doctorItem.ok, false);
+  const doctorItem = checklist.find((c) => c.id === "doctor_json_valid");
+  assert.equal(doctorItem.ok, true);
+});
+
+test("buildLayerA5Checklist accepts preactivation readiness before ARTIFACT-011", () => {
+  const preflight = makePreflight({
+    steps: {
+      ...makePreflight().steps,
+      status: {
+        ok: true,
+        parsed: {
+          ready: false,
+          preactivationReady: true,
+          consoleReady: true,
+          activationGate: "EXPLICIT_GO_REQUIRED",
+          daemonStatus: "n/a-via-gateway",
+        },
+      },
+    },
+  });
+  const checklist = buildLayerA5Checklist(preflight);
+  const item = checklist.find((c) => c.id === "status_preactivation_ready");
+  assert.equal(item.ok, true);
 });
 
 test("buildLayerA5OperatorPrepReport stays preview-only and names consent phrase", () => {

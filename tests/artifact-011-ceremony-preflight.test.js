@@ -63,6 +63,51 @@ test("assess blocks when mission propose would execute", () => {
   );
 });
 
+test("operator runtime readiness uses preactivationReady, not post-activation ready", () => {
+  const report = assessArtifact011CeremonyPreflight({
+    demaHome: "/tmp/example",
+    setup: okStep({ schema: "bizra.dema.setup.v0.1", created: true }),
+    setupCheck: okStep({
+      schema: "bizra.dema.setup_check.v0.1",
+      verdict: "INTACT",
+    }),
+    status: okStep({
+      ready: false,
+      preactivationReady: true,
+      consoleReady: true,
+      activationGate: "EXPLICIT_GO_REQUIRED",
+      daemonStatus: "n/a-via-gateway",
+      artifact011Issued: "UNKNOWN",
+    }),
+    doctor: okStep({
+      schema: "bizra.dema.doctor_dashboard.v0.1",
+      status: {
+        ready: false,
+        preactivationReady: true,
+        consoleReady: true,
+        activationGate: "EXPLICIT_GO_REQUIRED",
+        daemonStatus: "n/a-via-gateway",
+      },
+    }),
+    proposeNoConsent: okStep({
+      schema: "bizra.dema.mission_preview.v0.1",
+      executes: false,
+      consent: { accepted: false },
+      proposal: { allowed: true, expectedArtifact: "ARTIFACT-011" },
+    }),
+    proposeWithConsent: okStep({
+      schema: "bizra.dema.mission_preview.v0.1",
+      executes: false,
+      consent: { accepted: true },
+      proposal: { allowed: true, expectedArtifact: "ARTIFACT-011" },
+    }),
+  });
+
+  assert.equal(report.cleared_for_preview_ceremony, true);
+  assert.equal(report.operator_runtime_ready, true);
+  assert.equal(report.cleared_for_runtime_ceremony, false);
+});
+
 test("isolated preflight CLI clears preview ceremony on fresh home", async () => {
   const { stdout } = await execFileAsync(
     "node",

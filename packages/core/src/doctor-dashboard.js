@@ -108,15 +108,26 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
 
   // 3. Ready
   const ready = Boolean(s.ready);
+  const preactivationEligible =
+    s.preactivationReady === true && s.artifact011Issued !== true;
   predicates.push({
     key: "ready",
     label: d.ready,
     value: String(ready),
-    status: ready ? "ok" : unbridged ? "expected" : "fail",
+    status: ready
+      ? "ok"
+      : unbridged || preactivationEligible
+        ? "expected"
+        : "fail",
     ...(ready
       ? {}
       : unbridged
         ? { note: d.note_ready_unbridged }
+        : preactivationEligible
+          ? {
+              note: "Post-activation ready remains false until ARTIFACT-011; bounded diagnostic preactivation is eligible.",
+              preactivation_ready: true,
+            }
         : {
             // `ready` mirrors the adapter payload; setup does not set it either.
             fix: "`ready` is reported by the Node0 runtime, not set locally. Bridge a runtime (see the activation gate fix) and re-check with `dema status`.",
@@ -163,6 +174,7 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
 // Deliberately not "healthy". Nothing is broken, but an unbridged node has not
 // earned a health claim — it has earned an accurate description of where it is.
 const VERDICT_PREVIEW_ONLY = "preview-only — runtime not bridged";
+const VERDICT_PREACTIVATION_ELIGIBLE = "ARTIFACT_011_PREACTIVATION_ELIGIBLE";
 
 // Single source of the verdict for both the dashboard and `--json`. Deriving it
 // twice let the JSON surface print "ready and consent-gated" for an install
@@ -170,6 +182,9 @@ const VERDICT_PREVIEW_ONLY = "preview-only — runtime not bridged";
 export function doctorVerdict(predicates) {
   if (predicates.some((p) => p.status === "fail" || p.status === "warn")) {
     return "blocked";
+  }
+  if (predicates.some((p) => p.preactivation_ready === true)) {
+    return VERDICT_PREACTIVATION_ELIGIBLE;
   }
   return predicates.some((p) => p.status === "expected")
     ? VERDICT_PREVIEW_ONLY
@@ -193,6 +208,9 @@ export function doctorVerdict(predicates) {
 // disagreeing again (see the invariant test).
 export function doctorState(predicates) {
   const has = (s) => predicates.some((p) => p.status === s);
+  const preactivation = predicates.some(
+    (p) => p.preactivation_ready === true,
+  );
   const repair_required = has("fail");
   return {
     operational: !repair_required && !has("warn") && !has("expected"),
@@ -203,7 +221,9 @@ export function doctorState(predicates) {
       : has("warn")
         ? "degraded"
         : has("expected")
-          ? "runtime_not_bridged"
+          ? preactivation
+            ? "preactivation_not_activated"
+            : "runtime_not_bridged"
           : null,
   };
 }
@@ -271,9 +291,10 @@ export function formatDoctorDashboard(
 
   const verdict = doctorVerdict(predicates);
   const previewOnly = verdict === VERDICT_PREVIEW_ONLY;
+  const preactivationOnly = verdict === VERDICT_PREACTIVATION_ELIGIBLE;
   const allOk = failCount === 0 && warnCount === 0;
   const verdictColored = color
-    ? previewOnly
+    ? previewOnly || preactivationOnly
       ? colorize(verdict, ANSI_CYAN, true)
       : allOk
         ? colorize(verdict, ANSI_GREEN, true)
@@ -302,6 +323,15 @@ export function formatDoctorDashboard(
     lines.push(`  ${dLabels.preview_footer_nothing_broken}`);
     lines.push(`  ${dLabels.preview_footer_exit_code}`);
     lines.push(`  ${dLabels.preview_footer_preview_flag}`);
+  }
+
+  if (preactivationOnly) {
+    lines.push("");
+    lines.push(
+      "  Bounded diagnostic preactivation is eligible; explicit human consent is still required.",
+    );
+    lines.push("  Post-activation ready remains false until ARTIFACT-011 is independently issued.");
+    lines.push("  Operational exit remains non-zero until activation is measured.");
   }
 
   lines.push("");

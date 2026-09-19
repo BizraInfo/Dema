@@ -50,9 +50,11 @@ test("status formatting includes consent boundary", () => {
   assert.match(output, /Runtime pulse fired: false/);
 });
 
-test("bounded diagnostic requires ready node and explicit gate", () => {
+test("bounded diagnostic requires preactivation readiness and explicit gate", () => {
   const proposal = proposeBoundedDiagnostic({
-    ready: true,
+    ready: false,
+    preactivationReady: true,
+    artifact011Issued: "UNKNOWN",
     consoleReady: true,
     activationGate: "EXPLICIT_GO_REQUIRED",
     daemonStatus: "stopped",
@@ -61,6 +63,36 @@ test("bounded diagnostic requires ready node and explicit gate", () => {
   });
   assert.equal(proposal.allowed, true);
   assert.equal(proposal.expectedArtifact, "ARTIFACT-011");
+});
+
+test("bounded diagnostic remains blocked when preactivation prerequisites are false", () => {
+  const proposal = proposeBoundedDiagnostic({
+    ready: false,
+    preactivationReady: false,
+    artifact011Issued: "UNKNOWN",
+    consoleReady: true,
+    activationGate: "EXPLICIT_GO_REQUIRED",
+    daemonStatus: "stopped",
+    missionExecuted: false,
+    runtimePulse: { fired: false },
+  });
+  assert.equal(proposal.allowed, false);
+  assert.equal(proposal.reason, "Node is not ready.");
+});
+
+test("bounded diagnostic is blocked after independently measured ARTIFACT-011", () => {
+  const proposal = proposeBoundedDiagnostic({
+    ready: true,
+    preactivationReady: false,
+    artifact011Issued: true,
+    consoleReady: true,
+    activationGate: "EXPLICIT_GO_REQUIRED",
+    daemonStatus: "stopped",
+    missionExecuted: true,
+    runtimePulse: { fired: false },
+  });
+  assert.equal(proposal.allowed, false);
+  assert.match(proposal.reason, /mission execution|Runtime pulse/i);
 });
 
 test("bounded diagnostic blocks hidden daemon and previous runtime pulse", () => {

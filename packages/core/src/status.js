@@ -4,10 +4,14 @@ export function defaultStatus() {
     node: "Node0",
     human: null,
     ready: false,
+    preactivationReady: false,
+    artifact011Issued: "UNKNOWN",
+    artifact011Observation: "UNKNOWN",
     consoleReady: false,
     activationGate: "BLOCKED",
     daemonStatus: "unknown",
     missionExecuted: false,
+    missionExecutedTruth: "UNKNOWN",
     runtimePulse: { fired: false },
     findings: ["Node0 adapter not connected"],
     model: { connected: false, loadedModelIds: [], tokenPresent: false },
@@ -17,15 +21,28 @@ export function defaultStatus() {
   };
 }
 
-export function isReadyForBoundedDiagnostic(status) {
+export function isPreActivationReadyForBoundedDiagnostic(status) {
+  // Legacy shellout statuses have no additive field; retain their old
+  // contract while gateway statuses use the explicit preactivation predicate.
+  const preactivationReady =
+    status?.preactivationReady === undefined
+      ? status?.ready === true
+      : status.preactivationReady === true;
   return Boolean(
-    status?.ready &&
+    preactivationReady &&
     status?.consoleReady &&
     status?.activationGate === "EXPLICIT_GO_REQUIRED" &&
     status?.daemonStatus !== "running" &&
+    status?.artifact011Issued !== true &&
+    status?.artifact011Observation !== "INVALID" &&
     status?.missionExecuted !== true &&
     status?.runtimePulse?.fired !== true,
   );
+}
+
+// Compatibility name retained for callers that already import this predicate.
+export function isReadyForBoundedDiagnostic(status) {
+  return isPreActivationReadyForBoundedDiagnostic(status);
 }
 
 export function shouldUseColor(opts = {}) {
@@ -62,6 +79,10 @@ export function formatStatus(status, opts = {}) {
   lines.push("");
   lines.push(colorize("Readiness", ANSI.boldYellow, useColor));
   lines.push(`  Ready: ${Boolean(status.ready)}`);
+  lines.push(`  Preactivation ready: ${Boolean(status.preactivationReady)}`);
+  lines.push(
+    `  ARTIFACT-011 issued: ${status.artifact011Issued ?? "UNKNOWN"}`,
+  );
   lines.push(`  Console ready: ${Boolean(status.consoleReady)}`);
   lines.push(`  Activation gate: ${status.activationGate ?? "unknown"}`);
   lines.push(`  Daemon: ${status.daemonStatus ?? "unknown"}`);

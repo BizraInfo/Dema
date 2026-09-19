@@ -242,12 +242,19 @@ export function assessArtifact011CeremonyPreflight({
 
   const clearedForPreviewCeremony = blockers.length === 0;
 
+  const usesPreactivationContract =
+    status?.parsed?.preactivationReady !== undefined;
   const operatorRuntimeReady =
-    status?.parsed?.ready === true &&
+    (usesPreactivationContract
+      ? status?.parsed?.preactivationReady === true
+      : status?.parsed?.ready === true) &&
     status?.parsed?.consoleReady === true &&
     status?.parsed?.activationGate === "EXPLICIT_GO_REQUIRED" &&
     (status?.parsed?.daemonStatus ?? "") !== "running" &&
-    doctor?.exitCode === 0;
+    doctor?.ok === true &&
+    (usesPreactivationContract
+      ? doctor?.parsed?.status?.preactivationReady === true
+      : doctor?.exitCode === 0);
 
   return {
     schema: ARTIFACT_011_CEREMONY_PREFLIGHT_SCHEMA,

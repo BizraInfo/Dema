@@ -235,6 +235,8 @@ test("gateway-http adapter exposes a fully verified principal without making Nod
       status.principal.verifiedIdentity,
       VERIFIED_PRINCIPAL_IDENTITY,
     );
+    assert.equal(status.preactivationReady, true);
+    assert.equal(status.artifact011Issued, "UNKNOWN");
     assert.equal(status.ready, false);
   } finally {
     await gw.stop();
@@ -294,6 +296,7 @@ test("gateway-http adapter leaves principal identity unknown when the endpoint i
     assert.equal(status.principal.observation, "UNAVAILABLE");
     assert.equal(status.principal.contractValid, false);
     assert.equal(status.principal.identityVerified, null);
+    assert.equal(status.preactivationReady, false);
     assert.equal(status.ready, false);
     assert.ok(
       status.unknown.includes("principal_identity_not_exposed_by_gateway"),
@@ -326,7 +329,9 @@ test("gateway-http adapter never claims ready=true even with a populated chain",
     // first issuance flips Node0 into SPROUT readiness, and that lives
     // upstream of this adapter.
     assert.equal(status.ready, false);
-    assert.equal(status.missionExecuted, true);
+    assert.equal(status.artifact011Issued, "UNKNOWN");
+    assert.equal(status.missionExecuted, false);
+    assert.equal(status.missionExecutedTruth, "UNKNOWN");
     assert.equal(status.chain.length, 5);
     assert.equal(status.resources.count, 2);
     assert.equal(status.poi.totalEntries, 5);
@@ -334,6 +339,114 @@ test("gateway-http adapter never claims ready=true even with a populated chain",
   } finally {
     await gw.stop();
   }
+});
+
+test("gateway-http adapter exposes preactivation eligibility without claiming ARTIFACT-011", async () => {
+  const gw = await startFakeGateway({
+    ...HEALTHY_ROUTES,
+    "/chain": () =>
+      jsonResponse({
+        head: "ab".repeat(32),
+        length: 9,
+        latestTimestamp: 1234567890,
+      }),
+    "/principal/status": () =>
+      jsonResponse(
+        principalStatus({
+          verdict: "VERIFIED",
+          identityVerified: true,
+          bridgeEligible: true,
+          verifiedIdentity: VERIFIED_PRINCIPAL_IDENTITY,
+          evidenceState: {
+            profilePresent: true,
+            activeChainRecordFound: true,
+            durableReceiptMetadataFound: true,
+            canonicalPayloadAvailable: true,
+            chainContinuityVerified: true,
+          },
+        }),
+      ),
+  });
+  try {
+    const status = await createGatewayHttpAdapter({ baseUrl: gw.url }).status();
+
+    assert.equal(status.preactivationReady, true);
+    assert.equal(status.artifact011Issued, "UNKNOWN");
+    assert.equal(status.ready, false);
+    assert.equal(status.missionExecuted, false);
+    assert.equal(status.missionExecutedTruth, "UNKNOWN");
+    assert.equal(status.nextAdmissibleAction, "bounded_diagnostic_activation");
+  } finally {
+    await gw.stop();
+  }
+});
+
+test("gateway-http adapter promotes only verified explicit ARTIFACT-011 evidence", () => {
+  const status = composeNode0StatusFromGateway({
+    baseUrl: "http://127.0.0.1:7421",
+    health: {
+      ok: true,
+      json: { status: "ok", domain: HEALTHY_GATEWAY_DOMAIN },
+    },
+    chain: {
+      ok: true,
+      json: { head: "ab".repeat(32), length: 9, latestTimestamp: 1 },
+    },
+    poi: {
+      ok: true,
+      json: { totalEntries: 9, totalImpact: 1, avgImpact: 1 / 9 },
+    },
+    resources: { ok: true, json: { resources: [] } },
+    principal: {
+      ok: true,
+      json: principalStatus({
+        verdict: "VERIFIED",
+        identityVerified: true,
+        bridgeEligible: true,
+        verifiedIdentity: VERIFIED_PRINCIPAL_IDENTITY,
+        evidenceState: {
+          profilePresent: true,
+          activeChainRecordFound: true,
+          durableReceiptMetadataFound: true,
+          canonicalPayloadAvailable: true,
+          chainContinuityVerified: true,
+        },
+      }),
+    },
+    artifact011: {
+      artifactId: "ARTIFACT-011",
+      issued: true,
+      verified: true,
+    },
+  });
+
+  assert.equal(status.artifact011Issued, true);
+  assert.equal(status.ready, true);
+  assert.equal(status.missionExecuted, true);
+  assert.equal(status.preactivationReady, false);
+});
+
+test("gateway-http adapter rejects malformed ARTIFACT-011 evidence without readiness", () => {
+  const status = composeNode0StatusFromGateway({
+    baseUrl: "http://127.0.0.1:7421",
+    health: {
+      ok: true,
+      json: { status: "ok", domain: HEALTHY_GATEWAY_DOMAIN },
+    },
+    chain: { ok: true, json: { head: "ab".repeat(32), length: 9 } },
+    poi: {
+      ok: true,
+      json: { totalEntries: 9, totalImpact: 1, avgImpact: 1 / 9 },
+    },
+    resources: { ok: true, json: { resources: [] } },
+    principal: { ok: true, json: principalStatus() },
+    artifact011: { artifactId: "ARTIFACT-011", issued: true, verified: false },
+  });
+
+  assert.equal(status.artifact011Issued, "UNKNOWN");
+  assert.equal(status.artifact011Observation, "INVALID");
+  assert.equal(status.ready, false);
+  assert.equal(status.preactivationReady, false);
 });
 
 test("gateway-http adapter labels DEGRADED + records finding when /health is missing", async () => {

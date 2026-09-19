@@ -181,7 +181,7 @@ The remaining steps to close SEED and produce the first bounded-diagnostic recei
 **Requirements**
 
 - Step A4 complete (gateway HTTP adapter live)
-- `dema doctor` exits 0 against the live gateway: `ready=true && consoleReady=true && activationGate="EXPLICIT_GO_REQUIRED" && daemonStatus!="running"`
+- Live gateway status reports `preactivationReady=true`, `consoleReady=true`, `activationGate="EXPLICIT_GO_REQUIRED"`, `artifact011Issued` is not `true`, and `daemonStatus!="running"`. `ready` remains `false` until the governed runtime issues ARTIFACT-011; `dema doctor` need not exit 0 because its operational question is post-activation.
 - A real local model is loaded in LM Studio (or equivalent) and the gateway reports `lm_studio.connected=true && loaded_model_ids.length>0 && token_present=true`
 - The governed bounded-diagnostic runtime path exists outside the Dema repo and is invokable
 

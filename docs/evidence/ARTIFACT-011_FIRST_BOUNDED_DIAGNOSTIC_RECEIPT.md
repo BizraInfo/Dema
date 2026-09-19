@@ -67,7 +67,7 @@ Complete **before** Step A5 runtime invocation:
 - [ ] Repo gates green on operator machine: `npm test`, `npm run check`, `npm run llm:guidance`
 - [ ] Step A4 complete per [NODE0_ACTIVATION_ROADMAP.md](../NODE0_ACTIVATION_ROADMAP.md) (gateway HTTP adapter live if required by your Node0 build)
 - [ ] `dema setup` run against target `DEMA_HOME`
-- [ ] `dema doctor` exits 0 with: `ready=true`, `consoleReady=true`, `activationGate="EXPLICIT_GO_REQUIRED"`, `daemonStatus!="running"`
+- [ ] Gateway-backed status reports `preactivationReady=true`, `ready=false` until issuance, `artifact011Issued` is `UNKNOWN` or explicit `false`, `consoleReady=true`, `activationGate="EXPLICIT_GO_REQUIRED"`, and `daemonStatus!="running"`. The operational `dema doctor` exit may remain non-zero because post-activation `ready` is intentionally false before ARTIFACT-011.
 - [ ] Live local model available if your gateway requires it (`lm_studio.connected=true`, loaded model, token present — per roadmap A5)
 - [ ] Governed bounded-diagnostic runtime path exists **outside this repo** and is invokable by operator
 - [ ] Operator has the exact consent phrase ready (character-for-character, no translation)
@@ -128,7 +128,7 @@ dema status:json
 dema doctor --json
 ```
 
-**Expected:** doctor exit 0; activation gate `EXPLICIT_GO_REQUIRED`; no hidden daemon.
+**Expected:** pre-activation eligibility is visible in machine status; activation gate is `EXPLICIT_GO_REQUIRED`; no hidden daemon; no ARTIFACT-011 is claimed.
 
 **Operator notes:**
 
@@ -324,7 +324,7 @@ Check only after capturing proof (command output, hashes, timestamps):
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Consent phrase typo, extra whitespace, translation, or partial match | **BLOCK** — do not invoke runtime; fix phrase                                             |
 | `dema mission propose` shows `executes: true`                        | **STOP** — Dema regression; do not proceed                                                |
-| `dema doctor` not ready / daemon already running                     | **BLOCK** — resolve readiness first                                                       |
+| `preactivationReady` false / daemon already running                  | **BLOCK** — resolve the bounded-request prerequisites first                               |
 | Runtime invoked but no receipt file                                  | **FAIL** — do not claim MEASURED; inspect runtime logs                                    |
 | Receipt `truth_label` is `PREVIEW`, `FIXTURE`, or absent             | **FAIL** — not v0.1 close gate                                                            |
 | `dema receipts ARTIFACT-011` errors or ambiguous selector            | **FAIL** — fix storage path or filename collision                                         |

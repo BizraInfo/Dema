@@ -1,5 +1,5 @@
 import { evaluateConsent } from "../../fate/src/fate.js";
-import { isReadyForBoundedDiagnostic } from "./status.js";
+import { isPreActivationReadyForBoundedDiagnostic } from "./status.js";
 import { BOUNDED_DIAGNOSTIC_CONSENT_PHRASE } from "./diagnostic-consent.js";
 
 // Re-export so existing callers (tests, CLI dispatchers) keep working
@@ -16,7 +16,19 @@ export const BOUNDED_DIAGNOSTIC_FORBIDDEN = Object.freeze([
 ]);
 
 export function proposeBoundedDiagnostic(status) {
-  if (!status.ready) {
+  if (
+    status.artifact011Issued === true ||
+    status.missionExecuted === true ||
+    status.runtimePulse?.fired === true
+  ) {
+    return {
+      allowed: false,
+      reason: "Runtime pulse or mission execution has already been recorded.",
+      nextAction: "inspect_receipts",
+    };
+  }
+
+  if (status.preactivationReady !== true && status.ready !== true) {
     return {
       allowed: false,
       reason: "Node is not ready.",
@@ -49,16 +61,8 @@ export function proposeBoundedDiagnostic(status) {
     };
   }
 
-  if (status.missionExecuted === true || status.runtimePulse?.fired === true) {
-    return {
-      allowed: false,
-      reason: "Runtime pulse or mission execution has already been recorded.",
-      nextAction: "inspect_receipts",
-    };
-  }
-
   return {
-    allowed: isReadyForBoundedDiagnostic(status),
+    allowed: isPreActivationReadyForBoundedDiagnostic(status),
     missionType: "bounded_diagnostic",
     consentPhrase: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
     forbidden: [...BOUNDED_DIAGNOSTIC_FORBIDDEN],

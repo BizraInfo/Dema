@@ -24,6 +24,7 @@ function deepFreeze(value) {
 export function buildLayerA5Checklist(preflight) {
   const status = preflight?.steps?.status?.parsed ?? {};
   const doctor = preflight?.steps?.doctor ?? {};
+  const preactivationReady = status.preactivationReady ?? status.ready;
 
   return Object.freeze([
     Object.freeze({
@@ -37,9 +38,9 @@ export function buildLayerA5Checklist(preflight) {
       ok: preflight?.steps?.setup_check?.ok === true,
     }),
     Object.freeze({
-      id: "status_ready",
-      label: "status.ready === true",
-      ok: status.ready === true,
+      id: "status_preactivation_ready",
+      label: "status.preactivationReady === true",
+      ok: preactivationReady === true,
     }),
     Object.freeze({
       id: "console_ready",
@@ -57,9 +58,9 @@ export function buildLayerA5Checklist(preflight) {
       ok: (status.daemonStatus ?? "") !== "running",
     }),
     Object.freeze({
-      id: "doctor_exit_zero",
-      label: "dema doctor --json exit 0",
-      ok: doctor.exitCode === 0,
+      id: "doctor_json_valid",
+      label: "dema doctor --json returned a parseable report",
+      ok: doctor.ok === true,
     }),
     Object.freeze({
       id: "preview_ceremony",

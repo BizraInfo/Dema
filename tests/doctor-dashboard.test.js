@@ -64,6 +64,32 @@ test("evaluatePredicates: all-ok status → all predicates have status=ok", () =
   }
 });
 
+test("preactivation eligibility is expected state, not a repair failure", () => {
+  const status = {
+    ready: false,
+    preactivationReady: true,
+    artifact011Issued: "UNKNOWN",
+    consoleReady: true,
+    activationGate: "EXPLICIT_GO_REQUIRED",
+    daemonStatus: "n/a-via-gateway",
+    gateway: { reachable: true },
+  };
+  const predicates = evaluatePredicates(status);
+  const ready = predicates.find((p) => p.key === "ready");
+  assert.equal(ready.status, "expected");
+  assert.equal(ready.preactivation_ready, true);
+  assert.equal(
+    doctorVerdict(predicates),
+    "ARTIFACT_011_PREACTIVATION_ELIGIBLE",
+  );
+  assert.deepEqual(doctorState(predicates), {
+    operational: false,
+    preview_environment_valid: true,
+    repair_required: false,
+    reason: "preactivation_not_activated",
+  });
+});
+
 test("evaluatePredicates: activation gate BLOCKED → fail with fix", () => {
   const preds = evaluatePredicates({ activationGate: "BLOCKED" });
   const gate = preds.find((p) => p.key === "activationGate");
