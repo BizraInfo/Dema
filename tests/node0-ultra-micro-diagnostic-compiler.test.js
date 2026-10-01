@@ -125,6 +125,30 @@ test("UMDC-06 DEMA-1A refusal classification outranks infrastructure retryabilit
   ), true);
 });
 
+test("UMDC-06B infrastructure failure remains explicitly infrastructure, not code", () => {
+  const packet = compileNode0UltraMicroDiagnostic({
+    subject_id: "infra-classification",
+    episodes: [
+      cleanEpisode({
+        id: "ep-infra",
+        outcome: "HALTED",
+        effects_started: false,
+        artifact_hashes: [],
+        boundary_attempted: true,
+        failure_recorded: true,
+        failure: { kind: "INFRA", rc: 127, infrastructure: true },
+      }),
+    ],
+  });
+  assert.equal(packet.reasoning_hierarchy.level_1_findings.some((f) =>
+    f.observation === "infra_failure" &&
+    f.reason === "infrastructure_unavailable_not_code_failure"
+  ), true);
+  assert.equal(packet.reasoning_hierarchy.level_1_findings.some((f) =>
+    f.observation === "code_failure"
+  ), false);
+});
+
 test("UMDC-07 outward failure without a durable record is a laundering risk", () => {
   const packet = compileNode0UltraMicroDiagnostic({
     subject_id: "r2",
@@ -271,6 +295,18 @@ test("UMDC-15 typed hypergraph recall prefers a two-type join", () => {
     5,
   );
   assert.equal(independent[0].evidence_ref, "e1");
+});
+
+test("UMDC-15B existing LOCAL_ONLY proof ledger does not fabricate economic convergence", () => {
+  const packet = compileNode0UltraMicroDiagnostic({
+    subject_id: "economic-ceiling",
+    proof_ledger: validLedger(),
+    episodes: [cleanEpisode()],
+  });
+  assert.equal(packet.proof_convergence.ledger_verified, true);
+  assert.equal(packet.proof_convergence.channels.economic, false);
+  assert.equal(packet.proof_convergence.converged, false);
+  assert.ok(packet.critique.unknowns.includes("proof_channel_open:economic"));
 });
 
 test("UMDC-16 verifier re-derives semantics and catches forged packet", () => {
