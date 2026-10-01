@@ -28,6 +28,9 @@ export const OBSERVATION_ALPHABET = Object.freeze([
   "self_attested",
   "unbound",
   "nonconformant",
+  "stale_evidence",
+  "infra_failure",
+  "code_failure",
 ]);
 
 const MAX_EPISODES = 256;
@@ -72,6 +75,9 @@ const HYPOTHESIS_RULES = Object.freeze({
   unmeasured_cost: Object.freeze({ id: "economic_evidence_gap", severity: 3, cost: 1 }),
   refusal: Object.freeze({ id: "authority_or_policy_refusal", severity: 2, cost: 1 }),
   dry_run: Object.freeze({ id: "simulation_not_effect", severity: 2, cost: 1 }),
+  stale_evidence: Object.freeze({ id: "stale_evidence_boundary", severity: 4, cost: 1 }),
+  infra_failure: Object.freeze({ id: "infrastructure_unavailable", severity: 3, cost: 1 }),
+  code_failure: Object.freeze({ id: "code_defect_candidate", severity: 3, cost: 2 }),
 });
 
 function freezeDeep(v) {
@@ -176,6 +182,9 @@ function mineEpisode(raw, index) {
 
   if (!flow.prefix_conformant) findings.push(finding(id, "nonconformant", "stage_trace_not_canonical_prefix", last, 4));
   if (failureKind === "REFUSAL") findings.push(finding(id, "refusal", "authority_or_policy_refused", last, 2));
+  if (failureKind === "STALE") findings.push(finding(id, "stale_evidence", "verification_or_evidence_stale", last, 4));
+  if (failureKind === "INFRA") findings.push(finding(id, "infra_failure", "infrastructure_unavailable_not_code_failure", last, 3));
+  if (failureKind === "CODE") findings.push(finding(id, "code_failure", "code_failure_candidate", last, 3));
   if (outward && failureKind && raw.failure_recorded !== true) {
     findings.push(finding(id, "launder_risk", "outward_failure_unrecorded", last, 5));
   }
@@ -482,7 +491,12 @@ export function compileNode0UltraMicroDiagnostic(input = {}) {
       hidden_chain_of_thought_required: false,
     },
     compliance: {
-      dema_fde_dual_diagnostic_1a: true,
+      dema_fde_dual_diagnostic_1a: {
+        mode: "diagnostic_constraints_only",
+        classification_order: ["REFUSAL", "STALE", "INFRA", "CODE", "UNKNOWN"],
+        inward_repair_performed: false,
+        outward_failure_recording_performed: false,
+      },
       self_consent_permitted: false,
       consequential_authority_present: false,
       authority_delta: 0,
