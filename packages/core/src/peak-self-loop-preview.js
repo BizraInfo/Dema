@@ -636,7 +636,7 @@ function buildProactiveSelf({
   });
 }
 
-function buildTraceDiagnosticMoat({ verifiedSignalEvents, noiseEvents }) {
+function buildTraceDiagnosticMoat({ verifiedSignalEvents, noiseEvents, traceCorroboration = null }) {
   const trace_set = verifiedSignalEvents.map((e) =>
     Object.freeze({
       trace_id: `trace.signal.${String(e.id)}`,
@@ -671,15 +671,33 @@ function buildTraceDiagnosticMoat({ verifiedSignalEvents, noiseEvents }) {
     synthesis_mode: "proactive_ultra_micro_self_consistency",
     doxology: "Ihsān · precision · no-false-GREEN · burden removed",
   });
+  // Corroboration is an external input to this compose layer. The peak loop may
+  // derive the replay SUBJECT hash, but it may never assert that an independent
+  // replay happened or manufacture its witness hash. Missing corroboration
+  // therefore fails closed at REMAIN_TRACE rather than laundering same-process
+  // self-consistency into independence.
+  const expectedReplaySubjectHash = computeTraceDiagnosticReplaySubjectHashV2(
+    trace_set,
+    hypothesis_graph,
+    insight_candidate,
+  );
+  const suppliedCorroboration =
+    traceCorroboration &&
+    typeof traceCorroboration === "object" &&
+    !Array.isArray(traceCorroboration)
+      ? traceCorroboration
+      : {};
   const verification = Object.freeze({
-    replay_performed: true,
-    independent: true,
-    independent_replay_hash: "c".repeat(64),
-    replay_subject_hash: computeTraceDiagnosticReplaySubjectHashV2(
-      trace_set,
-      hypothesis_graph,
-      insight_candidate,
-    ),
+    replay_performed: suppliedCorroboration.replay_performed === true,
+    independent: suppliedCorroboration.independent === true,
+    independent_replay_hash:
+      typeof suppliedCorroboration.independent_replay_hash === "string"
+        ? suppliedCorroboration.independent_replay_hash
+        : "",
+    replay_subject_hash:
+      typeof suppliedCorroboration.replay_subject_hash === "string"
+        ? suppliedCorroboration.replay_subject_hash
+        : "",
   });
   const report = buildTraceDiagnosticContractV2({
     trace_set,
@@ -773,6 +791,7 @@ export function buildPeakSelfLoopPreview({
   proposer = "",
   certifier = "",
   verifier_bindings = {},
+  trace_corroboration = null,
 } = {}) {
   const signalEvents = Array.isArray(signal_events)
     ? signal_events
@@ -871,6 +890,7 @@ export function buildPeakSelfLoopPreview({
   const trace_diagnostic_moat = buildTraceDiagnosticMoat({
     verifiedSignalEvents,
     noiseEvents,
+    traceCorroboration: trace_corroboration,
   });
 
   const proactive_self = buildProactiveSelf({
@@ -937,7 +957,7 @@ export function buildPeakSelfLoopPreview({
     what_this_proves:
       "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, MC witness, agent-outside-sandbox posture, OODA review, RSI gate, and trace-diagnostic moat (four-rail self-consistency) without runtime",
     what_this_does_not_prove:
-      "Live autonomy, HHMM engine execution, economic activation, or cryptographic seal; moat classifies admissibility only, not truth of insight",
+      "Live autonomy, HHMM engine execution, economic activation, cryptographic seal, or independent replay; moat classifies caller-supplied corroboration admissibility only, not truth of insight",
     boundary: buildPreviewBoundary(),
   });
 }
