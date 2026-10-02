@@ -31,6 +31,7 @@ import {
   verifyTraceDiagnosticContractV2,
   computeTraceDiagnosticReplaySubjectHashV2,
 } from "./dema-trace-diagnostic-contract.js";
+import { verifyTraceCorroborationOrigin } from "./trace-corroboration-origin.js";
 
 export const PEAK_SELF_LOOP_PREVIEW_SCHEMA =
   "bizra.dema.peak_self_loop_preview.v0.1";
@@ -636,7 +637,12 @@ function buildProactiveSelf({
   });
 }
 
-function buildTraceDiagnosticMoat({ verifiedSignalEvents, noiseEvents, traceCorroboration = null }) {
+function buildTraceDiagnosticMoat({
+  verifiedSignalEvents,
+  noiseEvents,
+  traceCorroboration = null,
+  traceCorroborationContext = {},
+}) {
   const trace_set = verifiedSignalEvents.map((e) =>
     Object.freeze({
       trace_id: `trace.signal.${String(e.id)}`,
@@ -681,24 +687,26 @@ function buildTraceDiagnosticMoat({ verifiedSignalEvents, noiseEvents, traceCorr
     hypothesis_graph,
     insight_candidate,
   );
-  const suppliedCorroboration =
-    traceCorroboration &&
-    typeof traceCorroboration === "object" &&
-    !Array.isArray(traceCorroboration)
-      ? traceCorroboration
-      : {};
-  const verification = Object.freeze({
-    replay_performed: suppliedCorroboration.replay_performed === true,
-    independent: suppliedCorroboration.independent === true,
-    independent_replay_hash:
-      typeof suppliedCorroboration.independent_replay_hash === "string"
-        ? suppliedCorroboration.independent_replay_hash
-        : "",
-    replay_subject_hash:
-      typeof suppliedCorroboration.replay_subject_hash === "string"
-        ? suppliedCorroboration.replay_subject_hash
-        : "",
+  // TRACE-CORROBORATION-ORIGIN-1A: raw caller assertions are not
+  // corroboration. A receipt must be bound to a trusted external verifier,
+  // exact replay subject, challenge, and Ed25519 signature before it can be
+  // normalized into the v0.2 corroboration rail.
+  const originVerification = verifyTraceCorroborationOrigin({
+    corroboration: traceCorroboration,
+    expected_subject_hash: expectedReplaySubjectHash,
+    trusted_verifiers: traceCorroborationContext.trusted_verifiers,
+    proposer_origin: traceCorroborationContext.proposer_origin,
+    executor_origin: traceCorroborationContext.executor_origin,
+    expected_challenge: traceCorroborationContext.expected_challenge,
   });
+  const verification =
+    originVerification.normalized_corroboration ??
+    Object.freeze({
+      replay_performed: false,
+      independent: false,
+      independent_replay_hash: "",
+      replay_subject_hash: "",
+    });
   const report = buildTraceDiagnosticContractV2({
     trace_set,
     hypothesis_graph,
@@ -711,6 +719,7 @@ function buildTraceDiagnosticMoat({ verifiedSignalEvents, noiseEvents, traceCorr
     hypothesis_graph,
     insight_candidate,
     expected_replay_subject_hash: expectedReplaySubjectHash,
+    origin_verification: originVerification,
     verification,
     report,
     verified,
@@ -793,6 +802,7 @@ export function buildPeakSelfLoopPreview({
   certifier = "",
   verifier_bindings = {},
   trace_corroboration = null,
+  trace_corroboration_context = {},
 } = {}) {
   const signalEvents = Array.isArray(signal_events)
     ? signal_events
@@ -892,6 +902,7 @@ export function buildPeakSelfLoopPreview({
     verifiedSignalEvents,
     noiseEvents,
     traceCorroboration: trace_corroboration,
+    traceCorroborationContext: trace_corroboration_context,
   });
 
   const proactive_self = buildProactiveSelf({
@@ -958,7 +969,7 @@ export function buildPeakSelfLoopPreview({
     what_this_proves:
       "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, MC witness, agent-outside-sandbox posture, OODA review, RSI gate, and trace-diagnostic moat (four-rail self-consistency) without runtime",
     what_this_does_not_prove:
-      "Live autonomy, HHMM engine execution, economic activation, cryptographic seal, or independent replay; moat classifies admissibility only from caller-supplied corroboration, not truth of insight",
+      "Live autonomy, HHMM engine execution, economic activation, external trust-root governance, or independent replay itself; moat verifies cryptographic receipt origin and subject/challenge binding but does not prove insight truth",
     boundary: buildPreviewBoundary(),
   });
 }
