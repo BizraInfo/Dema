@@ -101,3 +101,20 @@ test("PTM-07: render includes trace diagnostic moat line", async () => {
   assert.ok(text.includes("trace_moat:"));
   assert.ok(text.includes("trace_moat"));
 });
+
+
+// PTM-08: regression for same-process corroboration laundering.
+// Source-bound signals may satisfy provenance/consistency/disambiguation,
+// but MUST NOT self-mint the corroboration rail. Without caller-supplied
+// independent replay evidence, promotion remains REMAIN_TRACE.
+test("PTM-08: bound signals alone cannot self-authorize corroboration", () => {
+  const nine = Array.from({ length: 9 }, (_, i) => BOUND(i));
+  const out = buildPeakSelfLoopPreview({ signal_events: nine, noise_events: [] });
+  assert.equal(out.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
+  assert.equal(out.trace_diagnostic_moat.synthesis.insight_authorized, false);
+  assert.equal(out.proactive_self.compliance.trace_diagnostic_authorized, false);
+  assert.ok(
+    out.trace_diagnostic_moat.blocked_by.some((b) => b.includes("corroboration")),
+    "expected a corroboration blocker",
+  );
+});
