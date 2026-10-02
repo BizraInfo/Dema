@@ -958,7 +958,7 @@ export function buildPeakSelfLoopPreview({
     what_this_proves:
       "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, MC witness, agent-outside-sandbox posture, OODA review, RSI gate, and trace-diagnostic moat (four-rail self-consistency) without runtime",
     what_this_does_not_prove:
-      "Live autonomy, HHMM engine execution, economic activation, cryptographic seal, or independent replay; moat classifies caller-supplied corroboration admissibility only, not truth of insight",
+      "Live autonomy, HHMM engine execution, economic activation, cryptographic seal, or independent replay; moat classifies admissibility only from caller-supplied corroboration, not truth of insight",
     boundary: buildPreviewBoundary(),
   });
 }
