@@ -6,7 +6,10 @@ import {
   isCanonicalBoundary,
   PREVIEW_BOUNDARY_CANONICAL_KEYS,
 } from "../packages/core/src/preview-boundary.js";
-import { DEMA_TRACE_DIAGNOSTIC_CONTRACT_V2_SCHEMA } from "../packages/core/src/dema-trace-diagnostic-contract.js";
+import {
+  DEMA_TRACE_DIAGNOSTIC_CONTRACT_V2_SCHEMA,
+  computeTraceDiagnosticReplaySubjectHashV2,
+} from "../packages/core/src/dema-trace-diagnostic-contract.js";
 
 const BOUND = (i) => ({
   id: `moat-${i}`,
@@ -53,21 +56,39 @@ test("PTM-03: one verified signal plus vacuous alternative yields REMAIN_TRACE",
   assert.ok(out.trace_diagnostic_moat.blocked_by.some((b) => b.includes("v2_disambiguation_hypothesis_without_evidence")));
 });
 
-// PTM-04: 9 bound signals yield INSIGHT_AUTHORIZED, trace_moat clears gap, critique may still HOLD on other gaps but moat gap absent
-test("PTM-04: 9 bound signals yield INSIGHT_AUTHORIZED and moat gap cleared", () => {
+// PTM-04: source-bound signals alone stop at REMAIN_TRACE. A separate caller
+// may then submit a subject-bound corroboration envelope; only that second pass
+// can authorize the moat.
+test("PTM-04: caller-supplied corroboration can authorize a bound signal set", () => {
   const nine = Array.from({ length: 9 }, (_, i) => BOUND(i));
-  const out = buildPeakSelfLoopPreview({ signal_events: nine, noise_events: [] });
+  const baseline = buildPeakSelfLoopPreview({ signal_events: nine, noise_events: [] });
+  assert.equal(baseline.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
+
+  const replaySubjectHash = computeTraceDiagnosticReplaySubjectHashV2(
+    baseline.trace_diagnostic_moat.trace_set,
+    baseline.trace_diagnostic_moat.hypothesis_graph,
+    baseline.trace_diagnostic_moat.insight_candidate,
+  );
+  const out = buildPeakSelfLoopPreview({
+    signal_events: nine,
+    noise_events: [],
+    trace_corroboration: {
+      replay_performed: true,
+      independent: true,
+      independent_replay_hash: "d".repeat(64),
+      replay_subject_hash: replaySubjectHash,
+    },
+  });
+
   assert.equal(out.trace_diagnostic_moat.promotion_status, "INSIGHT_AUTHORIZED");
   assert.equal(out.trace_diagnostic_moat.trace_set.length, 9);
   assert.equal(out.trace_diagnostic_moat.hypothesis_graph.length, 2);
   assert.equal(out.trace_diagnostic_moat.synthesis.verified_trace_count, 9);
   assert.equal(out.proactive_self.compliance.trace_diagnostic_authorized, true);
-  // moat gap should be absent even though other gaps may remain (declared, companion, verify)
   assert.equal(
     out.proactive_self.critique.gaps.some((g) => g.includes("TRACE moat")),
     false,
   );
-  // ultra micro compose includes moat subsystems
   assert.ok(out.ultra_micro_compose.subsystems.includes("proactive_self.trace_diagnostic_moat"));
   assert.ok(out.ultra_micro_compose.subsystems.includes("trace_diagnostic_moat"));
 });
