@@ -710,6 +710,7 @@ function buildTraceDiagnosticMoat({ verifiedSignalEvents, noiseEvents, traceCorr
     trace_set: Object.freeze(trace_set),
     hypothesis_graph,
     insight_candidate,
+    expected_replay_subject_hash: expectedReplaySubjectHash,
     verification,
     report,
     verified,
