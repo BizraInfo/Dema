@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { generateKeyPairSync, sign } from "node:crypto";
 
 import { buildPeakSelfLoopPreview } from "../packages/core/src/peak-self-loop-preview.js";
 import {
@@ -103,7 +104,7 @@ test("PTM-06: HHMM diffusion intact alongside moat, both preview-only", () => {
   assert.equal(out.hhmm.phases.length, 5);
   assert.equal(out.trace_diagnostic_moat.report.stage, "TRACE_DIAGNOSTIC_PROMOTION_GATE");
   // self-consistency requires both moat and no neural claim
-  assert.equal(out.what_this_does_not_prove.includes("moat classifies admissibility only"), true);
+  assert.equal(out.what_this_does_not_prove.includes("moat verifies cryptographic receipt origin"), true);
 });
 
 // PTM-07: render includes trace_moat line
@@ -130,4 +131,138 @@ test("PTM-08: bound signals alone cannot self-authorize corroboration", () => {
     out.trace_diagnostic_moat.blocked_by.some((b) => b.includes("corroboration")),
     "expected a corroboration blocker",
   );
+});
+
+
+const ORIGIN_SUBJECT = "a".repeat(64);
+const ORIGIN_REPLAY = "b".repeat(64);
+const ORIGIN_CHALLENGE = "trace-origin-challenge-001";
+const { publicKey: ORIGIN_PUBLIC_KEY, privateKey: ORIGIN_PRIVATE_KEY } =
+  generateKeyPairSync("ed25519");
+const ORIGIN_PUBLIC_KEY_PEM = ORIGIN_PUBLIC_KEY.export({
+  type: "spki",
+  format: "pem",
+});
+const ORIGIN_TRUSTED = Object.freeze([
+  Object.freeze({
+    verifier_id: "sat.external.trace-v1",
+    verifier_key_id: "sat.external.trace-v1:key-1",
+    public_key_pem: ORIGIN_PUBLIC_KEY_PEM,
+    status: "ACTIVE",
+  }),
+]);
+
+function signedOriginReceipt(overrides = {}) {
+  const receipt = {
+    schema: TRACE_CORROBORATION_ORIGIN_SCHEMA,
+    verifier_id: "sat.external.trace-v1",
+    verifier_key_id: "sat.external.trace-v1:key-1",
+    replay_performed: true,
+    replay_subject_hash: ORIGIN_SUBJECT,
+    independent_replay_hash: ORIGIN_REPLAY,
+    challenge_nonce: ORIGIN_CHALLENGE,
+    ...overrides,
+  };
+  const signature = sign(
+    null,
+    Buffer.from(canonicalTraceCorroborationOriginPayload(receipt), "utf8"),
+    ORIGIN_PRIVATE_KEY,
+  ).toString("base64");
+  return { ...receipt, signature_b64: signature };
+}
+
+function verifyOrigin(receipt, overrides = {}) {
+  return verifyTraceCorroborationOrigin({
+    corroboration: receipt,
+    expected_subject_hash: ORIGIN_SUBJECT,
+    trusted_verifiers: ORIGIN_TRUSTED,
+    proposer_origin: "pat.local.proposer",
+    executor_origin: "node0.local.executor",
+    expected_challenge: ORIGIN_CHALLENGE,
+    ...overrides,
+  });
+}
+
+test("PTM-09: same-origin verifier cannot satisfy independent corroboration", () => {
+  const receipt = signedOriginReceipt({ verifier_id: "pat.local.proposer" });
+  const out = verifyOrigin(receipt, {
+    trusted_verifiers: [{
+      verifier_id: "pat.local.proposer",
+      verifier_key_id: receipt.verifier_key_id,
+      public_key_pem: ORIGIN_PUBLIC_KEY_PEM,
+      status: "ACTIVE",
+    }],
+  });
+  assert.equal(out.ok, false);
+  assert.ok(out.blocked_by.includes("corroboration_origin_same_as_proposer"));
+});
+
+test("PTM-10: unknown verifier and wrong subject/challenge fail closed", () => {
+  const unknown = verifyOrigin(
+    signedOriginReceipt({ verifier_id: "unknown.verifier" }),
+  );
+  assert.equal(unknown.ok, false);
+  assert.ok(unknown.blocked_by.includes("corroboration_origin_unknown_verifier"));
+
+  const wrongSubject = verifyOrigin(
+    signedOriginReceipt({ replay_subject_hash: "c".repeat(64) }),
+  );
+  assert.equal(wrongSubject.ok, false);
+  assert.ok(wrongSubject.blocked_by.includes("corroboration_origin_subject_mismatch"));
+
+  const wrongChallenge = verifyOrigin(
+    signedOriginReceipt({ challenge_nonce: "stale-challenge" }),
+  );
+  assert.equal(wrongChallenge.ok, false);
+  assert.ok(wrongChallenge.blocked_by.includes("corroboration_origin_challenge_mismatch"));
+});
+
+test("PTM-11: valid signed external-origin receipt normalizes to v0.2 corroboration", () => {
+  const out = verifyOrigin(signedOriginReceipt());
+  assert.equal(out.ok, true);
+  assert.deepEqual(out.blocked_by, []);
+  assert.deepEqual(out.normalized_corroboration, {
+    replay_performed: true,
+    independent: true,
+    independent_replay_hash: ORIGIN_REPLAY,
+    replay_subject_hash: ORIGIN_SUBJECT,
+  });
+  assert.equal(out.verification_mode, "ed25519_origin_receipt");
+});
+
+test("PTM-12: peak moat accepts only verified external-origin corroboration", () => {
+  const nine = Array.from({ length: 9 }, (_, i) => BOUND(i));
+  const baseline = buildPeakSelfLoopPreview({ signal_events: nine, noise_events: [] });
+  const subjectHash = computeTraceDiagnosticReplaySubjectHashV2(
+    baseline.trace_diagnostic_moat.trace_set,
+    baseline.trace_diagnostic_moat.hypothesis_graph,
+    baseline.trace_diagnostic_moat.insight_candidate,
+  );
+
+  const rawAssertion = buildPeakSelfLoopPreview({
+    signal_events: nine,
+    noise_events: [],
+    trace_corroboration: {
+      replay_performed: true,
+      independent: true,
+      independent_replay_hash: ORIGIN_REPLAY,
+      replay_subject_hash: subjectHash,
+    },
+  });
+  assert.equal(rawAssertion.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
+
+  const receipt = signedOriginReceipt({ replay_subject_hash: subjectHash });
+  const signed = buildPeakSelfLoopPreview({
+    signal_events: nine,
+    noise_events: [],
+    trace_corroboration: receipt,
+    trace_corroboration_context: {
+      trusted_verifiers: ORIGIN_TRUSTED,
+      proposer_origin: "pat.local.proposer",
+      executor_origin: "node0.local.executor",
+      expected_challenge: ORIGIN_CHALLENGE,
+    },
+  });
+  assert.equal(signed.trace_diagnostic_moat.origin_verification.ok, true);
+  assert.equal(signed.trace_diagnostic_moat.promotion_status, "INSIGHT_AUTHORIZED");
 });
