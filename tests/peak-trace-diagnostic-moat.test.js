@@ -56,10 +56,9 @@ test("PTM-03: one verified signal plus vacuous alternative yields REMAIN_TRACE",
   assert.ok(out.trace_diagnostic_moat.blocked_by.some((b) => b.includes("v2_disambiguation_hypothesis_without_evidence")));
 });
 
-// PTM-04: source-bound signals alone stop at REMAIN_TRACE. A separate caller
-// may then submit a subject-bound corroboration envelope; only that second pass
-// can authorize the moat.
-test("PTM-04: caller-supplied corroboration can authorize a bound signal set", () => {
+// PTM-04: raw caller corroboration assertions are not sufficient. Origin
+// verification is mandatory; positive signed-origin coverage lives in TCO-05.
+test("PTM-04: raw caller corroboration remains trace without origin proof", () => {
   const nine = Array.from({ length: 9 }, (_, i) => BOUND(i));
   const baseline = buildPeakSelfLoopPreview({ signal_events: nine, noise_events: [] });
   assert.equal(baseline.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
@@ -80,17 +79,10 @@ test("PTM-04: caller-supplied corroboration can authorize a bound signal set", (
     },
   });
 
-  assert.equal(out.trace_diagnostic_moat.promotion_status, "INSIGHT_AUTHORIZED");
-  assert.equal(out.trace_diagnostic_moat.trace_set.length, 9);
-  assert.equal(out.trace_diagnostic_moat.hypothesis_graph.length, 2);
-  assert.equal(out.trace_diagnostic_moat.synthesis.verified_trace_count, 9);
-  assert.equal(out.proactive_self.compliance.trace_diagnostic_authorized, true);
-  assert.equal(
-    out.proactive_self.critique.gaps.some((g) => g.includes("TRACE moat")),
-    false,
-  );
-  assert.ok(out.ultra_micro_compose.subsystems.includes("proactive_self.trace_diagnostic_moat"));
-  assert.ok(out.ultra_micro_compose.subsystems.includes("trace_diagnostic_moat"));
+  assert.equal(out.trace_diagnostic_moat.origin_verification.ok, false);
+  assert.equal(out.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
+  assert.equal(out.trace_diagnostic_moat.synthesis.insight_authorized, false);
+  assert.equal(out.proactive_self.compliance.trace_diagnostic_authorized, false);
 });
 
 // PTM-05: boundary remains all-false and frozen, doxology bound
