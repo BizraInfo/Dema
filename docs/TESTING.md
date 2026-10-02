@@ -62,6 +62,7 @@ reproduction.
 | Test file | Surface covered |
 | --- | --- |
 | `tests/dema-data-steward-scripts.test.js` | DEMA-DATA-STEWARD-INVENTORY-BOUNDARY-1A: temporary fixtures prove opt-in exact directory exclusions are recorded before descendants, normal paths stay included by default, symlinks are not followed, metadata-only mode reads no file contents, and sealed receipts bind producer path/bytes/SHA-256 while rejecting invalid, duplicate, or source-root-contained output paths. |
+| `tests/node0-ultra-micro-diagnostic-compiler.test.js` | NODE0-ULTRA-MICRO-DIAGNOSTIC-COMPILER-1A: preview-only process mining, DEMA failure classification, prefix-keyed HHMM health inference, typed hypergraph recall, deterministic evidence diffusion, fixed-k SNR frontier, proof-convergence ceiling, consent/authority anti-laundering controls, and packet semantic re-derivation. No runtime execution or authority grant. |
 
 > **EVIDENCE-HONEST-SUITE-1A correction (2026-08-23):** the detailed historical rows below predate the current suite. `tests/node0-closure-invariants-gate.test.js` has 10 tests: host-derived ledger counts are asserted as content/floors, while NCG-01b retains the hermetic `1 satisfied / 0 violated / 9 unknown` count control. `tests/preview-receipt-signing.test.js` has 26 tests: the active key-pair injection seam is exercised, and unknown signing options are refused before key loading.
 
