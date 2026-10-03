@@ -37,12 +37,13 @@ function pathInside(child, parent) {
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
-function git(repoRoot, args) {
+function git(repoRoot, args, { trim = true } = {}) {
   try {
-    return execFileSync("git", ["-C", repoRoot, ...args], {
+    const output = execFileSync("git", ["-C", repoRoot, ...args], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
+    });
+    return trim ? output.trim() : output;
   } catch (error) {
     throw new Error(`GIT_BIND_FAILED: ${error.stderr?.trim() || error.message}`);
   }
@@ -54,12 +55,12 @@ export function buildPhysicalState({ cwd, repoRoot } = {}) {
   if (!pathInside(resolvedCwd, resolvedRepoRoot)) {
     throw new Error("REPO_ROOT_MISMATCH: cwd is outside repo root");
   }
-  const status = execFileSync(
-    "git",
-    ["-C", resolvedRepoRoot, "status", "--porcelain=v1", "-z", "--untracked-files=all"],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  );
-  const branch = git(resolvedRepoRoot, ["symbolic-ref", "--short", "-q", "HEAD"]) || "DETACHED";
+  const status = git(resolvedRepoRoot, ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
+    trim: false,
+  });
+  // rev-parse works in detached HEAD (CI checkouts); symbolic-ref does not.
+  const branchRef = git(resolvedRepoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
+  const branch = branchRef === "HEAD" ? "DETACHED" : branchRef;
   return {
     cwd: resolvedCwd,
     repo_root: resolvedRepoRoot,

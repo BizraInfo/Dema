@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -487,6 +488,54 @@ test("filesystem binding refuses a cwd outside the selected repository", () => {
     () => buildPhysicalState({ cwd: "/outside", repoRoot: "/repo" }),
     /REPO_ROOT_MISMATCH/,
   );
+  assert.throws(
+    () => collectAncestorContexts({ cwd: "/outside", repoRoot: "/repo" }),
+    /REPO_ROOT_MISMATCH/,
+  );
+});
+
+test("physical binding reports missing Git metadata as a bounded bind failure", () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "bizra-no-git-context-"));
+  try {
+    assert.throws(
+      () => buildPhysicalState({ cwd: repoRoot, repoRoot }),
+      /GIT_BIND_FAILED/,
+    );
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("physical binding preserves attached and detached checkout identity", () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "bizra-detached-context-"));
+  const git = (...args) => execFileSync("git", ["-C", repoRoot, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+  try {
+    git("init", "-q");
+    execFileSync("git", [
+      "-C", repoRoot,
+      "-c", "user.name=DEMA test",
+      "-c", "user.email=dema-test@example.invalid",
+      "commit", "--allow-empty", "-q", "-m", "fixture",
+    ], { stdio: "ignore" });
+
+    const attachedState = buildPhysicalState({ cwd: repoRoot, repoRoot });
+    assert.notEqual(attachedState.branch, "DETACHED");
+    assert.equal(attachedState.head, git("rev-parse", "HEAD"));
+    assert.equal(attachedState.tree, git("rev-parse", "HEAD^{tree}"));
+
+    git("checkout", "--detach", "-q", "HEAD");
+
+    const state = buildPhysicalState({ cwd: repoRoot, repoRoot });
+
+    assert.equal(state.branch, "DETACHED");
+    assert.equal(state.head, git("rev-parse", "HEAD"));
+    assert.equal(state.tree, git("rev-parse", "HEAD^{tree}"));
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
 });
 
 test("context collection refuses when the node root has no canonical context", () => {
