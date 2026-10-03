@@ -37,6 +37,14 @@ function refuse(code) {
   });
 }
 
+function isWellFormedUtf16(text) {
+  if (typeof text.isWellFormed === "function") return text.isWellFormed();
+  // Fallback for engines without String#isWellFormed.
+  return !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(
+    text,
+  );
+}
+
 function proposalHash(proposalText) {
   return `sha256:${createHash("sha256").update(proposalText, "utf8").digest("hex")}`;
 }
@@ -63,6 +71,9 @@ export function runBaselineVerifierGate({ consent, input } = {}) {
   }
   if (typeof input.proposalText !== "string") {
     return refuse("proposal_not_string");
+  }
+  if (!isWellFormedUtf16(input.proposalText)) {
+    return refuse("proposal_not_well_formed");
   }
 
   const verified = proposalHasExactGoPhrase(input.proposalText);

@@ -122,3 +122,21 @@ test("BASELINE-VERIFIER-07: distinct proposals produce distinct event hashes", (
   assert.notEqual(a.event.payload.proposal_hash, b.event.payload.proposal_hash);
   assert.notEqual(a.event.event_hash, b.event.event_hash);
 });
+
+test("BASELINE-VERIFIER-08: ill-formed UTF-16 is refused before hashing", () => {
+  const loneSurrogate = `Plan\n${BASELINE_VERIFIER_GATE_GO_PHRASE}\n` + "\uD800";
+  const replaced = `Plan\n${BASELINE_VERIFIER_GATE_GO_PHRASE}\n` + "\uFFFD";
+  const ill = runBaselineVerifierGate({
+    consent: BASELINE_VERIFIER_GATE_GO_PHRASE,
+    input: { proposalText: loneSurrogate },
+  });
+  assert.equal(ill.ok, false);
+  assert.deepEqual(ill.blocked_by, ["proposal_not_well_formed"]);
+
+  const well = runBaselineVerifierGate({
+    consent: BASELINE_VERIFIER_GATE_GO_PHRASE,
+    input: { proposalText: replaced },
+  });
+  assert.equal(well.ok, true);
+  assert.equal(well.event.payload.verified, true);
+});
