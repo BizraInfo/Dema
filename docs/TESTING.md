@@ -61,6 +61,7 @@ reproduction.
 
 | Test file | Surface covered |
 | --- | --- |
+| `tests/context-spine.test.js` | Checkout-bound Context Spine V1: recursive inheritance, authority narrowing, source and projection integrity, lock and session binding, and fail-closed negative controls. Same-implementation local checks; no portability or independent-verifier claim. |
 | `tests/dema-data-steward-scripts.test.js` | DEMA-DATA-STEWARD-INVENTORY-BOUNDARY-1A: temporary fixtures prove opt-in exact directory exclusions are recorded before descendants, normal paths stay included by default, symlinks are not followed, metadata-only mode reads no file contents, and sealed receipts bind producer path/bytes/SHA-256 while rejecting invalid, duplicate, or source-root-contained output paths. |
 | `tests/node0-ultra-micro-diagnostic-compiler.test.js` | NODE0-ULTRA-MICRO-DIAGNOSTIC-COMPILER-1A: preview-only process mining, DEMA failure classification, prefix-keyed HHMM health inference, typed hypergraph recall, deterministic evidence diffusion, fixed-k SNR frontier, proof-convergence ceiling, consent/authority anti-laundering controls, and packet semantic re-derivation. No runtime execution or authority grant. |
 
