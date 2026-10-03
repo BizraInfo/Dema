@@ -109,6 +109,9 @@ For the full list of what is **measured**, what is **designed but not
 live**, and what is **planned**, read
 [docs/CURRENT_LIMITS.md](docs/CURRENT_LIMITS.md).
 
+The technical Genesis-v1 handoff is tracked separately as a local candidate in
+[docs/NODE0_GENESIS_V1_LIGHTHOUSE.md](docs/NODE0_GENESIS_V1_LIGHTHOUSE.md).
+
 ---
 
 ## Sovereign journey

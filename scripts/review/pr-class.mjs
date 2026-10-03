@@ -31,7 +31,7 @@ const REVIEW_CLASSES = {
   "policy/broad-scope": {
     // Kept in sync with the branch-class case resolver in
     // .github/workflows/bizra-review.yml. pr/* is the clean release-train
-    // convention; refactor/* and test/* are accepted as broad-scope too.
+    // convention; refactor/*, test/*, and slice/* are accepted as broad-scope too.
     branchPrefixes: [
       "adr/",
       "policy/",
@@ -46,6 +46,7 @@ const REVIEW_CLASSES = {
       "pr/",
       "refactor/",
       "test/",
+      "slice/",
     ],
   },
   "policy/merged-to-main": {

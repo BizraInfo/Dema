@@ -11,6 +11,7 @@ import {
   type FsAdapter,
   type OsAdapter,
 } from "@/lib/telemetry/node-resources-core";
+import { requireLocalSession } from "@/lib/auth/session-boundary";
 
 // ---------------------------------------------------------------------------
 // GET /api/node-resources
@@ -94,6 +95,9 @@ function clientIp(req: NextRequest): string | null {
 }
 
 export async function GET(req: NextRequest) {
+  const denied = await requireLocalSession(req);
+  if (denied) return denied;
+
   // SECURITY NOTE (honest boundary): x-forwarded-for / x-real-ip are proxy
   // headers and are spoofable — this header check is best-effort defense in
   // depth, NOT a hard access gate. The PRIMARY controls are: (1) the dev/prod

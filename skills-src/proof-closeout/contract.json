@@ -1,0 +1,53 @@
+{
+  "skill_id": "proof-closeout",
+  "version": "1.0.0",
+  "capability_family": "dema-proof-lifecycle",
+  "lifecycle_phase": "post-implementation",
+  "applicability": [
+    "ending any implementation task or PR",
+    "closing out a Dema slice",
+    "before ending any implementation task"
+  ],
+  "exclusions": [
+    "new feature implementation",
+    "runtime mutation",
+    "claiming green if npm test or npm run check failed"
+  ],
+  "preconditions": [
+    "repository checkout exists",
+    "implementation slice is ending"
+  ],
+  "inputs": [
+    "changed files",
+    "focused test commands"
+  ],
+  "outputs": [
+    "closeout block with what changed, proof ran, what did not happen, blocked items, next action",
+    "pass/fail status for each gate"
+  ],
+  "side_effects": [
+    "report-only — does not mutate runtime",
+    "runs git status, focused tests, npm test, npm run check, npm run llm:guidance, npm run claim:check:corpus, git diff --check"
+  ],
+  "permissions": [
+    "read repository",
+    "run declared checks",
+    "read git status"
+  ],
+  "resource_bindings": [
+    "docs/CURRENT_LIMITS.md",
+    "docs/TESTING.md",
+    "docs/ARCHITECTURE.md",
+    "docs/CLAIM_REGISTER_v0_1.md",
+    ".claude/bus/proof-bus.policy.json"
+  ],
+  "truth_boundary": "report-only",
+  "evidence_refs": [],
+  "projection_targets": [".claude", ".agents"],
+  "convergence": {
+    "formal": 2,
+    "cryptographic": 1,
+    "empirical": 3,
+    "economic": 0
+  }
+}

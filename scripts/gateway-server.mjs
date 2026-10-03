@@ -1,21 +1,39 @@
-// Node0 Gateway Server v0.1 — the missing conductor.
+// Node0 Gateway Server v0.1 — QUARANTINED: LEGACY CONSUMER — FIXTURE-ONLY
 //
-// Lightweight HTTP server on 127.0.0.1:7421 that implements the contract
-// expected by the gateway-http-adapter. Makes one Node0 actually run locally.
+// RETIRED per DEMA_GOVERNED_RUNTIME_HANDOFF-1A (2026-08-31 evaluation).
+// This JavaScript gateway MUST NOT execute or certify production missions.
+// Production path is the governed Rust runtime (bizra-data-lake).
+// This file remains ONLY as a fixture for isolated tests
+// (tests/gateway-verified-mission.test.js with injected stateDir=temp).
+// Production stateDir (~/.dema/node0) via POST /mission/run now returns
+// 410 Gone. The preview SAT-5 admission filter inside executeMission is
+// request-envelope admission (same-process, caller-supplied booleans,
+// hard-coded effect_count=1, SAT preview inert) — NOT independent
+// mission execution, NOT governed-runtime receipt, NOT CONSTITUTIONAL
+// verification. See docs/CURRENT_LIMITS.md and incident receipt
+// docs/receipts/GATEWAY_QUARANTINE_2026-08-31.md.
 //
-// Endpoints:
+// Endpoints (fixture-only):
 //   GET /health        — domain=bizra-cognition-gateway-v1, status=ok
 //   GET /chain         — receipt chain head, length, latestTimestamp
 //   GET /poi/summary   — proof-of-impact summary
 //   GET /resources/list — resource availability
-//   POST /mission/run  — execute one bounded mission (accepts consent phrase)
+//   POST /mission/run  — 410 in production; 200 only with isolated stateDir
 //
 // Loopback-only. No network surface. Stdlib only.
 
 import { createServer } from "node:http";
 import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { homedir } from "node:os";
 import { createHash } from "node:crypto";
+import { evaluateConsent } from "../packages/fate/src/fate.js";
+import { deriveSatVerifierSet } from "../packages/core/src/sat5-constitutional-verifier-set-preview.js";
+import {
+  genesisSupervisorState,
+  step as supervisorStep,
+  EVENT_KINDS as SUPERVISOR_EVENTS,
+} from "../packages/core/src/mission-supervisor.js";
 
 // Deterministic serialization — imported from the same source as node0-mumu-loop.
 // JSON.stringify is NOT guaranteed to produce stable key order across engines.
@@ -30,6 +48,21 @@ const DEFAULT_PORT = 7421;
 const DEFAULT_HOST = "127.0.0.1";
 const DOMAIN = "bizra-cognition-gateway-v1";
 const GATEWAY_VERSION = "0.1.0";
+const MISSION_CONSENT_PHRASE = "GO: Node0 bounded diagnostic activation only";
+
+function defaultStateDir() {
+  return join(process.env.DEMA_HOME || join(homedir(), ".dema"), "node0");
+}
+
+function isProductionStateDir(stateDir) {
+  try {
+    const def = defaultStateDir();
+    // Exact match is production; temp dirs (mkdtemp) are fixture
+    return resolve(stateDir) === resolve(def);
+  } catch {
+    return false;
+  }
+}
 
 // ---- state persistence ---------------------------------------------------
 
@@ -120,7 +153,6 @@ function executeMission(stateDir, mission) {
   const now = new Date().toISOString();
   const missionId = mission.id || sha256(mission).slice(7, 19);
 
-  // Build receipt
   const chain = loadChain(stateDir);
   if (!chain.ok) {
     return { ok: false, error: chain.error, message: `Chain integrity failure: ${chain.error}` };
@@ -128,14 +160,14 @@ function executeMission(stateDir, mission) {
   const entries = chain.entries || [];
   const prevHead = entries.length > 0 ? entries[entries.length - 1].hash : null;
 
-  const receipt = {
+  // Build base receipt without final status — status is DERIVED via verifiers, not self-declared.
+  const baseReceipt = {
     schema: "bizra.dema.node0_mission_receipt.v0.1",
     mission_id: missionId,
     objective: mission.objective || "unknown",
     effect_class: mission.effect_class || "READ_ONLY_OBSERVATION",
     previous_hash: prevHead,
     timestamp: now,
-    status: "COMPLETED",
     effect_count: 1,
     duplicate_effects: 0,
     boundary_flags: {
@@ -146,10 +178,106 @@ function executeMission(stateDir, mission) {
       source_tree_mutated: false,
     },
   };
+
+  // ---- SAT-5 constitutional judgement (fail-closed) ----
+  // Construct the deterministic outcome that SAT-5 judges. For honest missions the
+  // outcome is ADMISSIBLE; any tripwire (mint claim, riba, forbidden claim) makes it REJECTED.
+  const receiptHashForSat = sha256(baseReceipt);
+  const outcome = {
+    subject: "node0",
+    receipt: {
+      claimed_content_hash: receiptHashForSat,
+      body_hash_rederived: receiptHashForSat,
+    },
+    consent: {
+      phrase_present: typeof mission.consent === "string" && mission.consent.length > 0,
+      exact_match: mission.consent === MISSION_CONSENT_PHRASE,
+    },
+    impact: {
+      mint_claim: !!mission.mint_claim,
+      cost_called_value: !!mission.cost_called_value,
+      simulated_impact_as_real: !!mission.simulated_impact_as_real,
+      unverified_impact_claimed: !!mission.unverified_impact_claimed,
+    },
+    blast: {
+      blast_radius: mission.blast_radius || "low",
+      reversible: mission.reversible ?? true,
+      backup_present: mission.backup_present ?? true,
+    },
+    doctrine: {
+      truth_label_present: mission.truth_label_present ?? true,
+      boundary_all_false: mission.boundary_all_false ?? true,
+      forbidden_claims: Array.isArray(mission.forbidden_claims) ? mission.forbidden_claims : [],
+    },
+  };
+  // Convenience: objective marker SHOULD_FAIL_SAT5 forces a failing outcome without requiring the caller to set fields explicitly.
+  if (typeof mission.objective === "string" && mission.objective.includes("SHOULD_FAIL_SAT5")) {
+    outcome.impact.mint_claim = true;
+    outcome.doctrine.forbidden_claims = [...outcome.doctrine.forbidden_claims, "test_forbidden_via_objective_marker"];
+  }
+  let satJudgment;
+  try {
+    satJudgment = deriveSatVerifierSet(outcome);
+  } catch {
+    satJudgment = { admissible: false, set_verdict: "REJECTED", failing_verifiers: ["SAT-derive-threw"], verifiers: [] };
+  }
+
+  // ---- MissionSupervisor wiring (preview) ----
+  // The supervisor is pure and proposes; it never performs. We wire it as a
+  // structural check that the call site imports the conductor — the gateway never
+  // invents its own COMPLETED. A real contract would be frozen before EXECUTE;
+  // here we prove the import and genesis do not throw on a minimal contract.
+  // Supervisor failure does NOT override SAT-5 in this slice; SAT-5 is the gate.
+  try {
+    const dummyContract = {
+      mission_id: missionId,
+      authority_ceiling: "read_only",
+      scope: "node0",
+      iteration_budget: 5,
+      acceptance_contract: {
+        required_output_keys: [],
+        forbidden_substrings: [],
+        expected: {},
+      },
+    };
+    const contractHash = sha256(dummyContract);
+    const genesis = genesisSupervisorState({ contract: dummyContract, contract_hash: contractHash });
+    // One step to prove the reducer is live (DISCOVER -> CONTRACT) — not terminal, but validates wiring.
+    supervisorStep(genesis, { kind: SUPERVISOR_EVENTS.DISCOVERY_RECORDED, stage: "DISCOVER", hash: `test-${missionId}` }, { contract: dummyContract });
+  } catch {
+    // Preview boundary — supervisor wiring is structural, not mission-blocking in v0.1.
+  }
+
+  const verifiedStatus = satJudgment.admissible ? "COMPLETED" : "VERIFY_FAILED";
+
+  const receipt = {
+    ...baseReceipt,
+    status: verifiedStatus,
+    sat_verdict: satJudgment.set_verdict,
+    sat_admissible: satJudgment.admissible,
+    sat_failing_verifiers: satJudgment.failing_verifiers,
+    // Inert judgment — no authority, no mint, no live SAT agent.
+    sat_judges_node0: satJudgment.judges_node0,
+    sat_serves_node0: satJudgment.serves_node0,
+  };
   receipt.hash = sha256(receipt);
 
-  // Persist
   appendChain(stateDir, receipt);
+
+  // The HTTP response is honest about verification — a failing mission is not ok:true COMPLETED.
+  if (verifiedStatus === "VERIFY_FAILED") {
+    return {
+      ok: false,
+      error: "verify_failed",
+      message: `Mission verdict REJECTED by SAT-5: ${satJudgment.failing_verifiers.join(",")}`,
+      mission_id: missionId,
+      receipt_hash: receipt.hash,
+      timestamp: now,
+      status: verifiedStatus,
+      sat_verdict: satJudgment.set_verdict,
+      sat_failing_verifiers: satJudgment.failing_verifiers,
+    };
+  }
 
   return {
     ok: true,
@@ -158,6 +286,8 @@ function executeMission(stateDir, mission) {
     timestamp: now,
     effect_count: 1,
     duplicate_effects: 0,
+    status: verifiedStatus,
+    sat_verdict: satJudgment.set_verdict,
   };
 }
 
@@ -167,7 +297,7 @@ export function createGatewayServer(options = {}) {
   const {
     port = DEFAULT_PORT,
     host = DEFAULT_HOST,
-    stateDir = options.stateDir || join(process.cwd(), ".node0-state"),
+    stateDir = options.stateDir || defaultStateDir(),
   } = options;
 
   let ready = false;
@@ -281,23 +411,36 @@ export function createGatewayServer(options = {}) {
                 message: "POST /mission/run requires { objective: string }",
               });
             }
+            // QUARANTINE: production execution retired
+            if (isProductionStateDir(stateDir)) {
+              return respond(410, {
+                error: "gateway_retired",
+                message: "JS gateway retired: production mission execution via governed Rust runtime only (DEMA_GOVERNED_RUNTIME_HANDOFF-1A). Fixture-only with isolated stateDir.",
+                retired: true,
+                expected: "governed_runtime",
+              });
+            }
             // Consent gate: require exact phrase.
             // The actor must prove intent — bare POST is never authority.
-            const expectedConsent = mission.consent || "";
-            const consentOk =
-              expectedConsent === "GO: Node0 bounded diagnostic activation only" ||
-              expectedConsent.startsWith("GO: ");
-            if (!consentOk) {
+            const consent = evaluateConsent({
+              phrase: mission.consent,
+              requiredPhrase: MISSION_CONSENT_PHRASE,
+            });
+            if (!consent.accepted) {
               return respond(403, {
                 error: "consent_required",
                 message:
                   'POST /mission/run requires { consent: "GO: Node0 bounded diagnostic activation only" }',
                 expected_consent_phrase:
-                  "GO: Node0 bounded diagnostic activation only",
+                  MISSION_CONSENT_PHRASE,
               });
             }
             const result = executeMission(stateDir, mission);
             if (!result.ok) {
+              // Chain integrity failures are 503 (degraded); verified rejections are honest 200 with VERIFY_FAILED.
+              if (result.error === "verify_failed") {
+                return respond(200, result);
+              }
               return respond(503, result);
             }
             ready = true;
@@ -357,26 +500,39 @@ if (
   const port = Number(process.env.BIZRA_COGNITION_PORT || DEFAULT_PORT);
   const stateDir =
     process.env.BIZRA_SOVEREIGN_STATE_PATH ||
-    join(process.cwd(), ".node0-state");
+    defaultStateDir();
 
-  const gw = createGatewayServer({ port, stateDir });
+  if (isProductionStateDir(stateDir) && !process.env.DEMA_GATEWAY_ALLOW_FIXTURE) {
+    console.error(
+      JSON.stringify({
+        error: "gateway_retired",
+        message:
+          "JS gateway retired: production execution via governed Rust runtime only (DEMA_GOVERNED_RUNTIME_HANDOFF-1A). Use fixture with isolated stateDir or set DEMA_GATEWAY_ALLOW_FIXTURE=1 for local preview.",
+        stateDir,
+        retired: true,
+      }),
+    );
+    process.exitCode = 1;
+  } else {
+    const gw = createGatewayServer({ port, stateDir });
 
-  gw.start()
-    .then(() => {
-      console.log(
-        JSON.stringify({
-          status: "started",
-          domain: DOMAIN,
-          port,
-          host: DEFAULT_HOST,
-          stateDir,
-          loopback_only: true,
-          message: "Node0 gateway listening on 127.0.0.1:" + port,
-        }),
-      );
-    })
-    .catch((err) => {
-      console.error("Gateway failed to start:", err.message);
-      process.exitCode = 1;
-    });
+    gw.start()
+      .then(() => {
+        console.log(
+          JSON.stringify({
+            status: "started",
+            domain: DOMAIN,
+            port,
+            host: DEFAULT_HOST,
+            stateDir,
+            loopback_only: true,
+            message: "Node0 gateway listening on 127.0.0.1:" + port,
+          }),
+        );
+      })
+      .catch((err) => {
+        console.error("Gateway failed to start:", err.message);
+        process.exitCode = 1;
+      });
+  }
 }

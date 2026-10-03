@@ -116,6 +116,26 @@ test("fate consent requires exact phrase", () => {
     }).accepted,
     false,
   );
+  assert.equal(
+    evaluateConsent({
+      phrase: "GO: unrelated operation",
+      requiredPhrase: BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
+    }).accepted,
+    false,
+  );
+});
+
+test("gateway mission consent delegates to the exact FATE primitive", async () => {
+  const source = await readFile(
+    fileURLToPath(new URL("../scripts/gateway-server.mjs", import.meta.url)),
+    "utf8",
+  );
+
+  assert.match(source, /import\s*\{\s*evaluateConsent\s*\}/);
+  assert.match(source, /evaluateConsent\(\{[\s\S]*requiredPhrase:\s*MISSION_CONSENT_PHRASE/);
+  assert.doesNotMatch(source, /\.startsWith\(\s*["']GO:\s*["']\s*\)/);
+  assert.match(source, /process\.env\.DEMA_HOME\s*\|\|\s*join\(homedir\(\),\s*"\.dema"\)/);
+  assert.doesNotMatch(source, /process\.cwd\(\),\s*"\.node0-state"/);
 });
 
 test("setup creates local profile and config without daemon activation", async () => {

@@ -1,0 +1,25 @@
+{
+  "schema": "bizra.skill-manifest/v1",
+  "generated_at": "2026-08-30T20:38:09.092Z",
+  "source_root": "skills-src",
+  "skill_id": "self-loop-engineering",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "3173aa4400f96f892e091217f94f45675e7b84191c62a6379edbdfa70e14f86a",
+      "size": 4002
+    },
+    {
+      "path": "contract.json",
+      "sha256": "418c73c9dd5dc6ec4a367d5862fc060ae9fdb251bab924eb6769f0f59eb02903",
+      "size": 1729
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "6b4f538d8c9e535c152963c154d2b4d5c6c6783a01d67ccc808c36f08ea6c10b",
+      "size": 365
+    }
+  ],
+  "total_files": 3,
+  "total_bytes": 6096
+}

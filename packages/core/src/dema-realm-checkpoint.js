@@ -40,9 +40,9 @@ function color(s, code, useColor) {
 
 async function readJsonOrNull(path) {
   try {
-    return JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    return null;
+    return { value: JSON.parse(await readFile(path, "utf8")), malformed: false };
+  } catch (error) {
+    return { value: null, malformed: error?.code !== "ENOENT" };
   }
 }
 
@@ -78,13 +78,17 @@ export async function gatherDemaRealmCheckpoint({
   const checkpointPath = join(home, "realm", "last-checkpoint.json");
   const timelinePath = join(home, "realm", "timeline.json");
 
-  const rawCheckpoint = await readJsonOrNull(checkpointPath);
-  const rawTimeline = await readJsonOrNull(timelinePath);
+  const checkpointRead = await readJsonOrNull(checkpointPath);
+  const timelineRead = await readJsonOrNull(timelinePath);
+  const rawCheckpoint = checkpointRead.value;
+  const rawTimeline = timelineRead.value;
 
   const checkpointPresent = isCheckpointShape(rawCheckpoint);
-  const truthLabel = checkpointPresent
-    ? "LOCAL_CHECKPOINT_DECLARED"
-    : "CHECKPOINT_ABSENT";
+  const truthLabel = checkpointRead.malformed
+    ? "CHECKPOINT_MALFORMED"
+    : checkpointPresent
+      ? "LOCAL_CHECKPOINT_DECLARED"
+      : "CHECKPOINT_ABSENT";
 
   const checkpoint = checkpointPresent
     ? Object.freeze({

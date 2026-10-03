@@ -3,7 +3,9 @@
 // Purpose: prove that a consent-aware verifier can emit evidence under the
 // existing Node0 SSE event-envelope law before any effect is authorized.
 // Pure preview: no fs, network, process, clock, random, model, or execution.
+// The emitted SSE event is hash-chained and independently verifiable.
 
+import { createHash } from "node:crypto";
 import { buildSseStreamEvent } from "./node0-sse-envelope-stream.js";
 
 export const BASELINE_VERIFIER_GATE_SCHEMA = "bizra.dema.baseline_verifier_gate.v0.1";
@@ -20,6 +22,8 @@ function boundary() {
     live_execution_performed: false,
     file_mutation_performed: false,
     model_invocation_performed: false,
+    merge_authority: false,
+    authority_delta: 0,
   });
 }
 
@@ -33,10 +37,22 @@ function refuse(code) {
   });
 }
 
+function proposalHash(proposalText) {
+  return `sha256:${createHash("sha256").update(proposalText, "utf8").digest("hex")}`;
+}
+
+/** Exact whole-line match after trim — not a substring / prefix / suffix hit. */
+export function proposalHasExactGoPhrase(proposalText) {
+  return proposalText
+    .split(/\r?\n/)
+    .some((line) => line.trim() === BASELINE_VERIFIER_GATE_GO_PHRASE);
+}
+
 /**
  * Verify the absolute minimum proposal contract and emit one tamper-evident
  * state event. `ok` means the preview kernel executed correctly; the proposal
- * decision itself is carried by event.payload.verified.
+ * decision itself is carried by event.payload.verified and bound to
+ * event.payload.proposal_hash.
  */
 export function runBaselineVerifierGate({ consent, input } = {}) {
   if (consent !== BASELINE_VERIFIER_GATE_GO_PHRASE) {
@@ -49,13 +65,14 @@ export function runBaselineVerifierGate({ consent, input } = {}) {
     return refuse("proposal_not_string");
   }
 
-  const verified = input.proposalText.includes(BASELINE_VERIFIER_GATE_GO_PHRASE);
+  const verified = proposalHasExactGoPhrase(input.proposalText);
   const event = buildSseStreamEvent({
     streamId: "baseline-verifier-gate-1a",
     seq: 1,
     kind: "state",
     payload: {
       verified,
+      proposal_hash: proposalHash(input.proposalText),
       reason: verified
         ? "Proposal contains required GO consent"
         : "Proposal missing required GO consent",
