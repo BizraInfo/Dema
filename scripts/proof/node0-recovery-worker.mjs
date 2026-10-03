@@ -6,7 +6,7 @@
 // BOUNDARY: no network, no model, no daemon, no listener. Reads and writes only
 // under the DEMA_HOME it is handed.
 
-import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { sha256CanonicalJsonV1 } from "../../packages/canon/src/sha256-canonical-json-v1.js";
@@ -18,7 +18,13 @@ import { NODE0_RECOVERY_TRANSACTION_ID } from "../../packages/core/src/node0-rec
 const [role, DEMA_HOME] = process.argv.slice(2);
 export const RECOVERY_DIR = join("node0", "recovery");
 const p = (n) => join(DEMA_HOME, RECOVERY_DIR, n);
-const write = (n, o) => { mkdirSync(dirname(p(n)), { recursive: true }); writeFileSync(p(n), JSON.stringify(o, null, 2)); };
+const write = (n, o) => {
+  const target = p(n);
+  const tmp = `${target}.tmp.${process.pid}`;
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(tmp, JSON.stringify(o, null, 2));
+  renameSync(tmp, target);
+};
 
 const TX = NODE0_RECOVERY_TRANSACTION_ID;
 const TX_HASH = `sha256:${"5".repeat(64)}`;

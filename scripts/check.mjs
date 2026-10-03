@@ -113,6 +113,7 @@ export const commands = [
   ["node", ["scripts/review/openrouter-admission-policy-compiler-check.mjs"]],
   ["node", ["scripts/review/pot-claim-scope-check.mjs"]],
   ["node", ["scripts/review/node0-sse-envelope-stream-check.mjs"]],
+  ["node", ["scripts/review/baseline-verifier-gate-check.mjs"]],
   ["node", ["scripts/review/dema-presence-check.mjs"]],
   ["node", ["scripts/review/drs-realm-contracts-check.mjs"]],
   ["node", ["scripts/review/node0-sse-realm-composition-check.mjs"]],
@@ -166,6 +167,9 @@ export const commands = [
   // Classify the exact auto-discovery command against its own fresh log before
   // returning to the aggregate owner. A proved environmental exit 1 normalizes
   // to zero here, so every later gate still runs; all other exits stay fatal.
+  // File-level serialization is required because the auto-discovered suite
+  // contains shared-root tamper controls that temporarily rewrite canonical
+  // files. Parallel workers make the following coverage gate observe a race.
   [
     "node",
     [
@@ -174,6 +178,7 @@ export const commands = [
       "--",
       "node",
       "--test",
+      "--test-concurrency=1",
       "--test-reporter=tap",
     ],
   ],

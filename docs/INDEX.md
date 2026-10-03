@@ -39,6 +39,7 @@ This index is the clean map for the repo. It separates current user-facing docs,
 - [gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md](gtm/BIZRA_GTM_PHASE1_OPERATOR_PACKET_v0_1.md) — docs-only Phase-1 Ring-1 send checklist, private send receipt shape, feedback record boundary, and exact next consent phrases.
 - [ROADMAP.md](ROADMAP.md) — product roadmap.
 - [LIGHTHOUSE.md](LIGHTHOUSE.md) — private lighthouse operator lane.
+- [NODE0_GENESIS_V1_LIGHTHOUSE.md](NODE0_GENESIS_V1_LIGHTHOUSE.md) — current Node0 Genesis-v1 candidate handoff and claim ceiling.
 - [founder-field-notes/inroom-walkthrough-v0.2.md](founder-field-notes/inroom-walkthrough-v0.2.md) — Current working artifact for Ring-1 adversarial in-room review.
 - [DEMA_CONSTITUTION.md](DEMA_CONSTITUTION.md) — product constitution.
 - [00-product-thesis/dema-one-face.md](00-product-thesis/dema-one-face.md) — Dema as the one face.

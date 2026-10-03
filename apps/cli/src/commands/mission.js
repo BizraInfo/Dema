@@ -106,7 +106,7 @@ import { statusWithLocalIdentity } from "../lib/status-identity.js";
 import {
   mkdir, open as openFile, readFile as readFileFs, readdir, realpath, rename, stat, writeFile,
 } from "node:fs/promises";
-import { unlinkSync } from "node:fs";
+import { unlinkSync, writeSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, isAbsolute, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -1558,7 +1558,9 @@ const CORRIDOR_COMPLETE_LAWFUL_TERMINALS = Object.freeze([
 ]);
 
 function corridorFail(message) {
-  console.error(`Dema error: ${message}`);
+  // Synchronous output is required before process.exit: console.error may still
+  // be buffered when a child CLI is captured through a pipe under load.
+  writeSync(2, `Dema error: ${message}\n`);
   process.exit(1);
 }
 

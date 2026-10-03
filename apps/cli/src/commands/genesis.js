@@ -24,6 +24,7 @@ import {
   gatherGitTimeSpanEvidence,
 } from "./node0-historical-gatherer.js";
 import { gatherNode0HardwareObservations } from "./hardware-profile-gatherer.js";
+import { buildCrossRepoGenesisProvenanceReport } from "../../../../scripts/review/cross-repo-genesis-provenance.mjs";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -36,7 +37,23 @@ function resolveDemaHome() {
 
 // Mirror scripts/node0-genesis-key-ceremony-preflight.mjs — fail closed: missing
 // or unreadable provenance → BLOCKED rather than silently proceed.
-function loadProvenanceNextGate() {
+async function loadProvenanceNextGate(argv) {
+  if (argv.includes("--fresh-provenance")) {
+    try {
+      const report = await buildCrossRepoGenesisProvenanceReport({
+        demaRoot: process.cwd(),
+        skipGh: process.env.CROSS_REPO_SKIP_GH === "1",
+      });
+      if (process.env.CROSS_REPO_SKIP_GH !== "1"
+        && report.repos?.some((repo) => repo.ghError || repo.ghSearchRateLimited)) {
+        return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+      }
+      return report.next_gate?.gate ?? "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+    } catch {
+      return "BLOCKED_BY_UNRESOLVED_PROVENANCE";
+    }
+  }
+
   const path = join(
     process.cwd(),
     "docs/08-quality/CROSS_REPO_GENESIS_PROVENANCE_2026_06_05.json",
@@ -71,7 +88,7 @@ export async function cmd_genesis(ctx) {
     const readiness = await assessBlock0LiveReadiness({ demaHome });
     const preflight = await assessNode0GenesisKeyCeremonyPreflight({
       demaHome,
-      provenanceNextGate: loadProvenanceNextGate(),
+      provenanceNextGate: await loadProvenanceNextGate(argv),
     });
     const preview = buildBlock0SealCeremonyDryRun({ readiness, preflight });
     console.log(
@@ -109,7 +126,7 @@ export async function cmd_genesis(ctx) {
   }
   console.error(
     "Usage: dema genesis composition blueprint [--json]\n" +
-      "       dema genesis seal preview [--json]\n" +
+      "       dema genesis seal preview [--json] [--fresh-provenance]\n" +
       "       dema genesis verify-node0 --root <path> [--years 3] [--json]",
   );
   process.exitCode = 1;

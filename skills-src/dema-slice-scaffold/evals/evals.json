@@ -1,0 +1,19 @@
+{
+  "skill_name": "dema-slice-scaffold",
+  "evals": [
+    {
+      "id": 0,
+      "name": "explicit-id-chain",
+      "prompt": "I'm starting a new Dema proof slice: NODE0-PROOF-CHAIN-LINK-1A — it chains each new sealed receipt to the previous one by hash so the receipt log becomes a verifiable append-only chain. Scaffold the slice so I can build it test-first (red first). The repo is at <REPO>; do the work there.",
+      "expected_output": "Five new slice files generated (kernel, test, review gate, receipt, arch doc) with correct NODE0-PROOF-CHAIN-LINK-1A naming; all four wiring points edited (check.mjs, TESTING.md, CURRENT_LIMITS.md, capability-truth-registry.js incl. the registry-test count bump); the focused test runs RED (verify/run/gate fail with not_implemented, plan/payload pass); the registry source still parses and reloads at the bumped count.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "implicit-need-diff",
+      "prompt": "I want to add a new pre-action spine capability to Dema: a pure kernel that takes a proposed file rename and produces a content-addressed 'rename diff preview' atom — no mutation, preview only — with a review gate and the usual capability-registry wiring. Set it up red-first under TDD. Repo at <REPO>. Pick a sensible NODE0-*-1A id.",
+      "expected_output": "Skill triggers from intent alone (no slice id, no word 'scaffold' given). A complete red-first slice with a sensible NODE0-*-1A id: five files + four wiring edits, focused test RED, registry reloads at bumped count, boundary all-false.",
+      "files": []
+    }
+  ]
+}

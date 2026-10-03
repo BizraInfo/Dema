@@ -104,6 +104,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "OPENROUTER_ADMISSION_POLICY_COMPILER_1A",
   "POT_CLAIM_SCOPE_0A",
   "NODE0_SSE_ENVELOPE_STREAM_1A",
+  "BASELINE_VERIFIER_GATE_1A",
   "DEMA_PRESENCE_1A",
   "DRS_REALM_CONTRACTS_1A",
   "DRS_PRESENCE_REDUCER_2A",
@@ -2728,6 +2729,29 @@ function defaultCapabilityRows() {
         "That a received sequence of SSE event envelopes can be independently proven ORDERED (consecutive seq from 1), CHAINED (each envelope binds its predecessor's hash under the repo's single canonical byte contract, so any flipped byte is detected), COMPLETE (exactly one terminal event and nothing after it), and LIVENESS-HONEST (heartbeats advance sequence while carrying no application state) — from the envelopes alone, with no transport. It also proves the SSE wire serialization round-trips through a refusing parser without losing verifiability, so reconnecting consumers re-derive order+integrity instead of trusting the connection.",
       what_this_does_not_prove:
         "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "BASELINE_VERIFIER_GATE_1A",
+      truth_label: "BASELINE_VERIFIER_GATE_MEASURED_REPO",
+      summary:
+        "Pure exact-consent preview verifier that emits one hash-chained SSE state event describing whether supplied proposal text contains its required phrase.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/baseline-verifier-gate.js"],
+        test_paths: ["tests/baseline-verifier-gate.test.js"],
+        review_gate_paths: ["scripts/review/baseline-verifier-gate-check.mjs"],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, consumed operator consent, daemon runtime, network use, token, wallet, or federation. The exact phrase is a preview input, not authority.",
+      what_this_proves:
+        "For supplied preview input, exact invocation consent gates the kernel and the resulting single SSE event re-derives under the existing envelope law. The five focused tests cover refusal, verified and unverified proposal events, and the all-false boundary.",
+      what_this_does_not_prove:
+        "It does not prove an operator consented to any real proposal, that a proposal is safe or true, or that any runtime, listener, network action, model, receipt, or Node0 mission ran.",
       forbidden_claims: [
         "live execution",
         "operator mutation",

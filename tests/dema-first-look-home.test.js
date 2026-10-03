@@ -45,12 +45,13 @@ async function seededHome(t, profile = { preferred_name: "Mumu" }) {
 
 // The kernel is pure, so these build ctx directly — no temp home, no key
 // fixture, no machine coupling.
-function ctxWith({ keyPresent = true, mission = null, now, constellation = null, council = null } = {}) {
+function ctxWith({ keyPresent = true, mission = null, checkpoint = null, now, constellation = null, council = null } = {}) {
   return {
     dema_home: "/nonexistent",
     profile: { source_present: true, preferred_name: "Mumu", language_code: null },
     key_present: keyPresent,
     mission,
+    checkpoint,
     constellation,
     council,
     now: now ?? new Date("2026-08-09T05:00:00Z"),
@@ -72,6 +73,26 @@ test("FLM-01 an open mission outranks the generic next step", () => {
   // The pointer must never read as authority.
   assert.equal(envelope.mission.authority, "descriptive_only");
   assert.match(renderFirstLookHome(envelope, { noColor: true }), /Open mission/);
+});
+
+test("FLM-01c a persisted checkpoint supplies the re-entry point without a mission pointer", () => {
+  const envelope = buildFirstLookHome(
+    ctxWith({
+      checkpoint: {
+        checkpoint_present: true,
+        truth_label: "LOCAL_CHECKPOINT_DECLARED",
+        checkpoint: {
+          label: "Node0 closure",
+          resume_command: "dema chat",
+        },
+      },
+    }),
+  );
+  assert.match(
+    envelope.recommended_next_step,
+    /Resume from your last checkpoint: dema chat/,
+  );
+  assert.equal(envelope.checkpoint.present, true);
 });
 
 test("FLM-01b setup still outranks the mission — you cannot sign without a key", () => {
