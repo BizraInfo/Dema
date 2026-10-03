@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import {
   bindPeakSelfLoopSignalEvents,
   parsePeakSelfLoopSignalEventsArg,
+  resolvePeakSelfLoopRepoRoot,
 } from "../apps/cli/src/commands/peak-self-loop-evidence-gatherer.js";
 import { buildPeakSelfLoopPreview } from "../packages/core/src/peak-self-loop-preview.js";
 
@@ -65,7 +66,7 @@ test("PEB-G01 matching repo-contained source bytes are admitted", () =>
     assert.deepEqual(result.rejected, []);
 
     const preview = buildPeakSelfLoopPreview({ signal_events: result.admitted });
-    assert.equal(preview.evidence_binding.verified_signal_count, 1);
+    assert.equal(preview.snr_framework.verified_signal_count, 1);
   }));
 
 test("PEB-G02 nonexistent source is rejected and cannot raise SNR", () =>
@@ -88,8 +89,8 @@ test("PEB-G02 nonexistent source is rejected and cannot raise SNR", () =>
 
     // Caller-side atomic admission passes zero events on any binding failure.
     const preview = buildPeakSelfLoopPreview({ signal_events: [] });
-    assert.equal(preview.evidence_binding.verified_signal_count, 0);
-    assert.equal(preview.merged_verdict, "HOLD_FOR_VERIFICATION");
+    assert.equal(preview.snr_framework.verified_signal_count, 0);
+    assert.equal(preview.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
   }));
 
 test("PEB-G03 hash mismatch is rejected rather than silently repaired", () =>
@@ -163,4 +164,44 @@ test("PEB-G06 signal-events-json parser is explicit and fail-closed", () => {
     parsePeakSelfLoopSignalEventsArg(["--signal-events-json={}"]).error,
     "signal_events_json_not_array",
   );
+  assert.equal(
+    parsePeakSelfLoopSignalEventsArg(["--signal-events-json"]).error,
+    "signal_events_json_missing",
+  );
+  const twoToken = parsePeakSelfLoopSignalEventsArg([
+    "--signal-events-json",
+    "[]",
+  ]);
+  assert.equal(twoToken.error, null);
+  assert.equal(twoToken.provided, true);
+  assert.deepEqual(twoToken.events, []);
 });
+
+test("PEB-G07 nested cwd still resolves the Dema checkout, not the nested dir", () =>
+  withTempRoot(({ base }) => {
+    const nested = join(base, "not-a-dema-repo", "nested");
+    mkdirSync(nested, { recursive: true });
+    writeFileSync(join(nested, "proof.txt"), "local decoy\n");
+    // Walk-up from nested finds nothing Dema-shaped; module-anchored checkout wins.
+    const resolved = resolvePeakSelfLoopRepoRoot({ startDir: nested });
+    assert.ok(typeof resolved === "string" && resolved.length > 0);
+    assert.notEqual(resolved, nested);
+    assert.notEqual(resolved, join(base, "not-a-dema-repo"));
+    // Binding without explicit repoRoot must not admit nested decoy as repo evidence.
+    const result = bindPeakSelfLoopSignalEvents(
+      [
+        signal({
+          source_ref: "proof.txt",
+          source_sha256: sha256(Buffer.from("local decoy\n")),
+        }),
+      ],
+      { startDir: nested },
+    );
+    assert.equal(result.complete, false);
+    assert.equal(result.admitted.length, 0);
+    assert.ok(
+      result.rejected.some((row) =>
+        ["source_unreadable_or_missing", "source_hash_mismatch"].includes(row.reason),
+      ),
+    );
+  }));

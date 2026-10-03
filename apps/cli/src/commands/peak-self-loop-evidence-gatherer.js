@@ -9,10 +9,13 @@
 // token authority is present here.
 
 import { createHash } from "node:crypto";
-import { readFileSync, realpathSync } from "node:fs";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+const SIGNAL_EVENTS_FLAG = "--signal-events-json";
+const SIGNAL_EVENTS_PREFIX = `${SIGNAL_EVENTS_FLAG}=`;
 
 function eventId(event) {
   return event && typeof event === "object" && !Array.isArray(event)
@@ -29,12 +32,56 @@ function isContained(rootReal, targetReal) {
   return rel === "" || (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`));
 }
 
+function looksLikeDemaRepoRoot(candidate) {
+  try {
+    const pkgPath = join(candidate, "package.json");
+    if (!existsSync(pkgPath)) return false;
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+    if (pkg?.name === "@bizra/dema-root") return true;
+    return (
+      existsSync(join(candidate, "apps", "cli")) &&
+      existsSync(join(candidate, "packages", "core"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Module-anchored checkout root (apps/cli/src/commands → repo root). */
+export function moduleAnchoredRepoRoot(
+  moduleUrl = import.meta.url,
+) {
+  return resolve(dirname(fileURLToPath(moduleUrl)), "../../../..");
+}
+
+/**
+ * Prefer a Dema checkout discovered by walking up from `startDir`.
+ * Fall back to the module-anchored checkout so a nested cwd still binds
+ * against the real repo, and an arbitrary non-repo cwd cannot invent one.
+ */
+export function resolvePeakSelfLoopRepoRoot({
+  startDir = process.cwd(),
+  moduleUrl = import.meta.url,
+} = {}) {
+  let cursor = resolve(startDir);
+  for (;;) {
+    if (looksLikeDemaRepoRoot(cursor)) return cursor;
+    const parent = dirname(cursor);
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+  const anchored = moduleAnchoredRepoRoot(moduleUrl);
+  if (looksLikeDemaRepoRoot(anchored)) return anchored;
+  return null;
+}
+
 export function bindPeakSelfLoopSignalEvents(
   events,
   {
-    repoRoot = process.cwd(),
+    repoRoot,
     readFileImpl = readFileSync,
     realpathImpl = realpathSync,
+    startDir = process.cwd(),
   } = {},
 ) {
   if (!Array.isArray(events)) {
@@ -47,9 +94,24 @@ export function bindPeakSelfLoopSignalEvents(
     });
   }
 
+  const resolvedRoot =
+    typeof repoRoot === "string" && repoRoot.trim() !== ""
+      ? repoRoot
+      : resolvePeakSelfLoopRepoRoot({ startDir });
+
+  if (resolvedRoot == null) {
+    return Object.freeze({
+      admitted: Object.freeze([]),
+      rejected: Object.freeze([
+        Object.freeze({ id: null, reason: "repo_root_unresolvable" }),
+      ]),
+      complete: false,
+    });
+  }
+
   let rootReal;
   try {
-    rootReal = realpathImpl(repoRoot);
+    rootReal = realpathImpl(resolvedRoot);
   } catch {
     return Object.freeze({
       admitted: Object.freeze([]),
@@ -122,26 +184,62 @@ export function bindPeakSelfLoopSignalEvents(
   });
 }
 
-export function parsePeakSelfLoopSignalEventsArg(argv = []) {
-  const prefix = "--signal-events-json=";
-  const matches = argv.filter(
-    (arg) => typeof arg === "string" && arg.startsWith(prefix),
-  );
-
-  if (matches.length === 0) {
-    return Object.freeze({ provided: false, events: Object.freeze([]), error: null });
-  }
-  if (matches.length !== 1) {
-    return Object.freeze({ provided: true, events: Object.freeze([]), error: "signal_events_arg_duplicate" });
-  }
-
+function parseSignalEventsJsonValue(raw) {
   try {
-    const parsed = JSON.parse(matches[0].slice(prefix.length));
+    const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
-      return Object.freeze({ provided: true, events: Object.freeze([]), error: "signal_events_json_not_array" });
+      return Object.freeze({
+        provided: true,
+        events: Object.freeze([]),
+        error: "signal_events_json_not_array",
+      });
     }
     return Object.freeze({ provided: true, events: parsed, error: null });
   } catch {
-    return Object.freeze({ provided: true, events: Object.freeze([]), error: "signal_events_json_invalid" });
+    return Object.freeze({
+      provided: true,
+      events: Object.freeze([]),
+      error: "signal_events_json_invalid",
+    });
   }
+}
+
+export function parsePeakSelfLoopSignalEventsArg(argv = []) {
+  const values = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (typeof arg !== "string") continue;
+    if (arg.startsWith(SIGNAL_EVENTS_PREFIX)) {
+      values.push(arg.slice(SIGNAL_EVENTS_PREFIX.length));
+      continue;
+    }
+    if (arg === SIGNAL_EVENTS_FLAG) {
+      const next = argv[i + 1];
+      if (typeof next !== "string" || next.startsWith("--")) {
+        return Object.freeze({
+          provided: true,
+          events: Object.freeze([]),
+          error: "signal_events_json_missing",
+        });
+      }
+      values.push(next);
+      i += 1;
+    }
+  }
+
+  if (values.length === 0) {
+    return Object.freeze({
+      provided: false,
+      events: Object.freeze([]),
+      error: null,
+    });
+  }
+  if (values.length !== 1) {
+    return Object.freeze({
+      provided: true,
+      events: Object.freeze([]),
+      error: "signal_events_arg_duplicate",
+    });
+  }
+  return parseSignalEventsJsonValue(values[0]);
 }
