@@ -533,6 +533,9 @@ export async function invokeLocalLLM({
   const timeoutHandle = setTimeout(() => controller.abort(), timeoutSafe);
 
   try {
+    // codeql[js/file-access-to-http]: intentional local-only model boundary;
+    // Gate 1 rejects every non-loopback endpoint before this call, while the
+    // prompt has already passed the inbound safety scan above.
     const response = await fetcher(`${baseUrl}/api/generate`, {
       method: "POST",
       // Fail closed on any 3xx: a compromised localhost LLM server must not be

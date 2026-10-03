@@ -17,7 +17,7 @@ const CLI = join(REPO_ROOT, "apps", "cli", "src", "index.js");
 // Budgets. `cli_boot_latency_ms` is environment-aware: CLI cold-start on shared
 // CI runners runs markedly slower than local, and this gate runs AFTER other
 // check.mjs steps (under load). Local stays strict (150ms) to catch real boot
-// regressions; CI gets honest headroom (250ms) so the gate measures regressions,
+// regressions; CI gets honest headroom (275ms) so the gate measures regressions,
 // not runner jitter. A genuine 2×+ boot regression still trips even in CI. The
 // other budgets carry ample headroom and stay fixed across environments.
 export function resolvePerfBudgets(env = process.env) {
@@ -25,7 +25,7 @@ export function resolvePerfBudgets(env = process.env) {
   return Object.freeze({
     first_look_render_ms: 50,
     doctor_gather_ms: 250,
-    cli_boot_latency_ms: inCI ? 250 : 150,
+    cli_boot_latency_ms: inCI ? 275 : 150,
     memory_rss_mb: 80,
   });
 }

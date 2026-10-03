@@ -69,7 +69,7 @@ function findIsolatedTapCommand() {
       args[0] === "scripts/ci/run-with-classifier.mjs" &&
       separator >= 0 &&
       args.slice(separator + 1).join(" ") ===
-        "node --test --test-reporter=tap"
+        "node --test --test-concurrency=1 --test-reporter=tap"
     );
   });
 }

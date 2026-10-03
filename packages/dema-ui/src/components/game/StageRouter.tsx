@@ -13,7 +13,6 @@ import { Genesis } from "./Genesis";
 import { Ceremony } from "./Ceremony";
 import { Codex } from "./Codex";
 import { NodeStatus } from "./NodeStatus";
-import { EcosystemView } from "./EcosystemView";
 import { DiagnosticDoxology } from "./DiagnosticDoxology";
 import { MelaeForge } from "./MelaeForge";
 import { MissionCorridor } from "@/components/dema/MissionCorridor";
@@ -26,8 +25,6 @@ export function StageRouter() {
       return <MissionCorridor />;
     case "world":
       return <WorldMap />;
-    case "ecosystem":
-      return <EcosystemView />;
     case "diagnostics":
       return <DiagnosticDoxology />;
     case "melae":

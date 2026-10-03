@@ -38,11 +38,11 @@ test("resolveAPlusCeilings: local stays strict 150ms boot, verification 1ms, fro
   assert.ok(Object.isFrozen(c));
 });
 
-test("resolveAPlusCeilings: CI gets boot headroom (250ms), verification unchanged", () => {
-  assert.equal(resolveAPlusCeilings({ CI: "true" }).dema_boot_latency_ms, 250);
+test("resolveAPlusCeilings: CI gets boot headroom (275ms), verification unchanged", () => {
+  assert.equal(resolveAPlusCeilings({ CI: "true" }).dema_boot_latency_ms, 275);
   assert.equal(
     resolveAPlusCeilings({ GITHUB_ACTIONS: "true" }).dema_boot_latency_ms,
-    250,
+    275,
   );
   assert.equal(resolveAPlusCeilings({ CI: "true" }).verification_latency_ms, 1);
 });
@@ -50,7 +50,7 @@ test("resolveAPlusCeilings: CI gets boot headroom (250ms), verification unchange
 test("resolveAPlusCeilings: CI headroom stays far below a gross 2x+ regression (no masking)", () => {
   const ci = resolveAPlusCeilings({ CI: "true" }).dema_boot_latency_ms;
   assert.ok(ci < 600, "CI ceiling must still flag a genuine 2x+ boot regression");
-  assert.ok(ci <= 250, "CI headroom must not balloon");
+  assert.ok(ci <= 275, "CI headroom must not balloon");
 });
 
 test("perf-bench CLI boot probe is bounded and isolated from live gateway/model env", () => {

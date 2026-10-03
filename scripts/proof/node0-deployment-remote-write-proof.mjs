@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { sha256CanonicalJsonV1 } from "../../packages/canon/src/sha256-canonical-json-v1.js";
 import {
   evaluateDeploymentSurface,
+  deploymentSurfaceFacetCounts,
   buildDeploymentRemoteWriteObservation,
   REQUIRED_FACETS,
   ROOT_FILE_NAMES,
@@ -34,6 +35,7 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, "..", "..");
+const COLLECTOR_PATH = fileURLToPath(import.meta.url);
 const argv = process.argv.slice(2);
 const arg = (n) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const wantJson = argv.includes("--json");
@@ -160,20 +162,16 @@ const verdict = evaluateDeploymentSurface(surface);
 
 const facts = {
   ...verdict,
-  facet_counts: {
-    listeners: listeners?.length ?? null,
-    mounts: mounts?.length ?? null,
-    state_roots: stateRoots?.length ?? null,
-    visible_pids: processAuthority?.visible_pids ?? null,
-    root_files: rootFiles?.length ?? null,
-  },
+  facet_counts: deploymentSurfaceFacetCounts(surface),
 };
 
 const observation = buildDeploymentRemoteWriteObservation({
   facts,
+  surface,
   evidenceClass: "OBSERVED",
   observedAt: new Date().toISOString(),
   executedCodeHash: `sha256:${createHash("sha256").update(readFileSync(KERNEL_PATH)).digest("hex")}`,
+  collectorCodeHash: `sha256:${createHash("sha256").update(readFileSync(COLLECTOR_PATH)).digest("hex")}`,
   hash: sha256CanonicalJsonV1,
 });
 
