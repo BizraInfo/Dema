@@ -124,6 +124,8 @@ export function bindPeakSelfLoopSignalEvents(
 
   const admitted = [];
   const rejected = [];
+  const seenIds = new Set();
+  const seenTargets = new Set();
 
   for (const event of events) {
     if (!event || typeof event !== "object" || Array.isArray(event)) {
@@ -146,6 +148,16 @@ export function bindPeakSelfLoopSignalEvents(
       continue;
     }
 
+    const id = eventId(event);
+    if (id !== null && id !== undefined) {
+      const idKey = String(id);
+      if (seenIds.has(idKey)) {
+        rejected.push(frozenRejection(event, "duplicate_event_id"));
+        continue;
+      }
+      seenIds.add(idKey);
+    }
+
     const candidate = resolve(rootReal, event.source_ref);
     let targetReal;
     try {
@@ -157,6 +169,11 @@ export function bindPeakSelfLoopSignalEvents(
 
     if (!isContained(rootReal, targetReal)) {
       rejected.push(frozenRejection(event, "source_outside_repo"));
+      continue;
+    }
+
+    if (seenTargets.has(targetReal)) {
+      rejected.push(frozenRejection(event, "duplicate_source_target"));
       continue;
     }
 
@@ -174,13 +191,17 @@ export function bindPeakSelfLoopSignalEvents(
       continue;
     }
 
+    seenTargets.add(targetReal);
     admitted.push(Object.freeze({ ...event }));
   }
 
+  // Atomic batch admission: one rejection collapses the whole supplied set so a
+  // partial-valid subset cannot conceal forged or duplicated evidence.
+  const complete = rejected.length === 0;
   return Object.freeze({
-    admitted: Object.freeze(admitted),
+    admitted: Object.freeze(complete ? admitted : []),
     rejected: Object.freeze(rejected),
-    complete: rejected.length === 0,
+    complete,
   });
 }
 

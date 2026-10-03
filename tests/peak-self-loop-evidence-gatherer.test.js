@@ -205,3 +205,35 @@ test("PEB-G07 nested cwd still resolves the Dema checkout, not the nested dir", 
       ),
     );
   }));
+
+test("PEB-G08 duplicate id or source target fails the batch closed", () =>
+  withTempRoot(({ repoRoot }) => {
+    const bytes = Buffer.from("one file\n");
+    writeFileSync(join(repoRoot, "proof.txt"), bytes);
+    const digest = sha256(bytes);
+
+    const dupId = bindPeakSelfLoopSignalEvents(
+      [
+        signal({ id: "same", source_ref: "proof.txt", source_sha256: digest }),
+        signal({ id: "same", source_ref: "proof.txt", source_sha256: digest }),
+      ],
+      { repoRoot },
+    );
+    assert.equal(dupId.complete, false);
+    assert.equal(dupId.admitted.length, 0);
+    assert.ok(dupId.rejected.some((row) => row.reason === "duplicate_event_id"));
+
+    writeFileSync(join(repoRoot, "other.txt"), bytes);
+    const dupTarget = bindPeakSelfLoopSignalEvents(
+      [
+        signal({ id: "a", source_ref: "proof.txt", source_sha256: digest }),
+        signal({ id: "b", source_ref: "proof.txt", source_sha256: digest }),
+      ],
+      { repoRoot },
+    );
+    assert.equal(dupTarget.complete, false);
+    assert.equal(dupTarget.admitted.length, 0);
+    assert.ok(
+      dupTarget.rejected.some((row) => row.reason === "duplicate_source_target"),
+    );
+  }));
