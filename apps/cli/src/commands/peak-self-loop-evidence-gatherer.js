@@ -82,6 +82,7 @@ export function bindPeakSelfLoopSignalEvents(
     readFileImpl = readFileSync,
     realpathImpl = realpathSync,
     startDir = process.cwd(),
+    resolveRootImpl = resolvePeakSelfLoopRepoRoot,
   } = {},
 ) {
   if (!Array.isArray(events)) {
@@ -97,7 +98,7 @@ export function bindPeakSelfLoopSignalEvents(
   const resolvedRoot =
     typeof repoRoot === "string" && repoRoot.trim() !== ""
       ? repoRoot
-      : resolvePeakSelfLoopRepoRoot({ startDir });
+      : resolveRootImpl({ startDir });
 
   if (resolvedRoot == null) {
     return Object.freeze({

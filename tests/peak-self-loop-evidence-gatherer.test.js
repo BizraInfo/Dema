@@ -237,3 +237,120 @@ test("PEB-G08 duplicate id or source target fails the batch closed", () =>
       dupTarget.rejected.some((row) => row.reason === "duplicate_source_target"),
     );
   }));
+
+test("PEB-G09 fail-closed shape, root, and read paths", () =>
+  withTempRoot(({ base, repoRoot }) => {
+    assert.equal(
+      bindPeakSelfLoopSignalEvents(null, { repoRoot }).rejected[0].reason,
+      "signal_events_not_array",
+    );
+
+    const unreadableRoot = bindPeakSelfLoopSignalEvents([], {
+      repoRoot,
+      realpathImpl: () => {
+        throw new Error("nope");
+      },
+    });
+    assert.equal(unreadableRoot.rejected[0].reason, "repo_root_unreadable");
+
+    assert.equal(
+      bindPeakSelfLoopSignalEvents([], {
+        resolveRootImpl: () => null,
+      }).rejected[0].reason,
+      "repo_root_unresolvable",
+    );
+
+    const fakeModule = join(base, "orphan-module.mjs");
+    writeFileSync(fakeModule, "// not a dema checkout anchor\n");
+    const orphanUrl = `file://${fakeModule}`;
+
+    const namedRoot = join(base, "named-dema");
+    mkdirSync(join(namedRoot, "apps", "cli"), { recursive: true });
+    mkdirSync(join(namedRoot, "packages", "core"), { recursive: true });
+    mkdirSync(join(namedRoot, "nested"), { recursive: true });
+    writeFileSync(
+      join(namedRoot, "package.json"),
+      JSON.stringify({ name: "@bizra/dema-root" }),
+    );
+    assert.equal(
+      resolvePeakSelfLoopRepoRoot({
+        startDir: join(namedRoot, "nested"),
+        moduleUrl: orphanUrl,
+      }),
+      namedRoot,
+    );
+
+    const shapeRoot = join(base, "shape-dema");
+    mkdirSync(join(shapeRoot, "apps", "cli"), { recursive: true });
+    mkdirSync(join(shapeRoot, "packages", "core"), { recursive: true });
+    mkdirSync(join(shapeRoot, "nested"), { recursive: true });
+    writeFileSync(join(shapeRoot, "package.json"), JSON.stringify({ name: "other" }));
+    assert.equal(
+      resolvePeakSelfLoopRepoRoot({
+        startDir: join(shapeRoot, "nested"),
+        moduleUrl: orphanUrl,
+      }),
+      shapeRoot,
+    );
+
+    const badPkgDir = join(base, "bad-json-root");
+    mkdirSync(badPkgDir);
+    writeFileSync(join(badPkgDir, "package.json"), "{not-json");
+    assert.equal(
+      resolvePeakSelfLoopRepoRoot({
+        startDir: badPkgDir,
+        moduleUrl: orphanUrl,
+      }),
+      null,
+    );
+
+    const shapeRejects = bindPeakSelfLoopSignalEvents(
+      [
+        null,
+        { id: "a" },
+        { id: "b", source_ref: "/abs.txt", source_sha256: "a".repeat(64) },
+        { id: "c", source_ref: "x", source_sha256: "zz" },
+      ],
+      { repoRoot },
+    );
+    assert.equal(shapeRejects.complete, false);
+    assert.equal(shapeRejects.admitted.length, 0);
+    assert.ok(shapeRejects.rejected.some((r) => r.reason === "event_not_object"));
+    assert.ok(shapeRejects.rejected.some((r) => r.reason === "source_ref_missing"));
+    assert.ok(
+      shapeRejects.rejected.some((r) => r.reason === "source_ref_absolute_forbidden"),
+    );
+    assert.ok(
+      shapeRejects.rejected.some(
+        (r) => r.reason === "source_sha256_missing_or_malformed",
+      ),
+    );
+
+    const bytes = Buffer.from("readable\n");
+    writeFileSync(join(repoRoot, "proof.txt"), bytes);
+    const digest = sha256(bytes);
+    const readFail = bindPeakSelfLoopSignalEvents(
+      [signal({ source_ref: "proof.txt", source_sha256: digest })],
+      {
+        repoRoot,
+        readFileImpl: () => {
+          throw new Error("read boom");
+        },
+      },
+    );
+    assert.equal(readFail.rejected[0].reason, "source_unreadable_or_missing");
+    assert.equal(readFail.admitted.length, 0);
+
+    assert.equal(
+      parsePeakSelfLoopSignalEventsArg(["--signal-events-json", "--other"]).error,
+      "signal_events_json_missing",
+    );
+    assert.equal(
+      parsePeakSelfLoopSignalEventsArg([
+        "--signal-events-json",
+        "[]",
+        "--signal-events-json=[]",
+      ]).error,
+      "signal_events_arg_duplicate",
+    );
+  }));
