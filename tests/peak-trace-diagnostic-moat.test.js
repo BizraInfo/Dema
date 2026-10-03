@@ -11,6 +11,11 @@ import {
   DEMA_TRACE_DIAGNOSTIC_CONTRACT_V2_SCHEMA,
   computeTraceDiagnosticReplaySubjectHashV2,
 } from "../packages/core/src/dema-trace-diagnostic-contract.js";
+import {
+  TRACE_CORROBORATION_ORIGIN_SCHEMA,
+  canonicalTraceCorroborationOriginPayload,
+  verifyTraceCorroborationOrigin,
+} from "../packages/core/src/trace-corroboration-origin.js";
 
 const BOUND = (i) => ({
   id: `moat-${i}`,
