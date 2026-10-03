@@ -17,14 +17,24 @@ export function runBaselineVerifierGateCheck() {
   const result = runBaselineVerifierGate({
     consent: BASELINE_VERIFIER_GATE_GO_PHRASE,
     input: {
-      proposalText: `review ${BASELINE_VERIFIER_GATE_GO_PHRASE}`,
+      proposalText: `review\n${BASELINE_VERIFIER_GATE_GO_PHRASE}`,
     },
   });
   if (!result.ok) return result;
+  if (result.event?.payload?.verified !== true) {
+    return Object.freeze({
+      ...result,
+      ok: false,
+      blocked_by: Object.freeze(["proposal_not_exactly_consented"]),
+    });
+  }
 
   const blocked_by = [];
   const eventHash = verifyOneEventEnvelope(result.event, 1, null, blocked_by, "event_1");
   if (eventHash !== result.event.event_hash) blocked_by.push("event_hash_mismatch");
+  if (typeof result.event?.payload?.proposal_hash !== "string") {
+    blocked_by.push("proposal_hash_missing");
+  }
 
   return Object.freeze({
     ...result,
