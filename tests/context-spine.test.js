@@ -314,6 +314,106 @@ test("authority folding is restrictive and malformed contracts fail closed", () 
   );
 });
 
+test("parseContextContract fail-closed branches cover empty, schema, scope, and authority defects", () => {
+  assert.throws(() => parseContextContract(""), /non-empty string/i);
+  assert.throws(() => parseContextContract("# no contract\n"), /CONTEXT_CONTRACT_MISSING/);
+  assert.throws(
+    () => parseContextContract("# x\n\n<!-- BIZRA_CONTEXT\n{not-json\n-->\n"),
+    /CONTEXT_CONTRACT_INVALID_JSON/,
+  );
+  assert.throws(
+    () => parseContextContract("# x\n\n<!-- BIZRA_CONTEXT\n{\"schema\":\"nope\"}\n-->\n"),
+    /CONTEXT_CONTRACT_SCHEMA_INVALID/,
+  );
+  assert.throws(
+    () => parseContextContract(
+      contextMarkdown({ scope: "galaxy", context_id: "bizra://bad-scope" }),
+      "/bad-scope/BIZRA.md",
+    ),
+    /CONTEXT_SCOPE_INVALID/,
+  );
+  assert.throws(
+    () => parseContextContract(
+      contextMarkdown({ scope: "node", context_id: "" }),
+      "/empty-id/BIZRA.md",
+    ),
+    /context_id must be a non-empty string/i,
+  );
+  assert.throws(
+    () => parseContextContract(
+      contextMarkdown({
+        scope: "node",
+        context_id: "bizra://bad-default",
+        authority: authorityWith({
+          capabilities: { runtime: { default: "MAYBE", grantability: "HUMAN_EXPLICIT" } },
+        }),
+      }),
+      "/bad-default/BIZRA.md",
+    ),
+    /default is invalid/i,
+  );
+  assert.throws(
+    () => parseContextContract(
+      contextMarkdown({
+        scope: "node",
+        context_id: "bizra://hard-deny-allow",
+        authority: authorityWith({
+          capabilities: { runtime: { default: "ALLOW", grantability: "NEVER" } },
+        }),
+      }),
+      "/hard-deny-allow/BIZRA.md",
+    ),
+    /hard deny must default to DENY/i,
+  );
+  assert.throws(
+    () => parseContextContract(
+      contextMarkdown({
+        scope: "node",
+        context_id: "bizra://bad-network",
+        authority: authorityWith({ network: { default: "PLANET", max_grantable: "NONE" } }),
+      }),
+      "/bad-network/BIZRA.md",
+    ),
+    /network\.default is invalid/i,
+  );
+  assert.throws(
+    () => parseContextContract(
+      contextMarkdown({
+        scope: "node",
+        context_id: "bizra://empty-never",
+        authority: authorityWith({ never_delegable: [] }),
+      }),
+      "/empty-never/BIZRA.md",
+    ),
+    /never_delegable must not be empty/i,
+  );
+  assert.throws(
+    () => parseContextContract(
+      contextMarkdown({
+        schema: "bizra.context.contract.v1",
+        scope: "node",
+        context_id: "bizra://legacy-bad",
+        authority_ceiling: { ...LEGACY_AUTHORITY, network_mode: "WIFI" },
+      }),
+      "/legacy-bad/BIZRA.md",
+    ),
+    /network_mode is invalid/i,
+  );
+
+  const parentNever = authorityWith({
+    never_delegable: ["self_expand_authority", "fabricate_consent", "extra_never"],
+  });
+  const childDroppedNever = resolveContext({
+    layers: layers({
+      repository: { authority: parentNever },
+      subtree: { authority: AUTHORITY },
+    }),
+    operation_class: "read",
+  });
+  assert.equal(childDroppedNever.ok, false);
+  assert.ok(childDroppedNever.blocked_by.includes("AUTHORITY_BROADENING"));
+});
+
 test("a child cannot broaden authority or contradict constitutional rules", () => {
   const broadened = resolveContext({
     layers: layers({
