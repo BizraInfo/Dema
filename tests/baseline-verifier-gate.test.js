@@ -31,6 +31,17 @@ test("BASELINE-VERIFIER-02: malformed proposal is refused", () => {
   assert.deepEqual(result.blocked_by, ["proposal_not_string"]);
 });
 
+test("BASELINE-VERIFIER-02b: non-object input is refused", () => {
+  for (const input of [null, ["not", "object"], "string"]) {
+    const result = runBaselineVerifierGate({
+      consent: BASELINE_VERIFIER_GATE_GO_PHRASE,
+      input,
+    });
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.blocked_by, ["input_not_object"]);
+  }
+});
+
 test("BASELINE-VERIFIER-03: consented proposal emits a valid verified event", () => {
   const proposalText = `Plan\n${BASELINE_VERIFIER_GATE_GO_PHRASE}\nEnd`;
   const result = runBaselineVerifierGate({
