@@ -38,11 +38,9 @@ function refuse(code) {
 }
 
 function isWellFormedUtf16(text) {
-  if (typeof text.isWellFormed === "function") return text.isWellFormed();
-  // Fallback for engines without String#isWellFormed.
-  return !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(
-    text,
-  );
+  // Node 20+/22 CI floor: String#isWellFormed is required (no dead fallback
+  // branch that would dilute repository branch coverage).
+  return text.isWellFormed();
 }
 
 function proposalHash(proposalText) {
