@@ -39,6 +39,12 @@ interface NodeResources {
   receipts: Observation<number>;
 }
 
+async function fetchNodeResources(signal?: AbortSignal): Promise<NodeResources> {
+  const res = await fetch("/api/node-resources", { cache: "no-store", signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
 function UnavailableChip({ label }: { label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md border border-muted-foreground/30 bg-muted-foreground/5 px-2 py-1 font-mono text-[11px] text-muted-foreground">
@@ -70,15 +76,13 @@ function BoundaryChip({ label, obs }: { label: string; obs: Observation<boolean>
 export function RealResources() {
   const [data, setData] = useState<NodeResources | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/node-resources", { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData(await res.json());
+      setData(await fetchNodeResources());
     } catch (err) {
       setError(err instanceof Error ? err.message : "fetch failed");
     } finally {
@@ -87,8 +91,20 @@ export function RealResources() {
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    const controller = new AbortController();
+    fetchNodeResources(controller.signal).then(
+      (result) => {
+        setData(result);
+        setLoading(false);
+      },
+      (err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "fetch failed");
+        setLoading(false);
+      },
+    );
+    return () => controller.abort();
+  }, []);
 
   return (
     <Panel

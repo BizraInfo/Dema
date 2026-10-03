@@ -130,6 +130,18 @@ const NEXT_ACTION_PHRASES = [
 // Dispatch-intent phrase → argv map. Checked left-to-right; first match wins.
 const DISPATCH_INTENT_MAP = [
   {
+    phrases: [
+      "help me continue node0 closure",
+      "continue node0 closure",
+      "continue node0",
+      "where did we stop",
+      "where were we",
+    ],
+    // The first-look recovery home composes profile + active mission + the
+    // existing checkpoint reader. It is the one human-facing re-entry surface.
+    argv: ["--safe"],
+  },
+  {
     phrases: ["show my status", "show status", "status please"],
     argv: ["status"],
   },
@@ -201,13 +213,14 @@ function routeChatInput(input, options = {}) {
     return {
       intent: "greeting",
       response: [
-        "I'm here. I'm not a chat agent yet — I'm a strict-command CLI that answers",
-        "from local knowledge. Try:",
-        "  dema explain dema    — what I am",
-        "  dema help            — what I can do",
-        "  dema memory          — what I remember",
+        "I'm here. I'm Dema, your local companion.",
+        "I can help you return to your Node0 state, continue a mission, and inspect proof.",
+        "Try:",
+        "  dema realm       — return to your Node0 home",
+        "  dema receipts    — inspect local proof",
+        "  dema help        — see available paths",
       ].join("\n"),
-      suggestedCommands: ["dema explain dema", "dema help", "dema memory"],
+      suggestedCommands: ["dema realm", "dema receipts", "dema help"],
     };
   }
 
@@ -258,6 +271,21 @@ function routeChatInput(input, options = {}) {
       intent: "council-seat-pat-routing",
       response: formatCouncilSeatPatRoutingResponse(preview),
       suggestedCommands: ["dema realm council-route --json"],
+    };
+  }
+
+  // Continuation must be checked before concept matching: "Node0" is a
+  // glossary term, but this sentence is an explicit bounded local continuation
+  // request routed to the existing Season writer.
+  if (
+    lowerNorm.includes("continue my node0 closure work") ||
+    lowerNorm.includes("continue my node0 work")
+  ) {
+    return {
+      intent: "dispatch-intent",
+      response: "",
+      dispatchCommand: ["season", "continue"],
+      suggestedCommands: ["dema season continue"],
     };
   }
 

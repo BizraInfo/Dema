@@ -1,0 +1,55 @@
+{
+  "skill_id": "run-dema",
+  "version": "1.0.0",
+  "capability_family": "dema-cli-runtime",
+  "lifecycle_phase": "verification",
+  "applicability": [
+    "running the dema CLI",
+    "launching dema",
+    "smoke-testing dema commands",
+    "verifying the CLI works from a clean checkout",
+    "driving dema commands"
+  ],
+  "exclusions": [
+    "web/GUI app interaction (no screenshots)",
+    "consent-gated commands without exact string",
+    "long-running processes (dema is one-shot)"
+  ],
+  "preconditions": [
+    "Node.js available",
+    "repository checkout exists"
+  ],
+  "inputs": [
+    "command and arguments",
+    "optional DEMA_HOME override"
+  ],
+  "outputs": [
+    "command output (stdout/stderr)",
+    "exit code",
+    "PASS/FAIL per command"
+  ],
+  "side_effects": [
+    "writes receipts under DEMA_HOME (default ~/.dema)",
+    "driver uses throwaway DEMA_HOME via mkdtemp",
+    "does not start servers or daemons"
+  ],
+  "permissions": [
+    "read repository",
+    "run CLI commands",
+    "write to DEMA_HOME"
+  ],
+  "resource_bindings": [
+    "bin/dema",
+    "apps/cli/src/index.js",
+    "driver.mjs"
+  ],
+  "truth_boundary": "smoke-test-only",
+  "evidence_refs": [],
+  "projection_targets": [".claude"],
+  "convergence": {
+    "formal": 2,
+    "cryptographic": 0,
+    "empirical": 3,
+    "economic": 0
+  }
+}

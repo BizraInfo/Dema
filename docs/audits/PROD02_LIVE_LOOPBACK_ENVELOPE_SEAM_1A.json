@@ -1,0 +1,142 @@
+{
+    "schema": "bizra.dema.prod02_live_loopback_envelope_seam.v1",
+    "truth_label": "PROD02_LIVE_LOOPBACK_ENVELOPE_SEAM_1A",
+    "mode": "READ_ONLY_CONTRACT_DEFINITION",
+    "frozen_at": "2026-08-26T23:25:00Z",
+    "canon_template": "docs/canon/ULTRA_MICRO_TRANSITION_TEMPLATE.md",
+    "canon_template_sha256": "85b22895414ba73b6a8e96339524c2624ab137d961298adf0f1d7951ed636bef",
+    "predecessors": {
+        "0C": "ac3cf37be3402112502c3d344063f014c1db920957c1428f61ff5d5369e32719",
+        "pure_stream_law": "packages/core/src/node0-sse-envelope-stream.js MEASURED_REPO",
+        "pure_stream_law_detail": "ordered, gap-detecting, tamper-evident, exactly-one-terminal hash-chained SSE (kinds state/heartbeat/error/stream_end), heartbeat payload {} only, sockets/ports/runtime explicitly out of scope"
+    },
+    "MISSION": "Prove already-measured SSE envelope law survives transport through one real localhost client/server connection without byte corruption, causal ambiguity, false success, or authority widening",
+    "CURRENT_BLOCKER": "Repo-level transport semantics exist; actual network carriage NOT YET PROVEN \u2014 pure law proven, real carrier unmeasured",
+    "DOMINANT_UNCERTAINTY": "Can exact already-governed SSE envelope bytes leave one localhost server process, traverse real HTTP, arrive at client, and reproduce same verified stream semantics?",
+    "MINIMUM_SPECIAL_CASE": {
+        "server": "one localhost HTTP server",
+        "client": "one localhost client",
+        "sse_response": "one SSE response",
+        "stream": "one existing golden envelope stream (node0-sse-envelope-stream.js)",
+        "socket": "one real socket",
+        "controls": [
+            "one forced corruption control",
+            "one reconnect/second request"
+        ],
+        "exclusions": [
+            "no model",
+            "no PAT",
+            "no FATE redesign",
+            "no external network",
+            "no generic gateway",
+            "no production runtime mutation unless separately authorized"
+        ]
+    },
+    "CORRECTIONS_APPLIED": {
+        "sender_role": "DEMA_CLIENT | MISSION_SUPERVISOR \u2014 not PAT (PAT not live, would make unproven actor part of proof)",
+        "law_connection_stream_mission": "ConnectionContinuity \u2260 MessageContinuity \u2260 MissionContinuity \u2014 connection may die while mission remains valid; heartbeat proves liveness not success; never promote HTTP alive \u2192 mission healthy/successful",
+        "transport_choice": "Smallest that satisfies pattern: client HTTP request/command ingress + server SSE event stream egress; defer WebSocket until proven need for continuous client-originated messages over same persistent connection",
+        "idempotency_witness": "Controlled reversible test fixture \u2014 ledger/test counter 0\u21921 on execution_id exec-test-001 first command, remains 1 on duplicate same execution_id, 1\u21922 on new execution_id \u2014 proves same execution_id = same logical execution without external effect",
+        "four_ids": {
+            "message_id": "this envelope (seq)",
+            "correlation_id": "entire mission flow (mission_id)",
+            "causation_id": "which previous envelope caused this",
+            "execution_id": "exactly one work attempt / idempotency identity"
+        },
+        "kind_semantics": "Keep wire kinds state/heartbeat/error/stream_end (closed, refuses unknown); semantic COMMAND/ACCEPTED/OBSERVATION/REFUSAL/ERROR/TERMINAL inside payload.schema \u2014 version transport only later (prefer A)",
+        "timestamp": "sent_at/expires_at as runtime observation not proof; verifier needs declared clock source + skew + expiry rule \u2014 clock reports time, does not define truth",
+        "integrity": "Canonical serialization + event_hash + previous_event_hash + localhost/session context \u2014 existing hash-chain; principal signature deferred until Node0 principal VERIFIED, then bind principal\u2192session\u2192chain; no shadow identity now",
+        "reconnect": "New connection \u2260 automatic same stream \u2014 requires same mission_id + execution_id + expected previous_event_hash + next seq + server stream head; else CHAIN_DIVERGENCE not silent resync",
+        "terminal": "#TerminalReceipt(execution_id)=1 \u2014 one per execution_id, not per connection; disconnect may occur multiple times per execution without terminating execution"
+    },
+    "ENVELOPE_REFINEMENT": {
+        "wire_envelope": "state/heartbeat/error/stream_end via node0-sse-envelope-stream.js (seq 1..n, previous_event_hash, event_hash sha256: canonical, heartbeat payload {} only)",
+        "semantic_envelope_inside_payload": {
+            "message_id": "seq",
+            "correlation_id": "mission_id",
+            "causation_id": "previous message_id",
+            "execution_id": "exec-test-001",
+            "kind_semantic": "COMMAND|ACCEPTED|OBSERVATION|HEARTBEAT|REFUSAL|ERROR|TERMINAL inside payload.schema",
+            "sent_at": "observation time, not authority",
+            "expires_at": "with declared skew"
+        },
+        "example_chain": "mission-42 correlation \u2192 msg-101 execution exec-7 \u2192 msg-102 causation msg-101 \u2192 msg-103 observation \u2192 msg-104 terminal (all execution_id exec-7)"
+    },
+    "PROD02_CARRIER_MAPPING": {
+        "request_transport_carries": [
+            "mission_id",
+            "contract_hash",
+            "execution_id",
+            "eligible_action",
+            "bounded_input",
+            "authority_ceiling_reference",
+            "consent_fate_references"
+        ],
+        "response_carries": [
+            "execution_id",
+            "worker_identity",
+            "typed_result",
+            "observed_side_effects",
+            "runtime_receipt_reference",
+            "failure_code"
+        ],
+        "runtime_must_not_mutate": "mission contract",
+        "dema_must_truthfully_detect_recover": "runtime death"
+    },
+    "EXPECTED_RED": [
+        "malformed bytes",
+        "hash mutation / event_hash_mismatch / chain_break",
+        "sequence gap / seq_gap_or_duplicate",
+        "duplicate execution creates duplicate transition (counter 1\u21922 on same execution_id)",
+        "unknown event kind / event_kind_unknown (closed set violated)",
+        "heartbeat carries state / heartbeat_carries_state",
+        "disconnect falsely reported as success (HTTP alive \u2192 mission successful)",
+        "reconnect with wrong chain head \u2192 not CHAIN_DIVERGENCE / silent resync",
+        "terminal missing or >1 per execution_id / after_terminal",
+        "wire parse failure / data_unparseable / incomplete frame",
+        "authority widening (effective_authority_delta >0 hidden as 0)"
+    ],
+    "EXPECTED_GREEN": [
+        "exact bytes emitted == bytes received (emitted hash == received hash)",
+        "hash-chain verifies (sha256CanonicalJsonV1 over body minus hash)",
+        "sequence verifies 1..n consecutive, no gaps",
+        "terminal semantics verify exactly one stream_end at end per execution_id",
+        "duplicate execution_id suppressed (counter remains 1, no duplicate transition)",
+        "new execution_id advances counter 1\u21922",
+        "reconnect evidence explicit (same mission_id+execution_id+previous_event_hash+next seq verified or CHAIN_DIVERGENCE refused)",
+        "heartbeat proves liveness while carrying no state (payload {} only)",
+        "authority_delta 0 and effective_authority_delta 0 (no capability enabled by transport)",
+        "no external effects, no model, no PAT/SAT, no identity mutation"
+    ],
+    "EVIDENCE": [
+        "emitted byte hash (server serializeSseFrames)",
+        "received byte hash (client wire text)",
+        "parsed envelope hashes (per-event event_hash)",
+        "stream head / stream_hash",
+        "event_count + terminal_seq",
+        "execution_id (exec-test-001) + correlation_id (mission-42)",
+        "idempotency fixture result (counter 0\u21921\u21921\u21922)",
+        "disconnect observation (transport vs mission vs execution termination distinguished)",
+        "reconnect observation (continuation or CHAIN_DIVERGENCE)",
+        "negative controls (hash tamper, frame tamper, terminal drop all refused)",
+        "exact commit/tree 7f4ce3a/f6c3a2cf + verifier receipt content_hash"
+    ],
+    "ACCEPTANCE_EQUATION": "GREEN = Authenticated \u2227 Correlated \u2227 CausallyBound \u2227 Ordered \u2227 IntegrityVerified \u2227 Idempotent \u2227 TruthfullyRecoverable \u2227 Receipted \u2227 (\u0394Authority=0)",
+    "NOTE_EFFECTIVE_AUTHORITY": "Distinguish identity_state_delta from capability_authority_delta and effective_authority_delta \u2014 if transport enables previously inaccessible effect capability, fail authority_delta=0 even if policy table unchanged",
+    "UNLOCK": "Current PROD-02 live transport integration (DEMA\u2194Node0 observation + typed execution transport) \u2014 the missing carrier contract around existing PROD-02 acceptance surface",
+    "FORBIDDEN": [
+        "WebSocket migration",
+        "PAT / SAT runtime",
+        "model invocation",
+        "external network",
+        "mission-contract mutation (runtime must not mutate)",
+        "new identity system / shadow signing",
+        "unrelated runtime work",
+        "reinterpreting historical node_uid bytes",
+        "clock as authority"
+    ],
+    "DOCTRINE": "Progress = \u03a3 Dominant Uncertainties Permanently Removed \u2014 contract template is BIZRA unit of progress: Human mission \u2192 one uncertainty \u2192 one bounded experiment \u2192 reality \u2192 evidence \u2192 verdict \u2192 receipt \u2192 earned next transition",
+    "READY_FOR_AC5_PACKAGE": true,
+    "READY_FOR_HUMAN_GO": false,
+    "authority_delta": 0
+}

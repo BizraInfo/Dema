@@ -39,6 +39,10 @@ export function computeReleaseVerdict({
   }
 
   const resolvedBoundaries = buildControlPlaneBoundary(boundaries);
+  // Match the ledger verifier: an explicitly broken boundary cannot be READY_LOCAL.
+  if (Object.values(resolvedBoundaries).some((intact) => intact !== true)) {
+    return "BLOCKED";
+  }
   const formal = summarizeFormalRail(checks, claims);
   const empirical = summarizeEmpiricalRail(checks, coverage, perf, workflows);
   const economic = summarizeEconomicRail(claims, resolvedBoundaries);

@@ -1,0 +1,10 @@
+{
+  "schema": "bizra.skill-projection/v1",
+  "skill_id": "dema-data-steward",
+  "projection_target": ".agents",
+  "source_registry_hash": "9c8c18c7e954f18a92bc5e78cf5bebf9e1a4e1a5945551dc090e600ffdc12e37",
+  "contract_hash": "d3077b542c20e01bb056f47ad15ea09b1ff70ca01813d015176a27ad0d284753",
+  "generated_at": "2026-08-30T20:41:22.073Z",
+  "files_projected": 12,
+  "files_skipped": 0
+}

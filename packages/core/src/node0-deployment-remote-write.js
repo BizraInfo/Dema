@@ -28,6 +28,10 @@
 // generation this protects is not present to object.
 
 export const NODE0_DEPLOYMENT_REMOTE_WRITE_SCHEMA =
+  "bizra.dema.node0_deployment_remote_write_observation.v0.2";
+
+/** v0.1 has no measured surface and cannot support independent derivation. */
+export const NODE0_DEPLOYMENT_REMOTE_WRITE_LEGACY_SCHEMA =
   "bizra.dema.node0_deployment_remote_write_observation.v0.1";
 
 /** Must equal the invariant's `required_scope` or the row can never settle. */
@@ -89,6 +93,25 @@ export const REACHABILITY_ONLY_FINDING_KINDS = Object.freeze([
 const LOOPBACK_RE = /^(127\.|::1$|localhost$)/i;
 const isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const arr = (v) => (Array.isArray(v) ? v : null);
+
+/**
+ * The producer and adapter use this one normalization so summary counts cannot
+ * describe a different surface from the one that supplied the verdict.
+ */
+export function deploymentSurfaceFacetCounts(surface) {
+  const listeners = arr(surface?.listeners);
+  const mounts = arr(surface?.mounts);
+  const stateRoots = arr(surface?.state_roots);
+  const rootFiles = arr(surface?.root_files);
+  const visiblePids = surface?.process_authority?.visible_pids;
+  return Object.freeze({
+    listeners: listeners?.length ?? null,
+    mounts: mounts?.length ?? null,
+    state_roots: stateRoots?.length ?? null,
+    visible_pids: typeof visiblePids === "number" ? visiblePids : null,
+    root_files: rootFiles?.length ?? null,
+  });
+}
 
 const out = (verdict, reason, findings = []) =>
   Object.freeze({
@@ -224,9 +247,11 @@ export function isCleanEligibleDeployment(o) {
 
 export function buildDeploymentRemoteWriteObservation({
   facts = null,
+  surface = null,
   evidenceClass = "NONE",
   observedAt = null,
   executedCodeHash = null,
+  collectorCodeHash = null,
   hash,
 } = {}) {
   if (typeof hash !== "function") throw new TypeError("hash function required");
@@ -250,18 +275,23 @@ export function buildDeploymentRemoteWriteObservation({
     external_write_path_present: facts?.external_write_path_present ?? null,
     findings: Object.freeze([...(facts?.findings ?? [])]),
     facet_counts: Object.freeze({ ...(facts?.facet_counts ?? {}) }),
+    // The adapter re-derives every decision-bearing field from this exact body.
+    // A hash only proves the observation was not later edited.
+    surface,
     executed_code_hash: executedCodeHash,
+    collector_code_hash: collectorCodeHash,
     live_execution_performed: evidenceClass === "OBSERVED",
+    observed_at: observedAt,
     what_this_proves:
       PROSE_BY_VERDICT[facts?.verdict] ?? PROSE_BY_VERDICT.INCOMPLETE,
     what_this_does_not_prove:
       "It does NOT prove the node is unreachable, that no future mount or listener will appear, that a local process with legitimate authority cannot write, or that any other machine is safe. It speaks for this host at the moment it was measured.",
   };
-  return Object.freeze({ ...body, observed_at: observedAt, observation_hash: hash(body) });
+  return Object.freeze({ ...body, observation_hash: hash(body) });
 }
 
 export function verifyDeploymentRemoteWriteHash(observation, hash) {
   if (!observation || typeof hash !== "function") return false;
-  const { observed_at: _o, observation_hash: carried, ...body } = observation;
+  const { observation_hash: carried, ...body } = observation;
   return typeof carried === "string" && carried.length > 0 && hash(body) === carried;
 }

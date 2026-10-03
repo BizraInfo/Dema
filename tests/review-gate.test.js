@@ -701,6 +701,7 @@ test("resolveClassForBranch maps known prefixes to broad-scope", () => {
   assert.equal(resolveClassForBranch("feat/x"), "policy/broad-scope");
   assert.equal(resolveClassForBranch("fix/y"), "policy/broad-scope");
   assert.equal(resolveClassForBranch("docs/z"), "policy/broad-scope");
+  assert.equal(resolveClassForBranch("slice/node0-genesis-final-1a"), "policy/broad-scope");
 });
 
 test("resolveClassForBranch maps a specific-prefix branch to its exact class", () => {
