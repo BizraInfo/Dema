@@ -18,11 +18,13 @@
 
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
 const WORKFLOW = ".github/workflows/gitleaks.yml";
 const CACHE = "node_modules/.cache/gitleaks";
+const VERSION_RE = /^\d+\.\d+\.\d+$/;
+const SHA256_RE = /^[0-9a-f]{64}$/;
 
 const fail = (msg) => {
   console.error(`scan:secrets — ${msg}`);
@@ -47,28 +49,33 @@ const detectArgs = pick(/run: \.\/gitleaks (detect [^\n]+)/, "the detect command
   .trim()
   .split(/\s+/);
 
-// CI's checkout only contains the branch under test (fetch-depth: 0 on that ref).
-// A fat local clone has every fetched PR/branch tip; gitleaks' default git walk
-// then scans those unrelated refs and reports leaks CI will never see. Pin the
-// walk to HEAD so local matches the CI checkout shape. Do not restate this in
-// the workflow — CI does not need it; locals do.
-if (!detectArgs.includes("--log-opts") && !detectArgs.includes("--log-opts=HEAD")) {
-  detectArgs.push("--log-opts=HEAD");
+if (!VERSION_RE.test(version)) {
+  fail(`refusing non-semver VERSION parsed from ${WORKFLOW}: ${version}`);
+}
+if (!SHA256_RE.test(sha256)) {
+  fail(`refusing non-hex EXPECTED_SHA256 parsed from ${WORKFLOW}`);
 }
 
-const url = urlTemplate.replace(/\$\{VERSION\}|\$VERSION/g, version);
+// CI checkout with fetch-depth: 0 fetches origin refs. A fat local clone also
+// keeps abandoned local-only tips; gitleaks' default walk includes those and
+// reports leaks CI will never see. Pin the walk to origin remotes so the local
+// corpus matches CI's fetched-ref shape without scanning junk reflog objects.
+if (!detectArgs.some((a) => a === "--log-opts" || a.startsWith("--log-opts="))) {
+  detectArgs.push("--log-opts=--remotes=origin");
+}
 
-// The URL comes out of a file, so it is untrusted input to an outbound request:
-// anyone who can edit the workflow could otherwise point this at any host or at a
-// different release than VERSION. Require the exact upstream release path for the
-// parsed VERSION. The checksum below is the second line of defence.
-const expectedUrl =
+const workflowUrl = urlTemplate.replace(/\$\{VERSION\}|\$VERSION/g, version);
+
+// Construct the fetch URL from the validated VERSION. Still require the workflow
+// URL to expand to the same string so a drifted template cannot silently point
+// elsewhere while we download the expected path.
+const fetchUrl =
   `https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz`;
-if (url !== expectedUrl) {
+if (workflowUrl !== fetchUrl) {
   fail(
-    `refusing to fetch a URL that does not match pinned VERSION ${version}:\n` +
-      `  parsed:   ${url}\n` +
-      `  expected: ${expectedUrl}`,
+    `refusing to fetch: workflow URL does not match pinned VERSION ${version}:\n` +
+      `  workflow: ${workflowUrl}\n` +
+      `  expected: ${fetchUrl}`,
   );
 }
 
@@ -95,8 +102,21 @@ function resolveGitleaksBinary() {
 
     if (!existsSync(tarball)) {
       console.log(`scan:secrets — downloading gitleaks v${version}`);
-      const dl = spawnSync("curl", ["-sSL", url, "-o", tarball], { stdio: "inherit" });
-      if (dl.status !== 0) fail("download failed (no network?)");
+      // codeql[js/file-access-to-http]: intentional pinned release fetch.
+      // VERSION is restricted to digits.digits.digits; fetchUrl is constructed
+      // from that pin to the exact gitleaks upstream path; workflow URL must
+      // match before curl; tarball SHA-256 is re-verified before extract/exec.
+      const dl = spawnSync("curl", ["-sSL", fetchUrl, "-o", tarball], {
+        stdio: "inherit",
+      });
+      if (dl.status !== 0) {
+        try {
+          unlinkSync(tarball);
+        } catch {
+          // best-effort: leave no partial cache that would skip retry
+        }
+        fail("download failed (no network?)");
+      }
     }
 
     // Re-verified on every run, not just on download: a cached tarball is still
@@ -126,11 +146,15 @@ function resolveGitleaksBinary() {
         `Detect command: gitleaks ${detectArgs.join(" ")}`,
     );
   }
-  // Accept "8.30.1" or "v8.30.1" / multi-line banners that include the pin.
+  // Accept exact "8.30.1" / "v8.30.1", or a token in a multi-word banner.
+  // No RegExp built from VERSION — avoids incomplete-escape findings and keeps
+  // the match a plain string compare against the already-validated pin.
+  const tokens = reported.split(/\s+/);
   const versionOk =
     reported === version ||
     reported === `v${version}` ||
-    new RegExp(`(?:^|\\s)v?${version.replace(/\./g, "\\.")}(?:\\s|$)`).test(reported);
+    tokens.includes(version) ||
+    tokens.includes(`v${version}`);
   if (!versionOk) {
     fail(
       `PATH gitleaks reports "${reported}" but CI pins v${version}. ` +

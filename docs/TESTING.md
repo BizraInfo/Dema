@@ -24,7 +24,7 @@ git diff --check
 It enforces the repo coverage floor with Node's native threshold flags:
 95% lines, 84% branches, and 95% functions.
 
-### Secret scanning — not covered by the gate above
+### Secret scanning — not covered by `npm run check`
 
 ```bash
 npm run scan:secrets
@@ -43,8 +43,8 @@ cached tarball on every run, re-extracts the binary, and refuses to execute on
 mismatch. On other hosts it fail-closes on a PATH `gitleaks` at the exact CI-pinned
 version (CI only publishes a linux_x64 checksum). It also refuses to run on a
 shallow clone where a partial history would report a false clean, and pins
-`--log-opts=HEAD` so a fat local clone does not scan unrelated fetched branch
-tips that CI's single-ref checkout never contains.
+`--log-opts=--remotes=origin` so a fat local clone matches CI's fetched-ref
+corpus instead of also walking abandoned local-only tips.
 
 It is **not** part of `npm run check`, which stays offline-capable. It *is* wired
 into `npm run pre-push:seal` as the `scan_secrets` gate, positioned immediately
