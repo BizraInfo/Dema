@@ -1,102 +1,19 @@
-// BASELINE-VERIFIER-GATE-1A — Proactive verification gate inspired by Manus: checks proposal consent and returns a verifiable SSE envelope stream event.
-// This gate is itself hash-chained and verifiable by the node0-sse-envelope-stream contract, enabling pre-Done verification in the Dema loop.
+// BASELINE-VERIFIER-GATE-1A — minimal pre-action verification kernel.
+//
+// Purpose: prove that a consent-aware verifier can emit evidence under the
+// existing Node0 SSE event-envelope law before any effect is authorized.
+// Pure preview: no fs, network, process, clock, random, model, or execution.
+// The emitted SSE event is hash-chained and independently verifiable.
 
+import { createHash } from "node:crypto";
 import { buildSseStreamEvent } from "./node0-sse-envelope-stream.js";
 
 export const BASELINE_VERIFIER_GATE_SCHEMA = "bizra.dema.baseline_verifier_gate.v0.1";
 export const BASELINE_VERIFIER_GATE_TRUTH_LABEL = "BASELINE_VERIFIER_GATE_MEASURED_REPO";
 export const BASELINE_VERIFIER_GATE_GO_PHRASE = "GO: baseline verifier gate preview";
 
-/**
- * Run baseline verifier gate: verify proposal has exact GO consent and return a verifiable SSE stream event.
- * @param {{ consent: string, input: { proposalText: string } }} params
- * @returns {{ ok: boolean, schema: string, truth_label: string, event: Object, boundary: Object }}
- *   On success: ok:true, event: a verifiable SSE stream event (state kind, seq=1, payload with verified/reason)
- *   On failure: ok:false, blocked_by: array of refusal codes
- */
-export function runBaselineVerifierGate({ consent, input } = {}) {
-  // Consent gate (exact phrase only)
-  if (consent !== BASELINE_VERIFIER_GATE_GO_PHRASE) {
-    return Object.freeze({
-      ok: false,
-      schema: BASELINE_VERIFIER_GATE_SCHEMA,
-      truth_label: BASELINE_VERIFIER_GATE_TRUTH_LABEL,
-      boundary: Object.freeze({
-        execution_allowed: false,
-        daemon_started: false,
-        network_used: false,
-        token_minted: false,
-        wallet_accessed: false,
-        live_execution_performed: false,
-        file_mutation_performed: false,
-        model_invocation_performed: false,
-      }),
-      blocked_by: Object.freeze(["consent_phrase_mismatch"]),
-    });
-  }
-
-  // Input validation
-  if (!input || typeof input !== "object" || Array.isArray(input)) {
-    return Object.freeze({
-      ok: false,
-      schema: BASELINE_VERIFIER_GATE_SCHEMA,
-      truth_label: BASELINE_VERIFIER_GATE_TRUTH_LABEL,
-      boundary: Object.freeze({
-        execution_allowed: false,
-        daemon_started: false,
-        network_used: false,
-        token_minted: false,
-        wallet_accessed: false,
-        live_execution_performed: false,
-        file_mutation_performed: false,
-        model_invocation_performed: false,
-      }),
-      blocked_by: Object.freeze(["input_not_object"]),
-    });
-  }
-
-  if (typeof input.proposalText !== "string") {
-    return Object.freeze({
-      ok: false,
-      schema: BASELINE_VERIFIER_GATE_SCHEMA,
-      truth_label: BASELINE_VERIFIER_GATE_TRUTH_LABEL,
-      boundary: Object.freeze({
-        execution_allowed: false,
-        daemon_started: false,
-        network_used: false,
-        token_minted: false,
-        wallet_accessed: false,
-        live_execution_performed: false,
-        file_mutation_performed: false,
-        model_invocation_performed: false,
-      }),
-      blocked_by: Object.freeze(["proposal_not_string"]),
-    });
-  }
-
-  // Proactive verification: check that proposalText contains the exact GO phrase for this gate
-  // (In a real system, this might check a proposal file or a more complex condition)
-  const hasConsent = input.proposalText.includes(BASELINE_VERIFIER_GATE_GO_PHRASE);
-  const reason = hasConsent
-    ? "Proposal contains required GO consent"
-    : "Proposal missing required GO consent";
-
-  // Build a single SSE stream event representing the verification result
-  // This event is itself verifiable by the node0-sse-envelope-stream contract
-  const event = buildSseStreamEvent({
-    streamId: "baseline-verifier-gate-1a",
-    seq: 1,
-    kind: "state",
-    payload: {
-      verified: hasConsent,
-      reason,
-      timestamp: "2026-08-27T00:00:00.000Z", // fixed for determinism in preview
-    },
-    previousEventHash: null, // genesis event
-  });
-
-  // All-false boundary invariant (pure kernel preview)
-  const boundary = Object.freeze({
+function boundary() {
+  return Object.freeze({
     execution_allowed: false,
     daemon_started: false,
     network_used: false,
@@ -105,14 +22,79 @@ export function runBaselineVerifierGate({ consent, input } = {}) {
     live_execution_performed: false,
     file_mutation_performed: false,
     model_invocation_performed: false,
+    merge_authority: false,
+    authority_delta: 0,
+  });
+}
+
+function refuse(code) {
+  return Object.freeze({
+    ok: false,
+    schema: BASELINE_VERIFIER_GATE_SCHEMA,
+    truth_label: BASELINE_VERIFIER_GATE_TRUTH_LABEL,
+    boundary: boundary(),
+    blocked_by: Object.freeze([code]),
+  });
+}
+
+function isWellFormedUtf16(text) {
+  // Node 20+/22 CI floor: String#isWellFormed is required (no dead fallback
+  // branch that would dilute repository branch coverage).
+  return text.isWellFormed();
+}
+
+function proposalHash(proposalText) {
+  return `sha256:${createHash("sha256").update(proposalText, "utf8").digest("hex")}`;
+}
+
+/** Exact whole-line match after trim — not a substring / prefix / suffix hit. */
+export function proposalHasExactGoPhrase(proposalText) {
+  return proposalText
+    .split(/\r?\n/)
+    .some((line) => line.trim() === BASELINE_VERIFIER_GATE_GO_PHRASE);
+}
+
+/**
+ * Verify the absolute minimum proposal contract and emit one tamper-evident
+ * state event. `ok` means the preview kernel executed correctly; the proposal
+ * decision itself is carried by event.payload.verified and bound to
+ * event.payload.proposal_hash.
+ */
+export function runBaselineVerifierGate({ consent, input } = {}) {
+  if (consent !== BASELINE_VERIFIER_GATE_GO_PHRASE) {
+    return refuse("consent_phrase_mismatch");
+  }
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    return refuse("input_not_object");
+  }
+  if (typeof input.proposalText !== "string") {
+    return refuse("proposal_not_string");
+  }
+  if (!isWellFormedUtf16(input.proposalText)) {
+    return refuse("proposal_not_well_formed");
+  }
+
+  const verified = proposalHasExactGoPhrase(input.proposalText);
+  const event = buildSseStreamEvent({
+    streamId: "baseline-verifier-gate-1a",
+    seq: 1,
+    kind: "state",
+    payload: {
+      verified,
+      proposal_hash: proposalHash(input.proposalText),
+      reason: verified
+        ? "Proposal contains required GO consent"
+        : "Proposal missing required GO consent",
+    },
+    previousEventHash: null,
   });
 
   return Object.freeze({
     ok: true,
     schema: BASELINE_VERIFIER_GATE_SCHEMA,
     truth_label: BASELINE_VERIFIER_GATE_TRUTH_LABEL,
-    event, // the verifiable SSE stream event
-    boundary,
+    event,
+    boundary: boundary(),
     blocked_by: Object.freeze([]),
   });
 }
