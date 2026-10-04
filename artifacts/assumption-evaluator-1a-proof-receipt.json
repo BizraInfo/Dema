@@ -1,0 +1,59 @@
+{
+  "schema": "bizra.dema.canonical_receipt.v0.1",
+  "prev_hash": null,
+  "canonical_body": {
+    "intent": "ASSUMPTION-EVALUATOR-1A: implement pure deterministic Law-of-Assumption epistemic classifier with focused tests and documentation wiring",
+    "what_proves": "Pure kernel evaluates claims against evidence into KNOWN/INFERRED/ASSUMED-WITH-IHSAN/UNKNOWN/BOUNDARY/NEXT_EVIDENCE_NEEDED buckets with deterministic action ceiling; 23 red-first tests pass; integration check green; no new CI failures introduced",
+    "what_does_not_prove": "Does not prove runtime correctness of downstream consumers; does not activate Node0; does not mint or settle; does not expand authority; does not create GitHub App or estate-wide writes",
+    "operator_public_key_fingerprint": "pending-external-key-ceremony",
+    "created_at_iso": "2026-08-29T13:30:00.000Z",
+    "canonical_root": {
+      "path": "docs/canon/LAW_OF_ASSUMPTION.md",
+      "sha256": "637c16b89235437635cc01a2995aaab23fef136d579e2e0d66f1dab3e73c7304",
+      "role": "constitutional_law_root"
+    },
+    "slice_artifacts": [
+      "packages/core/src/assumption-evaluator.js",
+      "tests/assumption-evaluator.test.js",
+      "docs/TESTING.md"
+    ],
+    "verification": {
+      "focused_tests_before": 0,
+      "focused_tests_after": 23,
+      "focused_pass": 23,
+      "focused_fail": 0,
+      "full_suite_before": {
+        "pass": 9774,
+        "fail": 2,
+        "total": 9780
+      },
+      "full_suite_after": {
+        "pass": 9797,
+        "fail": 2,
+        "total": 9803
+      },
+      "integration_check_before": {
+        "ok": false,
+        "missing_test_files": 2
+      },
+      "integration_check_after": {
+        "ok": true,
+        "missing_test_files": 0
+      },
+      "new_failures_introduced": 0,
+      "pre_existing_failures_unchanged": 2
+    },
+    "boundary": {
+      "no_llm": true,
+      "no_io": true,
+      "no_network": true,
+      "no_git_write": true,
+      "no_filesystem_write": true,
+      "no_receipt_persistence": true,
+      "no_authority_creation": true,
+      "authority_delta": 0
+    }
+  },
+  "truth_label": "MEASURED",
+  "created_at_iso": "2026-08-29T13:30:00.000Z"
+}

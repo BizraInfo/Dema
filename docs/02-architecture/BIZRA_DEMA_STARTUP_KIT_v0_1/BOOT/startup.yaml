@@ -1,0 +1,14 @@
+schema: bizra.dema.startup.v0.1
+system_instruction: ../SYSTEM_INSTRUCTION.md
+knowledge_index: ../KNOWLEDGE/INDEX.yaml
+load_order:
+  - manifest
+  - system_instruction
+  - always_load_knowledge
+  - root_and_current_mission_state
+  - effective_runtime_configuration
+  - receipt_head
+  - mission_relevant_knowledge
+startup_effect_permission: NONE
+on_contradiction: BLOCK_AND_REPORT
+on_missing_authority: CONTINUE_READ_ONLY_OR_REFUSE_EFFECT

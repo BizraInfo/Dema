@@ -1,0 +1,12 @@
+schema: bizra.google_knowledge.policy.v0.1
+default_drive_mode: READ_ONLY
+drive_is_authoritative_memory: false
+changed_source_behavior: CREATE_NEW_VERSION_LINK_SUPERSESSION
+materialized_bytes_require_sha256: true
+minimum_source_identity: [drive_file_id, title, mime_type, source_ref]
+writeback_requires:
+  - explicit_separate_authority
+  - exact_target
+  - exact_effect
+  - postcondition_verification
+  - receipt

@@ -1,0 +1,128 @@
+{
+  "schema": "bizra.genesis.receipt_envelope.v1",
+  "phase": "PRE0",
+  "sealed_at": "2026-08-24T18:12:21Z",
+  "body_digest": "f5078a9eef984f14acbace3fec91d2d6597bf25d7f9de04c8a40ac96b42c6b7c",
+  "body": {
+    "schema": "bizra.genesis.pre0_reality_reconciliation.v1",
+    "plan_id": "BIZRA-NODE0-GENESIS-CLOSURE-MASTER-PLAN-1A",
+    "phase": "PRE0",
+    "truth_label": "OBSERVED_LOCAL",
+    "sealed_at": "2026-08-24T18:12:21Z",
+    "producer": {
+      "branch": "fix/prod01-mission-recovery-1a",
+      "commit": "3f4d8fae83af645610c436f8e7356605946f5a58",
+      "tree": "c9ceb9b7e759af9037c3c1800b9a32027aea71f4",
+      "clean": true,
+      "remote": "https://github.com/BizraInfo/bizra-data-lake.git",
+      "remote_ref": "refs/heads/fix/prod01-mission-recovery-1a",
+      "remote_verified": true,
+      "remote_commit": "3f4d8fae83af645610c436f8e7356605946f5a58",
+      "qualification": "qualified at exact bytes, battery green, pushed"
+    },
+    "consumer": {
+      "worktree": "/data/bizra/worktrees/prod01-runtime",
+      "branch": "prod/node0-runtime-1a",
+      "commit_pinned": "bf1a6ba9ef886dbc3f525dded1fedb1715001ad6",
+      "tree_pinned": "6199dcbfdd04320b65c9164232360ac5e5882a76",
+      "parent_commit": "d23cad7f29c1383faf0011da09456e6bd14d6a89",
+      "parent_tree": "8661583b5132e5c3cadf815a8557b372c51fa8ce",
+      "parent_branch": "merge-train-20260824",
+      "clean": true,
+      "remote": "https://github.com/BizraInfo/Dema.git",
+      "remote_ref": "refs/heads/prod/node0-runtime-1a",
+      "remote_commit": "bf1a6ba9ef886dbc3f525dded1fedb1715001ad6",
+      "remote_verified": true,
+      "gates": "9572/9570 pass, check 0, corpus new=0, diff-check 0",
+      "supersedes": "ab2d0815815553224febdc0c413f0c2662f79969 (stale)"
+    },
+    "supervisor": {
+      "path_1": "packages/core/src/mission-supervisor.js",
+      "blob_1": "c803b17d15f140e12f6e6bf8916de8f83de6ae8d",
+      "sha256_1": "37a309475e0d6dbad6d91169ed69db941e04da45779dad456160846290523d26",
+      "path_2": "packages/mission/src/mission-corridor.js",
+      "blob_2": "f61080a00ea1662746be700bf8121d1857ed18f0",
+      "sha256_2": "8140b772a407bd2e9f5ebd92724ab6b84f67b02cdc5b9984d5c6d17327869c24",
+      "containing_commit": "bf1a6ba9ef886dbc3f525dded1fedb1715001ad6"
+    },
+    "package_builder": {
+      "identity": "C2B rebind machinery at /data/bizra/node0-closure + Dema repo scripts at bf1a6ba",
+      "consumer_commit": "bf1a6ba9ef886dbc3f525dded1fedb1715001ad6",
+      "producer_commit": "3f4d8fae83af645610c436f8e7356605946f5a58",
+      "tool_version": "existing 2B machinery (prior descriptor 65bc220b..., gate 1dc54a53..., manifest eae3d9bb...) — to be regenerated for new SHAs",
+      "status": "IDENTIFIED, NOT YET EXECUTED"
+    },
+    "runtime": {
+      "pid_observed": null,
+      "port_7421_listener": false,
+      "dema_doctor": "preview-only — runtime not bridged",
+      "season_status": "season_ambiguous (fail-closed)",
+      "method": "ss -tlnp + ps aux + dema doctor"
+    },
+    "operator_checkout": {
+      "path": "/home/bizra-operating-system/Downloads/Dema",
+      "branch": "main",
+      "head": "9eb7f3f8287fd7e4e979a7922bcd718a8d49b0e3",
+      "remote_main": "9eb7f3f8287fd7e4e979a7922bcd718a8d49b0e3",
+      "remote_verified": true,
+      "dirty_paths": 73,
+      "merge_train_local": "refs/heads/merge-train-20260824 == d23cad7",
+      "merge_train_remote": "d23cad7",
+      "merge_train_pushed": true,
+      "local_main_advanced": false
+    },
+    "evidence_semantics": {
+      "network_read_only": true,
+      "external_mutation": false,
+      "network_operations": [
+        "git ls-remote origin main",
+        "git ls-remote origin merge-train-20260824",
+        "git ls-remote prod/node0-runtime-1a",
+        "git ls-remote bizra-data-lake fix/prod01-mission-recovery-1a"
+      ],
+      "external_mutation_operations": []
+    },
+    "mutation_semantics": {
+      "local_provisional_write": true,
+      "authoritative_canonical_transition": false,
+      "write_path": "docs/audits/PRE0_REALITY_RECONCILIATION_1A.md + .json (dirty checkout)",
+      "promotion_requires": "clean checkout or PR merge"
+    },
+    "authority": {
+      "authority_delta": 0,
+      "consent_required": false,
+      "consent_consumed": false,
+      "federation_used": false,
+      "model_used": false
+    },
+    "secret_hygiene": {
+      "no_new_secret_added_by_pre0": true,
+      "global_durable_secret_hygiene": "VIOLATED — sk-unsloth-... still in /data/bizra/bin/unsloth-bind.sh:15 and gemma4-vision-proof.sh:38",
+      "credential_rotation_status": "UNKNOWN"
+    },
+    "previous_receipt": {
+      "predecessor_path": "/data/bizra/node0-production-closure/prod01/dema-consumer-v0.3/cb1e9fb/PROD01_CODE_QUALIFICATION_RECEIPT.json",
+      "predecessor_sha256": "817a357d15dbeb289ffc77f215e1dd869ee62577f0f27d2d0f580d516e35e998",
+      "verified": true
+    },
+    "dod_predicates": {
+      "producer_exact": true,
+      "consumer_exact": true,
+      "consumer_exact_remote_ref": true,
+      "producer_tree": true,
+      "consumer_tree": true,
+      "cleanliness_recorded": true,
+      "supervisor_identity": true,
+      "package_builder_identity": true,
+      "runtime_absent": true,
+      "network_semantics_truthful": true,
+      "timestamp_valid": true,
+      "predecessor_digest_verified": true,
+      "placeholder_values": 0,
+      "load_bearing_unknown": 0
+    },
+    "verdict": "PRE0_CLOSED"
+  },
+  "previous_receipt_sha256": "817a357d15dbeb289ffc77f215e1dd869ee62577f0f27d2d0f580d516e35e998",
+  "receipt_hash": "1251f4a5d40318462b9a6f2ac70c71ca3d3d64256fc2f700948e4a2c49d0ed94"
+}

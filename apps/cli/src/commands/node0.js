@@ -106,6 +106,58 @@ export async function cmd_node0(ctx) {
     return;
   }
 
+  if (sub === "constellation") {
+    const { gatherBaseConstellationObservations } = await import(
+      "../node0-base-constellation-gatherer.js"
+    );
+    const { buildBaseConstellation, verifyBaseConstellation } = await import(
+      "../../../../packages/core/src/node0-base-constellation.js"
+    );
+    const observations = await gatherBaseConstellationObservations({});
+    const envelope = buildBaseConstellation(observations);
+    // The verdict is computed inside the emit path: an envelope whose totals
+    // do not re-derive from its own rows is refused, never printed.
+    const check = verifyBaseConstellation(envelope);
+    if (!check.ok) {
+      console.error(
+        `dema node0 constellation: self-verification failed (${check.reason}); refusing to report.`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+    if (wantJson) {
+      console.log(JSON.stringify(envelope, null, 2));
+      return;
+    }
+    const host = envelope.bases[0];
+    console.log(
+      `Node0 base constellation (read-only) — ${envelope.truth_label}`,
+    );
+    console.log(
+      `  bases:   ${envelope.base_count} (${envelope.attached_not_enrolled} attached, not enrolled)`,
+    );
+    console.log(
+      `  storage: total ${host.total_capacity_gb} GB · reachable ${host.reachable_capacity_gb} GB · dark ${host.dark_capacity_gb} GB`,
+    );
+    for (const d of host.storage) {
+      console.log(
+        `    ${d.name.padEnd(10)} ${d.capacity_gb} GB total · ${d.reachable_gb} reachable · ${d.dark_gb} dark${d.model ? ` (${d.model})` : ""}`,
+      );
+      for (const p of d.partitions.filter((part) => !part.reachable)) {
+        console.log(`      dark partition: ${p.name} ${p.capacity_gb} GB unreachable`);
+      }
+    }
+    for (const b of envelope.bases.slice(1)) {
+      console.log(
+        `  attached: ${b.label} — ${b.execution_role}, enrolled=${b.enrolled} (presence is not enrolment)`,
+      );
+    }
+    console.log(
+      "  No device content read; nothing mounted, paired, or enrolled.",
+    );
+    return;
+  }
+
   if (sub === "spine" && action === "run") {
     const { cmdNode0SpineRun } = await import("./node0-spine-run.js");
     return cmdNode0SpineRun(ctx);
@@ -223,6 +275,7 @@ export async function cmd_node0(ctx) {
         "  dema node0 map [--json]\n" +
         "  dema node0 activation observe [--json]\n" +
         "  dema node0 ladder [--json]\n" +
+        "  dema node0 constellation [--json]\n" +
         "  dema node0 chain [--pain ...] [--goal ...] [--baseline <abs.json>] [--self-loop] [--json]\n" +
         "  dema node0 mumu status [--json] [--out <dir>]\n" +
         "  dema node0 mumu verify [--json] [--out <dir>]\n" +

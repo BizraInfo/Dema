@@ -154,6 +154,29 @@ test(
 );
 
 test(
+  "dema memory query → degraded substrate renders MEMORY_DEGRADED verdict, never raw constructor leak",
+  { skip: pythonSkip },
+  async () => {
+    const res = await execFileAsync(
+      "node",
+      [cliPath, "memory", "query", "Q"],
+      {
+        env: {
+          ...process.env,
+          DEMA_AGENT_DB_QUERY_PATH: "/nonexistent/wrapper-xyz",
+        },
+      },
+    ).catch((e) => ({ stdout: e.stdout, stderr: e.stderr, code: e.code }));
+    const combined = (res.stdout || "") + (res.stderr || "");
+    assert.match(combined, /MEMORY_DEGRADED/);
+    assert.match(combined, /reason:/);
+    assert.match(combined, /still works:/);
+    assert.doesNotMatch(combined, /0 hit.s./, "must not print a success line above a failure");
+    assert.notEqual(res.code, 0);
+  },
+);
+
+test(
   "dema memory query → wrapper non-zero exit captured in envelope AND propagated to Dema exit code",
   { skip: pythonSkip },
   async () => {

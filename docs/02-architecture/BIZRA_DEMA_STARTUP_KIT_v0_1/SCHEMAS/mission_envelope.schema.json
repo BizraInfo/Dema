@@ -1,0 +1,80 @@
+{
+  "$id": "https://bizra.local/schemas/mission_envelope.v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "authority_ceiling": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "capabilities": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "intent_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "mission_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "mission_version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "receipt_head": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "recovery_contract_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "required_rails": {
+      "items": {
+        "enum": [
+          "F",
+          "K",
+          "E",
+          "$"
+        ]
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema": {
+      "const": "bizra.mission.envelope.v0.1"
+    },
+    "status": {
+      "enum": [
+        "PROVISIONAL",
+        "READY",
+        "RUNNING",
+        "BLOCKED",
+        "REFUSED",
+        "VERIFIED",
+        "COMPLETED",
+        "RECOVERY_REQUIRED"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "mission_id",
+    "mission_version",
+    "authority_ceiling",
+    "status",
+    "receipt_head"
+  ],
+  "title": "BIZRA Mission Envelope",
+  "type": "object"
+}

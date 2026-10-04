@@ -104,6 +104,56 @@ function buildReceiptProofRequirements(composed) {
   });
 }
 
+function buildDemoStory(envelope) {
+  const scanModes = envelope.scan_mode_summary?.mode_count ?? 0;
+  const assets = envelope.unstructured_asset_summary?.asset_count ?? 0;
+  const devices = envelope.multi_device_summary?.device_count ?? 0;
+  const ontology = envelope.node_space_summary?.ontology_node_count ?? 0;
+  const mobileHigh =
+    envelope.mobile_resource_value_profile?.high_value === true;
+  const hero = {
+    label: "local assets made legible without leaving the machine",
+    value: assets,
+    bound_to: "unstructured_asset_summary.asset_count",
+  };
+  return freezeDeep({
+    title: "From scattered local files to a consent-gated proof map",
+    situation:
+      "A stranger's machine holds mixed personal and work files across devices. They do not know what is safe to share, what is duplicate, or what a local AI node is allowed to touch.",
+    what_node0_did:
+      "Node0 (via Dema) composed a preview-only value loop: scan-mode choices, unstructured asset awareness, multi-device constellation, and a Node Space ontology — all metadata-first, no content read, no upload.",
+    what_changed: `The operator can now see ${assets} fixture assets across ${devices} devices under ${scanModes} declared scan modes, framed by ${ontology} ontology nodes — with mobile high-value posture ${mobileHigh ? "ON" : "OFF"} — before any consent to go deeper.`,
+    hero_number: hero,
+    bound_counts: Object.freeze({
+      scan_modes: Object.freeze({
+        value: scanModes,
+        path: "scan_mode_summary.mode_count",
+      }),
+      unstructured_assets: Object.freeze({
+        value: assets,
+        path: "unstructured_asset_summary.asset_count",
+      }),
+      devices: Object.freeze({
+        value: devices,
+        path: "multi_device_summary.device_count",
+      }),
+      ontology_nodes: Object.freeze({
+        value: ontology,
+        path: "node_space_summary.ontology_node_count",
+      }),
+      mobile_high_value: Object.freeze({
+        value: mobileHigh,
+        path: "mobile_resource_value_profile.high_value",
+      }),
+    }),
+    demo_stage: envelope.demo_stage,
+    truth_label: envelope.truth_label,
+    preview_only: true,
+    framing:
+      "PRE_TOKEN_LOCAL_PROOF · preview-only · no token, wallet, URP, federation, or content OCR",
+  });
+}
+
 /**
  * @param {object} [params]
  * @param {string} [params.generated_at_iso]
@@ -116,7 +166,7 @@ export function buildNode0KillerDemoValueLoopCli({
   );
   const boundary = buildPreviewBoundary();
 
-  return freezeDeep({
+  const base = {
     schema: NODE0_KILLER_DEMO_VALUE_LOOP_CLI_SCHEMA,
     truth_label: NODE0_KILLER_DEMO_VALUE_LOOP_CLI_TRUTH_LABEL,
     command: NODE0_KILLER_DEMO_VALUE_LOOP_CLI_COMMAND,
@@ -152,6 +202,10 @@ export function buildNode0KillerDemoValueLoopCli({
     ]),
     value_loop_summary: composed.value_loop_summary,
     product_law: composed.product_law,
+  };
+  return freezeDeep({
+    ...base,
+    story: buildDemoStory(base),
   });
 }
 
@@ -204,6 +258,27 @@ export function verifyNode0KillerDemoValueLoopCli(envelope) {
     blocked_by.push("value_loop_not_preview_only");
   }
 
+  const story = envelope.story;
+  if (!story || typeof story !== "object") {
+    blocked_by.push("story_missing");
+  } else {
+    if (story.demo_stage !== NODE0_KILLER_DEMO_VALUE_LOOP_DEMO_STAGE) {
+      blocked_by.push("story_demo_stage_mismatch");
+    }
+    if (story.truth_label !== NODE0_KILLER_DEMO_VALUE_LOOP_CLI_TRUTH_LABEL) {
+      blocked_by.push("story_truth_label_mismatch");
+    }
+    if (story.preview_only !== true) {
+      blocked_by.push("story_not_preview_only");
+    }
+    if (
+      story.bound_counts?.unstructured_assets?.value !==
+      envelope.unstructured_asset_summary?.asset_count
+    ) {
+      blocked_by.push("story_asset_count_unbound");
+    }
+  }
+
   return Object.freeze({ ok: blocked_by.length === 0, blocked_by });
 }
 
@@ -220,8 +295,18 @@ export function runNode0KillerDemoValueLoopCli(params = {}) {
 }
 
 export function formatNode0KillerDemoValueLoopCli(envelope) {
+  const story = envelope.story ?? buildDemoStory(envelope);
   const lines = [
     "DEMA · Node0 killer demo value loop (preview-only)",
+    "",
+    `STORY · ${story.title}`,
+    `  Situation : ${story.situation}`,
+    `  What Node0 did : ${story.what_node0_did}`,
+    `  What changed : ${story.what_changed}`,
+    `  Hero number : ${story.hero_number.value} (${story.hero_number.label})`,
+    `  Framing : ${story.framing}`,
+    "",
+    "Bound counters (kernel-computed · not marketing):",
     `  schema: ${envelope.schema}`,
     `  truth: ${envelope.truth_label}`,
     `  command: ${envelope.command}`,

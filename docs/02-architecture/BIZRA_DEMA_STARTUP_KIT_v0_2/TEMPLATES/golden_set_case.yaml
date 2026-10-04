@@ -1,0 +1,10 @@
+schema: bizra.golden_set.case.v0.2
+case_id: ""
+source_decision_or_failure: ""
+input_context: ""
+expected_law: ""
+expected_outcome: ""
+forbidden_false_green: ""
+evidence_refs: []
+reproduction_steps: []
+status: CANDIDATE

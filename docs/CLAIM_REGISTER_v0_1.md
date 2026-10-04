@@ -141,23 +141,23 @@ The governing dispositions are:
 
 | Surface | Canonical claim disposition | Current authority |
 | --- | --- | --- |
-| Current live `bizra.ai` pages and unauthenticated API output | `UNKNOWN` where evidence is absent; `FORBIDDEN` where live economy, URP, or federation is implied | Release-blocking defect; not approved for reuse |
+| Initial `bizra.ai` pages and unauthenticated API output observed on 2026-07-24 | `UNKNOWN` where evidence was absent; `FORBIDDEN` where live economy, URP, or federation was implied | Historical release-blocking defect; not approved for reuse |
 | Inspected `award-winner-design` source at `568ab0b41c32f812b8ce4d20e7f4ffdf1ebffd6e` | `VERIFIED` as a source-review anchor only | Does not prove which SHA Vercel deployed |
-| Local containment candidate on `fix/public-claim-binding-1a` | `VERIFIED` as local source presence; operational qualifier `LOCAL_ONLY` | Not pushed, merged, deployed, or live |
-| Corrected public deployment | `UNKNOWN` | Requires explicit deployment consent, exact-SHA provenance, and post-deploy crawl |
+| Containment source on `fix/public-claim-binding-1a` | `VERIFIED` as source presence | Site PR #7 merged review head `ebb5cc42082a7348014fe50fd4b584ccbddbbdc7` as `6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf` |
+| GitHub `Production – award-winner-design` deployment record | `VERIFIED` within the record's scope | GitHub deployment `5590104450` reports success at `6f7f545e6a1ac044cbb8d29a0a215e8a9f2885bf`; its environment URL is a Vercel deployment URL, not the `bizra.ai` alias |
+| Corrected `bizra.ai` public surface | `MEASURED`; exact-source relationship `DERIVED` | The internally bracketed `2026-07-24T17:11:43.617Z`–`2026-07-24T17:11:46.037Z` 62-surface crawl has zero known forbidden-phrase, private-200, or containment failures; its completion follows the latest embedded API `measured_at`. A committed scanner ran from `2026-07-24T17:11:52.390Z` through `2026-07-24T17:11:53.245Z` and retained per-route hashes and match results, with zero public receipt-link or revoked-key-link matches and no raw bodies retained. A live same-origin runtime asset embeds deployment identifier `dpl_C7hFkz6LZRSPK1XMHAXUYwJRJj2R`, matching the exact-commit Vercel status and deployment `5590104450`; the provider alias API was not readable, so the relationship is not promoted to `VERIFIED`. |
 | New signed public Claim Receipt | `UNKNOWN` | Not issued while signer rotation is pending |
 
-The local candidate reserves these stable claim identifiers. Their evidence
-links must pin the exact commit containing this incident record before any
-deployment:
+The containment boundary uses these stable claim identifiers. Their evidence
+links pin the exact commit containing this incident record:
 
 | Claim ID | Public statement boundary | Canonical label | Evidence and limit |
 | --- | --- | --- | --- |
-| `BIZRA-PUBLIC-001` | Dema is the local-first product face that reads local state, explains it, and previews safe next steps. | `VERIFIED` | `CURRENT_LIMITS.md`; this does not make Dema the whole BIZRA system or a governed runtime. |
-| `BIZRA-PUBLIC-002` | Federation, cross-node synchronization, shared URP runtime, token economics, and Proof-of-Impact rewards are not live. | `DESIGNED_NOT_LIVE` | `CURRENT_LIMITS.md` hard non-claims and the canonical lifecycle boundary. |
+| `BIZRA-PUBLIC-001` | Dema is the local-first product face that reads local state, explains it, and previews safe next steps. | `VERIFIED` | Exact incident-record commit [`26bb57359186a3ab533dd51e3623e0c84d5078e9`](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md) and [Current Limits at the same commit](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/CURRENT_LIMITS.md); this does not make Dema the whole BIZRA system or a governed runtime. |
+| `BIZRA-PUBLIC-002` | Federation, cross-node synchronization, shared URP runtime, token economics, and Proof-of-Impact rewards are not live. | `DESIGNED_NOT_LIVE` | Exact incident-record commit [`26bb57359186a3ab533dd51e3623e0c84d5078e9`](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md) and [Current Limits hard non-claims at the same commit](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/CURRENT_LIMITS.md). |
 | `BIZRA-PUBLIC-003` | The currently trusted public signing identity is not asserted while signer rotation remains pending. | `UNKNOWN` | TASK-029 remains open; no new public Claim Receipt is issued by this slice. |
-| `BIZRA-PUBLIC-004` | A health response is only a request-time observation of the web process. | `MEASURED` | Requires `measured_at`, scope `web_process_health_only`, and the immutable incident-record link in the response; it does not prove Node0, federation, persistence, or full-system health. |
-| `BIZRA-PUBLIC-005` | A beta-status or successful beta-admission response is only a request-time observation of the web access gate. | `MEASURED` | Requires `measured_at`, scope `web_access_gate_only`, and the immutable incident-record link in the response; it does not prove node activation or runtime capability. |
+| `BIZRA-PUBLIC-004` | A health response is only a request-time observation of the web process. | `MEASURED` | Requires `measured_at`, scope `web_process_health_only`, and exact incident-record commit [`26bb57359186a3ab533dd51e3623e0c84d5078e9`](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md) in the response; it does not prove Node0, federation, persistence, or full-system health. |
+| `BIZRA-PUBLIC-005` | A beta-status or successful beta-admission response is only a request-time observation of the web access gate. | `MEASURED` | Requires `measured_at`, scope `web_access_gate_only`, and exact incident-record commit [`26bb57359186a3ab533dd51e3623e0c84d5078e9`](https://github.com/BizraInfo/Dema/blob/26bb57359186a3ab533dd51e3623e0c84d5078e9/docs/audits/BIZRA_AI_PUBLIC_CLAIM_CONTAINMENT_1A.md) in the response; it does not prove node activation or runtime capability. |
 
 The route/source/evidence inventory, exact claim dispositions, local candidate
 paths, receipt boundary, and closure gates are recorded in
@@ -167,6 +167,67 @@ paths, receipt boundary, and closure gates are recorded in
 additional claim label. The seven-label taxonomy in Section 8 remains exact.
 No local branch, test result, or documentation edit may be described as a live
 public correction before the post-deploy gates pass.
+
+### 9.2 TASK-030 receipt-binding recheck — 2026-08-04
+
+A fresh credential-free `62`-surface scan completed at
+`2026-08-04T15:31:37.984Z` with `0` request errors, `0` known forbidden-phrase
+hits, and `0` public receipt-link matches. The root still publishes
+`BIZRA-PUBLIC-001`, `BIZRA-PUBLIC-002`, and `BIZRA-PUBLIC-003`;
+`/api/health` publishes `BIZRA-PUBLIC-004`; `/api/beta/status` publishes
+`BIZRA-PUBLIC-005`.
+
+All five claims name evidence commit
+`26bb57359186a3ab533dd51e3623e0c84d5078e9`, but none exposes a governed
+Claim Receipt hash or public receipt link. A commit evidence link is not a
+Claim Receipt.
+
+| Claim IDs | Live route | Commit evidence | Receipt evidence | TASK-030 disposition |
+| --- | --- | --- | --- | --- |
+| `BIZRA-PUBLIC-001` through `BIZRA-PUBLIC-003` | `/` | Present | Absent | `RECEIPT_UNBOUND` |
+| `BIZRA-PUBLIC-004` | `/api/health` | Present | Absent | `RECEIPT_UNBOUND` |
+| `BIZRA-PUBLIC-005` | `/api/beta/status` | Present | Absent | `RECEIPT_UNBOUND` |
+
+The machine-readable evidence is
+[`audits/evidence/bizra-ai-public-claim-receipt-binding-2026-08-04.json`](audits/evidence/bizra-ai-public-claim-receipt-binding-2026-08-04.json).
+The implementation closeout is
+[`receipts/PUBLIC_CLAIM_RECEIPT_BINDING_1A.md`](receipts/PUBLIC_CLAIM_RECEIPT_BINDING_1A.md).
+`npm run claims:receipt-binding` validates that the manifest is internally
+coherent while honestly blocked. `npm run claims:receipt-binding:require-closed`
+exits non-zero until every live claim is `BOUND` to both commit and governed
+receipt evidence or is `REMOVED` with removal-commit evidence.
+
+Closure requires one of two separately authorized outward acts:
+
+1. rotate and accept the trusted signer, issue governed Claim Receipts, and
+   publish per-claim receipt hashes/links; or
+2. remove the five claims from the website source and deploy the removal.
+
+Neither act occurred in this Dema slice. TASK-030 acceptance criterion 1 remains
+open.
+
+### 9.3 Dependabot triage snapshot — 2026-08-04 (TASK-030)
+
+The task description referenced four moderate findings. Current GitHub evidence
+on `2026-08-04` shows a larger open set on `BizraInfo/Dema`:
+
+- `13` open Dependabot alerts total (`7` high, `6` medium).
+- All open alerts point to `packages/dema-ui/package-lock.json`.
+- Source of record: `gh api repos/BizraInfo/Dema/dependabot/alerts?state=open&per_page=100`.
+
+Medium-severity findings are triaged below with explicit verdicts:
+
+| Alert | GHSA | Package | First patched version | Verdict |
+| --- | --- | --- | --- | --- |
+| [#17](https://github.com/BizraInfo/Dema/security/dependabot/17) | `GHSA-68g3-v927-f742` | `next` | `16.2.11` | `INWARD` — remediate in `packages/dema-ui` by upgrading `next` to `>=16.2.11`; not fixed in this claim-containment slice. |
+| [#16](https://github.com/BizraInfo/Dema/security/dependabot/16) | `GHSA-4633-3j49-mh5q` | `next` | `16.2.11` | `INWARD` — same remediation lane as alert `#17`; consolidate in one dependency bump slice. |
+| [#15](https://github.com/BizraInfo/Dema/security/dependabot/15) | `GHSA-4c39-4ccg-62r3` | `next` | `16.2.11` | `INWARD` — same remediation lane as alert `#17`; verify App Router and Server Actions behavior after bump. |
+| [#13](https://github.com/BizraInfo/Dema/security/dependabot/13) | `GHSA-q8wf-6r8g-63ch` | `next` | `16.2.11` | `INWARD` — same remediation lane as alert `#17`; include image optimization regression checks in the bump slice. |
+| [#12](https://github.com/BizraInfo/Dema/security/dependabot/12) | `GHSA-955p-x3mx-jcvp` | `next` | `16.2.11` | `INWARD` — same remediation lane as alert `#17`; verify internal server-function exposure is closed by patched release. |
+| [#2](https://github.com/BizraInfo/Dema/security/dependabot/2) | `GHSA-qx2v-qp2m-jg93` | `postcss` | `8.5.10` | `INWARD` — resolve by upgrading `postcss` to `>=8.5.10` in the same lockfile refresh pass. |
+
+This section is triage only. It does not claim that vulnerability remediation is
+complete.
 
 ## 10. Forbidden Claims
 

@@ -28,6 +28,7 @@ import { cmd_delivery } from "./commands/delivery.js";
 import { cmd_foundation } from "./commands/foundation.js";
 import { cmd_realm } from "./commands/realm.js";
 import { cmd_mission } from "./commands/mission.js";
+import { cmd_season } from "./commands/season.js";
 import { cmd_recovery } from "./commands/recovery.js";
 import { cmd_founder } from "./commands/founder.js";
 import { cmd_voice } from "./commands/voice.js";
@@ -61,6 +62,7 @@ import { cmd_llm_router } from "./commands/llm-router.js";
 import { cmd_process_mining } from "./commands/process-mining.js";
 import { cmd_key_maker_check } from "./commands/key-maker-check.js";
 import { cmd_llm_invoke } from "./commands/llm-invoke.js";
+import { cmd_ask } from "./commands/ask.js";
 import { cmd_today } from "./commands/today.js";
 import { cmd_doctor } from "./commands/doctor.js";
 import { cmd_dashboard } from "./commands/dashboard.js";
@@ -150,7 +152,8 @@ function argValue(argv, name) {
 const HELP = `Dema CLI
 
 Usage:
-  dema              Active kernel — banner + setup-or-status + next safe task
+  dema              Sovereign Homebase — orientation + one safe next step
+  dema --safe       Sovereign Recovery Shell — read-only local orientation
   dema chat         Interactive shell (same surface as the bare CLI)
 
 Orientation:
@@ -232,6 +235,14 @@ Orientation:
                     Verify a witness receipt (latest or by path)
   dema mission run health [--dry-run] [--json]
                     Node0 health snapshot mission; requires --consent to save
+  dema season save --season <id> --mission <id> --phase <PHASE> --next <ACTION> --repo-commit <sha40> --repo-tree <sha40> [--step <s>]... [--must-not-repeat <s>]... [--pending-consent none|<phrase>::<scope>]... [--from <state.json>] [--dema-home <path>] [--json]
+                    Durably persist ONE bounded season checkpoint under DEMA_HOME:
+                    content-addressed state + save receipt + atomically replaced HEAD.
+  dema season status [--season <id>] [--dema-home <path>] [--json]
+                    Verify and report the authoritative checkpoint (read-only; typed EMPTY when none)
+  dema season resume [--season <id>] [--repo-commit <sha40>] [--repo-tree <sha40>] [--dema-home <path>] [--json]
+                    Reconstruct the continuation from stored bytes alone — no chat history,
+                    no execution, pending consent preserved as pending
   dema mission verify <path> [--json]
                     Verify a mission receipt
   dema mission pulse <file> --claim ... --task ... --boundary ... [--json]
@@ -276,6 +287,12 @@ Orientation:
   dema authorship key migrate [--json]
                     One-time explicit migration of a legacy flat keypair into the
                     immutable generation store + atomic active pointer (requires --consent)
+  dema authorship key rotate [--json] [--envelope <path>] [--dema-home <path>]
+                    Retire the active generation + install a replacement under the
+                    active-pointer model (requires --consent + ceremony envelope)
+                    Mint the envelope first with:
+                      node scripts/node0-rotation-consent-envelope.mjs
+                    It is single-use, bound to one DEMA_HOME, and expires.
   dema authorship sign <artifact-path> [--json]
                     Sign a local artifact (requires --consent)
   dema authorship latest [--json]
@@ -734,6 +751,11 @@ Dema v{{DEMA_VERSION}} — Active Command Kernel. Local-first. Consent-bound. Re
 
 // Top-level tokens the switch handles. Used by the command suggester only.
 const REGISTERED_COMMANDS_LIST = [
+  {
+    command: "season",
+    description:
+      "durable local season state: save / status / resume a bounded continuation checkpoint",
+  },
   { command: "status", description: "show Node0 readiness" },
   { command: "status:json", description: "machine-readable status" },
   { command: "state", description: "Node0 state preview" },
@@ -762,6 +784,11 @@ const REGISTERED_COMMANDS_LIST = [
   {
     command: "talk",
     description: "preview a local-model talk request: model route + exact consent phrase (no call)",
+  },
+  {
+    command: "ask",
+    description:
+      "sanitizer-gated corpus ask (H3/H4): ALLOWED-only index + truth-graph receipt under DEMA_HOME/ask",
   },
   {
     command: "canon",
@@ -1314,6 +1341,7 @@ const COMMAND_TABLE = {
   "process-mining": cmd_process_mining,
   "key-maker-check": cmd_key_maker_check,
   "llm-invoke": cmd_llm_invoke,
+  ask: cmd_ask,
   today: cmd_today,
   doctor: cmd_doctor,
   dashboard: cmd_dashboard,
@@ -1323,6 +1351,7 @@ const COMMAND_TABLE = {
   diagnostics: cmd_diagnostics,
   consent: cmd_consent,
   mission: cmd_mission,
+  season: cmd_season,
   recovery: cmd_recovery,
   founder: cmd_founder,
   voice: cmd_voice,
@@ -1350,7 +1379,12 @@ const COMMAND_TABLE = {
   help: cmd_help,
 };
 
-async function dispatch(argv) {
+function finishDispatch(interactive, code = 0) {
+  if (!interactive) process.exit(process.exitCode ?? code);
+  return { handled: true, exit_code: code };
+}
+
+async function dispatch(argv, { interactive = false } = {}) {
   const command = argv[0] ?? "active";
   const subcommand = argv[1];
 
@@ -1375,22 +1409,26 @@ async function dispatch(argv) {
     } else {
       console.log(`dema ${version}`);
     }
-    process.exit(process.exitCode ?? 0);
+    return finishDispatch(interactive);
   }
 
   // First-look companion home (DEMA-QUALITY-DELIVERY-SPINE-1A).
   // Bare `dema` routes to human-first companion output.
   // Technical homebase preview: `dema homebase` (JSON/TUI · phase-5 legacy surface).
   const isBareInvocation =
-    (command === "active" || command === "" || command === "--json") &&
+    (command === "active" ||
+      command === "" ||
+      command === "--json" ||
+      command === "--safe") &&
     !argv.includes("--chat") &&
     !argv.includes("--interactive");
   if (isBareInvocation) {
     const wantJson =
       argv.includes("--json") ||
-      !process.stdout.isTTY ||
-      Boolean(process.env.DEMA_NO_TUI) ||
-      process.env.NODE_ENV === "test";
+      (!interactive &&
+        (!process.stdout.isTTY ||
+          Boolean(process.env.DEMA_NO_TUI) ||
+          process.env.NODE_ENV === "test"));
     const { join: pathJoin } = await import("node:path");
     const { homedir } = await import("node:os");
     const demaHome = process.env.DEMA_HOME || pathJoin(homedir(), ".dema");
@@ -1398,7 +1436,7 @@ async function dispatch(argv) {
     if (showIntro) {
       const introStream = wantJson ? process.stderr : process.stdout;
       introStream.write(renderIntroLine() + "\n\n");
-      await recordIntroSeen({ home: demaHome });
+      if (command !== "--safe") await recordIntroSeen({ home: demaHome });
     }
     const { gatherFirstLookContext, buildFirstLookHome, renderFirstLookHome } =
       await import("../../../packages/core/src/dema-first-look-home.js");
@@ -1408,19 +1446,19 @@ async function dispatch(argv) {
     const envelope = buildFirstLookHome(ctx);
     if (wantJson) {
       process.stdout.write(JSON.stringify(envelope, null, 2) + "\n");
-      process.exit(process.exitCode ?? 0);
+      return finishDispatch(interactive);
     }
     const opts = resolveFormatterOptsFromEnv(process.env);
     process.stdout.write(
       renderFirstLookHome(envelope, { noColor: opts.noColor }) + "\n",
     );
-    process.exit(process.exitCode ?? 0);
+    return finishDispatch(interactive);
   }
 
   // Route through the command table (Track 2 dispatcher refactor). Each command
   // token maps to a named handler in COMMAND_TABLE; the switch was replaced by
   // this O(1) lookup. Unknown commands fall through to the suggester below.
-  const ctx = { argv, command, subcommand };
+  const ctx = { argv, command, subcommand, interactive };
   const handler = Object.hasOwn(COMMAND_TABLE, command)
     ? COMMAND_TABLE[command]
     : null;
@@ -1444,6 +1482,7 @@ async function dispatch(argv) {
   }
   lines.push("", "Type `dema help` to see everything I can do.");
   console.log(lines.join("\n"));
+  return { refused: true, reason: "unknown_command" };
 }
 
 async function runActiveKernel({ interactive = false, force = false } = {}) {
@@ -1453,7 +1492,7 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
   if (interactive) {
     await runShell({
       greeting: banner,
-      dispatchCommand: dispatch,
+      dispatchCommand: (argv) => dispatch(argv, { interactive: true }),
       statusProvider: () => statusWithLocalIdentity(),
       councilPatDispatchFormatter: (chatResult) => {
         const preview = buildCouncilSeatPatDispatchPreview({

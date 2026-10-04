@@ -3,6 +3,7 @@ import { join, relative } from "node:path";
 
 import {
   DEFAULT_LM_STUDIO_URL,
+  DEFAULT_LLAMACPP_URL,
   DEFAULT_OLLAMA_URL,
   DEFAULT_TIMEOUT_MS,
   SCHEMA,
@@ -11,6 +12,7 @@ import {
   isModelFilename,
   isLocalUrl,
   portFor,
+  resolveLocalLlmBase,
   urlFor,
 } from "./model-common.js";
 import { buildRoutingRecommendations } from "./model-routing.js";
@@ -57,9 +59,13 @@ function normalizeOllamaModel(model) {
 }
 
 function normalizeLmStudioModel(model) {
+  return normalizeOpenAiCompatModel(model, "lm_studio");
+}
+
+function normalizeOpenAiCompatModel(model, source) {
   return {
     id: model?.id ?? "unknown",
-    source: "lm_studio",
+    source,
     size_bytes: null,
     size: "unknown",
     modified_at: null,
@@ -125,6 +131,38 @@ async function probeLmStudio({ baseUrl, fetchImpl, timeoutMs }) {
 
   return {
     source: "lm_studio",
+    url: baseUrl,
+    reachable: modelsResponse.ok,
+    model_count: models.length,
+    models,
+    error: modelsResponse.ok ? null : modelsResponse.error,
+  };
+}
+
+async function probeLlamaCpp({ baseUrl, fetchImpl, timeoutMs }) {
+  if (!isLocalUrl(baseUrl)) {
+    return {
+      source: "llamacpp",
+      url: baseUrl,
+      reachable: false,
+      model_count: 0,
+      models: [],
+      error: "non-local endpoint refused",
+    };
+  }
+
+  const modelsResponse = await fetchJson(urlFor(baseUrl, "/v1/models"), {
+    fetchImpl,
+    timeoutMs,
+  });
+  const models = modelsResponse.ok
+    ? (modelsResponse.json?.data ?? []).map((m) =>
+        normalizeOpenAiCompatModel(m, "llamacpp"),
+      )
+    : [];
+
+  return {
+    source: "llamacpp",
     url: baseUrl,
     reachable: modelsResponse.ok,
     model_count: models.length,
@@ -223,8 +261,20 @@ async function modelFileRecord(
 }
 
 export async function collectModelInventory({
-  ollamaUrl = process.env.DEMA_OLLAMA_URL || DEFAULT_OLLAMA_URL,
-  lmStudioUrl = process.env.DEMA_LM_STUDIO_URL || DEFAULT_LM_STUDIO_URL,
+  // PERIMETER-BRIDGE-PARITY-1A: same resolver the invoke path uses, so
+  // discover and llm-invoke can never target different endpoints.
+  ollamaUrl = resolveLocalLlmBase({
+    envValue: process.env.DEMA_OLLAMA_URL,
+    fallback: DEFAULT_OLLAMA_URL,
+  }),
+  lmStudioUrl = resolveLocalLlmBase({
+    envValue: process.env.DEMA_LM_STUDIO_URL,
+    fallback: DEFAULT_LM_STUDIO_URL,
+  }),
+  llamacppUrl = resolveLocalLlmBase({
+    envValue: process.env.DEMA_LLAMACPP_URL,
+    fallback: DEFAULT_LLAMACPP_URL,
+  }),
   downloadsRoot = defaultDownloadsRoot(),
   fetchImpl = fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS,
@@ -232,21 +282,34 @@ export async function collectModelInventory({
   includeAbsolutePaths = false,
   now = new Date(),
 } = {}) {
-  const ports = [portFor(ollamaUrl), portFor(lmStudioUrl)].filter(Boolean);
-  const [ollama, lmStudio, downloads, tcp] = await Promise.all([
+  const ports = [
+    portFor(ollamaUrl),
+    portFor(lmStudioUrl),
+    portFor(llamacppUrl),
+  ].filter(Boolean);
+  const [ollama, lmStudio, llamacpp, downloads, tcp] = await Promise.all([
     probeOllama({ baseUrl: ollamaUrl, fetchImpl, timeoutMs }),
     probeLmStudio({ baseUrl: lmStudioUrl, fetchImpl, timeoutMs }),
+    probeLlamaCpp({ baseUrl: llamacppUrl, fetchImpl, timeoutMs }),
     scanModelFiles(downloadsRoot, { includeAbsolutePaths }),
     resolveTcpBindings(ports, tcpBindings),
   ]);
 
-  const providers = { ollama, lm_studio: lmStudio, downloads };
+  const providers = {
+    ollama,
+    lm_studio: lmStudio,
+    llamacpp,
+    downloads,
+  };
   return {
     schema: SCHEMA,
     truth_label: "MEASURED_PARTIAL",
     generated_at: now.toISOString(),
     total_models:
-      ollama.model_count + lmStudio.model_count + downloads.model_count,
+      ollama.model_count +
+      lmStudio.model_count +
+      llamacpp.model_count +
+      downloads.model_count,
     boundary: {
       scope: "read-only",
       inference_invoked: false,
@@ -258,6 +321,6 @@ export async function collectModelInventory({
     },
     providers,
     routing_recommendations: buildRoutingRecommendations(providers),
-    safety: buildSafety({ ollamaUrl, lmStudioUrl, tcp, providers }),
+    safety: buildSafety({ ollamaUrl, lmStudioUrl, llamacppUrl, tcp, providers }),
   };
 }

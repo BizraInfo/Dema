@@ -7,6 +7,8 @@ import {
   HEX,
   ANSI,
   ROLE,
+  SCALE,
+  TEXTURE,
   paint,
   supportsColor,
 } from "../packages/core/src/theme.js";
@@ -27,6 +29,36 @@ describe("theme", () => {
     assert.equal(HEX.white, CANON.colors.pure_white.hex);
     assert.equal(HEX.ivory, CANON.colors.ivory.hex);
     assert.equal(HEX.teal, CANON.colors.living_teal.hex);
+  });
+
+  it("vendored canon stays a faithful copy of upstream (v0.2, no local scales)", () => {
+    // This file is a vendored copy of bizra-data-lake's canon. Dema is the face,
+    // not the whole system, so it must not promote BIZRA-wide brand canon
+    // locally. If this ever reads 0.3, upstream ratified it — not this repo.
+    assert.equal(CANON.version, "0.2");
+    assert.equal(CANON.scales, undefined);
+  });
+
+  it("SCALE is anchored to canon: the ramp cannot drift off the brand colors", () => {
+    // The ground ramp is an extension, but it is not free-floating — it brackets
+    // the two canon surface colors. origin_black is step 2 and celestial_navy is
+    // step 4, so any edit to canon that moves them fails here.
+    assert.equal(SCALE.ground.length, 5);
+    assert.equal(SCALE.ground[2], CANON.colors.origin_black.hex);
+    assert.equal(SCALE.ground[4], CANON.colors.celestial_navy.hex);
+    // Gold ramp is rooted on genesis_gold; steps 1-2 are highlight lifts only.
+    assert.equal(SCALE.gold.length, 3);
+    assert.equal(SCALE.gold[0], CANON.colors.genesis_gold.hex);
+    assert.equal(SCALE.paper.length, 3);
+  });
+
+  it("TEXTURE encodes truth state as glyph weight, not as a word", () => {
+    // The identity move: proven surfaces render solid, unproven render stippled.
+    // Direction-agnostic by construction — it survives RTL where a bracketed
+    // label does not.
+    assert.equal(TEXTURE.measured, "█");
+    assert.equal(TEXTURE.preview, "░");
+    assert.notEqual(TEXTURE.measured, TEXTURE.preview);
   });
 
   it("non-canon semantic + neutral hexes are the documented TUI-extension values", () => {

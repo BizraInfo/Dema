@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bizra.local/schemas/experience_event.v0.2.json",
+  "type": "object",
+  "required": ["schema", "event_id", "mission_id", "reward_status", "verdict_ref", "learnable", "source_refs"],
+  "properties": {
+    "schema": {"const": "bizra.experience.event.v0.2"},
+    "event_id": {"type": "string"},
+    "mission_id": {"type": "string"},
+    "reward_status": {"enum": ["VERIFIED_POSITIVE", "VERIFIED_REFUSAL", "VERIFIED_NEUTRAL", "UNKNOWN", "DISPUTED", "CONTRADICTED", "UNAUTHORIZED"]},
+    "verdict_ref": {"type": "string"},
+    "receipt_ref": {"type": ["string", "null"]},
+    "source_refs": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "learnable": {"type": "boolean"},
+    "authority_delta": {"type": "integer"}
+  },
+  "additionalProperties": true
+}

@@ -8,6 +8,7 @@ import {
   MULTI_AGENT_PAT_IDS,
   MULTI_AGENT_SAT_IDS,
 } from "../packages/core/src/multi-agent-orchestrator.js";
+import { LINEAGE_ROLES } from "../packages/core/src/fde-isnad-replay-capsule-preview.js";
 import {
   isCanonicalBoundary,
   buildPreviewBoundary,
@@ -181,4 +182,77 @@ test("Summary + exports", () => {
   assert.equal(s.pat_count, 7);
   assert.equal(s.sat_count, 5);
   assert.ok(isCanonicalBoundary(s.boundary));
+});
+
+// ── ORCHESTRATOR-ISNAD-SEAL-1A ───────────────────────────────────────────
+//
+// The pipeline already declares `audit_trail_required: true` and supplies no
+// trail. A delegation without isnād is an instruction with no provenance: the
+// verdict says SATs verified a PAT draft, but nothing binds WHO transmitted
+// WHAT to WHOM. `sealCapsuleBody` already content-addresses exactly that
+// lineage and refuses to grant authority — it was wired to nothing.
+
+test("Pipeline · verdict carries a sealed isnād lineage", () => {
+  const p = runVerificationPipeline({ artifact: buildNode0StatePreview() });
+
+  assert.ok(p.delegation_isnad, "verdict must carry a sealed lineage");
+  const seal = p.delegation_isnad;
+
+  assert.match(seal.source_lineage_hash, /^sha256:[0-9a-f]{64}$/);
+  assert.match(seal.capsule_hash, /^sha256:[0-9a-f]{64}$/);
+
+  // Every step uses the isnād vocabulary — roles are not invented here.
+  assert.ok(seal.source_lineage.length > 0);
+  for (const step of seal.source_lineage) {
+    assert.ok(
+      LINEAGE_ROLES.includes(step.role),
+      `role ${step.role} is not an isnād role`,
+    );
+    assert.equal(typeof step.ref_hash, "string");
+    assert.ok(Number.isInteger(step.step));
+  }
+
+  // Every SAT that ran must appear as a verifier in the chain of transmission.
+  const verifiers = seal.source_lineage
+    .filter((s) => s.role === "verifier")
+    .map((s) => s.ref_hash);
+  for (const sat of p.sats_run) {
+    assert.ok(verifiers.includes(sat), `SAT ${sat} missing from the isnād`);
+  }
+});
+
+test("Pipeline · isnād seal grants no authority", () => {
+  const p = runVerificationPipeline({ artifact: buildNode0StatePreview() });
+
+  assert.equal(p.delegation_isnad.authority_delta, 0);
+  assert.equal(p.delegation_isnad.execution_allowed, false);
+  assert.equal(p.delegation_isnad.mint_allowed, false);
+  // Sealing provenance must not change what the pipeline decided.
+  assert.equal(p.passed, true);
+  assert.equal(p.overall_verdict, "pipeline_verified");
+  assert.ok(isCanonicalBoundary(p.boundary));
+});
+
+test("Pipeline · isnād binds to the verdict, it does not decorate it", () => {
+  // A seal that does not move when the delegation moves is ornamentation.
+  const ok = runVerificationPipeline({ artifact: buildNode0StatePreview() });
+  const broken = runVerificationPipeline({
+    artifact: { schema: "not.canonical", boundary: {} },
+  });
+
+  assert.notEqual(
+    ok.delegation_isnad.capsule_hash,
+    broken.delegation_isnad.capsule_hash,
+    "a different delegation outcome must produce a different seal",
+  );
+  assert.notEqual(
+    ok.delegation_isnad.source_lineage_hash,
+    broken.delegation_isnad.source_lineage_hash,
+  );
+  // The failing run still records its transmission chain honestly.
+  assert.equal(broken.delegation_isnad.execution_allowed, false);
+  assert.ok(
+    broken.delegation_isnad.source_lineage.some((s) => s.role === "status"),
+    "the outcome must be a sealed step, not an unrecorded side effect",
+  );
 });

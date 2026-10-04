@@ -32,14 +32,36 @@ const REGISTER_PATH = join(
 );
 const SCHEMA = "bizra.dema.claim_corpus_gate.v0.1";
 
-// Defined corpus scope for v0.1: README + top-level docs/*.md. Subdirectories
-// (06-adr/, archive/, _absorbed/, …) are intentionally out — expand the scope
-// deliberately, not by an unbounded glob.
+// Defined corpus scope: README + top-level docs/*.md + docs/gtm/*.md.
+// Other subdirectories (06-adr/, archive/, _absorbed/, …) stay intentionally
+// out — expand the scope deliberately, not by an unbounded glob.
+//
+// docs/gtm/ added 2026-08-02 (DoD §15 box 9). The Claim Register §3 scope is
+// "every public-facing surface", and its §24 defers a `claim-lint.mjs` over
+// docs/public/** and docs/market/** — but neither directory exists, while
+// docs/gtm/ does and is exactly that material: it was the largest public-facing
+// surface in the tree with NO claim gate over it at all. Extending this ratchet
+// beats a second parallel linter: same scanner, same baseline discipline, one
+// gate to keep honest. Whichever of docs/public / docs/market appears later
+// joins this list in its own reviewed slice.
+const PUBLIC_FACING_SUBDIRS = ["gtm"];
+
 export function corpusFiles(root = REPO_ROOT) {
   const files = [join(root, "README.md")];
   const docsDir = join(root, "docs");
   for (const name of readdirSync(docsDir).sort()) {
     if (name.endsWith(".md")) files.push(join(docsDir, name));
+  }
+  for (const sub of PUBLIC_FACING_SUBDIRS) {
+    let entries;
+    try {
+      entries = readdirSync(join(docsDir, sub)).sort();
+    } catch {
+      continue; // not yet created — a future slice adds it
+    }
+    for (const name of entries) {
+      if (name.endsWith(".md")) files.push(join(docsDir, sub, name));
+    }
   }
   return files;
 }

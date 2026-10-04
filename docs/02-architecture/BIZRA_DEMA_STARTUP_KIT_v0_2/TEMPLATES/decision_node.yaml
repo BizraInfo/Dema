@@ -1,0 +1,13 @@
+schema: bizra.decision.node.v0.2
+decision_id: ""
+decision: ""
+date_or_version: UNKNOWN
+alternatives: []
+reason: ""
+evidence_refs: []
+implementation_consequence: ""
+outcome: UNKNOWN
+truth_status: SOURCE_BOUND
+contradictions: []
+supersedes: []
+superseded_by: []

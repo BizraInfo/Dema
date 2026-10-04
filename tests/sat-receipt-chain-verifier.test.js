@@ -9,6 +9,7 @@ import {
   verifyReceiptChain,
   SAT_RECEIPT_CHAIN_VERIFIER_PERSONA,
 } from "../packages/core/src/sat-receipt-chain-verifier.js";
+import { shapeReceiptCandidate } from "../packages/core/src/pat-receipt-recorder.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 
 const HASH_A = "a".repeat(64);
@@ -34,11 +35,23 @@ test("SAT-4 EffectCap valid", () => {
   assert.ok(cap.blocked_effects.includes("modify_receipt"));
 });
 
-test("verifyReceiptChain · empty chain → trivially compliant", () => {
+test("verifyReceiptChain · empty chain → UNKNOWN, never proof", () => {
   const v = verifyReceiptChain({ receipts: [] });
-  assert.equal(v.passed, true);
+  assert.equal(v.passed, false);
   assert.equal(v.verdict, "empty_chain");
   assert.equal(v.receipt_count, 0);
+  assert.equal(v.truth_label, "UNKNOWN");
+  assert.equal(v.receipt_shape_ready, false);
+  assert.deepEqual(v.violations, ["chain_is_empty_no_proof"]);
+});
+
+test("verifyReceiptChain · semantically empty input → UNKNOWN", () => {
+  const v = verifyReceiptChain({ receipts: [null, undefined, "not-a-receipt"] });
+  assert.equal(v.passed, false);
+  assert.equal(v.verdict, "empty_chain");
+  assert.equal(v.receipt_count, 0);
+  assert.equal(v.truth_label, "UNKNOWN");
+  assert.equal(v.receipt_shape_ready, false);
 });
 
 test("verifyReceiptChain · single genesis receipt with null prev → verified", () => {
@@ -77,6 +90,20 @@ test("verifyReceiptChain · prev_hash mismatch → violated", () => {
   });
   assert.equal(v.passed, false);
   assert.ok(v.violations.some((vio) => vio.includes("prev_hash_mismatch")));
+});
+
+test("verifyReceiptChain · reordered chain → violated", () => {
+  // Negative control pair: these exact receipts in correct order are verified
+  // by "two correctly linked receipts → verified" above. Reversal must fail.
+  const v = verifyReceiptChain({
+    receipts: [
+      { receipt_id: HASH_B, prev_hash: HASH_A },
+      { receipt_id: HASH_A, prev_hash: null },
+    ],
+  });
+  assert.equal(v.passed, false);
+  assert.equal(v.truth_label, "CHAIN_VIOLATION");
+  assert.ok(v.violations.length > 0);
 });
 
 test("verifyReceiptChain · invalid hash format → violated", () => {
@@ -118,6 +145,74 @@ test("Verdict deep-frozen + canonical boundary", () => {
   assert.ok(Object.isFrozen(v));
   assert.ok(Object.isFrozen(v.violations));
   assert.ok(isCanonicalBoundary(v.boundary));
+});
+
+// ── NAMESPACE TRAP · pinned, not fixed ──────────────────────────────────────
+// Every fixture above uses this verifier's OWN vocabulary: bare 64-hex ids and
+// `prev_hash` / `prev_receipt_hash`. The chain the estate actually writes
+// (scripts/node0-mumu-loop.mjs → receipts/receipt-chain.v0.1.jsonl) uses
+// 16-hex `receipt_id` and `previous_receipt_hash` with a `sha256:` prefix.
+//
+// Measured 2026-08-10 against the real 11-link chain in DEMA_HOME: this
+// verifier returns chain_violated, while `verifyReplay` in
+// scripts/node0-mumu-replay.mjs returns ok:true with zero tamper on the same
+// bytes. The chain is sound; the reader is looking for different field names.
+//
+// These two tests pin BOTH directions of the failure. They assert current
+// behaviour and take no position on which surface is authoritative — that is
+// an operator ruling, not a test's call. They exist so that whoever wires
+// receipt_per_transition does not mistake a false red for a real violation.
+test("verifyReceiptChain · MISREADS the estate's own chain shape (false red)", () => {
+  // Verbatim shape of the on-disk chain, minus payload fields.
+  const v = verifyReceiptChain({
+    receipts: [
+      { receipt_id: "3877b7f1268f8ba9", previous_receipt_hash: null },
+      {
+        receipt_id: "3374416cf0c63ad9",
+        previous_receipt_hash:
+          "sha256:e495472d73e9049dbe22c9cad0791d2bb76694980b8d2417672cc73f5e038f0a",
+      },
+    ],
+  });
+  assert.equal(v.passed, false, "a sound chain is reported violated");
+  assert.ok(v.violations.some((x) => x.includes("invalid_hash_format")));
+  // The sharpest part: link 1 DOES carry a predecessor hash on disk, and this
+  // verifier reports it missing, because it never reads that field name.
+  assert.ok(
+    v.violations.some((x) => x.includes("missing_prev_hash_for_non_genesis_receipt")),
+  );
+});
+
+// ── PAT → SAT SEAM · the boundary this verifier actually serves ─────────────
+// Until now pat-receipt-recorder and sat-receipt-chain-verifier were each
+// tested alone: 2 test files for the producer, 1 for the verifier, none
+// importing both. That gap is structural, not incidental — it is exactly how
+// the mumu-chain drift above went unnoticed. A producer and a verifier that
+// never meet in a test can drift apart field by field and stay green.
+//
+// This binds them. It is the one seam the repo's own PAT/SAT separation rule
+// treats as load-bearing, so it should fail loudly if either side renames a
+// field, changes hash width, or adds a prefix.
+test("PAT-6 → SAT-4 seam · a recorded chain verifies end to end", () => {
+  const a = shapeReceiptCandidate({ event_schema: "seam.a", prev_receipt_hash: null });
+  const b = shapeReceiptCandidate({
+    event_schema: "seam.b",
+    prev_receipt_hash: a.candidate_hash,
+  });
+
+  const v = verifyReceiptChain({ receipts: [a, b] });
+  assert.equal(v.verdict, "chain_verified");
+  assert.equal(v.passed, true);
+  assert.deepEqual([...v.violations], []);
+});
+
+test("PAT-6 → SAT-4 seam · the producer's field names are ones the verifier reads", () => {
+  // Named explicitly so a rename on either side fails here with a readable
+  // reason rather than as a mystery chain_violated.
+  const r = shapeReceiptCandidate({ event_schema: "seam.fields" });
+  assert.equal(typeof r.candidate_hash, "string", "producer must emit candidate_hash");
+  assert.match(r.candidate_hash, /^[a-f0-9]{64}$/, "bare 64-hex, no sha256: prefix");
+  assert.ok("prev_receipt_hash" in r, "producer must emit prev_receipt_hash");
 });
 
 test("Summary + exports · kernel pre-configured", () => {

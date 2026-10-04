@@ -11,12 +11,29 @@ import {
 import { join, dirname, basename, relative, isAbsolute, sep } from "node:path";
 import { homedir } from "node:os";
 import { createPublicKey, createPrivateKey } from "node:crypto";
-import { generateEd25519Keypair, sha256 } from "./authorship-signature.js";
+import {
+  generateEd25519Keypair,
+  fingerprintPublicKeyPem,
+  keypairMatches,
+  sha256,
+} from "./authorship-signature.js";
+// stableStringify only — consent-common imports nothing from receipts, so no cycle.
+import { stableStringify } from "../../consent/src/consent-common.js";
 
 export const KEY_INIT_CONSENT_PHRASE = "GENERATE AUTHORSHIP KEY";
 export const KEY_INIT_SCHEMA = "bizra.dema.authorship_key_init.v0.1";
 export const KEY_MIGRATE_CONSENT_PHRASE = "MIGRATE AUTHORSHIP KEY";
 export const KEY_MIGRATE_SCHEMA = "bizra.dema.authorship_key_migrate.v0.1";
+export const KEY_ROTATE_CONSENT_PHRASE = "ROTATE AUTHORSHIP KEY";
+export const KEY_ROTATE_SCHEMA = "bizra.dema.authorship_key_rotate.v0.1";
+export const KEY_ROTATE_RECEIPT_SCHEMA =
+  "bizra.dema.authorship_key_rotate_receipt.v0.1";
+export const KEY_ROTATE_JOURNAL_SCHEMA =
+  "bizra.dema.authorship_rotation_journal.v0.1";
+export const KEY_ROTATE_RESUME_CONSENT_PHRASE = "RESUME AUTHORSHIP ROTATION";
+export const KEY_ROTATE_RESUME_SCHEMA =
+  "bizra.dema.authorship_rotation_resume.v0.1";
+export const RETIRED_REGISTRY_SCHEMA = "bizra.dema.retired_key_registry.v0.1";
 export const ACTIVE_POINTER_SCHEMA = "bizra.dema.authorship_active_key.v0.1";
 export const GENERATION_METADATA_SCHEMA =
   "bizra.dema.authorship_key_generation.v0.1";
@@ -803,9 +820,16 @@ export async function inspectIdentityRecovery(demaHome) {
   } else {
     recommendedAction = "RUN_EXPLICIT_IDENTITY_RECOVERY";
   }
+  // CP5 (P0.2b crash matrix, 2026-07-29): a rotation interrupted between the
+  // retirement append and the pointer commit is REPORTED here and repaired
+  // nowhere. This root is read-only by contract (identity-recovery refuse-and-
+  // report gate); the operator runs resumeAuthorshipRotation explicitly.
+  const rotationJournal = await readRotationJournalDoc(paths);
   return Object.freeze({
     schema: "bizra.dema.identity_recovery_inspection.v0.1",
     recovery_class: recoveryClass,
+    rotation_journal_state: rotationJournal.state,
+    rotation_resume_state: await classifyRotationResume(ap, rotationJournal),
     active_pointer_path: ap.activePointer,
     active_pointer_hash: valid
       ? (pointerCls.pointerHash ?? null)
@@ -885,6 +909,58 @@ async function readRetiredFingerprints(ap) {
       ...new Set(retired.map((entry) => entry.fingerprint)),
     ].sort()),
   });
+}
+
+// --- CP5: interrupted-rotation reading (no mutation reachable from here) ---
+
+// Parse the rotation journal without ever trusting it as authority. An absent
+// journal is ABSENT, unparseable bytes are CORRUPT — never "fine".
+async function readRotationJournalDoc(paths) {
+  const raw = await readExactIfPresent(join(paths.dir, "rotation-journal.json"));
+  if (raw === null || raw === undefined) {
+    return Object.freeze({ state: "ABSENT", doc: null });
+  }
+  let doc;
+  try {
+    doc = JSON.parse(raw);
+  } catch {
+    return Object.freeze({ state: "CORRUPT", doc: null });
+  }
+  if (
+    !doc ||
+    typeof doc !== "object" ||
+    doc.schema !== KEY_ROTATE_JOURNAL_SCHEMA ||
+    typeof doc.state !== "string"
+  ) {
+    return Object.freeze({ state: "CORRUPT", doc: null });
+  }
+  return Object.freeze({ state: doc.state, doc: Object.freeze({ ...doc }) });
+}
+
+// Read-only verdict over the interrupted-rotation window. RESUMABLE_FORWARD is
+// claimed ONLY when the retirement is durably committed and the pointer has not
+// moved — the exact CP5 post-state. Everything else is named, never repaired.
+async function classifyRotationResume(ap, journal) {
+  if (journal.state === "CORRUPT") return "JOURNAL_CORRUPT";
+  if (journal.state !== "ACTIVATING") return "NOT_INTERRUPTED";
+  const { old_fingerprint: oldFp, new_fingerprint: newFp } = journal.doc ?? {};
+  if (!SHA256_HEX.test(oldFp ?? "") || !SHA256_HEX.test(newFp ?? "")) {
+    return "JOURNAL_CORRUPT";
+  }
+  const registry = await readRetiredFingerprints(ap);
+  if (!registry.ok) return "REGISTRY_UNREADABLE";
+  if (!registry.fingerprints.includes(oldFp)) return "RETIREMENT_NOT_COMMITTED";
+  const raw = await readFileNoFollow(ap.activePointer);
+  if (raw === null) return "POINTER_UNREADABLE";
+  let doc;
+  try {
+    doc = JSON.parse(raw);
+  } catch {
+    return "POINTER_UNREADABLE";
+  }
+  if (doc?.generation_fingerprint === newFp) return "ALREADY_ACTIVE";
+  if (doc?.generation_fingerprint !== oldFp) return "POINTER_UNEXPECTED";
+  return "RESUMABLE_FORWARD";
 }
 
 async function checkRetired(ap, fingerprint, previousGeneration = null) {
@@ -1463,6 +1539,995 @@ export async function initAuthorshipKey({
   } finally {
     await lease.release();
   }
+}
+
+function rotateFailClosed(error, detail) {
+  return Object.freeze({
+    schema: KEY_ROTATE_SCHEMA,
+    rotated: false,
+    error,
+    ...(detail ? { detail } : {}),
+    boundary: buildBoundary(false),
+  });
+}
+
+// Finding #1/#2 gate: a rotation requires a nonce-bearing consent envelope.
+// Returns an error code (mutation must be refused) or null (may proceed).
+function validateConsentEnvelope(envelope, demaHome, nowIso) {
+  if (!envelope || typeof envelope !== "object") return "consent_envelope_required";
+  if (typeof envelope.nonce !== "string" || envelope.nonce.length === 0) {
+    return "consent_envelope_required";
+  }
+  if (
+    envelope.operation !== undefined &&
+    envelope.operation !== "authorship_key_rotation"
+  ) {
+    return "consent_envelope_wrong_operation";
+  }
+  if (
+    envelope.authority_delta !== undefined &&
+    envelope.authority_delta !== 0
+  ) {
+    return "consent_envelope_authority_nonzero";
+  }
+  if (
+    envelope.dema_home_hash !== undefined &&
+    envelope.dema_home_hash !== sha256(String(demaHome ?? ""))
+  ) {
+    return "consent_envelope_dema_home_mismatch";
+  }
+  const nowMs = Date.parse(nowIso);
+  if (envelope.expires_at !== undefined) {
+    const e = Date.parse(envelope.expires_at);
+    if (Number.isFinite(e) && Number.isFinite(nowMs) && e < nowMs) {
+      return "consent_envelope_expired";
+    }
+  }
+  if (envelope.issued_at !== undefined) {
+    const i = Date.parse(envelope.issued_at);
+    if (Number.isFinite(i) && Number.isFinite(nowMs) && i > nowMs + 300000) {
+      return "consent_envelope_future";
+    }
+  }
+  return null;
+}
+
+function bindConsent(consent, envelope, oldFp, newFp, stamp, reason, demaHome) {
+  if (!envelope || !envelope.nonce) {
+    return Object.freeze({
+      strength: "phrase_only_INSUFFICIENT",
+      consent_phrase_sha256: sha256(consent),
+      note: "no nonce-bearing consent envelope supplied; a real ceremony MUST bind one",
+    });
+  }
+  const canonical = JSON.stringify({
+    ceremony_id: envelope.ceremony_id ?? null,
+    nonce: envelope.nonce,
+    old_fingerprint: oldFp,
+    new_fingerprint: newFp,
+    dema_home_hash: sha256(String(demaHome ?? "")),
+    runtime_root: envelope.runtime_root ?? null,
+    operator_id_hash: envelope.operator_id_hash ?? null,
+    reason,
+    issued_at: envelope.issued_at ?? null,
+    expiry: envelope.expiry ?? null,
+    operation: "authorship_key_rotation",
+    authority_delta: 0,
+  });
+  return Object.freeze({
+    strength: "envelope_bound",
+    nonce: envelope.nonce,
+    envelope_sha256: sha256(canonical),
+  });
+}
+
+async function writeRotationJournal(journalPath, state, oldFp, newFp, stamp) {
+  await writeFileSynced(
+    journalPath,
+    JSON.stringify({
+      schema: KEY_ROTATE_JOURNAL_SCHEMA,
+      state,
+      old_fingerprint: oldFp,
+      new_fingerprint: newFp,
+      at: stamp,
+    }),
+    0o600,
+  );
+}
+
+async function writeFileSynced(path, content, mode) {
+  const handle = await open(
+    path,
+    constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | NO_FOLLOW,
+    mode,
+  );
+  try {
+    await handle.writeFile(content, "utf8");
+    try {
+      await handle.sync();
+    } catch {
+      /* fsync unsupported — data written */
+    }
+  } catch (error) {
+    if (error?.code === "ELOOP") throw new UnsafeKeyPathError(path);
+    throw error;
+  } finally {
+    await handle.close();
+  }
+}
+
+async function readExact(path) {
+  const handle = await open(path, constants.O_RDONLY | NO_FOLLOW);
+  try {
+    return await handle.readFile("utf8");
+  } finally {
+    await handle.close();
+  }
+}
+
+async function readExactIfPresent(path) {
+  try {
+    return await readExact(path);
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function assertRegistryReadable(registryPath) {
+  const existing = await readExactIfPresent(registryPath);
+  if (!existing) return;
+  let parsed;
+  try {
+    parsed = JSON.parse(existing);
+  } catch {
+    throw new Error("retired registry is not valid JSON");
+  }
+  if (!Array.isArray(parsed.retired)) {
+    throw new Error("retired registry missing 'retired' array");
+  }
+}
+
+async function appendRetiredRegistry(registryPath, fp, stamp, reason) {
+  let entries = [];
+  const existing = await readExactIfPresent(registryPath);
+  if (existing) {
+    let parsed;
+    try {
+      parsed = JSON.parse(existing);
+    } catch {
+      throw new Error("retired registry corrupt — refusing to overwrite");
+    }
+    if (!Array.isArray(parsed.retired)) {
+      throw new Error("retired registry malformed — refusing to overwrite");
+    }
+    entries = parsed.retired;
+  }
+  if (!entries.some((e) => e.fingerprint === fp)) {
+    entries.push({ fingerprint: fp, retired_at: stamp, reason });
+  }
+  await writeFileSynced(
+    registryPath,
+    JSON.stringify({ schema: RETIRED_REGISTRY_SCHEMA, retired: entries }, null, 2),
+    0o600,
+  );
+}
+
+async function nonceAlreadyUsed(paths, nonce) {
+  const existing = await readExactIfPresent(
+    join(paths.dir, "used-consent-nonces.json"),
+  );
+  if (!existing) return false;
+  const parsed = JSON.parse(existing);
+  const used = Array.isArray(parsed.nonces) ? parsed.nonces : [];
+  return used.some((n) => n.nonce === nonce);
+}
+
+async function recordUsedNonce(paths, nonce, stamp) {
+  const registryPath = join(paths.dir, "used-consent-nonces.json");
+  let nonces = [];
+  const existing = await readExactIfPresent(registryPath);
+  if (existing) {
+    const parsed = JSON.parse(existing);
+    if (Array.isArray(parsed.nonces)) nonces = parsed.nonces;
+  }
+  if (!nonces.some((n) => n.nonce === nonce)) nonces.push({ nonce, at: stamp });
+  await writeFileSynced(
+    registryPath,
+    JSON.stringify(
+      { schema: "bizra.dema.used_consent_nonces.v0.1", nonces },
+      null,
+      2,
+    ),
+    0o600,
+  );
+}
+
+async function writeBackupIfAbsent(path, content, mode) {
+  try {
+    await writeKeyFile(path, content, { mode, force: false });
+  } catch (error) {
+    if (error instanceof KeyAlreadyExistsError) {
+      const existing = await readExact(path);
+      if (existing !== content) {
+        throw new Error("quarantine byte-mismatch against pre-existing file");
+      }
+      return;
+    }
+    throw error;
+  }
+}
+
+async function stageQuarantine(paths, fp, privPem, pubPem) {
+  const dir = join(paths.dir, "retired", fp);
+  try {
+    await mkdir(dir, { recursive: true });
+    await writeBackupIfAbsent(join(dir, PRIVATE_KEY_FILENAME), privPem, 0o600);
+    await writeBackupIfAbsent(join(dir, PUBLIC_KEY_FILENAME), pubPem, 0o644);
+    if ((await readExact(join(dir, PRIVATE_KEY_FILENAME))) !== privPem) {
+      throw new Error("private quarantine byte-mismatch");
+    }
+    if ((await readExact(join(dir, PUBLIC_KEY_FILENAME))) !== pubPem) {
+      throw new Error("public quarantine byte-mismatch");
+    }
+    return { dir };
+  } catch (error) {
+    return { error: true, detail: error?.message ?? String(error) };
+  }
+}
+
+// ── ISNAD-AUTHORITY-SUCCESSION-1A · canonical-ledger bridge ─────────────────
+//
+// Imported dynamically. canonical-receipt.js imports loadActiveKeyPair from this
+// module, so a static import here would close a cycle. Deferring it to call time
+// keeps module evaluation order irrelevant and keeps the ONE canonical ledger as
+// the only proof store — no parallel succession log exists.
+async function canonicalLedgerModule() {
+  return import("./canonical-ledger.js");
+}
+
+const SUCCESSION_TRUTH_LABEL = "MEASURED_LOCAL";
+
+async function appendSuccessionIntent({
+  demaHome, rotationTxId, oldFingerprint, newFp, successorPublicKeyPem,
+  consentBindingSha256, expectedPointerStateSha256, now,
+}) {
+  try {
+    const { appendCanonicalReceipt } = await canonicalLedgerModule();
+    const { buildSuccessionIntentBody } = await import("./authority-succession.js");
+    const { CANONICAL_RECEIPT_CONSENT_PHRASE } = await import("./canonical-receipt.js");
+    const r = await appendCanonicalReceipt({
+      canonicalBody: buildSuccessionIntentBody({
+        rotationTxId,
+        predecessorFingerprint: oldFingerprint,
+        successorFingerprint: newFp,
+        successorPublicKeyPem,
+        successorPublicKeySha256: sha256(successorPublicKeyPem),
+        consentBindingSha256,
+        expectedPointerStateSha256,
+      }),
+      truthLabel: SUCCESSION_TRUTH_LABEL,
+      whatProves:
+        "the authority in force authorized this exact successor for this rotation transaction, before any pointer moved",
+      whatDoesNotProve:
+        "it does NOT prove the successor became authoritative; only a matching commit signed by the successor does that",
+      consent: CANONICAL_RECEIPT_CONSENT_PHRASE,
+      demaHome,
+      now,
+    });
+    return r.appended
+      ? { ok: true, receipt_id: r.receipt.receipt_id }
+      : { ok: false, reason: r.reason ?? r.error };
+  } catch (error) {
+    return { ok: false, reason: error?.message ?? String(error) };
+  }
+}
+
+async function appendSuccessionCommit({
+  demaHome, ap, rotationTxId, oldFingerprint, newFp, intentReceiptId, now,
+}) {
+  try {
+    const { appendCanonicalReceipt } = await canonicalLedgerModule();
+    const { buildSuccessionCommitBody } = await import("./authority-succession.js");
+    const { CANONICAL_RECEIPT_CONSENT_PHRASE } = await import("./canonical-receipt.js");
+    // Observed, not intended: the pointer and registry are re-read from disk so
+    // the commit attests to the world as it actually is.
+    const pointerRaw = await readExact(ap.activePointer);
+    const registryRaw = await readExact(ap.retiredRegistry).catch(() => "");
+    const r = await appendCanonicalReceipt({
+      canonicalBody: buildSuccessionCommitBody({
+        rotationTxId,
+        predecessorFingerprint: oldFingerprint,
+        successorFingerprint: newFp,
+        intentReceiptId,
+        observedPointerStateSha256: sha256(pointerRaw),
+        generationFingerprint: newFp,
+        retirementRelationSha256: sha256(registryRaw),
+      }),
+      truthLabel: SUCCESSION_TRUTH_LABEL,
+      whatProves:
+        "the successor holds its private key and attests that the authoritative pointer now selects it, completing exactly the succession its predecessor authorized",
+      whatDoesNotProve:
+        "it does not re-authorize itself; the authorization it completes was signed by the predecessor before the switch",
+      consent: CANONICAL_RECEIPT_CONSENT_PHRASE,
+      demaHome,
+      now,
+    });
+    return r.appended
+      ? { ok: true, receipt_id: r.receipt.receipt_id }
+      : { ok: false, reason: r.reason ?? r.error };
+  } catch (error) {
+    return { ok: false, reason: error?.message ?? String(error) };
+  }
+}
+
+/**
+ * Complete a succession whose commit half never landed.
+ *
+ * The measured crash state: the pointer selects K_new, a K_old-signed intent is
+ * in the ledger, and no commit exists. Before this, `resumeAuthorshipRotation`
+ * reported `already_resolved` and wrote nothing, so the transition stayed
+ * authoritative and unevidenced permanently.
+ *
+ * Idempotent by construction: it derives the pending successor from the chain
+ * itself, so a chain with no open intent has nothing to finalize and returns
+ * `already_complete` without writing a byte.
+ *
+ * FAILS CLOSED, and never fabricates the missing half in the other direction: if
+ * the pointer has switched but no valid predecessor-signed intent exists, this
+ * refuses with `requires_human`. Predecessor authorization cannot be
+ * manufactured after the authority has already moved — that is the one thing
+ * nothing in the system is entitled to do.
+ */
+export async function finalizeAuthoritySuccession({ demaHome, now } = {}) {
+  const ap = activeKeyPaths(demaHome);
+  const refuse = (reason) =>
+    Object.freeze({ finalized: false, requires_human: true, reason, authority_delta: 0 });
+  try {
+    const { loadCanonicalLedger } = await canonicalLedgerModule();
+    const entries = await loadCanonicalLedger({ demaHome });
+    if (entries.length === 0) {
+      return Object.freeze({ finalized: false, already_complete: true, reason: "no_ledger", authority_delta: 0 });
+    }
+    const { verifyCanonicalAuthorityChain } = await import("./canonical-receipt.js");
+    const rootFp = entries[0]?.operator_public_key_fingerprint;
+    const rootPem = await loadGenerationPublicKey(demaHome, rootFp);
+    if (!rootPem) return refuse("root_authority_unresolvable");
+
+    const walk = verifyCanonicalAuthorityChain({ entries, genesisPubkeyPem: rootPem });
+    if (!walk.verified) return refuse(`chain_unverifiable:${walk.reason}`);
+    if (!walk.pending_successor) {
+      return Object.freeze({ finalized: false, already_complete: true, authority_delta: 0 });
+    }
+
+    const pending = walk.pending_successor;
+    const active = await loadActiveKeyPair(demaHome);
+    if (!active.ok) return refuse(`active_identity_unreadable:${active.error}`);
+    // Only the key the predecessor NAMED may complete. A pointer that landed on
+    // some other generation is an ambiguity, not a rotation to finish.
+    if (active.fingerprint !== pending.successor_fingerprint) {
+      return refuse("active_identity_is_not_the_authorized_successor");
+    }
+
+    const intentBody = entries[pending.intent_index].canonical_body;
+    const commit = await appendSuccessionCommit({
+      demaHome,
+      ap,
+      rotationTxId: intentBody.rotation_tx_id,
+      oldFingerprint: intentBody.predecessor_fingerprint,
+      newFp: intentBody.successor_fingerprint,
+      intentReceiptId: pending.intent_receipt_id,
+      now: typeof now === "string" && now ? now : new Date().toISOString(),
+    });
+    if (!commit.ok) return refuse(`succession_commit_unrecordable:${commit.reason}`);
+
+    return Object.freeze({
+      finalized: true,
+      already_complete: false,
+      rotation_tx_id: intentBody.rotation_tx_id,
+      predecessor_fingerprint: intentBody.predecessor_fingerprint,
+      successor_fingerprint: intentBody.successor_fingerprint,
+      commit_receipt_id: commit.receipt_id,
+      authority_delta: 0,
+    });
+  } catch (error) {
+    return refuse(error?.message ?? String(error));
+  }
+}
+
+async function writeRotationReceipt(paths, newFingerprint, receipt) {
+  const dir = join(paths.dir, "rotation-receipts");
+  await mkdir(dir, { recursive: true });
+  const receiptPath = join(dir, `${newFingerprint}.json`);
+  await writeFileSynced(receiptPath, JSON.stringify(receipt, null, 2), 0o600);
+  return receiptPath;
+}
+
+// Ported onto main's active-pointer / generation store (#419+). Replaces the
+// flat-file overwrite model from feat/authorship-key-rotate-1a: the new pair
+// is installed as a generation, the old fingerprint is retired into the
+// registry BEFORE the pointer moves (checkRetired requires previous ∈
+// registry), and loadActiveKeyPair is the post-transition authority.
+export async function rotateAuthorshipKey({
+  consent,
+  demaHome,
+  retiredAt,
+  reason = "compromised_key_rotation",
+  envelope,
+} = {}) {
+  if (consent !== KEY_ROTATE_CONSENT_PHRASE) {
+    return Object.freeze({
+      schema: KEY_ROTATE_SCHEMA,
+      rotated: false,
+      error: "consent_required",
+      required_phrase: KEY_ROTATE_CONSENT_PHRASE,
+      boundary: buildBoundary(false),
+    });
+  }
+
+  const nowIso =
+    typeof retiredAt === "string" && retiredAt
+      ? retiredAt
+      : new Date().toISOString();
+  const envelopeError = validateConsentEnvelope(envelope, demaHome, nowIso);
+  if (envelopeError) {
+    return Object.freeze({
+      schema: KEY_ROTATE_SCHEMA,
+      rotated: false,
+      error: envelopeError,
+      authority_delta: 0,
+      boundary: buildBoundary(false),
+    });
+  }
+
+  const paths = keyPaths(demaHome);
+  const ap = activeKeyPaths(demaHome);
+  const journalPath = join(paths.dir, "rotation-journal.json");
+
+  try {
+    await assertRegistryReadable(ap.retiredRegistry);
+  } catch (error) {
+    return rotateFailClosed("retired_registry_corrupt", error?.message);
+  }
+
+  if (envelope?.nonce) {
+    let used;
+    try {
+      used = await nonceAlreadyUsed(paths, envelope.nonce);
+    } catch (error) {
+      return rotateFailClosed("nonce_ledger_unreadable", error?.message);
+    }
+    if (used) return rotateFailClosed("consent_nonce_replayed");
+  }
+
+  // Active-pointer model: rotate requires a loadable active generation.
+  // Pre-#419 flat homes (no pointer) refuse — migrate first (see C′/D′).
+  const current = await loadActiveKeyPair(demaHome);
+  if (!current.ok) {
+    if (current.error === "no_active_pointer") {
+      return rotateFailClosed("no_key_to_rotate");
+    }
+    // Symlink / unsafe generation reads surface as generation_unsafe etc.
+    if (
+      current.error === "generation_unsafe" ||
+      current.error === "pointer_escape"
+    ) {
+      return rotateFailClosed("no_key_to_rotate");
+    }
+    return rotateFailClosed("no_key_to_rotate", current.error);
+  }
+
+  const oldFingerprint = current.fingerprint;
+  const oldPrivatePem = current.private_key_pem;
+  const oldPublicPem = current.public_key_pem;
+
+  const lease = await acquireIdentityLease(ap);
+  if (!lease.acquired) {
+    return rotateFailClosed(lease.reason);
+  }
+
+  try {
+    const recheck = await loadActiveKeyPair(demaHome);
+    if (!recheck.ok || recheck.fingerprint !== oldFingerprint) {
+      return rotateFailClosed(
+        "identity_transition_in_progress",
+        "active identity changed under lease",
+      );
+    }
+
+    const stage = await stageQuarantine(
+      paths,
+      oldFingerprint,
+      oldPrivatePem,
+      oldPublicPem,
+    );
+    if (stage.error) {
+      return rotateFailClosed("quarantine_stage_failed", stage.detail);
+    }
+
+    const keys = generateEd25519Keypair();
+    if (!keypairMatches(keys.private_key_pem, keys.public_key_pem)) {
+      return rotateFailClosed(
+        "new_key_pair_invalid",
+        "generated keypair failed self-verify",
+      );
+    }
+    const newFp = keys.public_key_fingerprint;
+
+    let generationPath;
+    try {
+      await mkdir(ap.generationsDir, { recursive: true });
+      ({ generationPath } = await writeGeneration(ap, keys, {
+        now: nowIso,
+        source: "rotate",
+      }));
+      if (
+        (await readExact(join(generationPath, "private.pem"))) !==
+        keys.private_key_pem
+      ) {
+        throw new Error("generation private byte-mismatch");
+      }
+    } catch (error) {
+      return rotateFailClosed(
+        "generation_archive_failed",
+        error?.message ?? String(error),
+      );
+    }
+
+    await writeRotationJournal(
+      journalPath,
+      "PREPARED",
+      oldFingerprint,
+      newFp,
+      nowIso,
+    );
+
+    // ── ISNAD-AUTHORITY-SUCCESSION-1A · half one of two ──────────────────────
+    //
+    // The predecessor authorizes this exact successor, BEFORE the pointer moves
+    // and therefore while the predecessor is still the authority. Appending it
+    // here is what makes the pair possible at all: after the switch, K_old can
+    // no longer sign anything the chain will accept.
+    //
+    // A refusal here aborts the rotation. An authority transition that could not
+    // record its own authorization must not proceed — that is exactly the
+    // measured defect (authority changed, proof trail absent) this slice exists
+    // to remove, and letting it through "because the key store still works"
+    // would reproduce it under a new name.
+    const rotationTxId = sha256(
+      stableStringify({ old: oldFingerprint, new: newFp, at: nowIso, reason }),
+    );
+    const intent = await appendSuccessionIntent({
+      demaHome,
+      rotationTxId,
+      oldFingerprint,
+      newFp,
+      successorPublicKeyPem: keys.public_key_pem,
+      consentBindingSha256: sha256(
+        stableStringify({ consent, envelope: envelope ?? null, reason }),
+      ),
+      expectedPointerStateSha256: sha256(
+        stableStringify({ generation_fingerprint: newFp, previous_generation: oldFingerprint }),
+      ),
+      now: nowIso,
+    });
+    if (!intent.ok) {
+      return rotateFailClosed("succession_intent_unrecordable", intent.reason);
+    }
+
+    // Registry-first: previous_generation must already be retired before the
+    // pointer commits, or loadActiveKeyPair returns retired_registry_incomplete.
+    try {
+      await writeRotationJournal(
+        journalPath,
+        "ACTIVATING",
+        oldFingerprint,
+        newFp,
+        nowIso,
+      );
+      await appendRetiredRegistry(
+        ap.retiredRegistry,
+        oldFingerprint,
+        nowIso,
+        reason,
+      );
+      await writeFileSynced(
+        join(stage.dir, "retired.json"),
+        JSON.stringify({
+          retired_fingerprint: oldFingerprint,
+          retired_at: nowIso,
+          reason,
+          runtime_loadable: false,
+        }),
+        0o600,
+      );
+      await activateGeneration(ap, {
+        fingerprint: newFp,
+        now: nowIso,
+        previous: oldFingerprint,
+      });
+    } catch (error) {
+      await writeRotationJournal(
+        journalPath,
+        "ROLLED_BACK",
+        oldFingerprint,
+        newFp,
+        nowIso,
+      );
+      return rotateFailClosed(
+        "replacement_failed",
+        error?.message ?? String(error),
+      );
+    }
+
+    const verified = await loadActiveKeyPair(demaHome);
+    if (
+      !verified.ok ||
+      verified.fingerprint !== newFp ||
+      !keypairMatches(verified.private_key_pem, verified.public_key_pem)
+    ) {
+      await writeRotationJournal(
+        journalPath,
+        "ACTIVE_RETIREMENT_PENDING",
+        oldFingerprint,
+        newFp,
+        nowIso,
+      );
+      return Object.freeze({
+        schema: KEY_ROTATE_SCHEMA,
+        rotated: true,
+        old_fingerprint: oldFingerprint,
+        new_fingerprint: newFp,
+        retirement_committed: true,
+        transaction_state: "ACTIVE_RETIREMENT_PENDING",
+        requires: "post_activation_verify_rerun",
+        detail: verified.ok ? "fingerprint_or_pair_mismatch" : verified.error,
+        boundary: buildBoundary(true),
+      });
+    }
+
+    await writeRotationJournal(
+      journalPath,
+      "RETIREMENT_COMMITTED",
+      oldFingerprint,
+      newFp,
+      nowIso,
+    );
+
+    if (envelope?.nonce) {
+      await recordUsedNonce(paths, envelope.nonce, nowIso).catch(() => {});
+    }
+
+    // ── ISNAD-AUTHORITY-SUCCESSION-1A · half two of two ──────────────────────
+    //
+    // The successor proves possession and attests completion of exactly the
+    // succession its predecessor authorized. Only reachable once the pointer has
+    // selected K_new, so this signature is itself the possession proof.
+    //
+    // A crash between the two halves leaves an authorized-but-uncommitted intent
+    // — a legible state, which `finalizeAuthoritySuccession` below completes
+    // from durable facts alone.
+    const commit = await appendSuccessionCommit({
+      demaHome,
+      ap,
+      rotationTxId,
+      oldFingerprint,
+      newFp,
+      intentReceiptId: intent.receipt_id,
+      now: nowIso,
+    });
+    if (!commit.ok) {
+      return rotateFailClosed("succession_commit_unrecordable", commit.reason);
+    }
+
+    const receipt = {
+      schema: KEY_ROTATE_RECEIPT_SCHEMA,
+      succession_intent_receipt_id: intent.receipt_id,
+      succession_commit_receipt_id: commit.receipt_id,
+      rotation_tx_id: rotationTxId,
+      old_fingerprint: oldFingerprint,
+      new_fingerprint: newFp,
+      generation_dir: generationPath,
+      retired_at: nowIso,
+      reason,
+      quarantine_dir: stage.dir,
+      retired_registry_path: ap.retiredRegistry,
+      journal_path: journalPath,
+      runtime_activation: "not_verified_no_runtime",
+      revocation_state: "retired_local_denylisted",
+      affected_receipt_assessment:
+        "see R0B2_EXPOSURE_INTERVAL_ASSESSMENT (local signed-receipt exposure empty)",
+      consent_binding: bindConsent(
+        consent,
+        envelope,
+        oldFingerprint,
+        newFp,
+        nowIso,
+        reason,
+        demaHome,
+      ),
+      private_key_material_included: false,
+    };
+    const receiptPath = await writeRotationReceipt(paths, newFp, receipt);
+    await writeRotationJournal(
+      journalPath,
+      "COMPLETE",
+      oldFingerprint,
+      newFp,
+      nowIso,
+    );
+
+    return Object.freeze({
+      schema: KEY_ROTATE_SCHEMA,
+      rotated: true,
+      retirement_committed: true,
+      transaction_state: "COMPLETE",
+      ...receipt,
+      receipt_path: receiptPath,
+      private_key_path: join(generationPath, "private.pem"),
+      public_key_path: join(generationPath, "public.pem"),
+      boundary: buildBoundary(true),
+    });
+  } finally {
+    await lease.release();
+  }
+}
+
+// CP5 closure (P0.2b crash matrix 2026-07-29; docs/gtm/TASK029_PRE_CEREMONY_HALT.md).
+//
+// A rotation killed between `appendRetiredRegistry` and the active-pointer
+// commit leaves the old fingerprint retired while the pointer still names it:
+// nothing signs (loadActiveKeyPair -> retired_generation, loadGuardedActiveKey
+// -> rotation_in_progress), and nothing can move. That is a LIVENESS defect,
+// not an unsafe one, so the repair is a separate consented act rather than an
+// automatic one — the rejected PR #414 auto-quarantine design stays extinct and
+// the read-only inspection roots keep reporting instead of repairing.
+//
+// Recovery rolls FORWARD, never back: the new generation's bytes were archived
+// and byte-verified BEFORE the retirement was written, so the target is already
+// durable. It is re-verified here through `verifyPointerDoc` — the same contract
+// `loadActiveKeyPair` enforces — before the pointer is allowed to move.
+export async function resumeAuthorshipRotation({
+  consent,
+  demaHome,
+  resumedAt,
+} = {}) {
+  const refuse = (error, detail) =>
+    Object.freeze({
+      schema: KEY_ROTATE_RESUME_SCHEMA,
+      resumed: false,
+      error,
+      ...(detail ? { detail } : {}),
+      ...(error === "consent_required"
+        ? { required_phrase: KEY_ROTATE_RESUME_CONSENT_PHRASE }
+        : {}),
+      authority_delta: 0,
+      boundary: buildBoundary(false),
+    });
+
+  if (consent !== KEY_ROTATE_RESUME_CONSENT_PHRASE) return refuse("consent_required");
+
+  const paths = keyPaths(demaHome);
+  const ap = activeKeyPaths(demaHome);
+  const journalPath = join(paths.dir, "rotation-journal.json");
+  const nowIso =
+    typeof resumedAt === "string" && resumedAt
+      ? resumedAt
+      : new Date().toISOString();
+
+  const journal = await readRotationJournalDoc(paths);
+  const verdict = await classifyRotationResume(ap, journal);
+
+  // Idempotency BEFORE any write: an exact re-run of a completed resume must
+  // change no durable byte.
+  if (verdict === "ALREADY_ACTIVE" || verdict === "NOT_INTERRUPTED") {
+    const settled = await loadActiveKeyPair(demaHome);
+    if (settled.ok && settled.fingerprint === journal.doc?.new_fingerprint) {
+      // ISNAD-AUTHORITY-SUCCESSION-1A. "The pointer already moved" used to end
+      // here, and that was the defect: a rotation killed between the authority
+      // switch and its evidence left the transition authoritative and
+      // unevidenced, and this branch reported it settled while writing nothing.
+      //
+      // The pointer moving is not the transition completing. If the predecessor
+      // authorized a successor whose commit never landed, finalize it from
+      // durable facts. Idempotent — a chain with no open intent finalizes
+      // nothing and writes no byte, so an exact re-run still changes nothing.
+      const succession = await finalizeAuthoritySuccession({ demaHome, resumedAt: nowIso, now: nowIso });
+      if (succession.requires_human === true) {
+        return refuse("succession_unfinalizable", succession.reason);
+      }
+      return Object.freeze({
+        schema: KEY_ROTATE_RESUME_SCHEMA,
+        resumed: true,
+        already_resolved: true,
+        succession_finalized: succession.finalized === true,
+        succession_commit_receipt_id: succession.commit_receipt_id ?? null,
+        active_fingerprint: settled.fingerprint,
+        retired_fingerprint: journal.doc?.old_fingerprint ?? null,
+        transaction_state: journal.state,
+        boundary: buildBoundary(false),
+      });
+    }
+    return refuse("no_interrupted_rotation", verdict);
+  }
+  if (verdict !== "RESUMABLE_FORWARD") return refuse("not_resumable", verdict);
+
+  const oldFp = journal.doc.old_fingerprint;
+  const newFp = journal.doc.new_fingerprint;
+
+  // A rotation killed mid-transition leaves its lease behind on purpose: a dead
+  // holder is preserved as `recovery_required` for operator adjudication. This
+  // consented call IS that adjudication, so it may take the stale lease over —
+  // but a LIVE holder still refuses, and the O_EXCL re-acquire keeps two
+  // concurrent resumes from both proceeding.
+  let lease = await acquireIdentityLease(ap);
+  if (!lease.acquired && lease.reason === "recovery_required") {
+    await unlink(ap.identityLease).catch(() => {});
+    lease = await acquireIdentityLease(ap);
+  }
+  if (!lease.acquired) return refuse("identity_lease_unavailable", lease.reason);
+  try {
+    // Re-verify under the lease: the world may have changed since the
+    // unsynchronized read above.
+    if ((await classifyRotationResume(ap, journal)) !== "RESUMABLE_FORWARD") {
+      return refuse("not_resumable", "state_changed_under_lease");
+    }
+
+    const targetDoc = {
+      schema: ACTIVE_POINTER_SCHEMA,
+      generation_fingerprint: newFp,
+      generation_path: join(GENERATIONS_DIRNAME, newFp),
+      activated_at: nowIso,
+      previous_generation: oldFp,
+    };
+    const target = await verifyPointerDoc(
+      ap,
+      targetDoc,
+      JSON.stringify(targetDoc),
+    );
+    if (!target.ok) return refuse("generation_unverifiable", target.error);
+
+    await activateGeneration(ap, {
+      fingerprint: newFp,
+      now: nowIso,
+      previous: oldFp,
+    });
+
+    const verified = await loadActiveKeyPair(demaHome);
+    if (
+      !verified.ok ||
+      verified.fingerprint !== newFp ||
+      !keypairMatches(verified.private_key_pem, verified.public_key_pem)
+    ) {
+      await writeRotationJournal(
+        journalPath,
+        "ACTIVE_RETIREMENT_PENDING",
+        oldFp,
+        newFp,
+        nowIso,
+      );
+      return refuse(
+        "post_activation_verify_failed",
+        verified.ok ? "fingerprint_or_pair_mismatch" : verified.error,
+      );
+    }
+
+    await writeRotationJournal(journalPath, "COMPLETE", oldFp, newFp, nowIso);
+
+    // The pointer moved on THIS path too, so the same law applies: an authority
+    // that changed must carry its evidence. Finalizes the commit half the
+    // interrupted ceremony never reached, and refuses rather than inventing a
+    // predecessor authorization that was never signed.
+    const succession = await finalizeAuthoritySuccession({ demaHome, now: nowIso });
+    if (succession.requires_human === true) {
+      return refuse("succession_unfinalizable", succession.reason);
+    }
+
+    // ponytail: the resume seals its OWN receipt bound to the resume phrase. It
+    // cannot honestly reproduce the interrupted ceremony's consent envelope —
+    // that nonce is not persisted in the journal — so it records what it can
+    // witness (which rotation it finished, and that a human authorized the
+    // finish) rather than forging the original binding.
+    const receipt = {
+      schema: KEY_ROTATE_RECEIPT_SCHEMA,
+      old_fingerprint: oldFp,
+      new_fingerprint: newFp,
+      generation_dir: target.generation_path,
+      retired_at: journal.doc.at ?? null,
+      resumed_at: nowIso,
+      reason: "interrupted_rotation_resumed_forward",
+      retired_registry_path: ap.retiredRegistry,
+      journal_path: journalPath,
+      completed_by: "resume",
+      runtime_activation: "not_verified_no_runtime",
+      revocation_state: "retired_local_denylisted",
+      consent_binding: Object.freeze({
+        strength: "resume_phrase_only",
+        consent_phrase_sha256: sha256(consent),
+        note: "completes an interrupted rotation; the original ceremony envelope is not replayable from the journal",
+      }),
+      private_key_material_included: false,
+    };
+    const receiptPath = await writeRotationReceipt(paths, newFp, receipt);
+
+    return Object.freeze({
+      schema: KEY_ROTATE_RESUME_SCHEMA,
+      resumed: true,
+      already_resolved: false,
+      active_fingerprint: newFp,
+      retired_fingerprint: oldFp,
+      transaction_state: "COMPLETE",
+      receipt_path: receiptPath,
+      boundary: buildBoundary(true),
+    });
+  } finally {
+    await lease.release();
+  }
+}
+
+// Heavier mid-rotation / journal checks stay OFF the hot path (loadPrivateKey /
+// loadPublicKey) so a leftover journal never DoS-blocks signing consumers.
+/**
+ * Read one archived generation's PUBLIC key by fingerprint.
+ *
+ * ISNAD-AUTHORITY-SUCCESSION-1A. The chain walk resolves a successor's key from
+ * the intent body, so an external verifier needs no filesystem. This exists for
+ * the LOCAL side only: the appender must resolve the authority that signed the
+ * chain's first entry in order to walk forward from it.
+ *
+ * It returns the archived bytes and nothing else. It establishes no ancestry —
+ * a generation existing on this disk is not evidence that it was ever the
+ * legitimate authority, which is precisely what the succession links prove.
+ * Returns null when absent or unreadable; callers must fail closed on null.
+ */
+export async function loadGenerationPublicKey(demaHome, fingerprint) {
+  if (typeof fingerprint !== "string" || !/^[0-9a-f]{16,128}$/.test(fingerprint)) {
+    return null;
+  }
+  try {
+    const ap = activeKeyPaths(demaHome);
+    const pem = await readExact(join(ap.generationsDir, fingerprint, "public.pem"));
+    return isSpkiPublicKeyPem(pem) ? pem : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function loadGuardedActiveKey(demaHome) {
+  const paths = keyPaths(demaHome);
+  const journal = await readExactIfPresent(
+    join(paths.dir, "rotation-journal.json"),
+  );
+  if (journal) {
+    try {
+      const j = JSON.parse(journal);
+      if (j.state === "ACTIVATING" || j.state === "PREPARED") {
+        return Object.freeze({
+          blocked: true,
+          reason: "rotation_in_progress",
+        });
+      }
+    } catch {
+      return Object.freeze({
+        blocked: true,
+        reason: "rotation_journal_corrupt",
+      });
+    }
+  }
+  const pair = await loadActiveKeyPair(demaHome);
+  if (!pair.ok) {
+    return Object.freeze({
+      blocked: true,
+      reason:
+        pair.error === "no_active_pointer" ? "no_active_key" : pair.error,
+    });
+  }
+  return Object.freeze({
+    blocked: false,
+    private_key_pem: pair.private_key_pem,
+    public_key_pem: pair.public_key_pem,
+    fingerprint: pair.fingerprint,
+  });
 }
 
 // Legacy single-key loaders. Pointer-aware: when a generation store exists it
