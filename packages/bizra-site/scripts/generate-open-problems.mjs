@@ -23,6 +23,9 @@ const UNSOLVED = [
   ["PLANNED", "planned", "Declared intent. No implementation."],
 ];
 
+const UNSOLVED_SET = new Set(UNSOLVED.map(([token]) => token));
+const SOLVED_SET = new Set(["MEASURED", "LOCAL_ONLY", "MEASURED_LOCAL"]);
+
 function cells(line) {
   return line
     .split("|")
@@ -30,29 +33,27 @@ function cells(line) {
     .map((c) => c.trim());
 }
 
-// Status is read from an EXPLICIT leading marker, never inferred from anywhere
-// in the row. First implementation matched any status token in the joined row
-// and mislabelled a solved row ("[MEASURED] Absence Steward…") as BLOCKED
-// because the word appeared later in its own evidence text. Deterministic
-// perimeter: read the marker, or classify nothing.
-const MARKER = /^\[([A-Z_]+)\]\s*/;
+// Status is read ONLY from an explicit leading status marker on the surface
+// cell (authoritative) or, if absent, on the evidence cell:
+//   [STATUS] …   or   **STATUS** …
+// Never from prose elsewhere in the row — historical "was BLOCKED" / enum
+// VALUE "REVIEW_BLOCKED" text must not publish a solved capability as an open
+// door.
+const BRACKET_MARKER = /^\[([A-Z_]+)\]\s*/;
+const BOLD_MARKER = /^\*\*([A-Z_]+)\*\*\s*/;
+const LEADING_MARKER = /^(\[([A-Z_]+)\]|\*\*([A-Z_]+)\*\*)\s*/;
 
-// Bounded status token: not preceded or followed by [A-Z_]. Without the
-// boundaries, the enum VALUE "REVIEW_BLOCKED" inside a row's own evidence
-// matched as the STATUS "BLOCKED" and flipped a solved row into the quest
-// board. Same class as the unanchored secret pattern fixed in this repo.
-const TOKEN = /(?<![A-Z_])(BLOCKED|DESIGNED_NOT_LIVE|PREVIEW_ONLY|PLANNED|MEASURED|LOCAL_ONLY)(?![A-Z_])/;
-const UNSOLVED_TOKEN = /(?<![A-Z_])(BLOCKED|DESIGNED_NOT_LIVE|PREVIEW_ONLY|PLANNED)(?![A-Z_])/;
+function leadingStatus(cell) {
+  const raw = String(cell || "");
+  const bracket = raw.match(BRACKET_MARKER);
+  if (bracket) return bracket[1];
+  const bold = raw.match(BOLD_MARKER);
+  if (bold) return bold[1];
+  return null;
+}
 
 function statusOf(surfaceCell, evidenceCell) {
-  // 1. An explicit leading marker on the surface is authoritative.
-  const m = surfaceCell.match(MARKER);
-  if (m) return m[1];
-  // 2. Otherwise the first BOUNDED status token in the evidence cell.
-  const e = evidenceCell.match(TOKEN);
-  if (e) return e[1];
-  // 3. Unknown. Skipped, never guessed.
-  return null;
+  return leadingStatus(surfaceCell) ?? leadingStatus(evidenceCell);
 }
 
 const md = await readFile(LEDGER, "utf8");
@@ -66,50 +67,32 @@ for (const line of rows) {
   if (c.length < 2) continue;
   if (/^-+$/.test(c[0]) || c[0] === "Surface") continue;
 
-  // Prefer the structured statusOf helper: an evidence-cell [MEASURED] marker
-  // outranks PREVIEW_ONLY / DESIGNED prose in the surface text (e.g. First Light
-  // front door is MEASURED as a preview surface — it is not an open quest).
-  const resolved = statusOf(c[0], c[1]);
-  if (
-    resolved === "MEASURED" ||
-    resolved === "LOCAL_ONLY" ||
-    resolved === "MEASURED_LOCAL"
-  ) {
-    continue; // solved → not a quest
-  }
+  const status = statusOf(c[0], c[1]);
+  if (!status || SOLVED_SET.has(status) || !UNSOLVED_SET.has(status)) continue;
 
-  const marked = c[0].match(MARKER)?.[1] ?? null;
-  if (marked === "MEASURED") continue;
-
-  // Unsolved token, bounded, anywhere in the row. Boundaries stop the enum
-  // VALUE "REVIEW_BLOCKED" from reading as the STATUS "BLOCKED".
-  const found = line.match(UNSOLVED_TOKEN);
-  const status =
-    resolved && UNSOLVED.some(([token]) => token === resolved)
-      ? resolved
-      : marked && marked !== "MEASURED"
-        ? marked
-        : (found?.[1] ?? null);
-  if (!status) continue;                       // unknown → never guessed
   const hit = UNSOLVED.find(([token]) => token === status);
   if (!hit) continue;
 
   const surface = c[0]
-    .replace(MARKER, "")
-    .replace(/\*\*[A-Z_]+\*\*\s*/g, "")   // bold inline status marker
+    .replace(LEADING_MARKER, "")
     .replace(/`/g, "")
     .trim();
   if (!surface || seen.has(surface)) continue;
   seen.add(surface);
 
-  const evidence = (c[1] || "").replace(MARKER, "").replace(/`/g, "").trim();
+  // Keep the complete evidence string in the inventory. UI may truncate for
+  // display; the generator must not discard ledger proof text.
+  const evidence = (c[1] || "")
+    .replace(LEADING_MARKER, "")
+    .replace(/`/g, "")
+    .trim();
 
   problems.push({
     surface,
     status,
     kind: hit[1],
     meaning: hit[2],
-    evidence: evidence.length > 180 ? `${evidence.slice(0, 177)}…` : evidence,
+    evidence,
   });
 }
 

@@ -62,10 +62,10 @@ export function SealedDoors() {
           <div>
             <div className="flex items-center gap-3">
               <IqraMark size="md" />
-              <TruthLabel state="MEASURED" />
+              <TruthLabel state="PREVIEW_ONLY" />
             </div>
             <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.24em] text-[#c89b3c]">
-              Habitat fixture · generated from CURRENT_LIMITS
+              Habitat fixture · derived from CURRENT_LIMITS · not a MEASURED runtime
             </p>
             <h2 className="mt-3 max-w-[16ch] text-[clamp(2.2rem,6vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-[#ebe6db]">
               Sealed doors, not hidden promises.

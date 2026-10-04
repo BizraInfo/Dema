@@ -43,14 +43,28 @@ export function IqraMark({
     lg: 'text-[clamp(3.5rem,12vw,8rem)]',
   }
 
+  // Decorative (quiet) marks stay aria-hidden. Named marks use role="img" so
+  // the Read gloss is exposed — aria-label on a plain span is not reliable.
+  if (quiet) {
+    return (
+      <span
+        dir="rtl"
+        lang="ar"
+        aria-hidden="true"
+        className={`${sizes[size]} font-[KufiLocal,'Noto_Kufi_Arabic',serif] font-bold leading-none text-[#c89b3c]/35 ${className}`}
+      >
+        اقرأ
+      </span>
+    )
+  }
+
   return (
     <span
+      role="img"
       dir="rtl"
       lang="ar"
       aria-label="اقرأ — Read"
-      className={`${sizes[size]} font-[KufiLocal,'Noto_Kufi_Arabic',serif] font-bold leading-none ${
-        quiet ? 'text-[#c89b3c]/35' : 'text-[#d9bb6a]'
-      } ${className}`}
+      className={`${sizes[size]} font-[KufiLocal,'Noto_Kufi_Arabic',serif] font-bold leading-none text-[#d9bb6a] ${className}`}
     >
       اقرأ
     </span>

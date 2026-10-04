@@ -28,9 +28,10 @@ const cliPath = fileURLToPath(
 async function runCli(args) {
   const root = await mkdtemp(join(tmpdir(), "dema-onboard-"));
   const env = { ...process.env, DEMA_HOME: root, NO_COLOR: "1" };
-  const result = await execFileAsync("node", [cliPath, ...args], { env }).catch(
-    (e) => e,
-  );
+  // Nonzero exit must fail the test — catching and returning stdout alone can
+  // green a broken command that still printed the expected stage text.
+  const result = await execFileAsync("node", [cliPath, ...args], { env });
+  assert.equal(result.stderr ?? "", "", `unexpected stderr for dema ${args.join(" ")}`);
   return result.stdout ?? "";
 }
 
