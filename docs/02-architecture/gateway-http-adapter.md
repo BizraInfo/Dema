@@ -25,12 +25,13 @@ The shellout backend is unchanged. Existing tests that exercise it pass without 
 | `GET /chain`          | Receipt chain head + length    | `chain.{head, length, latestTimestamp}`, `proof.latestChainHash`, `missionExecuted` |
 | `GET /poi/summary`    | POI ledger summary             | `poi.{totalEntries, totalImpact, avgImpact}`                                        |
 | `GET /resources/list` | Registered resources           | `resources.count`                                                                   |
+| `GET /principal/status` | Chain-sealed principal observation | validated `principal` projection only                                              |
 
 The adapter NEVER calls `POST` and NEVER calls any of `/missions/*`, `/principal/activate`, `/resources/register`, `/missions/organize`. It is a pure read surface.
 
 ## Composed schema
 
-`bizra.dema.node0_status.v0.2` — superset of the shellout adapter's `bizra.dema.status.v0.1`. Preserves the v0.1 fields that `formatStatus` and `isReadyForBoundedDiagnostic` consume (so existing CLI surface keeps working), additively extended with `gateway`, `chain`, `poi`, `resources`, `unknown`, `truth_label`, and `source`.
+`bizra.dema.node0_status.v0.2` — superset of the shellout adapter's `bizra.dema.status.v0.1`. Preserves the v0.1 fields that `formatStatus` and `isReadyForBoundedDiagnostic` consume (so existing CLI surface keeps working), additively extended with `gateway`, `chain`, `poi`, `resources`, `principal`, `unknown`, `truth_label`, and `source`.
 
 Example output against a healthy, empty-chain gateway:
 
@@ -47,7 +48,10 @@ Example output against a healthy, empty-chain gateway:
   "daemonStatus": "n/a-via-gateway",
   "missionExecuted": false,
   "runtimePulse": { "fired": false },
-  "findings": ["Gateway live, first mission/receipt has not been issued."],
+  "findings": [
+    "Gateway principal identity is not verified (ABSENT).",
+    "Gateway live, first mission/receipt has not been issued."
+  ],
   "model": {
     "connected": false,
     "loadedModelIds": [],
@@ -73,6 +77,15 @@ Example output against a healthy, empty-chain gateway:
   },
   "poi": { "totalEntries": 0, "totalImpact": 0, "avgImpact": 0 },
   "resources": { "count": 0 },
+  "principal": {
+    "observation": "MEASURED",
+    "contractValid": true,
+    "verdict": "ABSENT",
+    "identityVerified": false,
+    "bridgeEligible": false,
+    "authorityDelta": 0,
+    "_truth": "MEASURED_PARTIAL"
+  },
   "unknown": [
     "lm_studio_status_not_exposed_by_gateway",
     "pyO3_bridge_status_not_exposed_by_gateway",
@@ -85,17 +98,18 @@ Example output against a healthy, empty-chain gateway:
 ## Honesty rules (all enforced by tests)
 
 1. **`ready` is always `false`.** The gateway being live is necessary but not sufficient. Only the first ARTIFACT-011 issuance — driven by the governed bounded-diagnostic runtime path that lives upstream of Dema (per repo invariant #1) — flips Node0 into SPROUT readiness. The adapter cannot fabricate this flip.
-2. **`truth_label`** is `MEASURED_PARTIAL` when the gateway is reachable and identifies as `bizra-cognition-gateway-v1`, otherwise `DEGRADED`.
-3. **`unknown[]`** lists every conceptually load-bearing field the gateway does NOT expose. The adapter never invents values for these (no fake `lm_studio.connected`, no guessed `human`).
-4. **Network failure never throws.** A connection error returns a `DEGRADED` status with one finding per failed endpoint, so `dema status` still produces an honest report when the gateway is down.
-5. **`rust_bus.ready` is inferred from gateway uptime** (the gateway runs on top of the rust bus; if the gateway responds, the rust bus is up). This single inference is recorded in `unknown[]` so future readers can audit the assumption.
-6. **No POSTs, ever.** The adapter is pure read. Tests assert this by recording every method/path the fake gateway sees.
+2. **`principal` is a discriminator, not a self-certification.** Dema accepts a principal observation only when the exact v0.3 schema and runtime domain match, the policy states `EXPLICIT_GO` with `authorityDelta: 0`, every GET effect is false, and the verdict, evidence, and sealed identity fields agree. A malformed or effectful response is `INVALID_GATEWAY_CONTRACT` and degrades the whole status.
+3. **`truth_label`** is `MEASURED_PARTIAL` when the gateway is reachable and the principal contract is valid or unavailable; it remains partial even for `VERIFIED`, because identity observation is not Node0 closure. An unreachable gateway or invalid principal contract is `DEGRADED`.
+4. **`unknown[]`** lists every conceptually load-bearing field the gateway does NOT expose. A missing `/principal/status` endpoint leaves identity unavailable rather than invented (no fake `lm_studio.connected`, no guessed `human`).
+5. **Network failure never throws.** A connection error returns a `DEGRADED` status with one finding per failed endpoint, so `dema status` still produces an honest report when the gateway is down.
+6. **`rust_bus.ready` is inferred from gateway uptime** (the gateway runs on top of the rust bus; if the gateway responds, the rust bus is up). This single inference is recorded in `unknown[]` so future readers can audit the assumption.
+7. **No POSTs, ever.** The adapter is pure read. Tests assert this by recording every method/path the fake gateway sees.
 
 ## Verification
 
 ```bash
 # Local-only (no network), against a fake gateway in-process:
-npm test                                # 9 new tests in tests/gateway-http-adapter.test.js
+node --test tests/gateway-http-adapter.test.js
 
 # Against the real gateway (must already be running on 127.0.0.1:7421):
 DEMA_NODE0_ADAPTER=gateway-http \
@@ -116,6 +130,6 @@ DEMA_NODE0_ADAPTER=gateway-http node apps/cli/src/index.js status    # gateway-h
 
 - `packages/node-adapter/src/gateway-http-adapter.js` — implementation
 - `packages/node-adapter/src/node0-adapter.js` — dispatch in `createNode0Adapter()`
-- `tests/gateway-http-adapter.test.js` — 9 tests (composition, ready-never-true, /health failure, domain mismatch, network failure, UNKNOWN fields, dispatch precedence, shellout fallback, purity)
+- `tests/gateway-http-adapter.test.js` — read-only composition, principal contract, refusal, and shellout compatibility tests
 - `docs/06-adr/ADR-003-core-truth-lives-in-bizra-omega.md` — binding decision this implements
 - `.env.example` — declares `DEMA_NODE0_ADAPTER` and `DEMA_GATEWAY_URL`

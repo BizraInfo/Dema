@@ -1,0 +1,194 @@
+{
+  "schema": "bizra.startup_kit.manifest.v0.1",
+  "package": "BIZRA_DEMA_Startup_Kit_v0.1",
+  "status": "PROPOSED_DESIGN_SPECIFICATION",
+  "authority_delta": 0,
+  "generated_utc": "2026-08-25T05:11:21.608035+00:00",
+  "files": [
+    {
+      "path": "BLUEPRINTS/ADK_BOUNDARY.md",
+      "sha256": "7f01804bb47ecca85ae29f73e872535bfb2efd0f12cba2a22d4938a0e78807dc",
+      "bytes": 667
+    },
+    {
+      "path": "BLUEPRINTS/HARNESS_BLUEPRINT.md",
+      "sha256": "b60c932ace82d5fded10b0afc957baf40992745748bac8e410762303eca416df",
+      "bytes": 1372
+    },
+    {
+      "path": "BLUEPRINTS/WRAPPER_BLUEPRINT.md",
+      "sha256": "c0ae945eaa58a4b7a3759aacfc8df0dd3ca7e9d8fca1e3240ae8629b595f2094",
+      "bytes": 889
+    },
+    {
+      "path": "BOOT/boot_sequence.md",
+      "sha256": "6a3acf21f5ae094c074df6f297dd04a8ca744054309bd6da9a05377315b26e3d",
+      "bytes": 557
+    },
+    {
+      "path": "BOOT/first_boot_checklist.md",
+      "sha256": "7d56c9a263875cc1bc5b435ffd5d6bc324a3e1022ce17eb37c1fca8ad87d4048",
+      "bytes": 589
+    },
+    {
+      "path": "BOOT/startup.yaml",
+      "sha256": "233c1d270315f6ad8914795e36114e7fa4e001b712ee5b44979063ddc2d1e245",
+      "bytes": 436
+    },
+    {
+      "path": "KNOWLEDGE/00_ROOT_AND_IDENTITY.md",
+      "sha256": "f771cf8e6626de02b78822fab6c7e09b36d85b96d8244f7257aefd2c1b6c7913",
+      "bytes": 421
+    },
+    {
+      "path": "KNOWLEDGE/01_MISSION_AND_AUTHORITY.md",
+      "sha256": "e1f88e1107bd6dafbc5fa918addc0e2802a4b85e9ecc0b744c26ff10228b19cc",
+      "bytes": 393
+    },
+    {
+      "path": "KNOWLEDGE/02_EVIDENCE_AND_TRUTH.md",
+      "sha256": "ef3f96fce00502df996e19367ddc359729ea4e6853045798d14cf287d8a91993",
+      "bytes": 506
+    },
+    {
+      "path": "KNOWLEDGE/03_ROLES_DEMA_PAT_SAT_FATE_URP.md",
+      "sha256": "fd0ee6882622b1728f34194a9420037dacfa97f70c32acd8ac501b79b51c8112",
+      "bytes": 557
+    },
+    {
+      "path": "KNOWLEDGE/04_HARNESS.md",
+      "sha256": "078e1c135279ddeb97ca9a6f1d1d1805c9ae702df90e66ba194ed256c7f8f5a6",
+      "bytes": 493
+    },
+    {
+      "path": "KNOWLEDGE/05_WRAPPERS.md",
+      "sha256": "b8be00032856e1c3983eabf44eec6824a626d2eb4de5afbe82acba7dd595cee0",
+      "bytes": 410
+    },
+    {
+      "path": "KNOWLEDGE/06_MEMORY_AND_CONTEXT.md",
+      "sha256": "072bdf73931f390f1b30410bf346359860ee1293fa561162266b1af0242589e1",
+      "bytes": 463
+    },
+    {
+      "path": "KNOWLEDGE/07_RECOVERY.md",
+      "sha256": "a77f53df251d10cc283072c49098fff909ce3c37baf5bd6c527df0b961e8f879",
+      "bytes": 437
+    },
+    {
+      "path": "KNOWLEDGE/08_LEARNING_RL_RSI.md",
+      "sha256": "8229dc48073c61e33e0e61761cef66d0a2af73434a8e15c92bafefe95fa6fa6b",
+      "bytes": 533
+    },
+    {
+      "path": "KNOWLEDGE/09_SNR_GEMS.md",
+      "sha256": "1549abe0f988458cccb9e97762a069f14835b8bcac6fa15fbd75a98f8a4f46e6",
+      "bytes": 589
+    },
+    {
+      "path": "KNOWLEDGE/10_FAILURE_AND_VERIFICATION.md",
+      "sha256": "82008e5e25a314c69db369b1bc3ea286a238526f786c9459f86baaad9db98e83",
+      "bytes": 402
+    },
+    {
+      "path": "KNOWLEDGE/11_GLOSSARY.md",
+      "sha256": "780728e00a22f9c9f2c9fa6f467e9ef701b55e073b1474e06eb4bee03485ca13",
+      "bytes": 820
+    },
+    {
+      "path": "KNOWLEDGE/INDEX.yaml",
+      "sha256": "570dbeb465fb0d74d37a1087929e4d1216b56e96ad017ba5fbaae75f79ebb6d3",
+      "bytes": 637
+    },
+    {
+      "path": "PACKAGE_TREE.txt",
+      "sha256": "c9661d9e10cbc199d4e64a298221b2d68b1af8a2444815bb2f18cd185bb7d601",
+      "bytes": 992
+    },
+    {
+      "path": "POLICIES/claim_scope.yaml",
+      "sha256": "c8917009d1d7aefe5ae10fa52b0486842c1af35db0b75b54c56783698455f3fe",
+      "bytes": 380
+    },
+    {
+      "path": "POLICIES/fate_policy.yaml",
+      "sha256": "70c6995e60d2cdc176af1effd2077d3fe97e6a44bc83c8ea88b5de8db8251ac6",
+      "bytes": 665
+    },
+    {
+      "path": "POLICIES/harness_transparency.yaml",
+      "sha256": "337c56201d0d8a18eebf15a6bc780c86b7de53ea20bfc82ca2b1e2e6068380a1",
+      "bytes": 450
+    },
+    {
+      "path": "POLICIES/learning_policy.yaml",
+      "sha256": "38e2bb8edc7fcd4ffacd6e5c253ac9f4af51dc0b9ea4e38abbca09edd72c33a3",
+      "bytes": 396
+    },
+    {
+      "path": "POLICIES/wrapper_policy.yaml",
+      "sha256": "62b982219e71d094fe9c14223d1d128329b414339ccaf8bedd82dfeb573a7ec5",
+      "bytes": 438
+    },
+    {
+      "path": "README.md",
+      "sha256": "6f25b7edd763d20af2c0d149fb543c185b124f1ed9996f4e419ec74b8134268b",
+      "bytes": 937
+    },
+    {
+      "path": "SCHEMAS/experience_event.schema.json",
+      "sha256": "f51989bcc1ffb08d48dc3f9dd2b63ea6eccd57206eb21e71eed131d0535282a6",
+      "bytes": 822
+    },
+    {
+      "path": "SCHEMAS/mission_envelope.schema.json",
+      "sha256": "55045bd1e9a515b5ed442ebee5ac6a2a4cf81c0df318ef7d393417feb3316751",
+      "bytes": 1443
+    },
+    {
+      "path": "SCHEMAS/model_execution_envelope.schema.json",
+      "sha256": "fa817a98258a7fb11549002d8d6e4c7b0e2bcb08c5d30a5526541f4f1550052a",
+      "bytes": 1655
+    },
+    {
+      "path": "SCHEMAS/receipt.schema.json",
+      "sha256": "28ae23f09fb3df3e90db8d266c83a715fb49e92b696211d92fc54575a8799818",
+      "bytes": 969
+    },
+    {
+      "path": "SCHEMAS/verdict.schema.json",
+      "sha256": "f19c6d25de6fddaae0cf9036be557f9f36846f5f7c79bfbb64eaed0addea75bb",
+      "bytes": 798
+    },
+    {
+      "path": "SCHEMAS/wrapper_manifest.schema.json",
+      "sha256": "b802a276bfd730b67500a14d6d614beda66132f171c9c09852090bf3cc914fef",
+      "bytes": 1055
+    },
+    {
+      "path": "SYSTEM_INSTRUCTION.md",
+      "sha256": "c297d311e75b5f5ffad67a8cd883ed4b3b087593ec9f04d609570663e5f37542",
+      "bytes": 6266
+    },
+    {
+      "path": "TEMPLATES/failure_report.md",
+      "sha256": "c5a4d0ec68d84c6f5c35d3ddf10b55cc3420e63bd7108e558c1ae13e642641b9",
+      "bytes": 391
+    },
+    {
+      "path": "TEMPLATES/responsibility.yaml",
+      "sha256": "6882773e6619c7a1cb5811ebe6dc65b2ae11b73e1d04526509090ae8f1d08224",
+      "bytes": 298
+    },
+    {
+      "path": "TEMPLATES/skill.md",
+      "sha256": "d8784f283f472b2cdb4d20d46e63ef86d0d6872be2dd953b4eb956a843a75b06",
+      "bytes": 383
+    },
+    {
+      "path": "TEMPLATES/wrapper_manifest.yaml",
+      "sha256": "6db48d3c6885fe44905738da4c74a5f600afb65fe5c3e8aa6fe05646e7e2fbb2",
+      "bytes": 299
+    }
+  ]
+}

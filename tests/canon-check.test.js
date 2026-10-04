@@ -102,6 +102,38 @@ test("canon check rejects forbidden topology drift", async () => {
   ]);
 });
 
+test("canon check rejects Node0-local SAT wording that collapses URP custody", async () => {
+  const root = await mkdtemp(join(tmpdir(), "dema-canon-sat-custody-check-"));
+  await mkdir(join(root, "docs", "canon"), { recursive: true });
+  await mkdir(join(root, "docs", "02-architecture"), { recursive: true });
+  await cp(
+    "docs/canon/canon_registry.json",
+    join(root, "docs", "canon", "canon_registry.json"),
+  );
+  await writeFile(
+    join(root, "docs", "canon", "BIZRA_TOPOLOGY_CANON.md"),
+    "Each human node mints PAT-7 locally on their device and SAT-5 into one shared Universal Resource Pool. PAT serves the human. SAT serves the system. The membrane sits between them.\n",
+  );
+  await writeFile(
+    join(root, "docs", "02-architecture", "node0-urp-ecosystem-transition.md"),
+    "# Transition\n",
+  );
+  await writeFile(
+    join(root, "docs", "02-architecture", "pat-builder-sat-validator.md"),
+    "# PAT/SAT\n",
+  );
+  await writeFile(
+    join(root, "docs", "bad.md"),
+    "## Node0-local SAT vs future shared-URP SAT\n",
+  );
+
+  const report = buildCanonCheckReport({ root });
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.forbidden_topology_findings, [
+    { file: "docs/bad.md", line: 1, phrase: "Node0-local SAT" },
+  ]);
+});
+
 test("canon check rejects forbidden topology drift in source files", async () => {
   const root = await mkdtemp(join(tmpdir(), "dema-canon-source-check-"));
   await mkdir(join(root, "docs", "canon"), { recursive: true });

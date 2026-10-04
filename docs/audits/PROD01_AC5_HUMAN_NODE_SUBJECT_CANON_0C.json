@@ -1,0 +1,209 @@
+{
+    "schema": "bizra.dema.prod01_ac5_human_node_subject_canon.v0.3",
+    "truth_label": "PROD01_AC5_HUMAN_NODE_SUBJECT_CANON_0C",
+    "mode": "READ_ONLY_CANON_PROMOTION",
+    "frozen_at": "2026-08-26T23:10:30Z",
+    "authorization": "GO 0A lineage covers 0C as read-only canon promotion \u2014 no principal activation/key/runtime/PROD-02",
+    "predecessors": {
+        "0A_path": "docs/audits/PROD01_AC5_IDENTITY_SUBJECT_CONTRACT_0A.json",
+        "0A_hash": "49ea88d7670352e5b8fb1a0a2f9abe29ad381dffb13430c90aab2e8e01a20ce7",
+        "0B_path": "docs/audits/PROD01_AC5_IDENTITY_SEMANTICS_RECONCILIATION_0B.json",
+        "0B_hash": "4a1d18dc9b2f4323c882f37945ede251f572f147915c21ec8d7c810c1fe06041",
+        "0B_human_node_id_derivation": "UNKNOWN correctly fail-closed \u2014 operator is presentation-level"
+    },
+    "mission": "Promote existing node-ordinal law into versioned human-scoped canonical subject identifier without altering historical device UID semantics",
+    "current_blocker_restated": "No explicit machine-level human_node_id presently exists; existing node_uid is device-derived per operator|ordinal|device",
+    "dominant_uncertainty_resolved": "Can identity-bearing node_ordinal law serve as canonical immutable human subject root? YES \u2014 ordinal is registry-assigned, non-duplicable, non-reassignable, companion-shared, identity-bearing canon",
+    "evidence_hashes": {
+        "topology_canon_path": "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+        "topology_canon_sha256": "70b15aeed848c633a4f29c51bf73c918dafd0f56474799d56d1b73fc9c4106ff",
+        "topology_canon_frozen": "25 March 2026",
+        "topology_ordinal_rules": "Node0 is origin; Node1 is first invited human not second device; ordinal assigned never guessed; no duplicate; no skipped without authorization; no hidden ordinal; companion shares ordinal distinct uid (BIZRA_TOPOLOGY_CANON.md:130-154)",
+        "canon_registry_path": "docs/canon/canon_registry.json",
+        "canon_registry_sha256": "0d549cdb96bcaa67dfd946c7dda0c5c2e43e875a22f65d3432eedd310b9bf171",
+        "canon_registry_node_ordinal_law": {
+            "version": "v0.1",
+            "uid_seed_format": "operator|ordinal|device",
+            "introduced_at_commit": "9a8389e",
+            "rule_identity_independent_of_presentation": "explicit"
+        },
+        "profile_impl_path": "packages/core/src/profiles.js",
+        "profile_impl_sha256": "6ba51591d1a88983ba6794d51583cbc2bb498912187da34dee1d960e683e04bf",
+        "principal_contract_path": "/data/bizra/node0-closure/worktrees/prod01-mission-recovery-1a-8f744/bizra-omega/bizra-cognition-gateway/src/contracts.rs",
+        "principal_contract_sha256": "53730ea8f0b7f9ba237c417419e9cba99a8808e90fccbd2906b319356b849934",
+        "principal_status_schema": "bizra.node0.principal_identity_status.v0.2"
+    },
+    "canonical_promotion": {
+        "principle": "Identifier \u2260 Authenticator \u2014 human_node_id answers WHICH sovereign subject; principal key+seal answers WHICH cryptographic principal is authorized to represent that subject",
+        "human_node_subject_definition": {
+            "field": "human_node_id",
+            "version": "v1",
+            "canonical_form": "bizra:human-node:v1:<ordinal>",
+            "example_Node0": "bizra:human-node:v1:0",
+            "derivation": "pure function of canonical node_ordinal only \u2014 no operator, no device_label, no language, no runtime, no key",
+            "derivation_pseudocode": "human_node_id = `bizra:human-node:v1:${node_ordinal}`",
+            "alternative_if_fixed_width_required": "sha256('bizra.human-node.v1|'+ordinal) hex \u2014 not preferred; hashing public ordinal adds no security, authentication is via principal key",
+            "preferred": "first form bizra:human-node:v1:0 unless protocol requires fixed-width bytes",
+            "immutability": "ordinal is identity-bearing registry coordinate; cannot be duplicated/skipped/reassigned without canon authorization",
+            "stability": "SAME across all companion devices, restarts, language changes, key rotations"
+        },
+        "device_identity": {
+            "field": "device_id",
+            "current_realization": "legacy node_uid bytes bizra_node_<ordinal>_<12hex> sha256(operator|ordinal|device_label)",
+            "relationship": "belongs_to = human_node_id",
+            "companion_of": "preserved as primary device linkage (points to primary device_id, not human_node_id, for v0.1 compat); new explicit binding is device.human_node_id"
+        },
+        "principal_binding": {
+            "subject_kind": "HUMAN_NODE",
+            "subject_id": "bizra:human-node:v1:0",
+            "note": "principal authenticates/controls human_node_id; key rotation does NOT change human_node_id"
+        }
+    },
+    "schema_evolution_additive": {
+        "preserve_v0_1": {
+            "fields": [
+                "node_ordinal",
+                "node_uid",
+                "device_label",
+                "companion_of"
+            ],
+            "semantics": "v0.1 frozen \u2014 node_uid remains device-derived",
+            "historical_hashes": "untouched, never reinterpreted"
+        },
+        "add_v0_2": {
+            "human_node": {
+                "human_node_id": "bizra:human-node:v1:0"
+            },
+            "device": {
+                "device_id": "bizra_node_0_... (legacy node_uid bytes)",
+                "legacy_node_uid": "bizra_node_0_... (alias for compat)",
+                "human_node_id": "bizra:human-node:v1:0"
+            },
+            "principal": {
+                "subject_kind": "HUMAN_NODE",
+                "subject_id": "bizra:human-node:v1:0"
+            },
+            "example_Node0_primary": {
+                "node_ordinal": 0,
+                "human_node": {
+                    "human_node_id": "bizra:human-node:v1:0"
+                },
+                "device": {
+                    "device_id": "bizra_node_0_a1b2c3d4e5f6",
+                    "legacy_node_uid": "bizra_node_0_a1b2c3d4e5f6",
+                    "human_node_id": "bizra:human-node:v1:0",
+                    "device_label": null,
+                    "companion_of": null
+                },
+                "principal": {
+                    "subject_kind": "HUMAN_NODE",
+                    "subject_id": "bizra:human-node:v1:0"
+                }
+            },
+            "example_Node0_phone_companion": {
+                "node_ordinal": 0,
+                "human_node": {
+                    "human_node_id": "bizra:human-node:v1:0"
+                },
+                "device": {
+                    "device_id": "bizra_node_0_f6e5d4c3b2a1",
+                    "legacy_node_uid": "bizra_node_0_f6e5d4c3b2a1",
+                    "human_node_id": "bizra:human-node:v1:0",
+                    "device_label": "phone",
+                    "companion_of": "bizra_node_0_a1b2c3d4e5f6"
+                },
+                "principal": {
+                    "subject_kind": "HUMAN_NODE",
+                    "subject_id": "bizra:human-node:v1:0"
+                }
+            }
+        },
+        "three_clean_concepts": [
+            "DEMA PERSONA IDENTITY \u2014 who Dema speaks as \u2014 founding-root bound (dema-identity-root-canon.js PREVIEW_ONLY)",
+            "HUMAN NODE SUBJECT IDENTITY \u2014 which sovereign subject \u2014 node_ordinal/human_node_id",
+            "RUNTIME PRINCIPAL IDENTITY \u2014 which cryptographic principal is authorized to represent that subject \u2014 principal key+seal+activation receipt 0x61"
+        ]
+    },
+    "expected_red_refused": [
+        "human_node_id depends on operator/display name \u2014 REFUSED (not in derivation)",
+        "human_node_id depends on device_label \u2014 REFUSED (device_id does, human does not)",
+        "human_node_id depends on language \u2014 REFUSED (not in derivation)",
+        "human_node_id depends on PID/runtime_instance \u2014 REFUSED (ephemeral)",
+        "human_node_id depends on current cryptographic key \u2014 REFUSED (authenticator separate from identifier)",
+        "changing device creates different human_node_id \u2014 REFUSED (same human_node_id across companions)",
+        "old node_uid silently changes semantics \u2014 REFUSED (preserved as legacy)",
+        "companion device becomes Node1 \u2014 REFUSED (Node1 requires ordinal 1 registry assignment, different human)",
+        "principal subject kind is not HUMAN_NODE \u2014 REFUSED",
+        "principal subject_id differs from human_node_id \u2014 REFUSED"
+    ],
+    "expected_green": {
+        "node_ordinal": 0,
+        "canonical_human_subject": "HUMAN_NODE / node_ordinal 0",
+        "human_node_id": "bizra:human-node:v1:0",
+        "same_across_companions": true,
+        "legacy_node_uid_retained": true,
+        "principal_subject_kind": "HUMAN_NODE",
+        "principal_subject_id": "bizra:human-node:v1:0",
+        "historical_hashes_valid": true
+    },
+    "truth_label_correction": {
+        "avoid": "HUMAN_IDENTITY_VERIFIED (implies biological/legal personhood)",
+        "use": "HUMAN_NODE_SUBJECT_CONTINUITY_VERIFIED",
+        "meaning": "live Node0 runtime principal is cryptographically bound to canonically declared Human-Node-0 subject, and that binding survives runtime replacement/restart"
+    },
+    "authority_delta_gate": {
+        "distinguish": [
+            "identity_state_delta",
+            "capability_authority_delta",
+            "effective_authority_delta"
+        ],
+        "expected_ac5": {
+            "identity_state_delta": "ABSENT -> VERIFIED (HUMAN_NODE_SUBJECT_CONTINUITY_VERIFIED)",
+            "capability_definition_delta": 0
+        },
+        "effective_authority_test": "Did identity activation itself enable any previously inaccessible consequential effect capability? If YES, report effective_authority_delta>0 and halt \u2014 do not hide with authority_delta=0 policy table unchanged. If NO, authority_delta=0 defensible. Verifier must answer explicitly.",
+        "current_c6b_evidence": "operationEffects all false, authorityDelta 0, so no capability enabled yet"
+    },
+    "unlock": {
+        "READY_FOR_AC5_PACKAGE": true,
+        "READY_FOR_HUMAN_GO": false,
+        "explanation": "0C gives human subject a canonical machine identifier; AC5 package can now bind principal->HUMAN_NODE:0 with correct subject. Still need package qualification + adversarial verification + exact content-bound GO before activation."
+    },
+    "next_sequence": [
+        "0A WHO must key represent? HUMAN_NODE",
+        "0B separate human/device/runtime/principal semantics",
+        "0C give HUMAN NODE canonical machine identifier bizra:human-node:v1:0",
+        "AC5 PACKAGE bind principal -> HUMAN_NODE:0 (subject_kind HUMAN_NODE, subject_id human_node_id, device_id preserved)",
+        "fresh content-bound GO (package_hash + human_node_id + anchor_hash + fingerprint + ceiling)",
+        "HUMAN TYPES EXACT PHRASE",
+        "activate / restart / re-derive same human principal",
+        "AC5 PASS HUMAN_NODE_SUBJECT_CONTINUITY_VERIFIED",
+        "PROD-01 closure re-derivation"
+    ],
+    "ac5_restart_invariants": {
+        "MUST_REMAIN_SAME": [
+            "human_node_id=bizra:human-node:v1:0",
+            "device_id same physical device in this test",
+            "principal_id",
+            "principal_subject_id=bizra:human-node:v1:0",
+            "public_key_fingerprint same key epoch",
+            "principal activation/seal binding"
+        ],
+        "MUST_MAY_CHANGE": [
+            "pid MUST change after killed process",
+            "runtime_instance_id MAY change"
+        ],
+        "note": "fingerprint SAME is AC5 restart invariant, not eternal \u2014 rotation is separate lifecycle, human_node_id unchanged"
+    },
+    "forbidden_in_0C": [
+        "principal activation",
+        "key generation",
+        "runtime start",
+        "PROD-02",
+        "PAT/SAT runtime",
+        "reinterpretation of historical node_uid bytes",
+        "changing existing receipts",
+        "authority increase"
+    ],
+    "authority_delta": 0
+}

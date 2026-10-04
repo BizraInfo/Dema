@@ -1,0 +1,18 @@
+schema: bizra.dema.memory_index.v0.1
+always_load:
+  - 00_IDENTITY_ANCHORS.md
+  - 01_CURRENT_MISSION.md
+  - 02_AUTHORITY_AND_CONSENT.md
+  - 03_CURRENT_PROOF_STATE.md
+on_demand:
+  episodic: [04_EPISODIC_LEDGER.md]
+  semantic: [05_SEMANTIC_KNOWLEDGE.md]
+  procedural: [06_PROCEDURAL_KNOWHOW.md]
+  open_loops: [07_OPEN_LOOPS.md]
+  decision_graph: [08_DECISION_GRAPH.md]
+  golden_set: [09_GOLDEN_SET.md]
+rules:
+  - memory_is_not_authority
+  - current_evidence_outranks_cached_memory
+  - contradictions_are_preserved
+  - authoritative_state_is_not_silently_compacted

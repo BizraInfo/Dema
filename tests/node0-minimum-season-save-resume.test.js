@@ -36,6 +36,7 @@ import {
 } from "../packages/core/src/node0-minimum-season-save-resume.js";
 import {
   saveSeasonState,
+  DEFAULT_STORE_OPS,
   seasonStatus,
   resumeSeason,
   loadSeasonHead,
@@ -139,6 +140,66 @@ test("S2: second save binds to sequence 1, old state stays immutable, HEAD point
   assert.equal(head.state_hash, second.state_hash);
   assert.notEqual(head.state_hash, first.state_hash);
   await rm(home, { recursive: true, force: true });
+});
+
+test("HEAD publication failure preserves the previous authoritative HEAD and reports the durable orphan", async () => {
+  const home = await newHome();
+  try {
+    const first = await saveSeasonState({ demaHome: home, state: baseState() });
+    const headBefore = await readFile(_internal.headPath(home, "season-test"), "utf8");
+    const ops = {
+      ...DEFAULT_STORE_OPS,
+      replaceFileAtomic: async () => {
+        const error = new Error("simulated HEAD publication failure");
+        error.code = "EIO";
+        throw error;
+      },
+    };
+
+    const failed = await saveSeasonState({
+      demaHome: home,
+      ops,
+      state: baseState({
+        mission_phase: "QUALIFICATION",
+        saved_at: "2026-08-05T13:30:00Z",
+      }),
+    });
+
+    assert.equal(failed.ok, false);
+    assert.equal(failed.reason, "head_publication_failed:EIO");
+    assert.equal(failed.previous_head_intact, true);
+    assert.match(failed.orphan_state_hash, /^sha256:[0-9a-f]{64}$/);
+    assert.equal(await readFile(_internal.headPath(home, "season-test"), "utf8"), headBefore);
+    const authoritative = await loadSeasonHead({ demaHome: home, seasonId: "season-test" });
+    assert.equal(authoritative.ok, true, JSON.stringify(authoritative));
+    assert.equal(authoritative.state.state_hash, first.state_hash);
+    assert.equal(authoritative.state.state_sequence, 1);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
+
+test("post-save re-read failure refuses a corrupted HEAD instead of claiming a committed transition", async () => {
+  const home = await newHome();
+  try {
+    const ops = {
+      ...DEFAULT_STORE_OPS,
+      replaceFileAtomic: async (dir, finalPath, bytes) => {
+        await DEFAULT_STORE_OPS.replaceFileAtomic(dir, finalPath, bytes);
+        await writeFile(finalPath, "{", "utf8");
+      },
+    };
+    const result = await saveSeasonState({
+      demaHome: home,
+      ops,
+      state: baseState(),
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, "post_save_verification_failed");
+    assert.equal(result.detail, "malformed_head");
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
 });
 
 // ── S3 ──────────────────────────────────────────────────────────────────────

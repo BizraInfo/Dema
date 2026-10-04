@@ -9,10 +9,7 @@ import {
   LayoutGrid,
   ListChecks,
   Map as MapIcon,
-  Menu,
-  Users,
   Cpu,
-  Sparkles,
   ShieldAlert,
   Wand2,
 } from "lucide-react";
@@ -23,7 +20,6 @@ import type { SceneId } from "@/lib/game/types";
 const MODE_TABS: { id: SceneId; label: string; icon: React.ElementType }[] = [
   { id: "corridor", label: "Corridor", icon: Compass },
   { id: "world", label: "World", icon: MapIcon },
-  { id: "ecosystem", label: "Ecosystem", icon: Sparkles },
   { id: "melae", label: "MELAE", icon: Wand2 },
   { id: "diagnostics", label: "Doxology", icon: ShieldAlert },
   { id: "nodeStatus", label: "Node", icon: Cpu },
@@ -31,10 +27,8 @@ const MODE_TABS: { id: SceneId; label: string; icon: React.ElementType }[] = [
 ];
 
 export function GameHeader({
-  onToggleAgents,
   onToggleMissions,
 }: {
-  onToggleAgents: () => void;
   onToggleMissions: () => void;
 }) {
   const resources = useGame((s) => s.resources);
@@ -126,13 +120,6 @@ export function GameHeader({
 
         {/* mobile toggles */}
         <div className="flex items-center gap-1 lg:hidden shrink-0">
-          <button
-            onClick={onToggleAgents}
-            className="grid size-8 place-items-center rounded-md border border-border/60 bg-card/40 text-muted-foreground hover:text-foreground"
-            aria-label="Agents"
-          >
-            <Users size={15} />
-          </button>
           <button
             onClick={onToggleMissions}
             className="grid size-8 place-items-center rounded-md border border-border/60 bg-card/40 text-muted-foreground hover:text-foreground"

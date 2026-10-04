@@ -31,18 +31,93 @@ export async function verifyRootCanon() {
     return fail("ROOT_CANON_NOT_IMMUTABLE");
   }
 
-  if (manifest.authority?.founder_can_modify !== false) {
-    return fail("ROOT_CANON_FOUNDER_MUTABILITY_FORBIDDEN");
+  // --- Authority contract: all six predicates must hold exactly ---
+  const REQUIRED_AUTHORITY = {
+    founder_can_modify: false,
+    network_vote_can_modify: false,
+    agent_can_modify: false,
+    model_can_modify: false,
+    validator_can_modify: false,
+    fork_if_modified: true,
+  };
+
+  if (!manifest.authority || typeof manifest.authority !== "object") {
+    return fail("ROOT_CANON_AUTHORITY_MISSING");
   }
 
-  if (manifest.authority?.network_vote_can_modify !== false) {
-    return fail("ROOT_CANON_NETWORK_MUTABILITY_FORBIDDEN");
+  for (const [key, requiredValue] of Object.entries(REQUIRED_AUTHORITY)) {
+    if (manifest.authority[key] !== requiredValue) {
+      return fail(`ROOT_CANON_AUTHORITY_PREDICATE_INVALID_${key.toUpperCase()}`, {
+        expected: { [key]: requiredValue },
+        actual: { [key]: manifest.authority[key] },
+      });
+    }
   }
 
+  // Reject unexpected authority members (no silent expansion)
+  const knownKeys = new Set(Object.keys(REQUIRED_AUTHORITY));
+  for (const key of Object.keys(manifest.authority)) {
+    if (!knownKeys.has(key)) {
+      return fail("ROOT_CANON_AUTHORITY_UNEXPECTED_MEMBER", {
+        unexpected: key,
+      });
+    }
+  }
+
+  // --- Root identity set: exactly three canonical roots, exact ID/path pairing ---
   if (!Array.isArray(manifest.roots) || manifest.roots.length !== 3) {
     return fail("ROOT_CANON_REQUIRES_EXACTLY_THREE_ROOTS");
   }
 
+  const EXPECTED_ROOTS = Object.freeze([
+    { id: "ROOT_1_THE_MESSAGE", path: "docs/root-canon/source/themassage.pdf" },
+    { id: "ROOT_2_THE_SEED", path: "docs/root-canon/source/bizra.pdf" },
+    {
+      id: "ROOT_3_THE_THIRD_FACT",
+      path: "docs/root-canon/source/BIZRA_Third_Fact_v0_1_FINAL.pdf",
+    },
+  ]);
+
+  const observedIds = manifest.roots.map((r) => r.id);
+  const observedPaths = manifest.roots.map((r) => r.path);
+
+  // No duplicate IDs
+  if (new Set(observedIds).size !== observedIds.length) {
+    return fail("ROOT_CANON_DUPLICATE_ROOT_ID");
+  }
+
+  // No duplicate paths
+  if (new Set(observedPaths).size !== observedPaths.length) {
+    return fail("ROOT_CANON_DUPLICATE_ROOT_PATH");
+  }
+
+  // No extra roots
+  for (const id of observedIds) {
+    if (!EXPECTED_ROOTS.find((e) => e.id === id)) {
+      return fail("ROOT_CANON_UNEXPECTED_ROOT", { unexpected: id });
+    }
+  }
+
+  // No missing roots
+  for (const expected of EXPECTED_ROOTS) {
+    if (!observedIds.includes(expected.id)) {
+      return fail("ROOT_CANON_MISSING_ROOT", { missing: expected.id });
+    }
+  }
+
+  // ID/path pairs must match canonical pairing (no swaps)
+  for (const root of manifest.roots) {
+    const expected = EXPECTED_ROOTS.find((e) => e.id === root.id);
+    if (!expected || expected.path !== root.path) {
+      return fail("ROOT_CANON_ID_PATH_MISMATCH", {
+        id: root.id,
+        observed_path: root.path,
+        expected_path: expected?.path,
+      });
+    }
+  }
+
+  // --- Hash verification ---
   const results = [];
 
   for (const root of manifest.roots) {

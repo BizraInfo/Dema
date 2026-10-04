@@ -173,6 +173,10 @@
       "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
     },
     {
+      "phrase": "Node0-local SAT",
+      "allowed_files": []
+    },
+    {
       "phrase": "PAT connects directly to other nodes",
       "allowed_files": ["docs/canon/BIZRA_TOPOLOGY_CANON.md"]
     },

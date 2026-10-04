@@ -100,6 +100,19 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "MISSION_CONTRACT_STATE_0A",
   "MISSION_SUPERVISOR_0A",
   "MISSION_WORKER_ADAPTER_0A",
+  "DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_1A",
+  "OPENROUTER_ADMISSION_POLICY_COMPILER_1A",
+  "POT_CLAIM_SCOPE_0A",
+  "NODE0_SSE_ENVELOPE_STREAM_1A",
+  "BASELINE_VERIFIER_GATE_1A",
+  "DEMA_PRESENCE_1A",
+  "DRS_REALM_CONTRACTS_1A",
+  "DRS_PRESENCE_REDUCER_2A",
+  "DRS_FIXTURE_PUBLISHER_1A",
+  "NODE0_FATE_STAGED_EFFECT_1A",
+  "NODE0_SSE_REALM_COMPOSITION_1A",
+  "BIZRA_PROMPT_COMPILER_0A",
+  "DEMA_TRACE_DIAGNOSTIC_CONTRACT_1A",
 ]);
 
 const REQUIRED_BLOCKED_LIVE_SURFACES = Object.freeze([
@@ -2606,7 +2619,364 @@ function defaultCapabilityRows() {
         "unattended runtime",
       ],
     }),
-  ]);
+    capability({
+      capability_id: "DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_1A",
+      truth_label: "DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_MEASURED_REPO",
+      summary:
+        "Purely resolves an MR desired revision and verified observation snapshot into one deterministic effective route or explicit refusal, with zero authority and no invocation.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-master-registry-effective-config.js"],
+        test_paths: ["tests/dema-master-registry-effective-config.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-master-registry-effective-config-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim a persistent MR, live provider observation, provider invocation, operator mutation, daemon runtime, network use, token, wallet, consent consumption, receipt minting, or federation.",
+      what_this_proves:
+        "A supplied MR desired revision plus supplied verified observation resolves deterministically to one declared primary route or explicit REFUSED/UNKNOWN, with re-derivation, disabled fallback, no raw secret output, and authority_delta zero.",
+      what_this_does_not_prove:
+        "It does not prove MR persistence, a live provider observation, provider qualification, invocation, consent, runtime activation, operator execution, daemon runtime, network use, wallet access, receipt minting, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "OPENROUTER_ADMISSION_POLICY_COMPILER_1A",
+      truth_label: "OPENROUTER_ADMISSION_POLICY_COMPILER_MEASURED_REPO",
+      summary:
+        "Purely compiles an explicitly constrained OpenRouter external proposal route into a non-executable plan or explicit refusal, with zero authority and no network.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/openrouter-admission-policy-compiler.js"],
+        test_paths: ["tests/openrouter-admission-policy-compiler.test.js"],
+        review_gate_paths: [
+          "scripts/review/openrouter-admission-policy-compiler-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/OPENROUTER_ADMISSION_POLICY_COMPILER_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/OPENROUTER_ADMISSION_POLICY_COMPILER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim a live OpenRouter provider, model, account, credential, prompt, route observation, invocation, consent, runtime, external effect, receipt minting, or federation.",
+      what_this_proves:
+        "A supplied, explicitly constrained external OpenRouter proposal route deterministically compiles to a content-addressed non-executable request plan or explicit refusal. The pure compiler requires an exact model ID, proposal-only authority, external locality, a nonempty underlying-provider allowlist, disabled fallback, denied data collection, required zero-data-retention and router metadata; it refuses raw secrets, openrouter/free, malformed controls, and self-supplied consent, and independently detects a rehashed authority escalation.",
+      what_this_does_not_prove:
+        "It does not prove live OpenRouter availability, an actual provider/model route, account entitlement, credential validity, privacy-provider compliance, prompt processing, provider invocation, MR external-route selection, exact human consent, runtime activation, an effect, receipt minting, or federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "POT_CLAIM_SCOPE_0A",
+      truth_label: "POT_CLAIM_SCOPE_MEASURED_REPO",
+      summary:
+        "Pure four-scope Proof-of-Truth claim evaluator with fail-closed promotion semantics.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/pot-claim-scope.js"],
+        test_paths: ["tests/pot-claim-scope.test.js"],
+        review_gate_paths: [
+          "scripts/review/pot-claim-scope-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/POT_CLAIM_SCOPE_0A.md"],
+        documentation_paths: [
+          "docs/02-architecture/POT_CLAIM_SCOPE_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim a live provider/model route, mission, responsibility, Node0 closure, operator mutation, daemon runtime, network use, token, wallet, or federation.",
+      what_this_proves:
+        "Caller-supplied claim descriptors are evaluated against fixed COMPONENT, ROUTE, MISSION, or RESPONSIBILITY structural rules. Required causal bindings, freshness, recovery, and scope promotion requirements deterministically yield PASS, FAIL, or HOLD; a claim cannot weaken its rules or promote itself above its scope.",
+      what_this_does_not_prove:
+        "It does not independently authenticate any digest, signature, release, observation, provider/model route, runtime, mission, receipt, recovery result, burden measurement, or Node0 closure. It does not execute, mutate operator state, consume consent, start a daemon, use a network, access a wallet, or federate.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_SSE_ENVELOPE_STREAM_1A",
+      truth_label: "NODE0_SSE_ENVELOPE_STREAM_MEASURED_REPO",
+      summary:
+        "Pure hash-chained SSE event-envelope stream contract: ordered, gap-detecting, tamper-evident, exactly-once terminal — the verifiable wire law for the PROD-02 persistent transport.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-sse-envelope-stream.js"],
+        test_paths: ["tests/node0-sse-envelope-stream.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-sse-envelope-stream-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_SSE_ENVELOPE_STREAM_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_SSE_ENVELOPE_STREAM_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "That a received sequence of SSE event envelopes can be independently proven ORDERED (consecutive seq from 1), CHAINED (each envelope binds its predecessor's hash under the repo's single canonical byte contract, so any flipped byte is detected), COMPLETE (exactly one terminal event and nothing after it), and LIVENESS-HONEST (heartbeats advance sequence while carrying no application state) — from the envelopes alone, with no transport. It also proves the SSE wire serialization round-trips through a refusing parser without losing verifiability, so reconnecting consumers re-derive order+integrity instead of trusting the connection.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "BASELINE_VERIFIER_GATE_1A",
+      truth_label: "BASELINE_VERIFIER_GATE_MEASURED_REPO",
+      summary:
+        "Pure exact-consent preview verifier that emits one hash-chained SSE state event describing whether supplied proposal text contains its required phrase.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/baseline-verifier-gate.js"],
+        test_paths: ["tests/baseline-verifier-gate.test.js"],
+        review_gate_paths: ["scripts/review/baseline-verifier-gate-check.mjs"],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, consumed operator consent, daemon runtime, network use, token, wallet, or federation. The exact phrase is a preview input, not authority.",
+      what_this_proves:
+        "For supplied preview input, exact invocation consent gates the kernel and the resulting single SSE event re-derives under the existing envelope law. The five focused tests cover refusal, verified and unverified proposal events, and the all-false boundary.",
+      what_this_does_not_prove:
+        "It does not prove an operator consented to any real proposal, that a proposal is safe or true, or that any runtime, listener, network action, model, receipt, or Node0 mission ran.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_PRESENCE_1A",
+      truth_label: "DEMA_PRESENCE_MEASURED_REPO",
+      summary:
+        "Truthful DEMA avatar presence state machine: maps verified Node0 runtime events (receipt-bound) to avatar states; refuses unbound theatrical state; UNKNOWN state makes uncertainty visible.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-presence.js"],
+        test_paths: ["tests/dema-presence.test.js"],
+        review_gate_paths: [
+          "scripts/review/dema-presence-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DEMA_PRESENCE_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DEMA_PRESENCE_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "A pure, deterministic reducer maps receipt-bound Node0 runtime events to one of eight avatar presence states (IDLE/ACTIVE/NEEDS_HUMAN/VERIFYING/REFUSED/VERIFIED_DONE/RECOVERY/UNKNOWN). An event without a well-formed receipt hash is inadmissible; a sequence gap at the stream tail or an unrecognized event kind derives UNKNOWN — uncertainty is rendered, never papered over. The derived state is content-addressed and its verifier re-derives it from the events, so a claimed state the event stream does not justify is rejected.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DRS_REALM_CONTRACTS_1A",
+      truth_label: "DRS_REALM_CONTRACTS_MEASURED_REPO",
+      summary:
+        "Realm Shell IF-01 wire law: hello/resync/event schemas, source admission, sequence+digest chain, state evidence constraints, TTL freshness",
+      evidence: evidence({
+        source_paths: ["packages/core/src/drs-realm-contracts.js"],
+        test_paths: ["tests/drs-realm-contracts.test.js"],
+        review_gate_paths: [
+          "scripts/review/drs-realm-contracts-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DRS_REALM_CONTRACTS_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DRS_REALM_CONTRACTS_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The IF-01 wire law as a pure, deterministic kernel: hello/resync/event schemas; admission (authority_delta==0 required, uid/pid binding, revision + contracts_digest match, fail-closed executable-digest hook); snapshot-before-stream FSM; sequence contract with idempotent duplicate / DUPLICATE_CONTRADICTION / rollback / gap refusals; body-bound sha256-canonical-json-v1 event digest chain (tampered bodies refuse DIGEST_MISMATCH even mid-chain); state-specific evidence constraints (VERIFIED_DONE requires mission binding AND an evidence ref; VERIFYING requires a SAT_* code; RECOVERY a recovery-class code); TTL freshness classes with no-stale-success degradation. 42 conformance tests mirror ICD C01-C20 and golden scenarios G-01..G-05.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DRS_PRESENCE_REDUCER_2A",
+      truth_label: "DRS_PRESENCE_REDUCER_MEASURED_REPO",
+      summary:
+        "Realm Shell presence reducer v2: reduce IF-01-accepted RealmEvents into an 11-state projection snapshot and i18n-keyed RenderRequest with no-stale-success freshness",
+      evidence: evidence({
+        source_paths: ["packages/core/src/drs-presence-reducer.js"],
+        test_paths: ["tests/drs-presence-reducer.test.js"],
+        review_gate_paths: [
+          "scripts/review/drs-presence-reducer-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DRS_PRESENCE_REDUCER_2A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DRS_PRESENCE_REDUCER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The IF-02 projection derivation as a pure kernel over the frozen wire law: only transcripts that SURVIVE admission/sequence/digest-chain/evidence constraints can reduce to a render view; the 11-state ontology is imported (never duplicated) from DRS-REALM-CONTRACTS-1A; freshness classes and no-stale-success degradation are imported, not reimplemented; VERIFIED_DONE renders only with evidence refs carried from its event; WORKING renders only with mission binding; unavailable telemetry renders null, never zero; mission labels are newline-stripped and capped at 120 scalars; reason codes become i18n keys (`reason.<CODE>`), never prose; skin slots map 1:1 over all 11 states. A transcript refused by the wire law can only ever render UNKNOWN/OFFLINE — never a familiar state. 15 conformance tests including G-02 end-to-end.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DRS_FIXTURE_PUBLISHER_1A",
+      truth_label: "DRS_FIXTURE_PUBLISHER_MEASURED_REPO",
+      summary:
+        "Realm Shell simulated-feed harness: scenario transcript builders stamped simulated:true end-to-end, proving fixtures can never render as production truth",
+      evidence: evidence({
+        source_paths: ["packages/core/src/drs-fixture-publisher.js"],
+        test_paths: ["tests/drs-fixture-publisher.test.js"],
+        review_gate_paths: [
+          "scripts/review/drs-fixture-publisher-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/DRS_FIXTURE_PUBLISHER_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/DRS_FIXTURE_PUBLISHER_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The simulated-feed harness for the Realm Shell: five golden scenario builders (idle, mission_work, refusal, recovery, integrity_breach) emit wire-law-valid transcripts stamped simulated:true at the signing choke point (snapshot body + every event payload) with SIMULATED_FIXTURE reason codes; fixtures are bound to a DISTINCT fixture component id — binding to a production component id refuses at build; the propagation law is measured end-to-end: even a transcript that walks cleanly to VERIFIED_DONE renders simulated:true in the derived view (DRS-PRESENCE-REDUCER-2A ORs any contributing marker), so a fixture can never look like production truth; an integrity-breach fixture qualifies as EXPECTED refusal and stays marked. 13 tests.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_FATE_STAGED_EFFECT_1A",
+      truth_label: "NODE0_FATE_STAGED_EFFECT_MEASURED_REPO",
+      summary:
+        "G6 composition kernel: FATE exact-string consent gates a staged reversible effect with independent world observation and exactly-once crash recovery (effect_done_receipt_absent never re-executes)",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-fate-staged-effect.js"],
+        test_paths: ["tests/node0-fate-staged-effect.test.js"],
+        review_gate_paths: [
+          "scripts/review/node0-fate-staged-effect-check.mjs",
+        ],
+        receipt_paths: ["docs/receipts/NODE0_FATE_STAGED_EFFECT_1A.md"],
+        documentation_paths: [
+          "docs/02-architecture/NODE0_FATE_STAGED_EFFECT_v0_1.md",
+          "docs/TESTING.md",
+        ],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "G6 composition kernel: FATE (evaluateConsent exact byte match) gates a STAGED reversible rename executed via the measured node0-reversible-execute-gate, observed by re-deriving world digests from bytes (never from claims), and sealed as a COMMITTED receipt hash-linked in an append-only journal whose stage record binds the fate phrase INSIDE its hashed subject. THE proven law: the crash window effect->receipt is exactly-once — a rename preserves bytes so the stage carries a PREDICTABLE after-image; resume measures the world and either observes+commits WITHOUT re-executing (effect_done_record_absent / effect_done_receipt_absent), executes once (staged-not-effected), or halts RECOVERY_REQUIRED on ambiguous worlds. Observation contradiction fails closed (gate law refuses undo once live state diverges). 14 tests incl. three SIGKILL-window recoveries and idempotent double-resume.",
+      what_this_does_not_prove:
+        "It does not prove operator execution, daemon runtime, network use, wallet access, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_SSE_REALM_COMPOSITION_1A",
+      truth_label: "NODE0_REALM_SSE_COMPOSITION_MEASURED_REPO",
+      summary:
+        "SSE-to-Realm composition bridge: transport chain, frame law, wire law and presence projection proven as ONE pipeline with layer-tagged refusals",
+      evidence: evidence({
+        source_paths: ["packages/core/src/node0-sse-realm-composition.js"],
+        test_paths: ["tests/node0-sse-realm-composition.test.js"],
+        review_gate_paths: ["scripts/review/node0-sse-realm-composition-check.mjs"],
+        receipt_paths: ["docs/receipts/NODE0_SSE_REALM_COMPOSITION_1A.md"],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "That the three frozen laws COMPOSE: an SSE text document is parsed and chain-verified (seq from 1, hash-linked, one terminal), every state/error payload must pass the realm frame law by name (FRAME_OVERSIZE/FRAME_MALFORMED_UTF8), survivors walk the realm wire law through the presence reducer, and ANY layer refusal degrades the derived render to UNKNOWN — never a familiar state, never stale success; simulated markers survive the whole pipe so fixtures stay production-inadmissible end-to-end. 10 join-law tests.",
+      what_this_does_not_prove:
+        "It does not prove a server, socket or persistent connection exists; that bytes crossed a network; that the payload resists forged bodies with recomputed transport hashes (no independent anchor); or that Node0 is closed.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "BIZRA_PROMPT_COMPILER_0A",
+      truth_label: "BIZRA_PROMPT_COMPILER_MEASURED_REPO",
+      summary:
+        "Founder-language prompt compiler: dense invocations compile into typed phase-ordered mission contracts with no silently dropped tokens",
+      evidence: evidence({
+        source_paths: ["packages/core/src/bizra-prompt-compiler.js"],
+        test_paths: ["tests/bizra-prompt-compiler.test.js"],
+        review_gate_paths: ["scripts/review/bizra-prompt-compiler-check.mjs"],
+        receipt_paths: ["docs/receipts/BIZRA_PROMPT_COMPILER_0A.md"],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "That the founder's cognitive OS compiles deterministically: OPERATOR_TABLE binds each vocabulary term to ONE role (objective / reasoning_method / verification_gate / deliverable), ONE phase of the 12-step precedence chain (evidence_boundary -> perception -> compression -> amplification -> one_spearpoint), and an emits contract; unrecognized doctrine names surface as UNCOMPILED_TOKENS warnings with their own output section (no silent drop, no brittle refusal); structure-sensitive tamper probe proves meaning changes change the contract while whitespace does not. 5 tests + gate.",
+      what_this_does_not_prove:
+        "It does not execute the compiled mission, call any model, or prove compiled missions pass their gates — compilation is structure, not performance.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "DEMA_TRACE_DIAGNOSTIC_CONTRACT_1A",
+      truth_label: "DEMA_TRACE_DIAGNOSTIC_CONTRACT_PREVIEW_ONLY",
+      summary:
+        "Moat gate: four-rail promotion contract (provenance · consistency · disambiguation · corroboration) that makes every trace observable, testable, diagnosable and permits insight only after all four rails pass with scope/completeness/correlation limits explicit",
+      evidence: evidence({
+        source_paths: ["packages/core/src/dema-trace-diagnostic-contract.js"],
+        test_paths: ["tests/dema-trace-diagnostic-contract.test.js"],
+        review_gate_paths: ["scripts/review/dema-trace-diagnostic-contract-check.mjs"],
+        receipt_paths: ["docs/receipts/DEMA_TRACE_DIAGNOSTIC_CONTRACT_1A.md"],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, autonomous promotion, production diagnosability, daemon, network, token, wallet, or federation. Promotion is a preview classification; INSIGHT_AUTHORIZED is not ground truth and requires independent corroboration before any system change.",
+      what_this_proves:
+        "That trace-derived conclusions are classified by four explicit, independently re-derived rails: provenance requires scope/completeness/correlation_limit/source_ref/source_sha256/observed_at; consistency requires referential integrity and no duplicate ids; disambiguation requires ≥2 hypotheses (graph-of-thoughts); corroboration requires independent replay_performed+hash; only ALL FOUR true yields INSIGHT_AUTHORIZED, provenance failure yields BLOCKED (inadmissible), any other failure yields REMAIN_TRACE; semantic rederivation rejects tampered promotion or rails even with recomputed hash. 14 tests + gate.",
+      what_this_does_not_prove:
+        "It does not prove the promoted insight is true, that production traces were measured, that a system change is authorized, or that any autopoietic loop closed — it classifies admissibility and promotion eligibility, not truth or authority.",
+      forbidden_claims: [
+        "live execution",
+        "autonomous promotion",
+        "production diagnosis",
+        "unattended runtime",
+      ],
+    }),
+              ]);
 }
 
 function blockedLiveSurfaces() {
