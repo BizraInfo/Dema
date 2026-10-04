@@ -56,12 +56,15 @@ if (!SHA256_RE.test(sha256)) {
   fail(`refusing non-hex EXPECTED_SHA256 parsed from ${WORKFLOW}`);
 }
 
-// CI checkout with fetch-depth: 0 fetches origin refs. A fat local clone also
-// keeps abandoned local-only tips; gitleaks' default walk includes those and
-// reports leaks CI will never see. Pin the walk to origin remotes so the local
-// corpus matches CI's fetched-ref shape without scanning junk reflog objects.
+// CI checkout with fetch-depth: 0 fetches origin refs; gitleaks' default walk
+// there is effectively the remote corpus. A fat local clone also keeps abandoned
+// local-only tips that CI never has (measured: default walk → hundreds of false
+// leaks). Pin the walk to `HEAD --remotes=origin` so we cover:
+//   • unpushed local HEAD commits (the pre-push corpus this gate must see)
+//   • origin remote-tracking refs (CI's fetched-ref shape)
+// without scanning junk local-only tips.
 if (!detectArgs.some((a) => a === "--log-opts" || a.startsWith("--log-opts="))) {
-  detectArgs.push("--log-opts=--remotes=origin");
+  detectArgs.push("--log-opts=HEAD --remotes=origin");
 }
 
 const workflowUrl = urlTemplate.replace(/\$\{VERSION\}|\$VERSION/g, version);

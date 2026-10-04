@@ -43,8 +43,8 @@ cached tarball on every run, re-extracts the binary, and refuses to execute on
 mismatch. On other hosts it fail-closes on a PATH `gitleaks` at the exact CI-pinned
 version (CI only publishes a linux_x64 checksum). It also refuses to run on a
 shallow clone where a partial history would report a false clean, and pins
-`--log-opts=--remotes=origin` so a fat local clone matches CI's fetched-ref
-corpus instead of also walking abandoned local-only tips.
+`--log-opts=HEAD --remotes=origin` so a fat local clone covers unpushed HEAD
+plus CI's origin-ref corpus without walking abandoned local-only tips.
 
 It is **not** part of `npm run check`, which stays offline-capable. It *is* wired
 into `npm run pre-push:seal` as the `scan_secrets` gate, positioned immediately
