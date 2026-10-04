@@ -54,7 +54,7 @@ flowchart LR
     EF["EffectCap execution"]
     MINT["receipt issuance"]
   end
-  subgraph SYS["SAT-5 / URP — system-side"]
+  subgraph SYS["SAT-5 / URP — system-side · DESIGNED_NOT_LIVE"]
     VAL["validation after evidence<br/>or receipt handoff"]
   end
   OP -- reads --> ST
@@ -65,6 +65,8 @@ flowchart LR
   MINT -- mirror --> RC
   MINT -- handoff --> VAL
 ```
+
+> **DESIGNED_NOT_LIVE:** the SAT-5 / URP subgraph is a designed handoff shape, not a claim that a live shared-URP SAT pool is running in this repo.
 
 **Navigate:**
 [60-second version](#the-60-second-version) ·
