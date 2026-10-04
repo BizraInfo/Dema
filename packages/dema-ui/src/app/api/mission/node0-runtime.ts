@@ -28,7 +28,7 @@ function sha256File(path: string) {
 function rootCanonContext() {
   const rootsDir = process.env.BIZRA_NODE0_ROOTS_DIR || process.env.DEMA_ROOTS_DIR || DEFAULT_IDENTITY_ROOTS_DIR;
   try {
-    const root_files = IDENTITY_ROOT_PINS.map((pin) => ({
+    const root_files: Array<{ file: string; sha256: string }> = IDENTITY_ROOT_PINS.map((pin) => ({
       file: pin.file,
       sha256: sha256File(join(rootsDir, pin.file)),
     }));

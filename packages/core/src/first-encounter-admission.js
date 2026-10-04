@@ -150,6 +150,14 @@ function derivePhrase(scope) {
   return `READ ${scope.file_count} FILES IN ${scope.root_real_path}`;
 }
 
+/**
+ * @param {Object} options
+ * @param {string} options.root_label
+ * @param {string} options.root_real_path
+ * @param {ReturnType<typeof normalizeInventory>} options.inventory
+ * @param {string} options.mission_question
+ * @param {string|null} [options.manifest_hash]
+ */
 export function buildConsentContract({
   root_label,
   root_real_path,

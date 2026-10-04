@@ -105,6 +105,7 @@ function rejectedCanon(reason_code) {
 }
 
 // root_files: caller-measured [{ file, sha256 }] for the roots dir contents.
+/** @param {{ root_files?: Array<{ file: string, sha256: string }> }} [options] */
 export function buildDemaIdentityRootCanon({ root_files = [] } = {}) {
   const measured = Array.isArray(root_files) ? root_files : [];
   if (measured.length !== IDENTITY_ROOT_PINS.length) {
