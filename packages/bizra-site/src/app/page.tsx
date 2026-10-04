@@ -105,7 +105,7 @@ export default function Home() {
         <div className="mx-auto w-full max-w-[1080px] px-4 py-10 text-center sm:px-6">
           <div className="mb-6 flex flex-col items-center gap-3">
             <IqraMark size="md" />
-            <TruthLabel state="DECLARED" />
+            <TruthLabel state="DESIGNED_NOT_LIVE" />
             <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-[#707b8f]">
               The signature of the habitat · knowledge before assertion
             </p>
@@ -124,7 +124,7 @@ export default function Home() {
             </span>
           </div>
           <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.3em] text-[#7a8499]">
-            BIZRA vΩ.2.0 · APEX KERNEL · OMNI-SYNTHESIS · SEALED
+            BIZRA · habitat brand surface · DESIGNED_NOT_LIVE for federation claims
           </p>
         </div>
       </footer>

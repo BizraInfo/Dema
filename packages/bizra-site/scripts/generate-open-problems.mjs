@@ -66,13 +66,30 @@ for (const line of rows) {
   if (c.length < 2) continue;
   if (/^-+$/.test(c[0]) || c[0] === "Surface") continue;
 
+  // Prefer the structured statusOf helper: an evidence-cell [MEASURED] marker
+  // outranks PREVIEW_ONLY / DESIGNED prose in the surface text (e.g. First Light
+  // front door is MEASURED as a preview surface — it is not an open quest).
+  const resolved = statusOf(c[0], c[1]);
+  if (
+    resolved === "MEASURED" ||
+    resolved === "LOCAL_ONLY" ||
+    resolved === "MEASURED_LOCAL"
+  ) {
+    continue; // solved → not a quest
+  }
+
   const marked = c[0].match(MARKER)?.[1] ?? null;
-  if (marked === "MEASURED") continue;         // explicitly solved → not a quest
+  if (marked === "MEASURED") continue;
 
   // Unsolved token, bounded, anywhere in the row. Boundaries stop the enum
   // VALUE "REVIEW_BLOCKED" from reading as the STATUS "BLOCKED".
   const found = line.match(UNSOLVED_TOKEN);
-  const status = marked && marked !== "MEASURED" ? marked : found?.[1] ?? null;
+  const status =
+    resolved && UNSOLVED.some(([token]) => token === resolved)
+      ? resolved
+      : marked && marked !== "MEASURED"
+        ? marked
+        : (found?.[1] ?? null);
   if (!status) continue;                       // unknown → never guessed
   const hit = UNSOLVED.find(([token]) => token === status);
   if (!hit) continue;

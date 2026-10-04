@@ -43,6 +43,9 @@ export const FORBIDDEN_TOKENS = Object.freeze([
 // (acceptance #8). A declared entry that no longer matches is reported as
 // `stale_allowlist` (mirrors the env-hygiene sync discipline).
 export const IO_TIER_ALLOWLIST = Object.freeze({
+  // --- Acting tier: the I/O IS the proof surface (not a reader) ---
+  "l1-micro-loop.js":
+    "L1-MICRO-LOOP-1A (ADR-049 #5): fs IS the act — one rename plus checkpoint copy and phase/receipt writes, all under the caller's sandboxRoot. Confined by lease (scope·expiry·budget) checked before any mutation, by realpath-resolved scope so a symlink cannot escape the root, by refusal to target its own `.l1/` audit state, and by refusal to overwrite an occupied dst. No deletes, no recursion, no network, no child_process, no clock/random except injected `now`.",
   // --- Read-only operator/repo state readers (legitimate I/O tier) ---
   "system-snapshot.js":
     "reads ~/.dema receipts + repo files to compose a read-only status snapshot",
@@ -56,6 +59,8 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "reads ~/.dema receipts/checkpoint/timeline for the read-only live status view",
   "dema-realm-council.js":
     "reads ~/.dema state to render the read-only council view",
+  "founder-useful-system.js":
+    "candidate-only founder closure adapter: reads existing local DEMA sources and localhost model/runtime observations, and writes only the explicitly supplied campaign sandbox; staged effects are bounded by the existing FATE kernel and never touch installed DEMA_HOME or Node0 runtime",
   "first-encounter-scan.js":
     "metadata-only walk for the first-encounter admission gate; streams bytes to hash but retains none",
   "node0-library-safe-plan.js":
@@ -116,6 +121,18 @@ export const IO_TIER_ALLOWLIST = Object.freeze({
     "writes the local asset inventory under ~/.dema via atomic write+rename (persistence I/O by design)",
   "node0-space-index.js":
     "metadata-only Node0 filesystem census with optional exact-consent content hashing and DEMA_HOME checkpoint persistence (I/O tier by design)",
+  "node0-worker-handoff-adapter.js":
+    "NODE0-WORKER-HANDOFF-1A: two bounded reads and nothing else — one recorded handoff artefact under DEMA_HOME||~/.dema, and the classification kernel's own bytes to bind the artefact to the rules that judged it. Reader tier by design: `worker_is_replaceable` cannot be measured without killing a process, so the producer executes and THIS module only reads, which is what lets the review gate keep declaring execution_allowed:false honestly. No write, no spawn, no network, no clock; the pure kernel it judges with (node0-worker-handoff.js) imports nothing.",
+  "node0-transition-coverage-adapter.js":
+    "NODE0-TRANSITION-COVERAGE-1A: two bounded reads and nothing else \u2014 one recorded coverage artefact under DEMA_HOME||~/.dema, and the classification kernel's own bytes. Reader tier by design: the producer performs the source-wide re-derivation and THIS module only reads, which is what lets the review gate keep declaring execution_allowed:false while the ledger can still record a refutation. No write, no spawn, no network, no clock.",
+  "node0-recovery-adapter.js":
+    "NODE0-RECOVERY-OBSERVATION-1A: two bounded reads and nothing else \u2014 one recorded recovery artefact under DEMA_HOME||~/.dema, and the classification kernel's own bytes. Reader tier by design: `recovery_after_worker_exit` cannot be measured without a supervisor watching a real death, so the supervisor conducts behind the governed Node0 boundary, an independent observer re-derives, and THIS module only reads \u2014 which is what lets the review gate keep declaring execution_allowed:false honestly. No write, no spawn, no network, no clock.",
+  "node0-runtime-mission-adapter.js":
+    "NODE0-RUNTIME-MISSION-OBSERVATION-1A: two bounded reads and nothing else \u2014 one recorded runtime artefact under DEMA_HOME||~/.dema, and the classification kernel's own bytes to bind the artefact to the rules that judged it. Reader tier by design: `mission_is_primary_state` and `contract_is_immutable` cannot be measured without killing a process and reconstructing from disk, so the producer executes and THIS module only reads, which is what lets the review gate keep declaring execution_allowed:false honestly. No write, no spawn, no network, no clock; the pure kernel it judges with (node0-runtime-mission-observation.js) imports nothing.",
+  "node0-history-replay-adapter.js":
+    "NODE0-HISTORY-REPLAY-1A: two bounded reads and nothing else — one recorded replay artefact under DEMA_HOME||~/.dema, and the classification kernel's own bytes to bind the artefact to the rules that judged it. Reader tier by design: `full_history_replayable` cannot be answered without walking every season store on the machine off disk, so the producer reads and re-derives and THIS module only reads its verdict, which is what lets the review gate keep declaring execution_allowed:false honestly. No write, no spawn, no network, no clock; the pure kernel it judges with (node0-history-replay.js) imports only the shipped season verifiers.",
+  "node0-deployment-remote-write-adapter.js":
+    "NODE0-DEPLOYMENT-REMOTE-WRITE-1A: two bounded reads and nothing else \u2014 one recorded deployment artefact under DEMA_HOME||~/.dema, and the classification kernel's own bytes to bind the artefact to the rules that judged it. Reader tier by design and more strictly than its siblings: `remote_write` is a property of the DEPLOYMENT \u2014 listeners, sync/network mounts, writable state roots, root-file integrity, process authority \u2014 which no source scan can see, and which an observer inside a PID namespace measures WRONG rather than not at all. So the producer runs on the host where the numbers are true and THIS module only re-reads its verdict, refusing any artefact that records INCOMPLETE. That is what lets the review gate keep declaring execution_allowed:false honestly on the one row that governs whether an outside party can write into the node. No write, no spawn, no network, no clock; the pure kernel it judges with (node0-deployment-remote-write.js) imports nothing.",
   "master-craftsmanship-audit.js":
     "external-witness audit log; injected fs with a node:fs/promises fallback (persistence I/O by design; DI-pure when fs is injected)",
   "operator-profile.js":

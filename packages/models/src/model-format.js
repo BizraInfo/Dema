@@ -43,6 +43,16 @@ function appendLmStudio(lines, lmStudio) {
   appendModels(lines, lmStudio.models);
 }
 
+function appendLlamaCpp(lines, llamacpp) {
+  if (!llamacpp) return;
+  lines.push("");
+  lines.push(
+    `llama.cpp: ${llamacpp.reachable ? "reachable" : "unreachable"} (${llamacpp.model_count} models)`,
+  );
+  if (llamacpp.error) lines.push(`  error: ${llamacpp.error}`);
+  appendModels(lines, llamacpp.models);
+}
+
 function appendDownloads(lines, downloads, options = {}) {
   lines.push("");
   lines.push(
@@ -97,6 +107,7 @@ export function formatModelInventory(
 
   appendOllama(lines, inventory.providers.ollama);
   appendLmStudio(lines, inventory.providers.lm_studio);
+  appendLlamaCpp(lines, inventory.providers.llamacpp);
   appendDownloads(lines, inventory.providers.downloads, {
     includeAbsolutePaths,
   });

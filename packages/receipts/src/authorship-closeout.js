@@ -1,6 +1,9 @@
 import { findLatestAuthorshipReceipt } from "./authorship-latest.js";
 import { verifyAuthorshipReceiptFile } from "./authorship-verify.js";
-import { readFile } from "node:fs/promises";
+import {
+  AUTHORSHIP_TRUST_SNAPSHOT_SCHEMA,
+  loadAuthorshipTrustSnapshot,
+} from "./authorship-key-store.js";
 
 export const CLOSEOUT_SCHEMA = "bizra.dema.authorship_closeout.v0.1";
 
@@ -23,35 +26,51 @@ export async function buildAuthorshipCloseout(demaHome) {
       found: false,
       verified: false,
       truth_label: "NO_AUTHORSHIP_RECEIPTS",
-      boundary: BOUNDARY,
+      boundary: Object.freeze({
+        ...BOUNDARY,
+        external_trust_load_attempted: false,
+        public_trust_snapshot_loaded: false,
+      }),
     });
   }
 
-  const verification = await verifyAuthorshipReceiptFile(latest.path);
-
-  let receipt = null;
-  try {
-    receipt = JSON.parse(await readFile(latest.path, "utf8"));
-  } catch {
-    // verification already captured the error
-  }
+  const trustSnapshot = await loadAuthorshipTrustSnapshot(demaHome);
+  const verification = await verifyAuthorshipReceiptFile(
+    latest.path,
+    trustSnapshot,
+  );
 
   const truthLabel = verification.verified
-    ? "VERIFIED_LOCAL_AUTHORSHIP_RECEIPT"
-    : "FAILED_LOCAL_AUTHORSHIP_RECEIPT";
+    ? "VERIFIED_ACTIVE_SIGNER_AUTHORSHIP_RECEIPT"
+    : "FAILED_ACTIVE_SIGNER_AUTHORSHIP_RECEIPT";
 
   return Object.freeze({
     schema: CLOSEOUT_SCHEMA,
     found: true,
     verified: verification.verified,
     verdict: verification.verdict,
+    error: verification.error ?? null,
+    verification_scope: verification.verification_scope,
+    trust_state: verification.trust_state ?? "UNKNOWN",
     truth_label: truthLabel,
     receipt_path: latest.path,
     receipt_filename: latest.filename,
     artifact: verification.artifact ?? null,
     author: verification.author ?? null,
-    public_key_fingerprint: receipt?.author?.public_key_fingerprint ?? null,
-    boundary: BOUNDARY,
+    public_key_fingerprint: verification.claimed_fingerprint ?? null,
+    claimed_fingerprint: verification.claimed_fingerprint ?? null,
+    embedded_fingerprint: verification.embedded_fingerprint ?? null,
+    trusted_fingerprint: verification.trusted_fingerprint ?? null,
+    trust_loader_error:
+      trustSnapshot.schema === AUTHORSHIP_TRUST_SNAPSHOT_SCHEMA
+        ? null
+        : (trustSnapshot.error ?? "load_failed"),
+    boundary: Object.freeze({
+      ...BOUNDARY,
+      external_trust_load_attempted: true,
+      public_trust_snapshot_loaded:
+        trustSnapshot.schema === AUTHORSHIP_TRUST_SNAPSHOT_SCHEMA,
+    }),
   });
 }
 

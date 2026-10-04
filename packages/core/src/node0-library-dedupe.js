@@ -35,11 +35,21 @@ class DedupeError extends Error {
   }
 }
 
-/** Strip trailing slashes so `/q/` + `/a/x` never becomes `/q//a/x`. Root `/` stays `/`. */
+/**
+ * Strip trailing slashes so `/q/` + `/a/x` never becomes `/q//a/x`. Root `/` stays `/`.
+ *
+ * Deliberately not `replace(/\/+$/, "")`: that is a polynomial-ReDoS shape
+ * (CodeQL js/polynomial-redos) because the engine retries `\/+$` from every start
+ * position, costing O(n^2) on a path that is a long run of slashes. These paths
+ * come from the scanned filesystem, i.e. uncontrolled input. Scanning backwards
+ * and slicing once is O(n) with no backtracking.
+ */
 function normalizeAbsDir(p) {
   if (typeof p !== "string" || !p.startsWith("/")) return p;
   if (p === "/") return "/";
-  return p.replace(/\/+$/, "");
+  let end = p.length;
+  while (end > 0 && p.charCodeAt(end - 1) === 47 /* "/" */) end -= 1;
+  return p.slice(0, end);
 }
 
 /**

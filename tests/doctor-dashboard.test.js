@@ -3,7 +3,10 @@ import { test } from "node:test";
 import {
   evaluatePredicates,
   formatDoctorDashboard,
+  doctorVerdict,
+  doctorState,
 } from "../packages/core/src/doctor-dashboard.js";
+import { displayWidth } from "../packages/core/src/display-width.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -267,4 +270,252 @@ test("evaluatePredicates: JSON output schema tag present", () => {
   );
   assert.equal(json.schema, "bizra.dema.doctor_dashboard.v0.1");
   assert.ok(Array.isArray(json.predicates));
+});
+
+// ── DOCTOR-PREVIEW-RESTING-STATE-1A ──────────────────────────────────────────
+//
+// TASK-036 made doctor tell the truth; it still renders that truth in the
+// visual language of failure. On a fresh clone with no runtime bridged,
+// `activationGate: BLOCKED` / `ready: false` / `consoleReady: false` are the
+// *correct resting state* — the fix prose already says so — yet they print as
+// three red ❌ under a red "Verdict: blocked" and exit 1. The first thing an
+// evaluator sees is a wall of red on a healthy install.
+//
+// The softening is gated on one structured signal, fail-closed exactly like
+// gatewayProbe: only an explicit `adapter.available === false` (the
+// legacy-shellout-unavailable payload, i.e. nothing bridged at all) earns
+// "expected". A bridged runtime reporting the same false values is a REAL
+// failure and must stay red — otherwise this feature launders every outage.
+
+// Nothing bridged: `createNode0Adapter()` with no env returns exactly this.
+function unbridgedStatus() {
+  return {
+    ...defaultFailStatus(),
+    source: "legacy-shellout-unavailable",
+    adapter: { mode: "legacy-shellout", available: false },
+  };
+}
+
+// Same false readiness values, but a runtime IS bridged and reporting them.
+function bridgedFailingStatus() {
+  return {
+    ...defaultFailStatus(),
+    source: "legacy-shellout",
+    adapter: { mode: "legacy-shellout", available: true },
+    gateway: { reachable: false },
+  };
+}
+
+const byKey = (status, key) =>
+  evaluatePredicates(status).find((p) => p.key === key);
+
+for (const key of ["activationGate", "ready", "consoleReady"]) {
+  test(`evaluatePredicates: unbridged → ${key} is expected, not fail`, () => {
+    assert.equal(byKey(unbridgedStatus(), key).status, "expected");
+  });
+}
+
+test("evaluatePredicates: unbridged → zero fail predicates", () => {
+  const preds = evaluatePredicates(unbridgedStatus());
+  assert.deepEqual(
+    preds.filter((p) => p.status === "fail").map((p) => p.key),
+    [],
+  );
+});
+
+test("evaluatePredicates: expected predicates carry a note, never a Fix", () => {
+  for (const p of evaluatePredicates(unbridgedStatus())) {
+    if (p.status !== "expected") continue;
+    assert.equal(p.fix, undefined, `${p.key} must not carry a fix`);
+    assert.ok(
+      typeof p.note === "string" && p.note.length > 0,
+      `${p.key} must explain why this is expected`,
+    );
+  }
+});
+
+// THE REGRESSION GUARD. If this ever goes green-by-softening, a real outage
+// prints as "healthy" and the evaluator trusts a broken node.
+for (const key of ["activationGate", "ready", "consoleReady"]) {
+  test(`evaluatePredicates: BRIDGED runtime reporting bad ${key} stays fail`, () => {
+    const p = byKey(bridgedFailingStatus(), key);
+    assert.equal(p.status, "fail", `${key} softened while a runtime was bridged`);
+    assert.ok(p.fix, `${key} must keep its fix when genuinely failing`);
+  });
+}
+
+// Fail-closed on the signal itself: gateway-http payloads carry no `adapter`
+// field at all. Absent ≠ false. Only an explicit false may soften.
+test("evaluatePredicates: absent adapter field does not earn expected", () => {
+  const preds = evaluatePredicates(defaultFailStatus());
+  assert.ok(
+    preds.some((p) => p.status === "fail"),
+    "undefined adapter.available must not be read as unbridged",
+  );
+  assert.ok(!preds.some((p) => p.status === "expected"));
+});
+
+test("evaluatePredicates: adapter.available true → no expected predicates", () => {
+  assert.ok(
+    !evaluatePredicates(bridgedFailingStatus()).some(
+      (p) => p.status === "expected",
+    ),
+  );
+});
+
+test("formatDoctorDashboard: unbridged verdict is preview-only, not blocked", () => {
+  const output = formatDoctorDashboard(evaluatePredicates(unbridgedStatus()), {
+    color: false,
+  });
+  const verdict = output.split("\n").find((l) => l.startsWith("Verdict:"));
+  assert.match(verdict, /preview-only/);
+  assert.doesNotMatch(verdict, /blocked/);
+});
+
+test("formatDoctorDashboard: unbridged prints no ❌ and no 'failed'", () => {
+  const output = formatDoctorDashboard(evaluatePredicates(unbridgedStatus()), {
+    color: false,
+  });
+  assert.ok(!output.includes("❌"), "healthy preview install must show no ❌");
+  assert.ok(!output.includes("failed"), "nothing failed on a fresh install");
+});
+
+test("formatDoctorDashboard: unbridged names how to move the gate", () => {
+  const output = formatDoctorDashboard(evaluatePredicates(unbridgedStatus()), {
+    color: false,
+  });
+  assert.match(output, /DEMA_NODE0_ADAPTER|DEMA_GATEWAY_URL/);
+});
+
+test("formatDoctorDashboard: bridged failure still prints ❌ and blocked", () => {
+  const output = formatDoctorDashboard(
+    evaluatePredicates(bridgedFailingStatus()),
+    { color: false },
+  );
+  assert.ok(output.includes("❌"), "a real outage must stay visibly red");
+  assert.match(output, /Verdict: blocked/);
+});
+
+// ── DOCTOR-PREVIEW-RESTING-STATE-1B · machine-truth correction ───────────────
+//
+// 1A softened the DISPLAY and then also flipped the default EXIT CODE to 0 for
+// an unbridged install. That crossed a boundary it had no mandate to cross: the
+// exit code is the machine channel, and it answers "is this node operational?"
+// For an unbridged node the answer is no. Returning 0 lets any script wrapping
+// `dema doctor` conclude a node with no runtime, no readiness and a BLOCKED
+// activation gate is healthy — the exact false GREEN this repo exists to stop.
+//
+// The two consumers are split instead of collapsed:
+//   humans read stdout   → calm, accurate, no ❌ wall for an expected state
+//   machines read $?     → conservative, nonzero until actually operational
+// A caller that specifically wants to validate the preview shell asks for it
+// with --preview and gets 0 when the preview environment is intact.
+//
+// Also closes the warn-only disagreement this suite proved empirically:
+// verdict said "blocked" while the process exited 0.
+
+function bridgedWarnOnlyStatus() {
+  return {
+    ready: true,
+    consoleReady: true,
+    activationGate: "EXPLICIT_GO_REQUIRED",
+    daemonStatus: "stopped",
+    findings: [],
+    gateway: { reachable: false }, // measured unreachable → warn
+  };
+}
+
+test("doctorState: unbridged is preview-valid but NOT operational", () => {
+  const st = doctorState(evaluatePredicates(unbridgedStatus()));
+  assert.equal(st.operational, false, "no runtime bridged is not operational");
+  assert.equal(st.preview_environment_valid, true);
+  assert.equal(st.repair_required, false, "nothing is broken");
+  assert.equal(st.reason, "runtime_not_bridged");
+});
+
+test("doctorState: all-ok bridged node is operational", () => {
+  const st = doctorState(evaluatePredicates(defaultOkStatus()));
+  assert.equal(st.operational, true);
+  assert.equal(st.repair_required, false);
+});
+
+test("doctorState: bridged failure requires repair and is not operational", () => {
+  const st = doctorState(evaluatePredicates(bridgedFailingStatus()));
+  assert.equal(st.operational, false);
+  assert.equal(st.repair_required, true);
+});
+
+test("doctorState: warn-only is not operational (verdict and exit must agree)", () => {
+  const st = doctorState(evaluatePredicates(bridgedWarnOnlyStatus()));
+  assert.equal(st.operational, false, "a warning must not read as operational");
+  assert.equal(st.repair_required, false, "a warning is not a repair");
+});
+
+// THE INVARIANT that keeps the two channels from ever drifting again.
+test("doctorState: operational is true exactly when verdict is ready and consent-gated", () => {
+  for (const s of [
+    unbridgedStatus(),
+    defaultOkStatus(),
+    bridgedFailingStatus(),
+    bridgedWarnOnlyStatus(),
+    defaultFailStatus(),
+  ]) {
+    const preds = evaluatePredicates(s);
+    assert.equal(
+      doctorState(preds).operational,
+      doctorVerdict(preds) === "ready and consent-gated",
+      "verdict/exit channels disagree",
+    );
+  }
+});
+
+test("doctorVerdict: unbridged verdict never contains the word healthy", () => {
+  const v = doctorVerdict(evaluatePredicates(unbridgedStatus()));
+  assert.doesNotMatch(v, /healthy/, "an unbridged node has earned no health claim");
+  assert.doesNotMatch(v, /ready and consent-gated/);
+  assert.match(v, /preview-only/);
+});
+
+test("formatDoctorDashboard: unbridged still prints no ❌ and states nothing is broken", () => {
+  const output = formatDoctorDashboard(evaluatePredicates(unbridgedStatus()), {
+    color: false,
+  });
+  assert.ok(!output.includes("❌"), "expected state must not render as failure");
+  assert.match(output, /Nothing is broken/i);
+  assert.match(output, /--preview/, "must name the flag that exits 0");
+});
+
+// REGRESSION — Arabic column alignment (transports the real defect).
+//
+// The pre-fix bug: formatDoctorDashboard padded with `.length`, which counts
+// Arabic non-spacing marks as if they occupied columns. A vocalised label was
+// therefore padded SHORT by exactly its mark count, shifting the value column
+// left and ragging the whole dashboard.
+//
+// This test deliberately uses a tashkeel-bearing label. A mark-free label
+// cannot fail here — it would test the control, not the attack. Every label
+// shipped today happens to be mark-free, which is why the defect was latent
+// and why the design handoff's vocalised vocabulary would have exposed it.
+test("Arabic labels with tashkeel align on rendered columns, not code units", () => {
+  const output = formatDoctorDashboard(
+    [
+      // .length 11 / renders 7 — the 4-mark case measured from the handoff.
+      { label: "المُقَرْنَص", value: "BLOCKED", status: "expected" },
+      // .length 8 / renders 8 — mark-free, so it sets the column on true width.
+      { label: "الجاهزية", value: "false", status: "expected" },
+    ],
+    { color: false, language_code: "ar" },
+  );
+
+  const valueColumn = (needle) => {
+    const line = output.split("\n").find((l) => l.includes(needle));
+    assert.ok(line, `expected a row containing ${needle}`);
+    return displayWidth(line.slice(0, line.indexOf(needle)));
+  };
+
+  assert.equal(
+    valueColumn("BLOCKED"),
+    valueColumn("false"),
+    "both values must start at the same rendered column",
+  );
 });

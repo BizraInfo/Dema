@@ -47,6 +47,8 @@ export const commands = [
   ["node", ["scripts/review/node0-space-index-check.mjs"]],
   ["node", ["scripts/review/node0-evidence-source-registry-check.mjs"]],
   ["node", ["scripts/review/node0-local-closure-readiness-check.mjs"]],
+  ["node", ["scripts/review/node0-closure-invariants-check.mjs"]],
+  ["node", ["scripts/review/legacy-consent-authority-check.mjs"]],
   ["node", ["scripts/review/dema-stand-check.mjs"]],
   ["node", ["scripts/review/dema-steward-chain-check.mjs"]],
   ["node", ["scripts/review/poi-time-compression-check.mjs"]],
@@ -101,8 +103,25 @@ export const commands = [
   ["node", ["scripts/review/node0-metrics-baseline-check.mjs"]],
   ["node", ["scripts/review/dema-recovery-mission-engine-check.mjs"]],
   ["node", ["scripts/review/dema-recovery-mission-gatherer-check.mjs"]],
+  ["node", ["scripts/review/node0-model-swap-invariance-check.mjs"]],
+  ["node", ["scripts/review/dema-mission-worker-handoff-check.mjs"]],
   ["node", ["scripts/review/dema-reversible-file-steward-check.mjs"]],
   ["node", ["scripts/review/ui-truth-label-check.mjs"]],
+  ["node", ["scripts/review/node0-minimum-season-save-resume-check.mjs"]],
+  ["node", ["scripts/review/node0-local-season-resurrection-check.mjs"]],
+  ["node", ["scripts/review/dema-master-registry-effective-config-check.mjs"]],
+  ["node", ["scripts/review/openrouter-admission-policy-compiler-check.mjs"]],
+  ["node", ["scripts/review/pot-claim-scope-check.mjs"]],
+  ["node", ["scripts/review/node0-sse-envelope-stream-check.mjs"]],
+  ["node", ["scripts/review/baseline-verifier-gate-check.mjs"]],
+  ["node", ["scripts/review/dema-presence-check.mjs"]],
+  ["node", ["scripts/review/drs-realm-contracts-check.mjs"]],
+  ["node", ["scripts/review/node0-sse-realm-composition-check.mjs"]],
+  ["node", ["scripts/review/bizra-prompt-compiler-check.mjs"]],
+  ["node", ["scripts/review/dema-trace-diagnostic-contract-check.mjs"]],
+  ["node", ["scripts/review/drs-presence-reducer-check.mjs"]],
+  ["node", ["scripts/review/drs-fixture-publisher-check.mjs"]],
+  ["node", ["scripts/review/node0-fate-staged-effect-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
@@ -142,10 +161,15 @@ export const commands = [
   ["node", ["scripts/claims/claim-register-check.mjs"]],
   ["node", ["scripts/claims/generate-public-claims.mjs", "--check"]],
   ["node", ["scripts/claims/claim-corpus-gate.mjs"]],
+  ["node", ["scripts/review/public-claim-receipt-binding-check.mjs"]],
+  ["node", ["scripts/review/node0-authority-graph-check.mjs"]],
   ["node", ["scripts/review/tracked-test-exec-target-check.mjs"]],
   // Classify the exact auto-discovery command against its own fresh log before
   // returning to the aggregate owner. A proved environmental exit 1 normalizes
   // to zero here, so every later gate still runs; all other exits stay fatal.
+  // File-level serialization is required because the auto-discovered suite
+  // contains shared-root tamper controls that temporarily rewrite canonical
+  // files. Parallel workers make the following coverage gate observe a race.
   [
     "node",
     [
@@ -154,6 +178,7 @@ export const commands = [
       "--",
       "node",
       "--test",
+      "--test-concurrency=1",
       "--test-reporter=tap",
     ],
   ],

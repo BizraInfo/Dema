@@ -23,11 +23,13 @@ import {
   runMissionCorridorFixture,
 } from "../packages/mission/src/mission-corridor.js";
 import { evaluateContextBoundConsent } from "../packages/consent/src/root-bound-consent-envelope-preview.js";
+import { nonceDigest } from "../packages/receipts/src/consent-nonce-claim.js";
 import { runMissionCorridorCheck } from "../scripts/review/mission-corridor-check.mjs";
 import {
   PREVIEW_BOUNDARY_CANONICAL_KEYS,
   buildPreviewBoundary,
 } from "../packages/core/src/boundary-schema.js";
+import { sha256CanonicalJsonV1 } from "../packages/canon/src/sha256-canonical-json-v1.js";
 
 // DEMA-MISSION-CORRIDOR-0A — control plane only. The mission remembers itself:
 // contract + journal on disk are the ONLY source of truth; status/resume are
@@ -159,6 +161,114 @@ test("journal chain is tamper-evident and monotonic", () => {
   const v = verifyCorridorJournal({ contract: c.contract, contract_hash: c.contract_hash, journal: tampered });
   assert.equal(v.ok, false);
   assert.ok(v.blocked_by.some((b) => b.startsWith("event_hash_mismatch")));
+});
+
+test("journal replay rejects correctly rehashed malformed closure bindings", () => {
+  const c = buildMissionContract(goodContractInput());
+  let checkpointJournal = seedJournal(c.contract, c.contract_hash);
+  for (const state of [
+    "PREFLIGHT", "PLANNING", "IMPLEMENTING", "VERIFYING",
+    "SAT_REVIEW", "CI_WAIT", "CHECKPOINT",
+  ]) {
+    const appended = appendCorridorEvent({
+      contract_hash: c.contract_hash,
+      journal: checkpointJournal,
+      event: {
+        state,
+        at_iso: `2026-07-11T12:${String(checkpointJournal.length).padStart(2, "0")}:00.000Z`,
+      },
+    });
+    assert.equal(appended.ok, true, `${state}: ${appended.blocked_by.join(",")}`);
+    checkpointJournal = appended.journal;
+  }
+
+  const closureBindings = {
+    closure_transaction_id: "tx-replay-1",
+    consent_claim_hash: "1".repeat(64),
+    prepared_intent_hash: `sha256:${"2".repeat(64)}`,
+    seal_head: "3".repeat(64),
+    ledger_head: "4".repeat(64),
+    anchor_hash: "5".repeat(64),
+  };
+  const completed = appendCorridorEvent({
+    contract_hash: c.contract_hash,
+    journal: checkpointJournal,
+    event: {
+      state: "COMPLETE",
+      at_iso: "2026-07-11T12:30:00.000Z",
+      ...closureBindings,
+    },
+  });
+  assert.equal(completed.ok, true, completed.blocked_by.join(","));
+  assert.equal(verifyCorridorJournal({
+    contract: c.contract,
+    contract_hash: c.contract_hash,
+    journal: completed.journal,
+  }).ok, true, "precondition: an exact binding set replays");
+
+  const rehash = (event, mutate) => {
+    const { event_hash: _oldHash, ...body } = event;
+    const changed = mutate({ ...body });
+    return { ...changed, event_hash: sha256CanonicalJsonV1(changed) };
+  };
+  const terminalIndex = completed.journal.length - 1;
+  const terminal = completed.journal[terminalIndex];
+
+  const partial = rehash(terminal, (body) => {
+    delete body.anchor_hash;
+    return body;
+  });
+  const partialVerdict = verifyCorridorJournal({
+    contract: c.contract,
+    contract_hash: c.contract_hash,
+    journal: [...checkpointJournal, partial],
+  });
+  assert.equal(partialVerdict.ok, false, "one missing binding must not become valid after rehash");
+  assert.ok(partialVerdict.blocked_by.includes(`closure_binding_incomplete:${terminalIndex}`));
+
+  const checkpointIndex = checkpointJournal.length - 1;
+  const boundCheckpoint = rehash(checkpointJournal[checkpointIndex], (body) => ({
+    ...body,
+    ...closureBindings,
+  }));
+  const placementVerdict = verifyCorridorJournal({
+    contract: c.contract,
+    contract_hash: c.contract_hash,
+    journal: [...checkpointJournal.slice(0, -1), boundCheckpoint],
+  });
+  assert.equal(placementVerdict.ok, false, "bindings on CHECKPOINT must fail despite a valid hash");
+  assert.ok(placementVerdict.blocked_by.includes(`closure_binding_on_noncomplete_state:${checkpointIndex}`));
+
+  const invalidValues = [
+    ["closure_transaction_id", "../escape", "closure_transaction_id_invalid"],
+    ["consent_claim_hash", "not-sha256", "consent_claim_hash_invalid"],
+    ["prepared_intent_hash", "sha256:ABC", "prepared_intent_hash_invalid"],
+    ["seal_head", `sha256:${"6".repeat(64)}`, "seal_head_invalid"],
+    ["ledger_head", "", "ledger_head_invalid"],
+    ["anchor_hash", `sha256:${"g".repeat(64)}`, "anchor_hash_invalid"],
+  ];
+  for (const [field, value, code] of invalidValues) {
+    const malformed = rehash(terminal, (body) => ({ ...body, [field]: value }));
+    const verdict = verifyCorridorJournal({
+      contract: c.contract,
+      contract_hash: c.contract_hash,
+      journal: [...checkpointJournal, malformed],
+    });
+    assert.equal(verdict.ok, false, `${field} survived semantic replay validation`);
+    assert.ok(verdict.blocked_by.includes(`${code}:${terminalIndex}`), verdict.blocked_by.join(","));
+  }
+
+  const legacyComplete = appendCorridorEvent({
+    contract_hash: c.contract_hash,
+    journal: checkpointJournal,
+    event: { state: "COMPLETE", at_iso: "2026-07-11T12:31:00.000Z" },
+  });
+  assert.equal(legacyComplete.ok, true, legacyComplete.blocked_by.join(","));
+  assert.equal(verifyCorridorJournal({
+    contract: c.contract,
+    contract_hash: c.contract_hash,
+    journal: legacyComplete.journal,
+  }).ok, true, "a legacy COMPLETE event with no closure fields remains compatible");
 });
 
 test("repair rounds may never decrease", () => {
@@ -414,6 +524,49 @@ test("root-bound consent: action-class and envelope tamper fail closed", () => {
   assert.ok(tampered.blocked_by.includes("consent_context_hash_mismatch"));
 });
 
+test("root-bound consent: COMPLETE binds the exact prepared effect intent", () => {
+  const c = buildMissionContract(goodContractInput());
+  const common = consentArgsFor(c.contract, c.contract_hash, {
+    kind: "COMPLETE",
+    requested_state: "COMPLETE",
+  });
+  const intentA = `sha256:${"1".repeat(64)}`;
+  const intentB = `sha256:${"2".repeat(64)}`;
+
+  const missing = buildCorridorConsentContext(common);
+  assert.equal(missing.ok, false);
+  assert.ok(missing.blocked_by.includes("prepared_intent_hash_invalid"));
+
+  const a = buildCorridorConsentContext({ ...common, prepared_intent_hash: intentA });
+  const b = buildCorridorConsentContext({ ...common, prepared_intent_hash: intentB });
+  assert.equal(a.ok, true, a.blocked_by.join(","));
+  assert.equal(b.ok, true, b.blocked_by.join(","));
+  assert.notEqual(
+    a.envelope.consent_context_hash,
+    b.envelope.consent_context_hash,
+    "one COMPLETE approval must not authorize a different rename intent",
+  );
+
+  const permitted = evaluateCorridorWriteConsent({
+    ...common,
+    prepared_intent_hash: intentA,
+    phrase: corridorRequiredPhrase("COMPLETE", common.mission_id, "COMPLETE"),
+    consent_context_hash: a.envelope.consent_context_hash,
+    now: "2026-07-11T12:30:00.000Z",
+  });
+  assert.equal(permitted.ok, true, permitted.blocked_by.join(","));
+
+  const reaimed = evaluateCorridorWriteConsent({
+    ...common,
+    prepared_intent_hash: intentB,
+    phrase: corridorRequiredPhrase("COMPLETE", common.mission_id, "COMPLETE"),
+    consent_context_hash: a.envelope.consent_context_hash,
+    now: "2026-07-11T12:30:00.000Z",
+  });
+  assert.equal(reaimed.ok, false);
+  assert.ok(reaimed.blocked_by.includes("consent_context_mismatch"));
+});
+
 test("root-bound consent: STOP binds the existing contract hash", () => {
   const c = buildMissionContract(goodContractInput());
   const other = buildMissionContract(goodContractInput({ objective: "different corridor" }));
@@ -470,6 +623,7 @@ test("CLI: start → status → resume survives process loss → stop; root-boun
   assert.equal(card.boundary.filesystem_write_performed, false);
   assert.ok(!existsSync(join(home, "missions/demo-corridor/contract.json")));
   assert.ok(!existsSync(join(home, "missions/consent-nonces")), "a consent card reserves no nonce");
+  assert.ok(!existsSync(join(home, "consent/nonces-v1")), "a consent card creates no C1 claim");
 
   // authorization without --created-at is refused: the clock never re-derives
   // the approved contract timestamp.
@@ -521,7 +675,16 @@ test("CLI: start → status → resume survives process loss → stop; root-boun
   assert.equal(started.boundary.runtime_execution_performed, false);
   assert.ok(existsSync(join(home, "missions/demo-corridor/contract.json")));
   assert.ok(existsSync(join(home, "missions/demo-corridor/journal.jsonl")));
-  assert.equal(readdirSync(join(home, "missions/consent-nonces")).length, 1, "exactly one nonce marker after start");
+  assert.equal(
+    readdirSync(join(home, "consent", "nonces-v1")).length,
+    1,
+    "the live START route must claim the one C1 authority",
+  );
+  assert.equal(
+    existsSync(join(home, "missions", "consent-nonces")),
+    false,
+    "the live route must not keep writing the retired CLI authority",
+  );
 
   // double start: the consumed nonce is refused atomically, BEFORE any clobber path
   assert.throws(() => run(fullStart), (e) => e.status === 1 && String(e.stderr).includes("nonce_replayed"));
@@ -537,7 +700,7 @@ test("CLI: start → status → resume survives process loss → stop; root-boun
     ]),
     (e) => e.status === 1 && String(e.stderr).includes("refusing to clobber"),
   );
-  assert.equal(readdirSync(join(home, "missions/consent-nonces")).length, 2, "burned nonce marker persists after the failed operation");
+  assert.equal(readdirSync(join(home, "consent", "nonces-v1")).length, 2, "burned C1 claim persists after the failed operation");
 
   // resume in a FRESH process (the terminal-loss acceptance): disk alone reconstructs
   const resumed = JSON.parse(run(["mission", "corridor", "resume", "demo-corridor", "--json"]));
@@ -600,15 +763,16 @@ test("CLI: start → status → resume survives process loss → stop; root-boun
   assert.equal(status.state, "STOPPED");
   assert.equal(status.terminal, true);
 
-  // journal on disk is the chain the kernel verifies; every consumed nonce is
-  // an atomic create-only marker (sha256-named — raw nonces never become paths)
+  // Journal on disk is the chain the kernel verifies; every consumed nonce is
+  // one domain-separated atomic C1 claim (raw nonces never become paths).
   const lines = readFileSync(join(home, "missions/demo-corridor/journal.jsonl"), "utf8").trim().split("\n");
   assert.equal(lines.length, 2);
-  const markers = readdirSync(join(home, "missions/consent-nonces")).sort();
+  const markers = readdirSync(join(home, "consent", "nonces-v1")).sort();
   assert.equal(markers.length, 3, "n-start-1 + burned n-clobber + n-stop-1");
   for (const m of markers) assert.match(m, /^[0-9a-f]{64}\.json$/);
-  const startMarker = `${createHash("sha256").update("n-start-1", "utf8").digest("hex")}.json`;
-  assert.ok(markers.includes(startMarker), "marker filename is the sha256 of the nonce");
+  const startMarker = `${nonceDigest("n-start-1")}.json`;
+  assert.ok(markers.includes(startMarker), "claim filename is the domain-separated nonce digest");
+  assert.equal(existsSync(join(home, "missions", "consent-nonces")), false);
 });
 
 test("CLI: consented mission root is absolute and lexically normalized", (t) => {
@@ -675,6 +839,7 @@ test("CLI: atomic nonce reservation — cross-mission replay, malformed marker, 
   // a pre-existing MALFORMED marker still blocks: existence is authoritative,
   // parsed content never is
   const digest = createHash("sha256").update("poisoned-nonce", "utf8").digest("hex");
+  mkdirSync(join(home, "missions", "consent-nonces"), { recursive: true });
   writeFileSync(join(home, "missions/consent-nonces", `${digest}.json`), "NOT JSON {{{");
   assert.throws(
     () => run(authorized("na-three", "poisoned-nonce")),
@@ -765,8 +930,8 @@ test("CLI: corrupt state is reported as corrupt (never as missing); modes are 0o
   assert.equal(statSync(dir).mode & 0o777, 0o700, "mission dir mode");
   assert.equal(statSync(join(dir, "contract.json")).mode & 0o777, 0o600, "contract mode");
   assert.equal(statSync(join(dir, "journal.jsonl")).mode & 0o777, 0o600, "journal mode");
-  const marker = readdirSync(join(home, "missions", "consent-nonces"))[0];
-  assert.equal(statSync(join(home, "missions", "consent-nonces", marker)).mode & 0o777, 0o600, "nonce marker mode");
+  const marker = readdirSync(join(home, "consent", "nonces-v1"))[0];
+  assert.equal(statSync(join(home, "consent", "nonces-v1", marker)).mode & 0o777, 0o600, "C1 claim mode");
 
   // a genuinely missing corridor is a lookup miss...
   assert.throws(

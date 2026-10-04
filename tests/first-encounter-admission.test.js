@@ -312,3 +312,25 @@ test("a clean tree still scans, and the ledger stays empty and sorted", async ()
     await fsp.rm(root, { recursive: true, force: true });
   }
 });
+
+test("isWithinRoot strips trailing slashes without polynomial backtracking", () => {
+  // Behaviour is unchanged by the de-regex fix.
+  assert.equal(isWithinRoot("/demo/corpus/", "/demo/corpus/a"), true);
+  assert.equal(isWithinRoot("/demo/corpus///", "/demo/corpus/a"), true);
+  assert.equal(isWithinRoot("/demo/corpus", "/demo/corpus"), true);
+  // The original bug this root check exists for: a sibling prefix is NOT inside.
+  assert.equal(isWithinRoot("/demo/corpus", "/demo/corpus-secret"), false);
+  assert.equal(isWithinRoot("/", "/anything"), false, "a bare root normalises to empty and fails closed");
+
+  // CodeQL js/polynomial-redos. The attack input is a long run of slashes followed
+  // by a NON-slash: `\/+$` then fails at every start position and the engine retries
+  // from each one, costing O(n^2). An all-slashes string is NOT the attack — it
+  // matches greedily to `$` on the first try and stays fast even with the bug, so a
+  // fixture without the trailing character silently proves nothing.
+  // Measured at n=50k: regex form 560ms, this fix 0.005ms.
+  const pathological = "/".repeat(50_000) + "x";
+  const started = process.hrtime.bigint();
+  assert.equal(isWithinRoot(pathological, "/demo/corpus/a"), false);
+  const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
+  assert.ok(elapsedMs < 250, `trailing-slash strip must stay linear, took ${elapsedMs}ms`);
+});

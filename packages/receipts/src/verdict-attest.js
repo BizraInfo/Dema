@@ -26,7 +26,7 @@ import {
   RULE_ID as CANONICAL_SHAPE_RULE_ID,
 } from "../../rules/src/rule-canonical-shape.v0.1.js";
 import { verifyConsentProof } from "./consent-proof.js";
-import { recordConsentNonce } from "./consent-nonce-registry.js";
+import { claimConsentNonce } from "./consent-nonce-claim.js";
 
 export const VERDICT_RECEIPT_SCHEMA = "bizra.dema.verdict_receipt.v0.1";
 
@@ -138,20 +138,36 @@ export async function attestVerdict({
     return fail({ error: `consent_proof_${consentVerify.reason}` });
   }
 
-  // (5b) KEYCONSENT-2B: record the consent proof's nonce as consumed.
-  // First call with a given nonce wins; replay → consent_nonce_already_used.
-  // Recorded AFTER consent verification succeeds and BEFORE rule
-  // execution + receipt persistence, so a rejected replay leaves NO
-  // side effect: no receipt, no chain advance, no rule run.
-  const nonceResult = await recordConsentNonce({
+  // (5b) Claim the consent proof's nonce through the ONE canonical authority.
+  // First call with a given nonce wins; replay → consent_nonce_already_claimed.
+  // Claimed AFTER consent verification succeeds and BEFORE rule execution +
+  // receipt persistence, so a rejected replay leaves NO side effect: no receipt,
+  // no chain advance, no rule run. That ordering is unchanged.
+  //
+  // CUTOVER (PARALLEL_CONSENT_REPLAY_AUTHORITY). This used the superseded
+  // `recordConsentNonce`, which writes `consent/nonces` and never reads
+  // `consent/nonces-v1` — so a nonce already claimed canonically could still be
+  // spent here. `consent-nonce-claim.js` is the sole consumption authority and
+  // reads the legacy namespaces for REFUSAL, so historical consumption still
+  // blocks reuse without the legacy store remaining a live writer.
+  //
+  // No transaction id is passed, deliberately: attest is not a mission
+  // transaction and has none to bind. `sameTx` requires a truthy id, so absence
+  // means every repeat is REPLAY rather than recovery — the strict reading, and
+  // identical to the behaviour this replaced. Synthesising one to look complete
+  // would invent a resume path attest is not entitled to.
+  const nonceResult = await claimConsentNonce({
     nonce: consentProof.nonce,
-    actionType: consentProof.action_scope.action_type,
-    targetHash: consentProof.action_scope.target_hash,
-    consentProofHash: consentProof.consent_proof_hash,
     demaHome,
+    actionKind: consentProof.action_scope.action_type,
+    contractHash: consentProof.action_scope.target_hash,
+    consentContextHash: consentProof.consent_proof_hash,
+    // attest already has a real act time; passing it preserves KEYCONSENT-2B
+    // DOD-10.1's requirement that WHEN a nonce was consumed is recorded.
+    claimedAtIso: createdAtIso || new Date().toISOString(),
   });
-  if (!nonceResult.recorded) {
-    return fail({ error: `consent_${nonceResult.error}` });
+  if (!nonceResult.claimed) {
+    return fail({ error: `consent_${nonceResult.reason}` });
   }
 
   // (6) Run the rule (pure)

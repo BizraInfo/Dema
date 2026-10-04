@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
 import { MELAE_SYSTEM_PROMPT } from "@/lib/game/melae";
 import type { MelaeResult } from "@/lib/game/melae";
+import { requireLocalSession } from "@/lib/auth/session-boundary";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -16,6 +17,9 @@ export const maxDuration = 30;
 // We never launder it as a fake success. The error is classified and returned.
 // ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
+  const denied = await requireLocalSession(req);
+  if (denied) return denied;
+
   let body: { prompt?: string };
   try {
     body = await req.json();

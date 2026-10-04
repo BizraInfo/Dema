@@ -1,7 +1,7 @@
 {
   "schema": "bizra.dema.claim_corpus_baseline.v0.1",
   "note": "Frozen reviewed claim-corpus state. Regenerate only via --update-baseline; every entry is an accepted, unresolved unlabeled-claim finding.",
-  "count": 122,
+  "count": 133,
   "findings": [
     {
       "file": "docs/A_PLUS_BLUEPRINT_v0_1.md",
@@ -302,6 +302,61 @@
       "file": "docs/GTM.md",
       "kind": "economic",
       "text": "- token rewards"
+    },
+    {
+      "file": "docs/gtm/AI_ACT_FIRST_LIGHT_EVIDENCE_FREEZE.md",
+      "kind": "first_or_only",
+      "text": "`ps aux` returns 5 lines; the only listening sockets are the sandbox proxy (1080, 3128);"
+    },
+    {
+      "file": "docs/gtm/AUG2_OPERATION_FIRST_WITNESS.md",
+      "kind": "economic",
+      "text": "\"first / only / leading\" · market sizes · token, mint, rewards · live federation /"
+    },
+    {
+      "file": "docs/gtm/AUG2_OPERATION_FIRST_WITNESS.md",
+      "kind": "first_or_only",
+      "text": "**Mumu — the only hands that can move these:**"
+    },
+    {
+      "file": "docs/gtm/AUG2_OPERATION_FIRST_WITNESS.md",
+      "kind": "first_or_only",
+      "text": "operation's own receipts (post URL, send evidence, gtm:readiness) are the only claims"
+    },
+    {
+      "file": "docs/gtm/BIZRA_90_Day_GTM_v0_1.md",
+      "kind": "economic",
+      "text": "| **Economic**      | No federation · no mint · no token · no revenue · 50% pool oath active · Zakat 2.5% canonical                                 | Per Third Fact §229 + `[[reference_50_percent_pool_correct_framing]]` | VERIFIED (correctly N/A) |"
+    },
+    {
+      "file": "docs/gtm/BIZRA_90_Day_GTM_v0_1.md",
+      "kind": "economic",
+      "text": "The phrase \"minted POI preview envelope\" can confuse readers because \"mint\" carries economic/token connotations. Canonical replacement wording per Mumu's review:"
+    },
+    {
+      "file": "docs/gtm/G0_WITNESS_CAMPAIGN_v0_1.md",
+      "kind": "cryptographic",
+      "text": "| Every governed action leaves a tamper-evident, replayable receipt | [MEASURED, LOCAL_ONLY] Ed25519 attestation → proof chain → signed head; tamper tests fail closed. Scope: governed actions on ONE local host, signed by a fixture or operator key. Not a second host, not federation, and — until TASK-029 completes — receipts signed after 2026-07-21 are custody-uncertain. |"
+    },
+    {
+      "file": "docs/gtm/G0_WITNESS_CAMPAIGN_v0_1.md",
+      "kind": "economic",
+      "text": "sizes · token, mint, rewards · live federation · live PAT/SAT autonomy · production"
+    },
+    {
+      "file": "docs/gtm/G0_WITNESS_CAMPAIGN_v0_1.md",
+      "kind": "first_or_only",
+      "text": "> the Node1 gate criteria are met. What follows is the only campaign G0 permits: a"
+    },
+    {
+      "file": "docs/gtm/G0_WITNESS_CAMPAIGN_v0_1.md",
+      "kind": "first_or_only",
+      "text": "| Overclaim under reply pressure | Destroys the only asset | Proof links only in replies; the forbidden list applies hardest on the loudest day |"
+    },
+    {
+      "file": "docs/gtm/G0_WITNESS_CAMPAIGN_v0_1.md",
+      "kind": "first_or_only",
+      "text": "receipts — post URL, send evidence, any witness attestation — are the only claims it may"
     },
     {
       "file": "docs/HOUSE_OF_WISDOM_UKE_URP_CANON_v0_1.md",

@@ -21,7 +21,17 @@ import {
 } from "./process-value-preview.js";
 import { buildPreviewBoundary } from "./preview-boundary.js";
 import { buildSelfLoopOodaCycle } from "./self-loop-ooda.js";
+import {
+  buildPeakVerificationAdmissionDefault,
+  evaluateVerificationAdmission,
+} from "./verification-admission.js";
 import { buildRsiProposalPreview } from "./rsi-proposal-preview.js";
+import {
+  buildTraceDiagnosticContractV2,
+  verifyTraceDiagnosticContractV2,
+  computeTraceDiagnosticReplaySubjectHashV2,
+} from "./dema-trace-diagnostic-contract.js";
+import { verifyTraceCorroborationOrigin } from "./trace-corroboration-origin.js";
 
 export const PEAK_SELF_LOOP_PREVIEW_SCHEMA =
   "bizra.dema.peak_self_loop_preview.v0.1";
@@ -112,6 +122,67 @@ const DEFAULT_NOISE_EVENTS = Object.freeze([
   }),
 ]);
 
+// PEAK-EVIDENCE-BINDING-1A — a signal event may raise SNR only when it carries
+// its own evidence binding. The defaults above are DECLARED FIXTURES: they stay
+// visible in the event hash table but score zero, so remembered narrative can
+// never authorize CONTINUE_MICRO_SLICE.
+// ponytail: no freshness/observed_at check — that needs a clock, and
+// .claude/rules/paths/core-kernels.md forbids one without documented injection.
+//
+// CEILING — this validates evidence SHAPE, never evidence BINDING. A pure kernel
+// cannot read source_ref, so it cannot re-derive source_sha256 from real content:
+// a structurally valid envelope pointing at a nonexistent file scores as verified
+// (see PEB-08, which transports that attack). This raises laundering from a kernel
+// DEFAULT to a caller ACT; it does not prevent forgery.
+// Upgrade path: whichever gatherer/CLI layer constructs signal_events must hash
+// source_ref itself and reject mismatches BEFORE calling this kernel. No such
+// caller exists yet — the CLI passes no events and therefore HOLDs.
+const EVIDENCE_TRUTH_LABELS = Object.freeze(["VERIFIED", "MEASURED"]);
+const SOURCE_SHA256_PATTERN = /^[0-9a-f]{64}$/;
+
+function evidenceBindingGap(event) {
+  if (!event || typeof event !== "object" || Array.isArray(event)) {
+    return "not_an_object";
+  }
+  if (!EVIDENCE_TRUTH_LABELS.includes(event.truth_label)) {
+    return "truth_label_not_verified_or_measured";
+  }
+  if (typeof event.source_ref !== "string" || event.source_ref.trim() === "") {
+    return "source_ref_missing";
+  }
+  if (
+    typeof event.source_sha256 !== "string" ||
+    !SOURCE_SHA256_PATTERN.test(event.source_sha256)
+  ) {
+    return "source_sha256_missing_or_malformed";
+  }
+  return null;
+}
+
+function partitionSignalsByEvidence(events) {
+  const verified = [];
+  const excluded = [];
+  const seenIds = new Set();
+  for (const event of events) {
+    const id =
+      event && typeof event === "object" && !Array.isArray(event)
+        ? (event.id ?? null)
+        : null;
+    const gap = evidenceBindingGap(event);
+    if (gap) {
+      excluded.push(Object.freeze({ id, gap }));
+      continue;
+    }
+    if (seenIds.has(id)) {
+      excluded.push(Object.freeze({ id, gap: "duplicate_event_id" }));
+      continue;
+    }
+    seenIds.add(id);
+    verified.push(event);
+  }
+  return { verified, excluded: Object.freeze(excluded) };
+}
+
 const DEFAULT_CONVERGENCE_CLAIMS = Object.freeze([
   Object.freeze({
     id: "delivery-spine-face",
@@ -190,6 +261,10 @@ function deepFreeze(value) {
     return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
+}
+
+function text(value) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function buildEventHashTable(signalEvents, noiseEvents) {
@@ -434,6 +509,12 @@ function buildProactiveSelf({
   consentPhrase,
   ciAdvisoryBlocked = false,
   companionDeviceConnected = false,
+  proposed_act = "",
+  verifier = "",
+  proposer = "",
+  certifier = "",
+  verifier_bindings = {},
+  trace_diagnostic_moat = null,
 }) {
   const localHarnessGates = Object.freeze([
     "ux-first-look-gate",
@@ -442,10 +523,28 @@ function buildProactiveSelf({
     "kernel-purity-check",
     "dema-harness-integration",
     "node0-proof-of-truth-control-plane-check",
+    "peak-verify-admission",
   ]);
   const nextGate = ciAdvisoryBlocked
     ? "DONE_LOCAL slices + operator seal; remote CI advisory when billing clears"
     : "reviewer PR merge + CI remote green";
+
+  const verification_admission =
+    text(proposed_act) || text(verifier)
+      ? evaluateVerificationAdmission({
+          proposed_act,
+          verifier,
+          proposer,
+          certifier,
+          bindings: verifier_bindings,
+        })
+      : buildPeakVerificationAdmissionDefault();
+
+  const trace_moat = trace_diagnostic_moat;
+  const trace_authorized =
+    trace_moat &&
+    trace_moat.verified?.ok === true &&
+    trace_moat.promotion_status === "INSIGHT_AUTHORIZED";
 
   return Object.freeze({
     critique: Object.freeze({
@@ -453,7 +552,9 @@ function buildProactiveSelf({
         snr.verdict === "PREVIEW_REJECT" ||
         (snr.score != null && snr.score < 0.5)
           ? "HOLD — noise dominates signal"
-          : "CONTINUE — micro-slice discipline holds",
+          : trace_moat && !trace_authorized
+            ? "HOLD — trace diagnostic moat blocks unverified signal"
+            : "CONTINUE — micro-slice discipline holds",
       gaps: Object.freeze(
         [
           convergence.summary.declared > 0
@@ -468,6 +569,12 @@ function buildProactiveSelf({
           !companionDeviceConnected
             ? "Mobile companion declared (Z Fold 6) but not connected — export-and-index bridge only"
             : null,
+          verification_admission.self_verifiable !== true
+            ? `VERIFY admission refused (${verification_admission.refusal_reason}) — output not eligible as next INPUT`
+            : null,
+          trace_moat && !trace_authorized
+            ? `TRACE moat ${trace_moat.promotion_status} (${(trace_moat.blocked_by || []).slice(0, 2).join("; ") || "no verified trace"}) — insight not authorized until provenance/consistency/disambiguation/corroboration all pass`
+            : null,
         ].filter(Boolean),
       ),
       limitation:
@@ -481,6 +588,7 @@ function buildProactiveSelf({
         "dema harness --summary --json",
         "npm test",
         "npm run check",
+        "dema peak-self-loop --json",
       ]),
     }),
     consent: Object.freeze({
@@ -498,13 +606,19 @@ function buildProactiveSelf({
       no_autonomous_runtime: true,
       no_network: true,
       no_token_mint: true,
+      reinsert_requires_judge_free_admission: true,
+      reinsert_eligible: verification_admission.reinsert_eligible === true,
+      trace_diagnostic_authorized: trace_authorized === true,
+      self_consistent_via_moat: trace_authorized === true,
     }),
+    verification_admission,
+    trace_diagnostic_moat: trace_moat,
     awareness: Object.freeze({
       truth_label: "NODE0_LOCAL_SEED",
       what_this_proves:
-        "Declared self-loop composition is structurally coherent and gate-aligned",
+        "Declared self-loop composition is structurally coherent and gate-aligned; VERIFY admission is judge-free; trace diagnostic moat self-consistently gates insight promotion",
       what_this_does_not_prove:
-        "Autonomy, live scoring, HHMM runtime, economic rights, or federation",
+        "Autonomy, live scoring, HHMM runtime, economic rights, federation, or closed re-insert loop; trace moat does not prove insight truth, only admissibility",
     }),
     loop_engineering: Object.freeze({
       hhmm_current: hhmm.peak_phase,
@@ -517,7 +631,108 @@ function buildProactiveSelf({
         "SETTLE→federation without proof ladder",
         "ACT→operator mutation outside sandbox",
         "ACT→mobile node control without ADR",
+        "EVAL→INPUT without judge-free admission",
       ]),
+    }),
+  });
+}
+
+function buildTraceDiagnosticMoat({
+  verifiedSignalEvents,
+  noiseEvents,
+  traceCorroboration = null,
+  traceCorroborationContext = {},
+}) {
+  const trace_set = verifiedSignalEvents.map((e) =>
+    Object.freeze({
+      trace_id: `trace.signal.${String(e.id)}`,
+      scope: `preview::${String(e.id).slice(0, 48)}`,
+      completeness: "SCOPED",
+      correlation_limit: "preview_only; no runtime, no production correlation",
+      source_ref: e.source_ref,
+      source_sha256: e.source_sha256,
+      observed_at: "2026-08-26T00:00:00.000Z",
+    }),
+  );
+  const traceIds = trace_set.map((t) => t.trace_id);
+  const half = Math.max(1, Math.ceil(traceIds.length / 2));
+  const sharedTraces = traceIds.slice(0, half);
+  const disjointTraces = traceIds.slice(half);
+  const hypothesis_graph = Object.freeze([
+    Object.freeze({
+      hypothesis_id: "H1_inward_actionable_signal",
+      explains_traces: Object.freeze([
+        ...sharedTraces,
+        ...(disjointTraces.length > 0 ? [disjointTraces[0]] : []),
+      ]),
+    }),
+    Object.freeze({
+      hypothesis_id: "H2_outward_noise_or_env_contamination",
+      explains_traces: Object.freeze(disjointTraces),
+    }),
+  ]);
+  const insight_candidate = Object.freeze({
+    claim: "Peak SNR verdict is admissible only if trace diagnostic moat authorizes",
+    evidence_refs: Object.freeze([...traceIds]),
+    synthesis_mode: "proactive_ultra_micro_self_consistency",
+    doxology: "Ihsān · precision · no-false-GREEN · burden removed",
+  });
+  // Corroboration is an external input to this compose layer. The peak loop may
+  // derive the replay SUBJECT hash, but it may never assert that an independent
+  // replay happened or manufacture its witness hash. Missing corroboration
+  // therefore fails closed at REMAIN_TRACE rather than laundering same-process
+  // self-consistency into independence.
+  const expectedReplaySubjectHash = computeTraceDiagnosticReplaySubjectHashV2(
+    trace_set,
+    hypothesis_graph,
+    insight_candidate,
+  );
+  // TRACE-CORROBORATION-ORIGIN-1A: raw caller assertions are not
+  // corroboration. A receipt must be bound to a trusted external verifier,
+  // exact replay subject, challenge, and Ed25519 signature before it can be
+  // normalized into the v0.2 corroboration rail.
+  const originVerification = verifyTraceCorroborationOrigin({
+    corroboration: traceCorroboration,
+    expected_subject_hash: expectedReplaySubjectHash,
+    trusted_verifiers: traceCorroborationContext.trusted_verifiers,
+    proposer_origin: traceCorroborationContext.proposer_origin,
+    executor_origin: traceCorroborationContext.executor_origin,
+    expected_challenge: traceCorroborationContext.expected_challenge,
+  });
+  const verification =
+    originVerification.normalized_corroboration ??
+    Object.freeze({
+      replay_performed: false,
+      independent: false,
+      independent_replay_hash: "",
+      replay_subject_hash: "",
+    });
+  const report = buildTraceDiagnosticContractV2({
+    trace_set,
+    hypothesis_graph,
+    insight_candidate,
+    verification,
+  });
+  const verified = verifyTraceDiagnosticContractV2(report);
+  return deepFreeze({
+    trace_set: Object.freeze(trace_set),
+    hypothesis_graph,
+    insight_candidate,
+    expected_replay_subject_hash: expectedReplaySubjectHash,
+    origin_verification: originVerification,
+    verification,
+    report,
+    verified,
+    promotion_status: report.promotion_status,
+    rails: report.rails,
+    blocked_by: report.blocked_by,
+    diagnostic_hash: report.diagnostic_hash,
+    synthesis: Object.freeze({
+      verified_trace_count: trace_set.length,
+      hypothesis_count: hypothesis_graph.length,
+      insight_authorized: report.promotion_status === "INSIGHT_AUTHORIZED" && verified.ok,
+      self_consistent: verified.ok && report.promotion_status === "INSIGHT_AUTHORIZED",
+      doxology_bound: true,
     }),
   });
 }
@@ -530,6 +745,8 @@ function buildUltraMicroComposeMap() {
       "proactive_self.harness",
       "proactive_self.consent",
       "proactive_self.compliance",
+      "proactive_self.verification_admission",
+      "proactive_self.trace_diagnostic_moat",
       "reasoning_modes.sequential",
       "reasoning_modes.analogical",
       "reasoning_modes.critical",
@@ -539,6 +756,7 @@ function buildUltraMicroComposeMap() {
       "self_loop_ooda",
       "rsi_integration_gate",
       "craftsmanship_witness",
+      "trace_diagnostic_moat",
     ]),
     agent_posture: "outside_sandbox_proposes_inside_sandbox_proves",
     mode: "preview_only",
@@ -578,6 +796,13 @@ export function buildPeakSelfLoopPreview({
   consent_phrase = "GO: act on peak-self-loop suggestion",
   ci_advisory_blocked = false,
   companion_device_connected = false,
+  proposed_act = "",
+  verifier = "",
+  proposer = "",
+  certifier = "",
+  verifier_bindings = {},
+  trace_corroboration = null,
+  trace_corroboration_context = {},
 } = {}) {
   const signalEvents = Array.isArray(signal_events)
     ? signal_events
@@ -586,8 +811,14 @@ export function buildPeakSelfLoopPreview({
     ? noise_events
     : [...DEFAULT_NOISE_EVENTS];
 
+  const { verified: verifiedSignalEvents, excluded: excludedSignalEvents } =
+    partitionSignalsByEvidence(signalEvents);
+
   const snr = computeSNRValue({
-    signalEvents: signalEvents.map((e) => ({ type: e.type, weight: e.weight })),
+    signalEvents: verifiedSignalEvents.map((e) => ({
+      type: e.type,
+      weight: e.weight,
+    })),
     noiseEvents: noiseEvents.map((e) => ({ type: e.type, weight: e.weight })),
   });
 
@@ -638,8 +869,12 @@ export function buildPeakSelfLoopPreview({
     noise_definition: "speculative implementation detail",
     score: snr.score,
     verdict: snr.verdict,
-    signal_count: signalEvents.length,
+    signal_count: verifiedSignalEvents.length,
     noise_count: noiseEvents.length,
+    declared_signal_count: signalEvents.length,
+    verified_signal_count: verifiedSignalEvents.length,
+    excluded_signal_count: excludedSignalEvents.length,
+    evidence_debt: excludedSignalEvents,
   });
 
   const snrDominates =
@@ -663,6 +898,13 @@ export function buildPeakSelfLoopPreview({
 
   const engine = selectHighestSnrEngine(snr, rsi, convergence);
 
+  const trace_diagnostic_moat = buildTraceDiagnosticMoat({
+    verifiedSignalEvents,
+    noiseEvents,
+    traceCorroboration: trace_corroboration,
+    traceCorroborationContext: trace_corroboration_context,
+  });
+
   const proactive_self = buildProactiveSelf({
     snr,
     craftsmanship,
@@ -671,6 +913,12 @@ export function buildPeakSelfLoopPreview({
     consentPhrase: consent_phrase,
     ciAdvisoryBlocked: ci_advisory_blocked === true,
     companionDeviceConnected: companion_device_connected === true,
+    proposed_act,
+    verifier,
+    proposer,
+    certifier,
+    verifier_bindings,
+    trace_diagnostic_moat,
   });
 
   const agent_orchestration = buildAgentOrchestrationPosture({
@@ -710,6 +958,7 @@ export function buildPeakSelfLoopPreview({
     }),
     snr_autonomous_engine: engine,
     proactive_self,
+    trace_diagnostic_moat,
     agent_orchestration,
     reasoning_modes,
     micro_process_mining,
@@ -718,9 +967,9 @@ export function buildPeakSelfLoopPreview({
     ultra_micro_compose,
     proof_spine_backlog,
     what_this_proves:
-      "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, MC witness, agent-outside-sandbox posture, OODA review, and RSI gate without runtime",
+      "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, MC witness, agent-outside-sandbox posture, OODA review, RSI gate, and trace-diagnostic moat (four-rail self-consistency) without runtime",
     what_this_does_not_prove:
-      "Live autonomy, HHMM engine execution, economic activation, or cryptographic seal",
+      "Live autonomy, HHMM engine execution, economic activation, external trust-root governance, or independent replay itself; moat verifies cryptographic receipt origin and subject/challenge binding but does not prove insight truth",
     boundary: buildPreviewBoundary(),
   });
 }
@@ -746,7 +995,9 @@ export function renderPeakSelfLoopPreview(preview, { useColor = false } = {}) {
     `  critique:    ${preview.proactive_self.critique.verdict}`,
     `  harness:     ${preview.proactive_self.harness.active_gates.length} gates active`,
     `  consent:     ${preview.proactive_self.consent.required_phrase}`,
-    `  compliance:  MC ${preview.proactive_self.compliance.master_craftsmanship_compliant ? "OK" : "GAP"}`,
+    `  compliance:  MC ${preview.proactive_self.compliance.master_craftsmanship_compliant ? "OK" : "GAP"} · reinsert ${preview.proactive_self.compliance.reinsert_eligible ? "ELIGIBLE" : "BLOCKED"} · trace_moat ${preview.proactive_self.compliance.trace_diagnostic_authorized ? "AUTHORIZED" : "BLOCKED"}`,
+    `  admission:   self_verifiable=${preview.proactive_self.verification_admission.self_verifiable} · ${preview.proactive_self.verification_admission.refusal_reason ?? preview.proactive_self.verification_admission.named_verifier ?? "awaiting_act"}`,
+    `  trace_moat:  ${preview.trace_diagnostic_moat.promotion_status} · verified:${preview.trace_diagnostic_moat.verified.ok} · traces:${preview.trace_diagnostic_moat.synthesis.verified_trace_count} · ${preview.trace_diagnostic_moat.blocked_by.slice(0, 2).join("; ") || "4/4 rails pass"}`,
     `  awareness:   ${preview.proactive_self.awareness.what_this_proves}`,
     `  loop:        ${preview.proactive_self.loop_engineering.hhmm_current} → ${preview.proactive_self.loop_engineering.next_safe_transition}`,
     "",

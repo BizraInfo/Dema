@@ -252,14 +252,20 @@ export async function checkModelReadiness() {
   if (apiReachable) {
     const textModels = apiModels
       .filter((m) => !m.name.includes("embed"))
-      // Size ascending; name tie-break keeps ordering deterministic when sizes
-      // are equal or both nullish (Infinity - Infinity is NaN, which sorts as 0
-      // and would otherwise leak API response order into the proof hash).
-      .sort(
-        (a, b) =>
-          (a.size ?? Infinity) - (b.size ?? Infinity) ||
-          (a.name < b.name ? -1 : a.name > b.name ? 1 : 0),
-      );
+      .sort((a, b) => {
+        const leftSize =
+          typeof a.size === "number" && Number.isFinite(a.size) ? a.size : null;
+        const rightSize =
+          typeof b.size === "number" && Number.isFinite(b.size) ? b.size : null;
+        if (leftSize === null && rightSize !== null) return 1;
+        if (leftSize !== null && rightSize === null) return -1;
+        if (leftSize !== null && rightSize !== null && leftSize !== rightSize) {
+          return leftSize - rightSize;
+        }
+        const leftName = String(a.name ?? "");
+        const rightName = String(b.name ?? "");
+        return leftName < rightName ? -1 : leftName > rightName ? 1 : 0;
+      });
     availableModels = textModels.map((m) => m.name);
     recommended = availableModels.length > 0 ? availableModels[0] : null;
   } else {

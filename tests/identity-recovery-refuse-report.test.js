@@ -806,10 +806,15 @@ describe("1E.1-A generation-path evidence containment", () => {
     assert.equal("previous_generation" in genesis, true);
     assert.equal(genesis.previous_generation, null);
     const p = readPointer(home);
-    writePointer(home, { ...p, previous_generation: "e".repeat(64) });
+    const previousFingerprint = "e".repeat(64);
+    writeFileSync(
+      activeKeyPaths(home).retiredRegistry,
+      JSON.stringify({ retired: [{ fingerprint: previousFingerprint }] }),
+    );
+    writePointer(home, { ...p, previous_generation: previousFingerprint });
     const rotated = await store.loadActiveKeyPair(home);
     assert.equal(rotated.ok, true);
-    assert.equal(rotated.previous_generation, "e".repeat(64));
+    assert.equal(rotated.previous_generation, previousFingerprint);
   });
 
   it("A14 the classifier reads the pointer exactly once — no mixed snapshots", async () => {

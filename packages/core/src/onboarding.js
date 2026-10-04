@@ -1,4 +1,5 @@
 import { buildUserProfile } from "./profiles.js";
+import { resolveOperatorSurfaceI18n } from "./operator-surface-i18n.js";
 
 const SCHEMA = "bizra.dema.onboarding.preview.v0.1";
 
@@ -130,6 +131,44 @@ const steps = [
   },
 ];
 
+const AR_STEPS = Object.freeze({
+  setup: Object.freeze({
+    title: "إنشاء المنزل المحلي",
+    user_value: "ينشئ ~/.dema حتى يكون لديما مكان محلي آمن لتذكر الحالة.",
+    boundary: "لا يستبدل الملف الشخصي/الإعداد، ولا يبدأ خادماً، ولا ينفّذ مهمة.",
+  }),
+  status: Object.freeze({
+    title: "قراءة حالة العقدة",
+    user_value: "يُظهر ما هو جاهز ومحظور ومجهول وآمن للخطوة التالية.",
+    boundary: "لا يُصلح ولا يتصل ولا يعدّل شيئاً.",
+  }),
+  diagnostics: Object.freeze({
+    title: "معاينة خطة الصحة",
+    user_value: "يُظهر الفحوصات التي ستجريها ديما في مهمة تشخيص محكومة.",
+    boundary: "لا يشغّل اختبارات أو أوامر صدفة.",
+  }),
+  consent: Object.freeze({
+    title: "معاينة الموافقة المصغّرة",
+    user_value: "يحوّل النية العادية إلى مسودة صلاحية ضيقة.",
+    boundary: "لا يوافق على الموافقة ولا يسكّ قدرة.",
+  }),
+  mission: Object.freeze({
+    title: "مسودة معاينة المهمة",
+    user_value: "يحوّل النية إلى مسودة مهمة مع معاينة الموافقة المطابقة.",
+    boundary: "لا ينفّذ ولا يرسل ولا يخوّل المهمة.",
+  }),
+  safety: Object.freeze({
+    title: "قراءة وضع السلامة",
+    user_value: "يشرح فجوات الإثبات والافتراضات الآمنة والحد المحلي الحالي.",
+    boundary: "لا يشهد بجاهزية الإنتاج.",
+  }),
+  receipts: Object.freeze({
+    title: "فحص سجلات الإثبات المحلية",
+    user_value: "يسرد تسليمات الإيصالات المحلية التي تثبت ما حدث في مكان آخر.",
+    boundary: "لا ينشئ إيصالات.",
+  }),
+});
+
 function cloneItems(items) {
   return items.map((item) => ({ ...item }));
 }
@@ -138,10 +177,28 @@ function cloneObject(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-export function buildOnboardingPreview() {
+function localizeSteps(languageCode) {
+  if (languageCode !== "ar") return cloneItems(steps);
+  return steps.map((step) => {
+    const ar = AR_STEPS[step.id];
+    if (!ar) return { ...step };
+    return {
+      ...step,
+      title: ar.title,
+      user_value: ar.user_value,
+      boundary: ar.boundary,
+    };
+  });
+}
+
+export function buildOnboardingPreview({ language_code = null } = {}) {
+  const i18n = resolveOperatorSurfaceI18n(language_code);
   return {
     schema: SCHEMA,
     mode: "preview_only",
+    language_code: i18n.language_code,
+    script_direction: i18n.script_direction,
+    strings_truth_label: i18n.truth_label,
     user_state: cloneObject(USER_STATE),
     node_identity: buildNodeIdentity(),
     next_steps: [...NEXT_STEPS],
@@ -150,14 +207,16 @@ export function buildOnboardingPreview() {
       name: "Dema",
       role: "local product face for BIZRA Node0",
       promise:
-        "show what is true, what is safe, what is blocked, and what needs consent",
+        i18n.language_code === "ar"
+          ? "تُظهر ما هو حقيقي، وما هو آمن، وما هو محظور، وما يحتاج موافقة"
+          : "show what is true, what is safe, what is blocked, and what needs consent",
     },
     inspiration: cloneItems(inspiration),
     doctrine: {
       stance: "stand_on_shoulders_do_not_copy",
       note: "Reference projects inform patterns only; no code, naming, UI, or transport is copied.",
     },
-    steps: cloneItems(steps),
+    steps: localizeSteps(i18n.language_code),
     boundary: {
       consent_required_to_view: false,
       files_mutated: false,
@@ -190,47 +249,54 @@ function renderStep(index, step) {
 }
 
 export function formatOnboardingPreview(guide) {
+  const i18n = resolveOperatorSurfaceI18n(guide.language_code);
+  const t = i18n.strings.welcome;
+  const dirMark = i18n.script_direction === "rtl" ? "\u200F" : "";
   const lines = [
-    "Welcome to Dema.",
-    "Dema — Sovereign AI Node Companion",
+    `${dirMark}${t.title}`,
+    `${dirMark}${t.subtitle}`,
     "",
     "+------------------------------------------------------------+",
-    "| Local-first. Consent-bound. Receipt-aware.                 |",
-    "| BIZRA is the ecosystem. Dema is the product face.          |",
+    `| ${t.banner_line1}`,
+    `| ${t.banner_line2}`,
     "+------------------------------------------------------------+",
     "",
-    "What Dema does:",
+    t.what_dema_does,
     `  ${guide.product.promise}.`,
     "",
-    "First-run orientation:",
-    "  Your node is local-first.",
-    "  Your actions are consent-bound.",
-    "  Run setup when you are ready to create local state.",
+    t.orientation_heading,
+    `  ${t.orientation_1}`,
+    `  ${t.orientation_2}`,
+    `  ${t.orientation_3}`,
     "",
-    "Current user state:",
-    `  phase: ${guide.user_state.phase}`,
-    `  node role: ${guide.user_state.node_role}`,
-    `  allowed: ${guide.user_state.allowed_actions.join(", ")}`,
-    `  blocked: ${guide.user_state.blocked_actions.join(", ")}`,
+    t.user_state_heading,
+    `  ${t.phase}: ${guide.user_state.phase}`,
+    `  ${t.node_role}: ${guide.user_state.node_role}`,
+    `  ${t.allowed}: ${guide.user_state.allowed_actions.join(", ")}`,
+    `  ${t.blocked}: ${guide.user_state.blocked_actions.join(", ")}`,
     "",
-    "Standing on shoulders, not copying:",
+    t.inspiration_heading,
     ...guide.inspiration.map(
       (item) => `  - ${item.source}: ${item.pattern} -> ${item.absorbed_as}.`,
     ),
     "",
-    "Guided first run:",
+    t.guided_heading,
     ...guide.steps.flatMap((step, index) => [renderStep(index + 1, step), ""]),
-    "Boundary:",
-    "  This guide is preview-only. It does not mutate files, start runtime,",
-    "  start a daemon, execute missions, mint receipts, connect Node1/Node2,",
-    "  start a multi-node pilot, perform Step 7 minting, post externally,",
-    "  or federate.",
+    t.boundary_heading,
+    `  ${t.boundary_body}`,
     "",
-    "Next:",
+    t.next_heading,
     ...guide.next_steps.map((step, index) => `  ${index + 1}. ${step}`),
     "",
-    "For the interactive shell: dema chat",
+    t.chat_hint,
   ];
+
+  if (i18n.truth_label === "DECLARED_NEEDS_NATIVE_REVIEW") {
+    lines.push("");
+    lines.push(
+      `[${i18n.truth_label}] Arabic surface · awaiting native operator review`,
+    );
+  }
 
   return lines.join("\n");
 }

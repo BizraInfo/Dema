@@ -67,22 +67,29 @@ export function resolveTcpBindings(ports, tcpBindings) {
   return detectTcpBindings(ports);
 }
 
-export function buildSafety({ ollamaUrl, lmStudioUrl, tcp, providers }) {
+export function buildSafety({
+  ollamaUrl,
+  lmStudioUrl,
+  llamacppUrl,
+  tcp,
+  providers,
+}) {
   return {
     exposure_check: tcp.available
       ? "measured"
       : tcp.skipped
         ? "skipped"
         : "unavailable",
-    exposures: buildExposures(ollamaUrl, lmStudioUrl, tcp.bindings),
+    exposures: buildExposures(ollamaUrl, lmStudioUrl, llamacppUrl, tcp.bindings),
     model_name_flags: buildModelNameFlags(providers),
   };
 }
 
-function buildExposures(ollamaUrl, lmStudioUrl, bindings) {
+function buildExposures(ollamaUrl, lmStudioUrl, llamacppUrl, bindings) {
   const providerPorts = [
     { provider: "ollama", port: portFor(ollamaUrl) },
     { provider: "lm_studio", port: portFor(lmStudioUrl) },
+    { provider: "llamacpp", port: portFor(llamacppUrl) },
   ];
 
   return providerPorts.flatMap((entry) => {

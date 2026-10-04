@@ -1,0 +1,10 @@
+{
+  "schema": "bizra.skill-projection/v1",
+  "skill_id": "dema-slice-scaffold",
+  "projection_target": ".agents",
+  "source_registry_hash": "9c8c18c7e954f18a92bc5e78cf5bebf9e1a4e1a5945551dc090e600ffdc12e37",
+  "contract_hash": "50d2cab8214aea0773d64217f2ffb2ddeefa4f270a458b118326281625651027",
+  "generated_at": "2026-08-30T20:41:22.074Z",
+  "files_projected": 6,
+  "files_skipped": 0
+}

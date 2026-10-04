@@ -73,7 +73,14 @@ describe("buildAuthorshipCloseout", () => {
       assert.equal(closeout.found, true);
       assert.equal(closeout.verified, true);
       assert.equal(closeout.verdict, "VERIFIED");
-      assert.equal(closeout.truth_label, "VERIFIED_LOCAL_AUTHORSHIP_RECEIPT");
+      assert.equal(
+        closeout.truth_label,
+        "VERIFIED_ACTIVE_SIGNER_AUTHORSHIP_RECEIPT",
+      );
+      assert.equal(closeout.verification_scope, "ACTIVE_SIGNER_TRUST");
+      assert.equal(closeout.trust_state, "ACTIVE_TRUSTED");
+      assert.equal(closeout.trust_loader_error, null);
+      assert.equal(closeout.boundary.public_trust_snapshot_loaded, true);
       assert.ok(closeout.artifact);
       assert.ok(closeout.author);
       assert.match(closeout.public_key_fingerprint, /^[a-f0-9]{64}$/);
@@ -93,7 +100,30 @@ describe("buildAuthorshipCloseout", () => {
       assert.equal(closeout.found, true);
       assert.equal(closeout.verified, false);
       assert.equal(closeout.verdict, "FAILED");
-      assert.equal(closeout.truth_label, "FAILED_LOCAL_AUTHORSHIP_RECEIPT");
+      assert.equal(
+        closeout.truth_label,
+        "FAILED_ACTIVE_SIGNER_AUTHORSHIP_RECEIPT",
+      );
+    } finally {
+      restore();
+    }
+  });
+
+  it("does not fall back to raw secret-bearing receipt fingerprint data", async () => {
+    const { home, signResult, restore } = await homeWithSignedReceipt();
+    try {
+      const receipt = JSON.parse(readFileSync(signResult.receipt_path, "utf8"));
+      receipt.author.public_key_fingerprint = {
+        private_key_pem: "-----BEGIN PRIVATE KEY----- secret",
+      };
+      writeFileSync(signResult.receipt_path, JSON.stringify(receipt));
+
+      const closeout = await buildAuthorshipCloseout(home);
+
+      assert.equal(closeout.verified, false);
+      assert.equal(closeout.public_key_fingerprint, null);
+      assert.equal(closeout.claimed_fingerprint, null);
+      assert.doesNotMatch(JSON.stringify(closeout), /PRIVATE KEY/);
     } finally {
       restore();
     }
@@ -109,6 +139,8 @@ describe("buildAuthorshipCloseout", () => {
     assert.equal(closeout.boundary.token_minted, false);
     assert.equal(closeout.boundary.verification_performed, true);
     assert.equal(closeout.boundary.summary_generated, true);
+    assert.equal(closeout.boundary.external_trust_load_attempted, false);
+    assert.equal(closeout.boundary.public_trust_snapshot_loaded, false);
   });
 });
 
@@ -169,7 +201,11 @@ describe("dema authorship closeout CLI", () => {
       ).toString();
       const result = JSON.parse(out);
       assert.equal(result.verified, true);
-      assert.equal(result.truth_label, "VERIFIED_LOCAL_AUTHORSHIP_RECEIPT");
+      assert.equal(
+        result.truth_label,
+        "VERIFIED_ACTIVE_SIGNER_AUTHORSHIP_RECEIPT",
+      );
+      assert.equal(result.verification_scope, "ACTIVE_SIGNER_TRUST");
     } finally {
       restore();
     }

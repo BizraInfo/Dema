@@ -34,8 +34,39 @@ const JSON_MODE = process.argv.includes("--json");
 // generated kernels at the anchor below. Any canon importer NOT in this list
 // (outside tests and this gate) still fails the scan.
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
+  // NODE0-1D FATE effect admission — verdict refs bind policy/authority
+  // semantics with the same canonical bytes as Situation and Action commitments.
+  "packages/fate/src/fate.js",
+  // Founder closure candidate: Situation and Action commitments use the
+  // canonical bytes; registration is adoption review only and does not
+  // promote the candidate or grant runtime authority.
+  "packages/core/src/founder-useful-system.js",
+  "packages/core/src/founder-pat-harness.js",
   "packages/mission/src/mission-corridor.js",
+  // Gate C, C3 — the disk-bound closure orchestrator and CLI derive the exact
+  // prepared-effect / transaction identity with canonical JSON v1. Registration
+  // is adoption review only; it does not promote the dirty candidate or Node0.
+  "packages/mission/src/corridor-closure-gatherer.js",
+  "apps/cli/src/commands/mission.js",
   "packages/mission/src/dema-program-graph.js",
+  // Gate C, C2 — the mission-closure transaction log. Canonicalises the
+  // transaction descriptor, each event body, and the semantic-evidence subset
+  // that settles concurrent appends, so every hash it publishes is stable
+  // across writers and processes.
+  "packages/receipts/src/mission-closure-transaction.js",
+  // Gate C, C4D — cross-process ownership claims. The fencing token IS the
+  // canonical hash of the claim body, and two different processes must derive
+  // the identical token from the identical claim or the fence cannot arbitrate
+  // between them, so key-order stability is the whole contract. Registration is
+  // adoption review only; it does not promote Node0 or close any DoD gate.
+  "packages/receipts/src/mission-closure-ownership.js",
+  // NODE0-CLEAN-STATE-JOURNEY-1A — the witness harness publishes ONE
+  // cross-machine value (`journey_invariant_hash`) over the subset of a
+  // clean-state run that is legitimately identical on every machine. That value
+  // is compared by strangers, so it must not depend on key order: canonical
+  // JSON v1 is exactly the contract for it. Registration is adoption review
+  // only; it does not promote Node0 or close any DoD gate by itself.
+  "scripts/proof/node0-clean-state-journey.mjs",
   // Back-registered 2026-07-25. These four landed on main (#401, #402, #403,
   // #405) with the scaffold's registration comment already in their headers —
   // dema-recovery-mission-gatherer.js says "reviewed in this slice's PR" — but
@@ -50,11 +81,155 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // identical conclusion about which consumers were legitimately missing.
   "packages/core/src/dema-recovery-mission-engine.js",
   "packages/core/src/dema-recovery-mission-gatherer.js",
+  "packages/core/src/node0-model-swap-invariance.js",
   "packages/core/src/node0-metrics-baseline.js",
   "packages/core/src/node0-realm-state-kernel.js",
   // DEMA-REVERSIBLE-FILE-STEWARD-1A / 1B — registered by the steward slice.
   "packages/core/src/dema-reversible-file-steward.js",
   "packages/core/src/dema-reversible-file-steward-execution.js",
+  "packages/core/src/node0-minimum-season-save-resume.js",
+  // DEMA-CONVENE-PERSONAL-COUNCIL-1A — the alpha edge publishes ONE value that
+  // must be stable across processes: the digest binding a convened plan to the
+  // intent it was charged with. DCC-09 uses it to catch an edited plan passing
+  // as the one the council actually received, so key order must not change the
+  // hash — which is exactly this canon's contract. Registration is adoption
+  // review only; it promotes nothing and closes no gate. Convening performs no
+  // model call and no dispatch.
+  "packages/core/src/dema-convene-personal-council.js",
+  // NODE0-WORKER-HANDOFF-1A — the adapter re-derives a recorded handoff's hash
+  // instead of trusting the one it carries, and compares the artefact's
+  // `executed_code_hash` against the classification kernel's bytes on disk. Both
+  // comparisons are made by a READER against a digest written earlier by a
+  // different process, so key-order stability is the entire contract: an
+  // unstable serializer would silently invalidate every honest artefact and
+  // validate none. Registration is adoption review only; it promotes nothing.
+  // The adapter performs one file read — no execution, mutation or network —
+  // and the ledger does not move until a producer actually runs.
+  "packages/core/src/node0-worker-handoff-adapter.js",
+  // NODE0-WORKER-HANDOFF-1A producer — the writing half of the same contract.
+  // It records the digest that the adapter above later re-derives, in a DIFFERENT
+  // process from the one that reads it, which is precisely why key-order
+  // stability is load-bearing: an unstable serializer would make every honest
+  // artefact fail its own verification. Registered separately from the adapter
+  // because writing a digest and reading one are distinct adoptions, and this
+  // one performs real execution (two spawns and a SIGKILL) while the adapter
+  // performs none.
+  "scripts/proof/node0-worker-handoff-proof.mjs",
+  // MISSION-CONTRACT-STATE-0A (TASK-026 phase 01) — the mission contract IS its
+  // hash: immutability is enforced by content-addressing, not by a guard, so an
+  // unstable serializer would not weaken the rule, it would abolish it. A
+  // key-order-dependent digest would let the identical contract present two
+  // identities, and `contract_binding_mismatch` — the check that stops a resuming
+  // worker adopting the wrong mission — would refuse honest resumes and admit
+  // nothing. The state snapshot has the same contract across a worker exit: the
+  // process that writes the checkpoint is not the process that verifies it.
+  // Registration is adoption review only; the kernel is pure, promotes nothing,
+  // and conducts no mission.
+  "packages/core/src/mission-contract-state.js",
+  // MISSION-SUPERVISOR-0A (TASK-026 phase 02) — the conductor's transition
+  // receipts and its derived decision-state identity are both canonical hashes,
+  // and both are compared ACROSS processes: replay re-derives a state that a
+  // different process walked live, and the receipt chain is checked by a reader
+  // that did not write it. Key-order instability would make an honest replay
+  // diverge from the run it is replaying, which is the one property FR-7 exists
+  // to guarantee. Registration is adoption review only; the reducer is pure and
+  // performs no execution.
+  "packages/core/src/mission-supervisor.js",
+  // MISSION-WORKER-ADAPTER-0A (TASK-026 phase 03) — the demonstration receipt is
+  // the artefact a stranger reads to decide whether the swap really happened, and
+  // T-05 requires two runs of the same fixture to be byte-identical. That is a
+  // key-order claim before it is anything else. The proposal hash at the seam is
+  // computed over untrusted worker input, so a serializer that reordered keys
+  // would let one proposal present two identities to the duplicate check.
+  // Registration is adoption review only; the module is pure and spawns nothing.
+  "packages/core/src/mission-worker-adapter.js",
+  // NODE0-RUNTIME-MISSION-OBSERVATION-1A reader — re-derives a recorded runtime
+  // artefact's digest instead of trusting the one it carries, and compares the
+  // artefact's `executed_code_hash` against the classification kernel's bytes on
+  // disk. Both comparisons are made by a READER against a digest written earlier
+  // by a process that is now dead, so key-order stability is the entire contract:
+  // an unstable serializer would invalidate every honest artefact and validate
+  // none. Registration is adoption review only; this half performs one file read.
+  "packages/core/src/node0-runtime-mission-adapter.js",
+  // NODE0-RUNTIME-MISSION-OBSERVATION-1A producer — the writing half. It records
+  // the digest the reader above later re-derives, in a DIFFERENT process from the
+  // one that reads it, and it also hashes the supervisor state that a SIGKILLed
+  // predecessor left behind so its successor can prove it resumed that exact
+  // checkpoint rather than a fresh one. Registered separately from the reader
+  // because writing a digest and reading one are distinct adoptions, and this one
+  // performs real execution (spawns and a SIGKILL) while the reader performs none.
+  "scripts/proof/node0-runtime-mission-proof.mjs",
+  // NODE0-RUNTIME-MISSION-OBSERVATION-1A worker — the disposable process itself.
+  // It hashes the supervisor state it checkpoints, and a DIFFERENT process later
+  // compares that digest to prove it resumed that exact checkpoint rather than a
+  // fresh one. Predecessor and successor never share memory — only bytes on disk
+  // — so key-order stability is what makes the comparison mean anything.
+  "scripts/proof/node0-runtime-mission-worker.mjs",
+  // NODE0-RECOVERY-OBSERVATION-1A. Four processes and no shared memory: worker A
+  // hashes the checkpoint it leaves behind, the supervisor never sees it, worker B
+  // resumes it, and an INDEPENDENT observer re-derives the contract hash from the
+  // persisted fields to decide whether B resumed the same mission. Every one of
+  // those comparisons is between bytes written by one dead process and read by
+  // another, so key-order stability is the entire basis of the claim.
+  "packages/core/src/node0-recovery-adapter.js",
+  "scripts/proof/node0-recovery-proof.mjs",
+  "scripts/proof/node0-recovery-worker.mjs",
+  "scripts/proof/node0-recovery-observer.mjs",
+  // NODE0-TRANSITION-COVERAGE-1A \u2014 the first artefact that can carry a
+  // REFUTATION into the closure ledger, so its digest is the thing standing
+  // between a measured violation and a forged one. The producer re-derives every
+  // counterexample from source and a reader in a different process re-derives the
+  // digest; key-order instability would let an edited artefact keep its hash.
+  "packages/core/src/node0-transition-coverage-adapter.js",
+  "scripts/proof/node0-transition-coverage-proof.mjs",
+  // NODE0-HISTORY-REPLAY-1A. The producer walks a season history written by
+  // processes long dead and re-derives whether it reconstructs; the adapter, in a
+  // third process, re-derives the artefact digest before letting it settle a
+  // closure row. Every comparison is between bytes one process wrote and another
+  // read, so key-order stability is what stops an edited artefact keeping its
+  // hash — and this row can carry an INCOMPLETE that blocks closure.
+  "packages/core/src/node0-history-replay-adapter.js",
+  "scripts/proof/node0-history-replay-proof.mjs",
+  // NODE0-DEPLOYMENT-REMOTE-WRITE-1A. The producer measures the host's exposure
+  // surface and seals the verdict; the adapter, in a later process on a possibly
+  // changed machine, re-derives that digest before letting it settle the one
+  // closure row that governs external writes. The artefact is the ONLY thing
+  // standing between "this host carries no silent write path" and someone
+  // editing a findings array to say so, and the root-file hashes it carries are
+  // compared against a Bitcoin-anchored manifest — so key-order stability is
+  // what stops an edited artefact keeping its hash.
+  "packages/core/src/node0-deployment-remote-write-adapter.js",
+  "scripts/proof/node0-deployment-remote-write-proof.mjs",
+  "packages/core/src/dema-master-registry-effective-config.js",
+  "packages/core/src/openrouter-admission-policy-compiler.js",
+  "packages/core/src/pot-claim-scope.js",
+  // NODE0-ESTATE-MAP-0A — a later verifier re-derives the outcome from the
+  // caller-supplied registry and observations, so the decision identity must
+  // remain stable across key order. Registration proves canon adoption only;
+  // the component remains pure and does not observe or mutate any root.
+  "packages/core/src/node0-estate-map.js",
+  "packages/core/src/node0-sse-envelope-stream.js",
+  "packages/core/src/node0-sse-realm-composition.js",
+  "packages/core/src/dema-presence.js",
+  "packages/core/src/drs-realm-contracts.js",
+  "packages/core/src/drs-presence-reducer.js",
+  "packages/core/src/drs-fixture-publisher.js",
+  "packages/core/src/node0-fate-staged-effect.js",
+  // NODE0-GENESIS-FINAL-SPRINT-1A — governed proposal and local realm
+  // consumers. These hashes cross process boundaries in the mission bridge
+  // and URP journal, so canonical JSON adoption is load-bearing here.
+  "packages/core/src/bizra-prompt-mission-bridge.js",
+  // FOUNDER-ESTATE-WORKFLOW-1B — the read-only estate observation/report
+  // identity crosses the durable mission receipt boundary, so its result hash
+  // uses the same canonical bytes as the receipt verifier.
+  "packages/core/src/founder-estate-workflow.js",
+  "packages/core/src/constitutional-attention-allocator.js",
+  "packages/genesis/src/urp0-kernel.js",
+  "packages/genesis/src/urp0-mission-kernel.js",
+  "packages/genesis/src/urp0-sat-evidence.js",
+  "packages/genesis/src/urp0-sat5.js",
+  "scripts/genesis/urp0-runtime.mjs",
+  "scripts/genesis/urp0-store.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
@@ -216,6 +391,8 @@ function scanForForbiddenImporters() {
   const scanDirs = ["packages", "apps", "bin", "scripts"];
   const allowed = new Set([
     "scripts/review/canonical-json-v1-check.mjs",
+    "scripts/review/node0-sse-realm-composition-check.mjs",
+    "scripts/review/bizra-prompt-compiler-check.mjs",
     ...CANONICAL_JSON_V1_REGISTERED_CONSUMERS,
   ]);
   for (const dir of scanDirs) {
@@ -230,6 +407,9 @@ function scanForForbiddenImporters() {
       if (!/\.(js|mjs|cjs)$/.test(e.name)) continue;
       const abs = join(e.parentPath ?? e.path, e.name);
       const rel = relative(REPO_ROOT, abs).replaceAll("\\", "/");
+      // Build output is not a production source surface; scanning generated
+      // Next chunks would report transitive imports as unreviewed consumers.
+      if (rel.includes("/.next/")) continue;
       if (rel.startsWith("packages/canon/")) continue;
       if (allowed.has(rel)) continue;
       const src = readFileSync(abs, "utf8");

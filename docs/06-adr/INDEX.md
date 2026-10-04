@@ -4,7 +4,9 @@
 >
 > **Format:** Lightweight ADR records (`# ADR-NNN: Title` · `**Status:**` · `**Date:**` · `## Context` / `## Decision` / `## Consequences` sections, with the older records lighter on the consequences section). Status values: `Accepted` · `Proposed` · `Parking lot` · `Superseded`.
 >
-> **Last refreshed:** 2026-07-03 GST against `feat/node0-spine-runner-cli-1a @ 6dc3062` (added ADR-043 pattern-first Node-Space / Away Contract / Quest kernel).
+> **Last refreshed:** 2026-07-24 GST (added ADR-044 through ADR-048; ADR-048 is
+> proposed until its security-containment implementation is reviewed and
+> merged).
 >
 > **2026-06-24 addendum (not a full re-review):** the five framework kernels
 > shipped in #233–#238 (HHMM, hash-table-knowledge-index, self-awareness,
@@ -63,10 +65,15 @@
 | [041](ADR-041-pat-sat-blackboard-live-1a.md) | PAT-SAT-BLACKBOARD-LIVE-1A — single-step live suggestion | Accepted | 2026-06-24 | One exact-consent-gated, localhost-only, suggestion-only local-model call for the PAT `propose` seat via `invokeDemaTalkLive`; `model_invocation_performed` may be true (honest), the 10 forbidden runtime-emission keys + autonomy stay false; not autonomous coordination. |
 | [042](ADR-042-operator-bridge-threat-model.md) | Operator Bridge Threat Model | Accepted | 2026-06-26 | Documents high-trust operator bridge env vars (Node0 shell-out, gateway HTTP, localhost LLM probes, memory query wrapper); read-only review gate; no runtime/activation/token change. |
 | [043](ADR-043-pattern-first-nodespace-away-contract-quest-kernel.md) | Pattern-First Node-Space, Away Contracts, Quest Kernel | Accepted | 2026-07-03 | Kernel stays authoritative/zero-dep; LLM at the edge; Away Contract grammar, quest state machine, capability envelopes, Cedar/EIP-712/VC/Temporal/Wasm/A2A adopted as reference patterns only — live dependencies explicitly refused pending their own ADR + tests + threat model. |
+| [044](ADR-044-node0-founder-impact-loop-0a.md) | Node0 Founder Impact Loop 0A | Proposed | Pending separate build GO | Local-only design candidate for a founder impact loop; no implementation authority. |
+| [045](ADR-045-diagnostic-schema-versioning-and-fail-closed-negation.md) | Diagnostic Schema Versioning and Fail-Closed Negation | Accepted | 2026-07-17 | Version diagnostic schemas explicitly and preserve fail-closed interpretation across historical verification. |
+| [046](ADR-046-dema-ui-package-boundary.md) | Dema UI Package Boundary | Accepted | 2026-07-18 | Keeps the local UI package isolated from the root zero-dependency kernel and truth-labels all flows. |
+| [047](ADR-047-identity-pair-coherence-generation-store.md) | Identity Pair Coherence Generation Store | Accepted | 2026-07-22 | Select one immutable private/public key generation through one atomic active pointer; legacy migration is explicit. |
+| [048](ADR-048-active-signer-trust-and-history-integrity.md) | Active Signer Trust and Historical Signature Integrity | Proposed | Pending review and merge | Strict current verification requires public-only external active trust; portable history remains explicitly signature-integrity-only. |
 
 > **ADR-039 is intentionally absent:** it was a draft for the CLAUDE-OPERATING-LAYER work that was discarded as NOT_MERGED orphan (never committed), so the on-disk sequence skips 039. (Noted 2026-06-25.)
 
-**Tally:** 21 Accepted · 1 Parking lot · 19 Proposed · 0 Superseded · **41 total**
+**Tally:** 24 Accepted · 1 Parking lot · 21 Proposed · 0 Superseded · **46 total**
 
 ---
 

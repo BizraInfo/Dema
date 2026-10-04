@@ -86,18 +86,46 @@ function reject(reason_code, details = {}) {
   return deepFreeze({ valid: false, rejected: true, reason_code, ...details });
 }
 
+// Markers match on word boundaries, never as bare substrings. Plain `includes`
+// scored any word merely CONTAINING a marker — "speak"/"peaked" hit `peak`,
+// "mighty" hit `might`, "perfectly" hit `perfect`.
+//
+// The boundary is `\w` ONLY — the hyphen is a separator, not an identifier char.
+// An earlier form used (?<![\w-]) / (?![\w-]), borrowing the identifier-safety
+// idiom from scripts/review/no-overclaim.mjs. That gate scans source, where "-"
+// really does bind identifiers; this kernel scores PROSE, where it does not. The
+// borrowed rule silently zeroed ordinary compounds that carry a real marker —
+// "might-be", "perfect-world", "semi-perfect" — a false NEGATIVE on the predicate
+// behind CONVERGED / ACCEPT_CONVERGED, strictly worse than the false positive it
+// replaced. Underscore identifiers ("peak_phase") stay exempt for free because
+// "_" is a word character. Lexicon entries that themselves contain a hyphen still
+// match as whole markers, since the pattern is built from the entry verbatim.
+// Cost: a hyphenated command name like `peak-self-loop` scores 1 — accepted
+// deliberately, since 0 of 241 hyphenated tokens in `dema --help` contain a marker
+// segment, so an identifier allowlist would exist for no documented command while
+// prose stayed broken.
+// Markers are lowercase and the haystack is lowercased, so no `i` flag is needed.
+const escapeForRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const MARKER_PATTERNS = Object.freeze(
+  DIFFUSION_NOISE_MARKERS.map(
+    (m) => new RegExp(`(?<!\\w)${escapeForRegex(m)}(?!\\w)`, "u"),
+  ),
+);
+
 export function scoreDraftNoise(draft) {
   const haystack = text(draft).toLowerCase();
   let score = 0;
-  for (const marker of DIFFUSION_NOISE_MARKERS) {
-    if (haystack.includes(marker)) score += 1;
+  for (const pattern of MARKER_PATTERNS) {
+    if (pattern.test(haystack)) score += 1;
   }
   return score;
 }
 
 function markersFound(draft) {
   const haystack = text(draft).toLowerCase();
-  return Object.freeze(DIFFUSION_NOISE_MARKERS.filter((m) => haystack.includes(m)));
+  return Object.freeze(
+    DIFFUSION_NOISE_MARKERS.filter((_m, i) => MARKER_PATTERNS[i].test(haystack)),
+  );
 }
 
 function deriveStatus(noiseScores, divergedAtStep, evidenceCount) {

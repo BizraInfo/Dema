@@ -286,6 +286,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     ["tests/llm-adapter.test.js"],
   ),
   row(
+    "ask",
+    ["content_read", "local_write", "network", "external_runtime"],
+    "subcommand_gated",
+    "ADR-042 localhost LLM bridges (DEMA_OLLAMA_URL / DEMA_LM_STUDIO_URL / DEMA_LLAMACPP_URL); `dema ask` requires exact `GO: dema ask H3/H4 sanitizer-gated`; reads scoped text files, hard-gates via untrusted corpus sanitizer (ALLOWED-only into index/prompt), writes one truth-graph receipt under DEMA_HOME/ask; optional --invoke uses localhost LLM with separate model consent",
+    ["tests/dema-ask-h3h4.test.js"],
+  ),
+  row(
     "today",
     ["local_write"],
     "subcommand_gated",
@@ -311,6 +318,13 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
     "subcommand_gated",
     "plan/verify preview; run/save require exact consent gates",
     ["tests/health-snapshot.test.js", "tests/mission-closeout.test.js"],
+  ),
+  row(
+    "season",
+    ["read_only", "local_write"],
+    "subcommand_gated",
+    "status/resume are read-only reconstruction (resume never grants pending consent); save writes one content-addressed checkpoint + receipt + HEAD strictly under DEMA_HOME",
+    ["tests/node0-minimum-season-save-resume.test.js"],
   ),
   preview("recovery", "tests/dema-recovery-mission-gatherer.test.js"),
   readOnly("receipts", "tests/receipt-store-format.test.js"),

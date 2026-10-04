@@ -97,14 +97,25 @@ export function assertMetadataOnly(record) {
  * Segment-aware on purpose: a naive `startsWith` would admit `/demo/corpus-secret`
  * for root `/demo/corpus`.
  */
+// Trailing-slash strip WITHOUT a regex. `/\/+$/` is a polynomial-ReDoS shape
+// (CodeQL js/polynomial-redos): on a long run of slashes the engine retries `\/+$`
+// from each start position, so a caller-supplied path of n slashes costs O(n^2).
+// These paths come from the scanned filesystem, i.e. uncontrolled input. Scanning
+// backwards and slicing once is O(n) with no backtracking.
+function stripTrailingSlashes(value) {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* "/" */) end -= 1;
+  return value.slice(0, end);
+}
+
 export function isWithinRoot(rootRealPath, candidateRealPath) {
   if (typeof rootRealPath !== "string" || typeof candidateRealPath !== "string") return false;
   if (!rootRealPath.startsWith("/") || !candidateRealPath.startsWith("/")) return false;
   if (candidateRealPath.includes("\0") || rootRealPath.includes("\0")) return false;
   // An unresolved traversal segment means the caller did not realpath it. Fail closed.
   if (candidateRealPath.split("/").includes("..")) return false;
-  const root = rootRealPath.replace(/\/+$/, "");
-  const candidate = candidateRealPath.replace(/\/+$/, "");
+  const root = stripTrailingSlashes(rootRealPath);
+  const candidate = stripTrailingSlashes(candidateRealPath);
   if (root === "") return false;
   return candidate === root || candidate.startsWith(root + "/");
 }

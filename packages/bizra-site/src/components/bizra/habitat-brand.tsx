@@ -2,15 +2,20 @@
 
 import { useState } from 'react'
 
-export type TruthState = 'MEASURED' | 'DESIGNED' | 'DECLARED' | 'SEALED' | 'BLOCKED' | 'PREVIEW'
+/** Canonical public truth labels — CURRENT_LIMITS.md / CLAIM_REGISTER_v0_1.md */
+export type TruthState =
+  | 'MEASURED'
+  | 'DESIGNED_NOT_LIVE'
+  | 'PREVIEW_ONLY'
+  | 'PLANNED'
+  | 'BLOCKED'
 
 const STATE_STYLES: Record<TruthState, string> = {
   MEASURED: 'border-[#4e7c59]/55 bg-[#4e7c59]/10 text-[#9fc0a6]',
-  DESIGNED: 'border-[#5b9bd5]/50 bg-[#5b9bd5]/10 text-[#9bc3ea]',
-  DECLARED: 'border-[#c9a84c]/50 bg-[#c9a84c]/10 text-[#e1c984]',
-  SEALED: 'border-[#c89b3c]/65 bg-[#c89b3c]/12 text-[#f0d38b]',
+  DESIGNED_NOT_LIVE: 'border-[#5b9bd5]/50 bg-[#5b9bd5]/10 text-[#9bc3ea]',
+  PREVIEW_ONLY: 'border-[#8c78b8]/50 bg-[#8c78b8]/10 text-[#bfaee4]',
+  PLANNED: 'border-[#c9a84c]/50 bg-[#c9a84c]/10 text-[#e1c984]',
   BLOCKED: 'border-[#a75656]/55 bg-[#a75656]/10 text-[#d69a9a]',
-  PREVIEW: 'border-[#8c78b8]/50 bg-[#8c78b8]/10 text-[#bfaee4]',
 }
 
 export function TruthLabel({ state, className = '' }: { state: TruthState; className?: string }) {
@@ -65,9 +70,9 @@ export function HabitatSignatureBar() {
         </div>
         <div className="hidden items-center gap-1.5 md:flex" aria-label="BIZRA truth states">
           <TruthLabel state="MEASURED" />
-          <TruthLabel state="DESIGNED" />
-          <TruthLabel state="DECLARED" />
-          <TruthLabel state="SEALED" />
+          <TruthLabel state="PREVIEW_ONLY" />
+          <TruthLabel state="DESIGNED_NOT_LIVE" />
+          <TruthLabel state="BLOCKED" />
         </div>
       </div>
     </div>

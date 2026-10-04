@@ -1,0 +1,16 @@
+schema: bizra.data_steward.policy.v0.1
+default_mode: METADATA_ONLY_PREVIEW
+follow_symlinks: false
+preserve_originals: true
+default_delete_authority: false
+content_read_requires: explicit_bounded_scope
+exact_duplicate_requires: raw_sha256_equality
+same_size_means: HASH_REQUIRED
+physical_reorganization_requires:
+  - exact_action_plan
+  - collision_check
+  - reversible_execution_path
+  - exact_human_go
+  - postcondition_observation
+  - receipt
+ordinary_authority_delta: 0

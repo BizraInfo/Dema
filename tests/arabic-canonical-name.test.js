@@ -80,3 +80,60 @@ test("the canonical spelling is present in the glossary, so the guard has a refe
     "canon glossary must carry the correct Arabic name",
   );
 });
+
+// ARABIC-LIGATURE-GUARD — the lam-alef (لإ) ligature must never decompose backwards.
+//
+// Measured 2026-07-31: the canon tagline reached docs/gtm/ — and an open PR —
+// with the tagline's second word opening U+0627 U+0625 U+0644 … where canon
+// opens U+0627 U+0644 U+0625 …. The lam and the hamza-carrying alef are
+// transposed: the signature of a lam-alef presentation form (ﻹ) converted
+// back to base characters in the wrong order, which is what PDF text
+// extraction does — and the root canon lives in docs/root-canon/source/*.pdf.
+// The result is not a word.
+//
+// It reached the PR because Layer-1 audits claim discipline and leakage, not
+// orthography, and reported PUBLIC_SAFE. Nothing else was looking. The line it
+// broke is the tagline — the most quoted sentence the project has.
+//
+// The tell that pins the mechanism: `كل إنسان` on the adjacent canon line is
+// correct, because the space prevents the ligature from forming. Only the لإ
+// word corrupted.
+//
+// Pattern: a bare alef immediately followed by a hamza-carrying alef. Two
+// consecutive alef forms do not occur inside a word in Arabic orthography, so
+// this cannot fire on valid text — measured across 2,199 tracked files: 2
+// hits, both the real defect, zero false positives. Built from code points for
+// the same reason the name guard above is: writing the broken form literally
+// would make this file flag its own source.
+const BROKEN_LAM_ALEF = new RegExp("ا[آأإ]", "u");
+
+test("no tracked file carries a backwards lam-alef ligature", async () => {
+  const files = await trackedTextFiles();
+  assert.ok(files.length > 0, "expected tracked files to scan");
+
+  const offenders = [];
+  for (const file of files) {
+    let source;
+    try {
+      source = await readFile(join(REPO_ROOT, file), "utf8");
+    } catch {
+      continue; // unreadable or removed between listing and read
+    }
+    if (!/[؀-ۿ]/u.test(source)) continue;
+    const lines = source.split("\n");
+    for (let i = 0; i < lines.length; i += 1) {
+      if (BROKEN_LAM_ALEF.test(lines[i])) {
+        offenders.push(`${file}:${i + 1}`);
+      }
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    // The broken sequence is named by code point, never rendered. Writing it
+    // literally here is what made this guard fail on its own assertion message
+    // — the file is tracked, so the scan reads this line too.
+    `backwards lam-alef ligature — an alef immediately followed by a hamza-alef (U+0627 then U+0625/U+0623/U+0622) — at:\n  ${offenders.join("\n  ")}\nRestore the lam before the hamza-alef: the word must open U+0627 U+0644 U+0625, as in الإنسانية.`,
+  );
+});

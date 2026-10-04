@@ -1,11 +1,17 @@
 import { join, basename } from "node:path";
 import { verifyProofPassport } from "./proof-passport-verify.js";
-import { verifyAuthorshipReceiptFile } from "./authorship-verify.js";
+import { verifyAuthorshipReceiptIntegrityFile } from "./authorship-verify.js";
+import {
+  LEGACY_PROOF_PASSPORT_SCHEMA,
+  PROOF_PASSPORT_SCHEMA,
+} from "./proof-passport.js";
 
 export const DEEP_VERIFY_SCHEMA =
-  "bizra.dema.proof_passport_deep_verification.v0.1";
+  "bizra.dema.proof_passport_deep_verification.v0.2";
 
-const VERIFICATION_SCOPE = "PASSPORT_ENVELOPE_AND_RECEIPTS";
+const VERIFICATION_SCOPE =
+  "PASSPORT_ENVELOPE_AND_RECEIPT_SIGNATURE_INTEGRITY_ONLY";
+const RECEIPT_INTEGRITY_SCOPE = "SIGNATURE_INTEGRITY_ONLY";
 const TRUTH_LABEL_VERIFIED = "LOCAL_PROOF_PASSPORT_DEEP_VERIFIED";
 const TRUTH_LABEL_FAILED = "LOCAL_PROOF_PASSPORT_DEEP_FAILED";
 const TRUTH_LABEL_EMPTY = "LOCAL_PROOF_PASSPORT_DEEP_EMPTY";
@@ -24,6 +30,7 @@ const BOUNDARY = Object.freeze({
   production_claimed: false,
   receipt_files_read: true,
   receipt_signatures_verified: true,
+  active_signer_trust_evaluated: false,
 });
 
 function isSafeFilename(filename) {
@@ -50,6 +57,35 @@ export async function verifyProofPassportDeep(passport, { receiptsDir } = {}) {
     });
   }
 
+  const legacyPassport = passport.schema === LEGACY_PROOF_PASSPORT_SCHEMA;
+  const currentPassport = passport.schema === PROOF_PASSPORT_SCHEMA;
+  const boundary = passport.boundary ?? {};
+  const integrityScopeBound =
+    currentPassport
+      ? passport.verification_scope === RECEIPT_INTEGRITY_SCOPE &&
+        boundary.active_signer_trust_evaluated === false &&
+        boundary.receipt_verification_scope === RECEIPT_INTEGRITY_SCOPE
+      : legacyPassport &&
+        (passport.verification_scope === undefined ||
+          passport.verification_scope === RECEIPT_INTEGRITY_SCOPE) &&
+        (boundary.active_signer_trust_evaluated === undefined ||
+          boundary.active_signer_trust_evaluated === false) &&
+        (boundary.receipt_verification_scope === undefined ||
+          boundary.receipt_verification_scope === RECEIPT_INTEGRITY_SCOPE);
+  if (!integrityScopeBound) {
+    return freeze({
+      schema: DEEP_VERIFY_SCHEMA,
+      verified: false,
+      verdict: "FAILED",
+      verification_scope: VERIFICATION_SCOPE,
+      truth_label: TRUTH_LABEL_FAILED,
+      envelope,
+      receipt_results: [],
+      boundary: BOUNDARY,
+      error: "passport_integrity_scope_invalid",
+    });
+  }
+
   if (typeof receiptsDir !== "string" || receiptsDir.length === 0) {
     return freeze({
       schema: DEEP_VERIFY_SCHEMA,
@@ -73,6 +109,8 @@ export async function verifyProofPassportDeep(passport, { receiptsDir } = {}) {
       verification_scope: VERIFICATION_SCOPE,
       truth_label: TRUTH_LABEL_EMPTY,
       envelope,
+      passport_schema: passport.schema,
+      legacy_compatibility: legacyPassport,
       receipt_results: [],
       boundary: BOUNDARY,
     });
@@ -96,7 +134,7 @@ export async function verifyProofPassportDeep(passport, { receiptsDir } = {}) {
     }
 
     const receiptPath = join(receiptsDir, filename);
-    const fileResult = await verifyAuthorshipReceiptFile(receiptPath);
+    const fileResult = await verifyAuthorshipReceiptIntegrityFile(receiptPath);
 
     if (!fileResult.verified) {
       allReceiptsOk = false;
@@ -115,7 +153,15 @@ export async function verifyProofPassportDeep(passport, { receiptsDir } = {}) {
       declared.artifact_sha256 === fileResult.artifact?.sha256;
     const fingerprintMatch =
       declared.author_fingerprint ===
-      (fileResult.author?.public_key_fingerprint ?? null);
+      (fileResult.embedded_fingerprint ?? null);
+    const scopeMatch = legacyPassport
+      ? declared.verification_scope === undefined ||
+        declared.verification_scope === RECEIPT_INTEGRITY_SCOPE
+      : declared.verification_scope === RECEIPT_INTEGRITY_SCOPE;
+    const trustStateMatch = legacyPassport
+      ? declared.trust_state === undefined ||
+        declared.trust_state === "NOT_EVALUATED"
+      : declared.trust_state === "NOT_EVALUATED";
     const verdictMatch = declared.verdict === fileResult.verdict;
     const truthLabelMatch =
       declared.truth_label === "VERIFIED_LOCAL_AUTHORSHIP_RECEIPT";
@@ -125,10 +171,17 @@ export async function verifyProofPassportDeep(passport, { receiptsDir } = {}) {
       author_fingerprint: fingerprintMatch,
       verdict: verdictMatch,
       truth_label: truthLabelMatch,
+      verification_scope: scopeMatch,
+      trust_state: trustStateMatch,
     });
 
     const ok =
-      artifactMatch && fingerprintMatch && verdictMatch && truthLabelMatch;
+      artifactMatch &&
+      fingerprintMatch &&
+      verdictMatch &&
+      truthLabelMatch &&
+      scopeMatch &&
+      trustStateMatch;
 
     if (!ok) allReceiptsOk = false;
 
@@ -137,6 +190,8 @@ export async function verifyProofPassportDeep(passport, { receiptsDir } = {}) {
         receipt_filename: filename,
         verified: ok,
         receipt_verified: true,
+        verification_scope: fileResult.verification_scope,
+        trust_state: fileResult.trust_state,
         metadata_match: metadataMatch,
       }),
     );
@@ -150,6 +205,8 @@ export async function verifyProofPassportDeep(passport, { receiptsDir } = {}) {
     verification_scope: VERIFICATION_SCOPE,
     truth_label: verified ? TRUTH_LABEL_VERIFIED : TRUTH_LABEL_FAILED,
     envelope,
+    passport_schema: passport.schema,
+    legacy_compatibility: legacyPassport,
     receipt_results: Object.freeze(receiptResults),
     boundary: BOUNDARY,
   });

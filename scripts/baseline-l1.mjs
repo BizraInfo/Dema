@@ -116,23 +116,43 @@ function countCliCommandsInHelp() {
   }
 }
 
+// Parse the TAP summary out of whatever we captured. Separated from the spawn
+// so a FAILING suite and an UNMEASURABLE one cannot be reported the same way:
+// a suite that ran and failed is a measurement, and only a suite we could not
+// read at all is incomplete.
+function parseTap(out) {
+  if (typeof out !== "string" || out === "") return null;
+  const m = (re) => (out.match(re) || [])[1];
+  const total = m(/# tests (\d+)/);
+  if (total === undefined) return null;
+  return {
+    pass: parseInt(m(/# pass (\d+)/) ?? "0", 10),
+    fail: parseInt(m(/# fail (\d+)/) ?? "0", 10),
+    total: parseInt(total, 10),
+    completed: true,
+  };
+}
+
 function runTestSuite() {
+  // maxBuffer is explicit: the default 1 MB was silently exceeded once the suite
+  // passed ~9k tests, so the instrument broke on exactly the growth it exists to
+  // measure and reported ENOBUFS instead of a count.
+  const opts = {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+    maxBuffer: 256 * 1024 * 1024,
+  };
   try {
-    const out = execFileSync("npm", ["test", "--silent"], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    const pass = parseInt((out.match(/# pass (\d+)/) || [])[1] ?? "0", 10);
-    const fail = parseInt((out.match(/# fail (\d+)/) || [])[1] ?? "0", 10);
-    const total = parseInt((out.match(/# tests (\d+)/) || [])[1] ?? "0", 10);
-    return { pass, fail, total, completed: true };
+    return parseTap(execFileSync("npm", ["test", "--silent"], opts))
+      ?? { pass: 0, fail: 0, total: 0, completed: false, error: "tap_summary_unparseable" };
   } catch (err) {
+    // A non-zero exit means the suite RAN and something failed. Its output is
+    // still on the error, and a real count is a measurement — not an absence.
+    const parsed = parseTap(err && typeof err.stdout === "string" ? err.stdout : "");
+    if (parsed) return { ...parsed, completed: true, exit_nonzero: true };
     return {
-      pass: 0,
-      fail: 0,
-      total: 0,
-      completed: false,
+      pass: 0, fail: 0, total: 0, completed: false,
       error: String(err).slice(0, 200),
     };
   }

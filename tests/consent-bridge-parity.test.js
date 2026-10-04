@@ -25,7 +25,9 @@ test("live parity report passes on current matrix + registry", () => {
     JSON.stringify(report.findings, null, 2),
   );
   assert.equal(verifyConsentBridgeParityReport(report).ok, true);
-  assert.equal(report.external_runtime_command_count, 6);
+  // 7 = node0 · status · talk · llm-invoke · ask · task · models.
+  // Bump deliberately when an external_runtime command lands — never to chase red.
+  assert.equal(report.external_runtime_command_count, 7);
 });
 
 test("fails when external_runtime command drops bridge reference", () => {

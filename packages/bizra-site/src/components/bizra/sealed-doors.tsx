@@ -11,11 +11,23 @@ type OpenProblem = {
   evidence: string
 }
 
-function normalizeState(problem: OpenProblem): TruthState {
-  if (problem.status === 'BLOCKED') return 'BLOCKED'
-  if (problem.status === 'PREVIEW_ONLY') return 'PREVIEW'
-  if (problem.status.includes('DESIGNED')) return 'DESIGNED'
-  return 'DECLARED'
+const CANONICAL: ReadonlySet<string> = new Set([
+  'MEASURED',
+  'DESIGNED_NOT_LIVE',
+  'PREVIEW_ONLY',
+  'PLANNED',
+  'BLOCKED',
+])
+
+function normalizeState(problem: OpenProblem): TruthState | null {
+  // Never render MEASURED capabilities as sealed/unfinished doors.
+  if (problem.status === 'MEASURED' || problem.status === 'LOCAL_ONLY' || problem.status === 'MEASURED_LOCAL') {
+    return null
+  }
+  if (CANONICAL.has(problem.status) && problem.status !== 'MEASURED') {
+    return problem.status as TruthState
+  }
+  return null
 }
 
 function unsealCondition(problem: OpenProblem): string {
@@ -25,14 +37,19 @@ function unsealCondition(problem: OpenProblem): string {
   if (problem.status === 'PREVIEW_ONLY') {
     return 'Replace preview-only rendering with a governed runtime path, measured effects, rollback evidence, and human-approved activation.'
   }
-  if (problem.status.includes('DESIGNED')) {
+  if (problem.status === 'DESIGNED_NOT_LIVE') {
     return 'Implement the design as a bounded vertical slice, prove it in an isolated environment, then bind the observed result to a signed receipt.'
+  }
+  if (problem.status === 'PLANNED') {
+    return 'Supply a falsifiable contract, executable evidence, and an explicit sovereign promotion decision.'
   }
   return 'Supply a falsifiable contract, executable evidence, and an explicit sovereign promotion decision.'
 }
 
 export function SealedDoors() {
-  const problems = openProblems.problems as OpenProblem[]
+  const problems = (openProblems.problems as OpenProblem[])
+    .map((problem) => ({ problem, state: normalizeState(problem) }))
+    .filter((entry): entry is { problem: OpenProblem; state: TruthState } => entry.state !== null)
 
   return (
     <section id="sealed-doors" className="relative border-y border-[#1c2438] bg-[#090d17] py-20 sm:py-28">
@@ -57,7 +74,7 @@ export function SealedDoors() {
 
           <div className="max-w-[58ch] lg:justify-self-end">
             <p className="text-[15px] leading-[1.8] text-[#9aa4b5]">
-              Every unfinished capability remains visible. Each door names its present truth state, the evidence already attached to it, and the exact class of proof required before it may open.
+              Every unfinished capability remains visible. Each door names its present truth state, the evidence already attached to it, and the exact class of proof required before it may open. MEASURED surfaces are excluded — they are not sealed promises.
             </p>
             <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.16em] text-[#68758a]">
               Click a door to inspect its seal · no status is upgraded by presentation
@@ -66,11 +83,11 @@ export function SealedDoors() {
         </div>
 
         <div className="mt-12 grid gap-4 md:grid-cols-2">
-          {problems.map((problem) => (
+          {problems.map(({ problem, state }) => (
             <SealedDoor
               key={`${problem.status}:${problem.surface}`}
               title={problem.surface.replace(/^\*\*[^*]+\*\*\s*/, '')}
-              state={normalizeState(problem)}
+              state={state}
               meaning={problem.meaning}
               evidence={problem.evidence}
               unseal={unsealCondition(problem)}
@@ -80,7 +97,7 @@ export function SealedDoors() {
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-[#1c2438] pt-5">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#667287]">
-            {openProblems.total_open} visible doors · {openProblems.generated_from_ledger_rows} ledger rows examined
+            {problems.length} visible doors · {openProblems.generated_from_ledger_rows} ledger rows examined
           </p>
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#c89b3c]">
             What is not live remains sealed

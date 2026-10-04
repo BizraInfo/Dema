@@ -93,3 +93,28 @@ test("PRE_PUSH_PUBLISH_GATES includes artifact-011 preflight gate before npm che
   assert.notEqual(checkIndex, -1);
   assert.ok(artifactIndex < checkIndex);
 });
+
+// `npm run check` has no gitleaks and neither did this seal, so CI's `scan` job
+// was the first thing to see a leaked credential — after the push, not before.
+test("PRE_PUSH_PUBLISH_GATES scans for secrets before the slow gates", () => {
+  const ids = PRE_PUSH_PUBLISH_GATES.map((g) => g.id);
+  const scanIndex = ids.indexOf("scan_secrets");
+  assert.notEqual(scanIndex, -1, "secret scan must be a registered pre-push gate");
+  for (const slow of ["artifact_011_preflight_gate", "npm_check", "release_readiness"]) {
+    const slowIndex = ids.indexOf(slow);
+    assert.ok(
+      scanIndex < slowIndex,
+      `secret scan must run before ${slow}; a leaked credential should fail fast`,
+    );
+  }
+});
+
+test("the secret scan gate shells out to the documented npm script, not a copied command", () => {
+  const gate = PRE_PUSH_PUBLISH_GATES.find((g) => g.id === "scan_secrets");
+  assert.ok(gate, "scan_secrets gate must exist");
+  // Anchored to `npm run scan:secrets` on purpose: that script parses the pinned
+  // version, checksum and flags out of the gitleaks workflow, so this gate cannot
+  // drift from CI. Inlining gitleaks argv here would reintroduce the second pin.
+  assert.deepEqual(gate.argv, ["npm", "run", "scan:secrets"]);
+  assert.equal(gate.exit_only, true, "fail closed: any non-zero exit blocks the push");
+});

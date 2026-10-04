@@ -47,7 +47,7 @@ test("dema doctor --json → JSON.parse succeeds, schema field present", async (
 
 // TASK-036 defect 2, end to end: point the gateway adapter at a port with
 // nothing listening. The adapter payload is honest here (truth_label DEGRADED,
-// gateway.reachable false, four "unreachable" findings), so doctor must not
+// gateway.reachable false, five "unreachable" findings), so doctor must not
 // contradict it by printing a green reachable probe.
 test("dema doctor → a dead gateway is not reported as reachable", async () => {
   const env = await freshEnv();
@@ -82,4 +82,42 @@ test("dema doctor --no-color → stdout contains no ANSI escape codes", async ()
     !result.stdout.includes("\x1b["),
     "ANSI codes must be absent with --no-color",
   );
+});
+
+// DOCTOR-PREVIEW-RESTING-STATE-1B, end to end. The default command answers
+// "is this node operational?"; --preview answers "is the preview shell intact?"
+// They must not be the same question, or a wrapper script reads exit 0 off a
+// node that has no runtime bridged at all.
+
+test("dema doctor → unbridged exits non-zero (not operational)", async () => {
+  const env = await freshEnv();
+  const result = await execFileAsync("node", [cliPath, "doctor", "--no-color"], {
+    env,
+  }).catch((e) => e);
+  assert.equal(result.code, 1);
+  assert.match(result.stdout, /Nothing is broken/i);
+});
+
+test("dema doctor --preview → unbridged exits 0 (preview shell is intact)", async () => {
+  const env = await freshEnv();
+  const result = await execFileAsync(
+    "node",
+    [cliPath, "doctor", "--preview", "--no-color"],
+    { env },
+  ).catch((e) => e);
+  assert.equal(result.code, undefined, "--preview must exit 0 when nothing failed");
+});
+
+test("dema doctor --json → typed machine dimensions, exit_code matches process", async () => {
+  const env = await freshEnv();
+  const result = await execFileAsync("node", [cliPath, "doctor", "--json"], {
+    env,
+  }).catch((e) => e);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.operational, false, "no runtime bridged is not operational");
+  assert.equal(parsed.preview_environment_valid, true);
+  assert.equal(parsed.repair_required, false);
+  assert.equal(parsed.reason, "runtime_not_bridged");
+  assert.equal(parsed.exit_code, 1);
+  assert.equal(result.code, parsed.exit_code, "reported exit_code must be the real one");
 });

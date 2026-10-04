@@ -2,22 +2,33 @@ import {
   buildOnboardingLifecyclePreview,
   ONBOARDING_LIFECYCLE_STAGE_COUNT,
 } from "../../../../packages/core/src/onboarding-lifecycle.js";
+import {
+  localizeOnboardingStages,
+  resolveOperatorSurfaceI18n,
+} from "../../../../packages/core/src/operator-surface-i18n.js";
+import { readOperatorLanguage } from "../../../../packages/core/src/operator-profile.js";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 // ONBOARD-ALIAS-1A: renders the canonical 7-stage lifecycle as a readable path.
 // Dema is one-shot with no prompting except exact-string consent, so this is a
 // PATH PREVIEW the operator reads and follows — the same posture as
 // `dema diagnostics plan` — not an interactive wizard.
-function formatGuidedPath(preview) {
+function formatGuidedPath(preview, languageCode = null) {
+  const i18n = resolveOperatorSurfaceI18n(languageCode);
+  const t = i18n.strings.onboard;
+  const dirMark = i18n.script_direction === "rtl" ? "\u200F" : "";
+  const stages = localizeOnboardingStages(preview.stages, i18n.language_code);
   const lines = [
-    "Dema — guided setup path",
+    `${dirMark}${t.header}`,
     "",
-    `  ${ONBOARDING_LIFECYCLE_STAGE_COUNT} stages · preview only · nothing is created or sent`,
+    `  ${ONBOARDING_LIFECYCLE_STAGE_COUNT} ${t.meta}`,
     "",
   ];
-  for (const stage of preview.stages) {
+  for (const stage of stages) {
     lines.push(`${stage.order + 1}. ${stage.title}`);
-    lines.push(`   stage   : ${stage.id}`);
-    if (stage.prompt_intent) lines.push(`   why     : ${stage.prompt_intent}`);
+    lines.push(`   ${t.stage}   : ${stage.id}`);
+    if (stage.prompt_intent) lines.push(`   ${t.why}     : ${stage.prompt_intent}`);
     if (Array.isArray(stage.options) && stage.options.length > 0) {
       const shown = stage.options
         .slice(0, 6)
@@ -25,21 +36,23 @@ function formatGuidedPath(preview) {
         .join(" · ");
       const more =
         stage.options.length > 6 ? ` (+${stage.options.length - 6} more)` : "";
-      lines.push(`   choices : ${shown}${more}`);
+      lines.push(`   ${t.choices} : ${shown}${more}`);
     }
     lines.push("");
   }
-  lines.push("Boundary:");
-  lines.push(
-    "  Preview only. No mission is created, no runtime starts, no receipt is minted,",
-  );
-  lines.push(
-    "  and nothing leaves this machine. Each stage acts only on your typed consent.",
-  );
+  lines.push(t.boundary_heading);
+  lines.push(`  ${t.boundary_1}`);
+  lines.push(`  ${t.boundary_2}`);
   lines.push("");
-  lines.push("Next:");
-  lines.push("  dema welcome    — read the first-run orientation");
-  lines.push("  dema status     — see what is true, safe, and blocked");
+  lines.push(t.next_heading);
+  lines.push(`  ${t.next_welcome}`);
+  lines.push(`  ${t.next_status}`);
+  if (i18n.truth_label === "DECLARED_NEEDS_NATIVE_REVIEW") {
+    lines.push("");
+    lines.push(
+      `[${i18n.truth_label}] Arabic onboard surface · awaiting native operator review`,
+    );
+  }
   return lines.join("\n");
 }
 
@@ -83,11 +96,24 @@ export async function cmd_onboard(ctx) {
     }
     process.exit(process.exitCode ?? 0);
   }
+  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+  const lang = await readOperatorLanguage(home);
   const preview = buildOnboardingLifecyclePreview({});
   console.log(
     argv.includes("--json")
-      ? JSON.stringify(preview, null, 2)
-      : formatGuidedPath(preview),
+      ? JSON.stringify(
+          {
+            ...preview,
+            language_code: lang.language_code,
+            stages: localizeOnboardingStages(
+              preview.stages,
+              lang.language_code === "ar" ? "ar" : "en",
+            ),
+          },
+          null,
+          2,
+        )
+      : formatGuidedPath(preview, lang.language_code),
   );
   process.exit(process.exitCode ?? 0);
 }

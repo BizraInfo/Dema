@@ -37,6 +37,48 @@ export const ANSI = Object.freeze({
   neutral: truecolor(156, 163, 175),
 });
 
+// SCALE — graduated ramps absorbed from the 2026-07-30 Dema TUI design handoff.
+//
+// STATUS: TUI extension, NOT brand canon. Canon v0.2 lives upstream in
+// bizra-data-lake and is vendored here byte-identically (sha256 2601f1e2…);
+// Dema is the face, not the whole system, so it does not promote BIZRA-wide
+// brand canon locally. Promotion to canon v0.3 is an upstream ratification.
+// Same posture as the proof-state SEMANTIC group above.
+//
+// Six flat colors cannot express depth; these ramps can. They are anchored, not
+// free-floating: origin_black and celestial_navy did not move, they turned out
+// to be ground steps 2 and 4 of a ramp that was always implied. The drift-guard
+// in tests/theme.test.js pins that anchoring.
+//
+// Vendored, not read from disk — this is a core kernel and stays fs-free
+// (.claude/rules/paths/core-kernels.md).
+export const SCALE = Object.freeze({
+  ground: Object.freeze([
+    "#02060C",
+    "#040A12",
+    HEX.originBlack,
+    "#071120",
+    HEX.navy,
+  ]),
+  gold: Object.freeze([HEX.gold, "#D4B875", "#EDD9A3"]),
+  paper: Object.freeze(["#F8F6F1", "#F3EEDF", "#EDE6D3"]),
+});
+
+// TEXTURE is the identity move: epistemic status rendered as glyph weight
+// rather than as a bracketed word. Solid is proven, stipple is declared.
+//
+// This is deliberately not a color. Color carries attention; texture carries
+// certainty, and conflating them is how a preview surface gets read as ready.
+// It is also direction-agnostic, so it survives RTL intact where "[PREVIEW_ONLY]"
+// does not — see the bidi isolation gap in doctor-dashboard.js.
+export const TEXTURE = Object.freeze({
+  measured: "█",
+  preview: "░",
+  ruleMajor: "═",
+  ruleMinor: "─",
+  separator: "·",
+});
+
 // ROLE maps SEMANTIC FOREGROUND intent only. Surface/background colors
 // (navy, originBlack) intentionally have no ROLE alias: HEX is their source of
 // truth, and originBlack is HEX-only (no fg ANSI entry) since it is never a text color.

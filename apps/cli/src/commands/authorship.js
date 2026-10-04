@@ -7,8 +7,11 @@ import {
 import {
   initAuthorshipKey,
   migrateLegacyAuthorshipKey,
+  rotateAuthorshipKey,
   KEY_INIT_CONSENT_PHRASE,
   KEY_MIGRATE_CONSENT_PHRASE,
+  KEY_ROTATE_CONSENT_PHRASE,
+  loadAuthorshipTrustSnapshot,
 } from "../../../../packages/receipts/src/authorship-key-store.js";
 import {
   signArtifact,
@@ -27,6 +30,8 @@ import {
   formatAuthorshipCloseout,
 } from "../../../../packages/receipts/src/authorship-closeout.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
+import { defaultDemaHome } from "../../../../packages/core/src/operator-profile.js";
+import { readFileSync } from "node:fs";
 
 function argValue(argv, name) {
   const index = argv.indexOf(name);
@@ -55,7 +60,7 @@ export async function cmd_authorship(ctx) {
       );
     } else if (result.error === "key_already_exists") {
       console.error(
-        `Key already exists at ${result.private_key_path}. Use dema authorship key rotate (future) to replace.`,
+        `Key already exists at ${result.private_key_path}. Use dema authorship key rotate to replace.`,
       );
     } else if (result.error === "unsafe_key_path") {
       console.error(`Unsafe authorship key path refused: ${result.key_path}`);
@@ -88,6 +93,70 @@ export async function cmd_authorship(ctx) {
       console.error(`Migration refused: ${result.error}`);
     }
     if (!result.migrated) process.exitCode = 1;
+    process.exit(process.exitCode ?? 0);
+  }
+
+  if (subCmdA === "key" && argv[2] === "rotate") {
+    const consent = argValue(argv, "--consent") ?? "";
+    // The validator hashes the demaHome ARGUMENT, not a resolved path. Passing
+    // it explicitly is what lets an envelope bind to a real home instead of to
+    // the empty string.
+    const demaHome = argValue(argv, "--dema-home") || defaultDemaHome();
+    const envelopePath = argValue(argv, "--envelope");
+    let envelope;
+    if (envelopePath) {
+      try {
+        envelope = JSON.parse(readFileSync(envelopePath, "utf8"));
+      } catch (error) {
+        console.error(
+          `Consent envelope unreadable at ${envelopePath}: ${error.message}. No key was changed.`,
+        );
+        process.exit(1);
+      }
+    }
+    const result = await rotateAuthorshipKey({ consent, demaHome, envelope });
+    if (wantJsonA) {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (result.rotated) {
+      console.log("Authorship Key Rotated");
+      console.log("=".repeat(40));
+      console.log(
+        `  Old fingerprint: ${result.old_fingerprint} (retired, denylisted)`,
+      );
+      console.log(`  New fingerprint: ${result.new_fingerprint}`);
+      console.log(`  Old key quarantined: ${result.quarantine_dir}`);
+      console.log(`  Rotation receipt: ${result.receipt_path}`);
+      console.log(
+        "  Next: classify receipts signed during the exposure interval and",
+      );
+      console.log(
+        "  confirm runtime loads the new fingerprint before re-arming.",
+      );
+    } else if (result.error === "consent_required") {
+      console.error(
+        `Consent required. Use: --consent "${KEY_ROTATE_CONSENT_PHRASE}"`,
+      );
+    } else if (String(result.error).startsWith("consent_envelope")) {
+      console.error(
+        `A nonce-bearing consent envelope is required for a real rotation (${result.error}). No key was changed.`,
+      );
+      console.error(
+        `Mint one, then pass it back:\n  node scripts/node0-rotation-consent-envelope.mjs\n  dema authorship key rotate --consent "${KEY_ROTATE_CONSENT_PHRASE}" --envelope <path>`,
+      );
+    } else if (result.error === "consent_nonce_replayed") {
+      console.error(
+        `That consent envelope was already spent. Mint a fresh one — a nonce authorises exactly one rotation. No key was changed.`,
+      );
+    } else if (result.error === "no_key_to_rotate") {
+      console.error(
+        `No authorship key to rotate. Use dema authorship key init first.`,
+      );
+    } else if (result.error === "unsafe_key_path") {
+      console.error(`Unsafe authorship key path refused: ${result.key_path}`);
+    } else {
+      console.error(`Rotation refused: ${result.error}`);
+    }
+    if (!result.rotated) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
   }
 
@@ -150,9 +219,10 @@ export async function cmd_authorship(ctx) {
       const latest = await findLatestAuthorshipReceipt();
       if (!latest) {
         const err = {
-          schema: "bizra.dema.authorship_verify_result.v0.1",
+          schema: "bizra.dema.authorship_verify_result.v0.2",
           verified: false,
           verdict: "FAILED",
+          verification_scope: "ACTIVE_SIGNER_TRUST",
           error: "no_authorship_receipts_found",
         };
         console.log(
@@ -174,7 +244,11 @@ export async function cmd_authorship(ctx) {
       process.exit(process.exitCode ?? 0);
     }
 
-    const result = await verifyAuthorshipReceiptFile(receiptPath);
+    const trustSnapshot = await loadAuthorshipTrustSnapshot();
+    const result = await verifyAuthorshipReceiptFile(
+      receiptPath,
+      trustSnapshot,
+    );
     if (wantJsonA) {
       console.log(JSON.stringify(result, null, 2));
     } else {
@@ -226,7 +300,7 @@ export async function cmd_authorship(ctx) {
   }
 
   console.error(
-    "Usage: dema authorship key init | key migrate | sign <path> | latest | closeout | verify <receipt> | demo",
+    "Usage: dema authorship key init | key migrate | key rotate | sign <path> | latest | closeout | verify <receipt> | demo",
   );
   process.exitCode = 1;
   process.exit(process.exitCode ?? 0);

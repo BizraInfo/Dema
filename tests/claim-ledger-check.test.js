@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import {
   auditMarkdown,
   LABELS,
+  MATURITY_LABELS,
   RISK_PATTERNS,
   extractClaimCitations,
 } from "../scripts/claim-ledger-check.mjs";
@@ -18,6 +19,22 @@ const execFileAsync = promisify(execFile);
 const cliPath = fileURLToPath(
   new URL("../scripts/claim-ledger-check.mjs", import.meta.url),
 );
+
+const EXISTING_SCANNER_LABELS = Object.freeze([
+  "MEASURED",
+  "CITED",
+  "DECLARED",
+  "PLANNED",
+  "REMOVE_OR_HARDEN",
+  "DESIGNED",
+  "DESIGNED_NOT_LIVE",
+  "MECHANISM_VERIFIED_SYNTHETIC",
+  "REAL_OPERATOR_VERIFIED",
+  "PUBLIC_MAIN_SYNCED",
+  "PRODUCTION_ACTIVE",
+  "DERIVED",
+  "SCENARIO",
+]);
 
 test("auditMarkdown passes truth-labeled measured and cited claims", () => {
   const report = auditMarkdown({
@@ -32,6 +49,47 @@ test("auditMarkdown passes truth-labeled measured and cited claims", () => {
 
   assert.equal(report.ok, true);
   assert.deepEqual(report.findings, []);
+});
+
+test("local measurement requires [MEASURED] in addition to the locality qualifier", () => {
+  const cases = [
+    {
+      body: "[MEASURED] [LOCAL_ONLY] Fixture Ed25519 verification completed in 12 ms.",
+      ok: true,
+    },
+    {
+      body: "[MEASURED_LOCAL] Fixture Ed25519 verification completed in 12 ms.",
+      ok: false,
+    },
+    {
+      body: "[MEASURED] Fixture Ed25519 verification completed in 12 ms.",
+      ok: true,
+    },
+    {
+      body: "[LOCAL_ONLY] Fixture Ed25519 verification completed in 12 ms.",
+      ok: false,
+    },
+    {
+      body: "Fixture Ed25519 verification completed in 12 ms.",
+      ok: false,
+    },
+  ];
+
+  for (const { body, ok } of cases) {
+    const report = auditMarkdown({ file: "closure.md", body });
+    assert.equal(report.ok, ok, body);
+  }
+});
+
+test("existing claim-ledger scanner labels retain compatibility behavior", () => {
+  assert.deepEqual([...LABELS, ...MATURITY_LABELS], EXISTING_SCANNER_LABELS);
+  for (const label of EXISTING_SCANNER_LABELS) {
+    const report = auditMarkdown({
+      file: "claim.md",
+      body: `[${label}] Fixture Ed25519 verification completed in 12 ms.`,
+    });
+    assert.equal(report.ok, true, label);
+  }
 });
 
 test("auditMarkdown flags risky unlabeled benchmark and first-ever claims", () => {

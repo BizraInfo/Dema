@@ -4,6 +4,7 @@ import { extname, join } from "node:path";
 export const SCHEMA = "bizra.dema.model_inventory.v0.1";
 export const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434";
 export const DEFAULT_LM_STUDIO_URL = "http://127.0.0.1:1234";
+export const DEFAULT_LLAMACPP_URL = "http://127.0.0.1:8080";
 export const DEFAULT_TIMEOUT_MS = 1500;
 
 const MODEL_EXTENSIONS = new Set([".gguf", ".safetensors", ".bin", ".onnx"]);

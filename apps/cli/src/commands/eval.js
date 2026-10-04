@@ -1,3 +1,4 @@
+import { writeSync } from "node:fs";
 import {
   getRubricPack,
   formatRubricPackReport,
@@ -109,11 +110,11 @@ export async function cmd_eval(ctx) {
     const generated_at_iso = new Date().toISOString(); // clock lives in the CLI, never the kernel
     const preview = buildModelRoutingPreview({ baseline, generated_at_iso });
     if (asJson) {
-      console.log(JSON.stringify(preview, null, 2));
+      writeSync(1, `${JSON.stringify(preview, null, 2)}\n`);
       process.exit(preview.rejected ? 1 : process.exitCode ?? 0);
     }
     if (preview.rejected) {
-      console.log(`eval route → REJECTED (${preview.reason_code})`);
+      writeSync(1, `eval route → REJECTED (${preview.reason_code})\n`);
       process.exitCode = 1;
     } else {
       console.log(`Model routing PREVIEW (${preview.truth_label}) — baseline ${preview.baseline_hash.slice(0, 16)}…`);

@@ -2,6 +2,14 @@
 
 > **A deterministic constitutional execution engine with replayable receipts.**
 
+<p>
+  <a href="https://github.com/BizraInfo/Dema/actions/workflows/check.yml"><img src="https://github.com/BizraInfo/Dema/actions/workflows/check.yml/badge.svg" alt="check"></a>
+  <img src="https://img.shields.io/badge/runtime%20deps-0-C9A962" alt="zero runtime dependencies">
+  <img src="https://img.shields.io/badge/local--first-consent--bound-04070E?labelColor=C9A962" alt="local-first, consent-bound">
+  <img src="https://img.shields.io/badge/node-%E2%89%A5%2020-2b3a55" alt="node >= 20">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/BizraInfo/Dema?color=2b3a55" alt="license"></a>
+</p>
+
 **Your sovereign AI node companion.**
 
 Dema helps you run a private AI workspace on your own machine -- with memory, safe actions, receipts, and a clear next step.
@@ -23,6 +31,56 @@ Install Dema
 BIZRA is the ecosystem.
 Dema is the door.
 
+## The atlas
+
+One picture of the whole boundary. Everything on the left is this repo;
+everything that executes or mints lives behind your typed consent, upstream.
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{
+  "primaryColor":"#0b1220","primaryTextColor":"#f8f6f1","primaryBorderColor":"#C9A962",
+  "lineColor":"#C9A962","clusterBkg":"#04070E","clusterBorder":"#2b3a55",
+  "edgeLabelBackground":"#04070E","fontFamily":"monospace","fontSize":"13px"}}}%%
+flowchart LR
+  subgraph YOU["you — the operator"]
+    OP["exact-string consent<br/>typed by you alone"]
+  end
+  subgraph DEMA["Dema — the door · this repo"]
+    ST["status · doctor · models<br/>truth-labeled snapshots"]
+    PV["journey · consent plan · mission draft<br/>previews only"]
+    RC["receipts — read and list"]
+  end
+  subgraph NODE0["Node0 — governed runtime · upstream"]
+    EF["EffectCap execution"]
+    MINT["receipt issuance"]
+  end
+  subgraph SYS["SAT-5 / URP — system-side · DESIGNED_NOT_LIVE"]
+    VAL["validation after evidence<br/>or receipt handoff"]
+  end
+  OP -- reads --> ST
+  OP -- asks --> PV
+  PV -- "consent scope, hash-committed" --> OP
+  OP == "typed GO phrase" ==> EF
+  EF --> MINT
+  MINT -- mirror --> RC
+  MINT -- handoff --> VAL
+```
+
+> **DESIGNED_NOT_LIVE:** the SAT-5 / URP subgraph is a designed handoff shape, not a claim that a live shared-URP SAT pool is running in this repo.
+
+**Navigate:**
+[60-second version](#the-60-second-version) ·
+[First run](#first-run) ·
+[Sovereign journey](#sovereign-journey) ·
+[Ambient boundary](#ambient-boundary) ·
+[Consent planning](#consent-planning) ·
+[Mission drafting](#mission-drafting) ·
+[Install](#install) ·
+[Receipts](#receipts) ·
+[Current boundary](#current-boundary) ·
+[What is live](#what-is-live) ·
+[Proof of priority](#proof-of-priority)
+
 ---
 
 ## The 60-second version
@@ -43,7 +101,28 @@ Dema does not ask you to trust a black box. It tells you what it knows, what it 
 
 ## First run
 
-Five commands. Each one is safe and reversible.
+### Obtain the `dema` command (before anything else)
+
+Dema runs with zero `npm install` from a clone. Use Node against the repo binary:
+
+```bash
+git clone https://github.com/BizraInfo/Dema
+cd Dema
+node bin/dema welcome
+```
+
+Optional aliases for the session (so the five commands below work verbatim):
+
+```bash
+alias dema='node bin/dema'
+# or: export PATH="$PWD/bin:$PATH"   # requires execute bit on bin/dema
+```
+
+Contributor / CI install (`npm install`, global link) stays under **Developer install** below. Do not start there for first contact.
+
+### Five commands
+
+Each one is safe and reversible. After the alias (or with `node bin/dema` substituted):
 
 ```bash
 dema welcome              # 1. read the product promise
@@ -51,6 +130,18 @@ dema setup                # 2. create ~/.dema/ (idempotent, non-destructive)
 dema status               # 3. see what is ready, what is blocked
 dema doctor               # 4. row-by-row readiness check + fix hints
 dema journey "Fix auth.py and run pytest"   # 5. preview the journey for one example task
+```
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{
+  "primaryColor":"#0b1220","primaryTextColor":"#f8f6f1","primaryBorderColor":"#C9A962",
+  "lineColor":"#2b3a55","fontFamily":"monospace","fontSize":"13px"}}}%%
+flowchart LR
+  W["1 · welcome<br/>the promise"] --> S["2 · setup<br/>~/.dema/ created"]
+  S --> T["3 · status<br/>ready vs blocked"]
+  T --> D["4 · doctor<br/>row-by-row readiness"]
+  D --> J["5 · journey<br/>one-screen preview"]
+  J -. "every step safe · reversible · no daemon" .-> W
 ```
 
 Expected first impression:
@@ -87,6 +178,9 @@ journey.
 For the full list of what is **measured**, what is **designed but not
 live**, and what is **planned**, read
 [docs/CURRENT_LIMITS.md](docs/CURRENT_LIMITS.md).
+
+The technical Genesis-v1 handoff is tracked separately as a local candidate in
+[docs/NODE0_GENESIS_V1_LIGHTHOUSE.md](docs/NODE0_GENESIS_V1_LIGHTHOUSE.md).
 
 ---
 
@@ -366,6 +460,16 @@ what happened,
 what did not happen,
 what evidence exists,
 and what the next safe action is.
+```
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{
+  "primaryColor":"#0b1220","primaryTextColor":"#f8f6f1","primaryBorderColor":"#C9A962",
+  "lineColor":"#C9A962","fontFamily":"monospace","fontSize":"13px"}}}%%
+flowchart LR
+  A["what happened"] --> B["what did <b>not</b> happen"]
+  B --> C["what evidence exists<br/>sha256 content-addressed"]
+  C --> D["next safe action"]
 ```
 
 Use:

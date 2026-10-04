@@ -1,21 +1,35 @@
 {
   "schema": "bizra.site.open_problems.v0_1",
   "source": "docs/CURRENT_LIMITS.md",
-  "generated_from_ledger_rows": 139,
-  "total_open": 10,
+  "generated_from_ledger_rows": 211,
+  "total_open": 11,
   "by_kind": {
-    "blocked": 2,
-    "designed": 6,
-    "preview": 2,
+    "blocked": 1,
+    "designed": 5,
+    "preview": 5,
     "planned": 0
   },
   "problems": [
     {
-      "surface": "First Light front door: a self-contained, zero-external-request static GUI preview rendered from a pure contract kernel — bilingual (Arabic first-class), consent-first, evidence-chipped, PREVIEW_ONLY. Renders the contract; the shipped HTML is gate-verified against it. (DEMA-FIRST-LIGHT-GUI-FRONT-DOOR-PREVIEW-1A)",
+      "surface": "Mission contract and durable state (MISSION-CONTRACT-STATE-0A)",
       "status": "PREVIEW_ONLY",
       "kind": "preview",
       "meaning": "A surface exists and is honest about performing nothing.",
-      "evidence": "packages/core/src/dema-first-light-front-door-preview.js + apps/front-door/index.html + tests/dema-first-light-front-door-preview.test.js + scripts/review/dema-first-light-front…"
+      "evidence": "packages/core/src/mission-contract-state.js + tests/mission-contract-state.test.js. [PREVIEW_ONLY] TASK-026 spec phase 01 — the first half of the mission runtime: the two docume…"
+    },
+    {
+      "surface": "Mission supervisor / conductor (MISSION-SUPERVISOR-0A)",
+      "status": "PREVIEW_ONLY",
+      "kind": "preview",
+      "meaning": "A surface exists and is honest about performing nothing.",
+      "evidence": "packages/core/src/mission-supervisor.js + tests/mission-supervisor.test.js. [PREVIEW_ONLY] TASK-026 spec phase 02 — the nine-stage reducer DISCOVER → CONTRACT → PLAN → FATE → EX…"
+    },
+    {
+      "surface": "Mission worker seam and swap protocol (MISSION-WORKER-ADAPTER-0A)",
+      "status": "PREVIEW_ONLY",
+      "kind": "preview",
+      "meaning": "A surface exists and is honest about performing nothing.",
+      "evidence": "packages/core/src/mission-worker-adapter.js + tests/mission-worker-adapter.test.js. [PREVIEW_ONLY] TASK-026 spec phase 03 — the worker seam plus the ten thesis §14 demonstration…"
     },
     {
       "surface": "URP supply-side resource reward contract (PREVIEW): encodes the public-market law — a provider earns base value from VERIFIED supply/availability/service, not from proving impact; the impact dividend is extra and requires a verified outcome. Computes reward-type eligibility previews; mints nothing, activates no live URP. Cost measured is not impact. (URP-SUPPLY-SIDE-RESOURCE-REWARD-CONTRACT-PREVIEW-1A)",
@@ -23,6 +37,13 @@
       "kind": "preview",
       "meaning": "A surface exists and is honest about performing nothing.",
       "evidence": "packages/core/src/urp-supply-side-resource-reward-contract-preview.js + tests/urp-supply-side-resource-reward-contract-preview.test.js + scripts/review/urp-supply-side-resource-…"
+    },
+    {
+      "surface": "**DEMA mission worker-handoff kernel** — the minimum provable model-substitution case: a declared mission changes worker/model and records the swap as ONE deterministic hash-chained MISSION_CHECKPOINT (checkpoint_type WORKER_HANDOFF) in the existing NODE0-REALM-STATE-KERNEL-1A event log — no parallel state machine, no model router, no persistence, no new authority. Fail-closed unless the mission is already declared, the worker actually changes, every before/after invariant hash (mission_contract, acceptance_criteria, consent_scope, source_checkpoint) is equal, consent is an exact byte match, and authority_delta is 0; the verifier replays the whole returned history and rejects a forged-and-rehashed authority increase, a false continuity proof, extra envelope/event/payload fields, non-normalized set ordering, or a non-canonical all-false boundary. Proves mission continuity SURVIVES a model/worker swap with the mission contract, acceptance, consent scope, source checkpoint, and authority invariant — the state lives in the realm chain, not the model. Durable persistence, restart recovery, automatic failover, worker selection, model invocation, and independent authenticity NOT implemented; the reducer records the checkpoint seq but does not yet project current_worker. (DEMA-MISSION-WORKER-HANDOFF-0A)",
+      "status": "PREVIEW_ONLY",
+      "kind": "preview",
+      "meaning": "A surface exists and is honest about performing nothing.",
+      "evidence": "packages/core/src/dema-mission-worker-handoff.js + tests/dema-mission-worker-handoff.test.js (28 tests) + scripts/review/dema-mission-worker-handoff-check.mjs (in npm run check)…"
     },
     {
       "surface": "Node0 proof-of-truth control plane (LOCAL_ONLY release ledger)",
@@ -58,20 +79,6 @@
       "kind": "designed",
       "meaning": "The design exists. Nothing runs it yet.",
       "evidence": "packages/core/src/absence-steward-queue-{schema,verify,receipt}.js + apps/cli/src/commands/away.js (dema away queue draft) + scripts/review/absence-steward-queue-check.mjs + tes…"
-    },
-    {
-      "surface": "Ed25519 authorship signing (demo + verify)",
-      "status": "DESIGNED_NOT_LIVE",
-      "kind": "designed",
-      "meaning": "The design exists. Nothing runs it yet.",
-      "evidence": "packages/receipts/src/authorship-signature.js, docs/security/H18_3_AUTHORSHIP_PERSISTENCE_PREFLIGHT.md"
-    },
-    {
-      "surface": "**BLOCKED (re-land decision)** Authorship key rotation (AUTHORSHIP-KEY-ROTATE-1A)",
-      "status": "BLOCKED",
-      "kind": "blocked",
-      "meaning": "Something concrete stands in the way. Name it and it moves.",
-      "evidence": "tests/authorship-key-rotate.test.js (tracked, red-first) · implementation green on feat/authorship-key-rotate-1a (eb828a0b, also on origin) · packages/receipts/src/authorship-ke…"
     },
     {
       "surface": "Layer 2 LLM-as-judge runtime (automated judging)",

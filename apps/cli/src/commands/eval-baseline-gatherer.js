@@ -8,7 +8,6 @@
 // recorded here, not in the kernel boundary — the kernel itself does no I/O.
 
 import { BIZRA_LOCAL_SMALL_SUITE } from "../../../../packages/core/src/model-eval-baseline.js";
-import { resolveLocalLlmBase } from "../../../../packages/models/src/model-common.js";
 
 export function isLocalUrl(url) {
   try {
@@ -29,7 +28,7 @@ function elide(s) {
     .slice(0, MAX_SAMPLE);
 }
 
-async function postJson(fetcher, url, payload, timeoutMs) {
+async function postJson(fetcher, url, payload, timeoutMs, key = "") {
   if (!isLocalUrl(url)) return { reachable: false, http_status: null, json: null, error_class: "non_local_url_refused" };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -37,7 +36,9 @@ async function postJson(fetcher, url, payload, timeoutMs) {
     const res = await fetcher(url, {
       method: "POST",
       redirect: "manual",
-      headers: { "Content-Type": "application/json" },
+      headers: key
+        ? { "Content-Type": "application/json", Authorization: `Bearer ${key}` }
+        : { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
       signal: ctrl.signal,
     });
@@ -55,12 +56,17 @@ async function postJson(fetcher, url, payload, timeoutMs) {
   }
 }
 
-async function getJson(fetcher, url, timeoutMs) {
+async function getJson(fetcher, url, timeoutMs, key = "") {
   if (!isLocalUrl(url)) return { ok: false, json: null };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetcher(url, { method: "GET", redirect: "manual", signal: ctrl.signal });
+    const res = await fetcher(url, {
+      method: "GET",
+      redirect: "manual",
+      signal: ctrl.signal,
+      ...(key ? { headers: { Authorization: `Bearer ${key}` } } : {}),
+    });
     if (!res.ok) return { ok: false, json: null };
     let json = null;
     try { json = await res.json(); } catch { json = null; }
@@ -72,33 +78,40 @@ async function getJson(fetcher, url, timeoutMs) {
   }
 }
 
+// MODEL-ARTIFACT-IDENTITY-INGRESS-1A — a provider list entry is an ALIAS, not an
+// artifact. `ids()` therefore yields { id, identity }: identity is the strongest
+// artifact fingerprint the list endpoint itself supplies (Ollama's manifest
+// digest), or null when the provider offers none. Never a second request — the
+// identity must come from the same read that produced the alias.
+function descriptors(entries, idKey) {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .map((m) => ({ id: m?.[idKey], identity: typeof m?.digest === "string" && m.digest ? m.digest : null }))
+    .filter((m) => Boolean(m.id));
+}
+
 // Provider adapters: { listUrl, ids(json), genUrl(base), genBody(model, prompt), genOut(json) }
+// MODEL-PROVIDER-AUTH-1A: lm_studio/llamacpp lanes accept an OPTIONAL loopback
+// bearer key from env (LMSTUDIO_KEY / LLAMACPP_KEY). The key is attached to the
+// request only — never logged, persisted, or included in any report. Keyless
+// providers (ollama) are untouched; the URL guard (isLocalUrl) still applies
+// first, so a key can never cause a non-local call.
 function providers(env) {
   return {
     ollama: {
-      // PERIMETER-BRIDGE-PARITY-1A: `dema models discover` routes here, so this
-      // must honour the ADR-042 bridge DEMA_OLLAMA_URL — it previously read only
-      // the undeclared OLLAMA_URL, so discover and llm-invoke targeted different
-      // endpoints whenever an operator followed the ADR. DEMA_OLLAMA_URL wins;
-      // OLLAMA_URL stays as a lower-precedence legacy fallback.
-      base: resolveLocalLlmBase({
-        envValue: env.DEMA_OLLAMA_URL || env.OLLAMA_URL,
-        fallback: "http://127.0.0.1:11434",
-      }),
+      base: env.OLLAMA_URL || "http://127.0.0.1:11434",
       list: (b) => `${b}/api/tags`,
-      ids: (j) => (Array.isArray(j?.models) ? j.models.map((m) => m?.name).filter(Boolean) : []),
+      ids: (j) => descriptors(j?.models, "name"),
       gen: (b) => `${b}/api/generate`,
       body: (model, prompt) => ({ model, prompt, stream: false, options: { num_predict: 64 } }),
       warm: (model) => ({ model, prompt: "ready", stream: false, options: { num_predict: 1 } }),
       out: (j) => (typeof j?.response === "string" ? j.response : ""),
     },
     lm_studio: {
-      base: resolveLocalLlmBase({
-        envValue: env.DEMA_LM_STUDIO_URL || env.LMSTUDIO_URL,
-        fallback: "http://127.0.0.1:1234",
-      }),
+      base: env.LMSTUDIO_URL || "http://127.0.0.1:1234",
+      key: env.LMSTUDIO_KEY || "",
       list: (b) => `${b}/v1/models`,
-      ids: (j) => (Array.isArray(j?.data) ? j.data.map((m) => m?.id).filter(Boolean) : []),
+      ids: (j) => descriptors(j?.data, "id"),
       gen: (b) => `${b}/v1/chat/completions`,
       body: (model, prompt) => ({ model, messages: [{ role: "user", content: prompt }], max_tokens: 64 }),
       warm: (model) => ({ model, messages: [{ role: "user", content: "ready" }], max_tokens: 1 }),
@@ -106,8 +119,9 @@ function providers(env) {
     },
     llamacpp: {
       base: env.LLAMACPP_URL || "http://127.0.0.1:8080",
+      key: env.LLAMACPP_KEY || "",
       list: (b) => `${b}/v1/models`,
-      ids: (j) => (Array.isArray(j?.data) ? j.data.map((m) => m?.id).filter(Boolean) : []),
+      ids: (j) => descriptors(j?.data, "id"),
       gen: (b) => `${b}/v1/chat/completions`,
       body: (model, prompt) => ({ model, messages: [{ role: "user", content: prompt }], max_tokens: 64 }),
       warm: (model) => ({ model, messages: [{ role: "user", content: "ready" }], max_tokens: 1 }),
@@ -121,18 +135,58 @@ export async function discoverLocalModels({ fetchImpl, env = process.env, includ
   const fetcher = fetchImpl || globalThis.fetch;
   const provs = providers(env);
   const provider_discovery = {};
-  const models = []; // { key, provider, model }
+  const models = []; // { key, provider, model, identity, identity_status }
   for (const [name, p] of Object.entries(provs)) {
     if (!isLocalUrl(p.base) && !includeExternalProviders) {
       provider_discovery[name] = { reachable: false, model_count: 0 };
       continue;
     }
-    const r = await getJson(fetcher, p.list(p.base), timeoutMs);
+    const r = await getJson(fetcher, p.list(p.base), timeoutMs, p.key || "");
     const ids = r.ok ? p.ids(r.json) : [];
     provider_discovery[name] = { reachable: r.ok, model_count: ids.length };
-    for (const id of ids) models.push({ key: `${name}:${id}`, provider: name, model: id });
+    for (const { id, identity } of ids) {
+      models.push({
+        key: `${name}:${id}`,
+        provider: name,
+        model: id,
+        identity,
+        identity_status: identity ? "PROVIDER_DIGEST" : "UNVERIFIED_PROVIDER_IDENTITY",
+      });
+    }
   }
   return { provider_discovery, models };
+}
+
+// Collapse alias tags onto the artifact they actually name, BEFORE any bound is
+// applied. Grouping key is (provider, identity): a digest namespace belongs to
+// the provider that issued it, so an identical string under two providers is two
+// artifacts. An absent identity NEVER merges — absence of evidence is not
+// evidence of sameness, so each unverified alias stays its own artifact.
+// The first alias in discovery order is canonical, so the choice is deterministic.
+// NUL delimiter: the one byte that cannot occur in a provider name or a digest,
+// so `a` + `bc` can never collide with `ab` + `c`. Written as an escape rather
+// than a literal NUL so the file stays TEXT to git: a raw NUL makes the whole
+// source binary and the diff unreviewable.
+const SEP = "\u0000";
+
+export function dedupeByArtifact(models) {
+  const byArtifact = new Map();
+  for (const m of models) {
+    const groupKey = m.identity ? `${m.provider}${SEP}${m.identity}` : `${SEP}unverified${SEP}${m.key}`;
+    const seen = byArtifact.get(groupKey);
+    if (seen) seen.aliases.push(m.key);
+    else byArtifact.set(groupKey, { canonical: m, aliases: [m.key] });
+  }
+  const groups = [...byArtifact.values()];
+  return {
+    unique: groups.map((g) => g.canonical),
+    artifact_identity: {
+      alias_count: models.length,
+      unique_artifact_count: groups.length,
+      aliases_by_model: Object.fromEntries(groups.map((g) => [g.canonical.key, [...g.aliases].sort()])),
+      identity_status_by_model: Object.fromEntries(groups.map((g) => [g.canonical.key, g.canonical.identity_status])),
+    },
+  };
 }
 
 // A chat-suite model only — embedding endpoints cannot answer a chat prompt, so
@@ -175,8 +229,10 @@ export async function gatherModelEvalBaseline({
   const fetcher = fetchImpl || globalThis.fetch;
   const provs = providers(env);
   const { provider_discovery, models } = await discoverLocalModels({ fetchImpl, env, includeExternalProviders, timeoutMs });
-  const eligible = interleaveByProvider(models.filter((m) => isChatCandidate(m.model)));
-  const chosen = eligible.slice(0, maxModels);
+  // Identity BEFORE the bound: aliases must not consume maxModels slots, and one
+  // artifact must not race itself on latency.
+  const { unique, artifact_identity } = dedupeByArtifact(models.filter((m) => isChatCandidate(m.model)));
+  const chosen = interleaveByProvider(unique).slice(0, maxModels);
   const results_by_model = {};
   for (const { key, provider, model } of chosen) {
     const p = provs[provider];
@@ -184,7 +240,7 @@ export async function gatherModelEvalBaseline({
     // Warm-up pass FIRST, with a generous timeout, so the cold-load cost is paid
     // before the suite is timed. A model that never loads is recorded unreachable
     // across the suite without spending the full 6-task budget on it.
-    const warm = await postJson(fetcher, p.gen(p.base), p.warm(model), warmupTimeoutMs);
+    const warm = await postJson(fetcher, p.gen(p.base), p.warm(model), warmupTimeoutMs, p.key || "");
     if (!warm.reachable) {
       for (const task of BIZRA_LOCAL_SMALL_SUITE) {
         tasks[task.id] = { reachable: false, latency_ms: null, output: "", usage: null };
@@ -194,7 +250,7 @@ export async function gatherModelEvalBaseline({
     }
     for (const task of BIZRA_LOCAL_SMALL_SUITE) {
       const t0 = time().getTime();
-      const probe = await postJson(fetcher, p.gen(p.base), p.body(model, task.prompt), timeoutMs);
+      const probe = await postJson(fetcher, p.gen(p.base), p.body(model, task.prompt), timeoutMs, p.key || "");
       const t1 = time().getTime();
       tasks[task.id] = {
         reachable: probe.reachable,
@@ -210,6 +266,7 @@ export async function gatherModelEvalBaseline({
     generated_at_iso: time().toISOString(),
     suite_id: suiteId,
     provider_discovery,
+    artifact_identity,
     models_tested: chosen.map((c) => c.key),
     results_by_model,
   };
