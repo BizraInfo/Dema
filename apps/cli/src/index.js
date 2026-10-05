@@ -432,14 +432,14 @@ Local asset awareness:
                     content hashing. Checkpoints write only under
                     DEMA_HOME/node0-index/checkpoints. No dedup apply, move,
                     delete, network, model, mint, wallet, SAT, or federation.
-  dema assets scan [--json] [--root <path>]
+  dema assets scan [--json] --root <path> [--consent "<phrase>"]
                     DEMA-HOMEBASE-ASSET-AWARENESS-1A metadata-only homebase
-                    asset awareness. Scans declared root (default ~/Downloads or
-                    DEMA_LOCAL_ASSET_ROOT) for metadata only — clusters, hidden-
-                    gem candidates, monetization candidates, risk flags. Also writes
-                    inventory artifact under DEMA_HOME/realm/local-assets/
-                    inventory-v0.1.json (mode 0600). No content reads, no symlink
-                    following, no network, no upload, no mutation inside scanned root.
+                    scan. Without exact consent, shows the scan scope and does not
+                    inspect the root. Exact "GO: scan homebase metadata only"
+                    consent permits metadata inspection and inventory write under
+                    DEMA_HOME/realm/local-assets/inventory-v0.1.json (mode 0600).
+                    No content reads, symlink following, network, upload, or
+                    mutation inside the scanned root.
   dema assets shareability [--json] [--root <path>]
                     DEMA-HOMEBASE-SHAREABILITY-1A metadata-only shareability
                     analysis. Classifies clusters into shareable, content-consent,

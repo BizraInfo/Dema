@@ -311,7 +311,15 @@ describe("dema assets scan CLI", () => {
     const home = freshDir("local-asset-cli-home");
     try {
       makeFixture(root);
-      const r = await runCli(["assets", "scan", "--root", root, "--json"], {
+      const r = await runCli([
+        "assets",
+        "scan",
+        "--root",
+        root,
+        "--consent",
+        "GO: scan homebase metadata only",
+        "--json",
+      ], {
         demaHome: home,
         root,
       });
