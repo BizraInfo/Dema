@@ -54,6 +54,11 @@ test("check gate includes hermetic provenance scans before perf bench", () => {
   assert.deepEqual(commands[crossRepoIndex][2], { CROSS_REPO_SKIP_GH: "1" });
   assert.deepEqual(commands[poolIndex][2], { NODE0_POOL_SKIP_SCAN: "1" });
   assert.equal(commands[0][4], "operator_observation");
+  const closureIndex = keys.indexOf(
+    "node scripts/review/node0-closure-invariants-check.mjs",
+  );
+  assert.notEqual(closureIndex, -1);
+  assert.equal(commands[closureIndex][4], "operator_observation");
 });
 
 test("check gate includes transition assurance before proof-room composition", () => {
