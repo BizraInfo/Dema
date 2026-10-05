@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useGame } from "@/lib/game/store";
 import { CI_GATES, COLOR_CLASS } from "@/lib/game/data";
 import type { GateState } from "@/lib/game/types";

@@ -390,7 +390,7 @@ test("raid completes once per local run and effect replay cannot duplicate the d
   assert.equal(raid.receipts(), 0);
   await raid.next();
   await pending;
-  tree = raid.render();
+  raid.render();
   assert.equal(raid.receipts(), 1);
   raid.h.replayEffects();
   raid.render();
