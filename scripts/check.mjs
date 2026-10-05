@@ -1,5 +1,7 @@
 import { execFileSync } from "node:child_process";
-import { writeSync } from "node:fs";
+import { mkdtempSync, rmSync, writeSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   CHECK_GATE_EVIDENCE_FD_ENV,
@@ -19,7 +21,13 @@ function writeCheckGateEvidence(record) {
 }
 
 export const commands = [
-  ["node", ["scripts/review/env-hygiene-check.mjs", "--strict"]],
+  [
+    "node",
+    ["scripts/review/env-hygiene-check.mjs", "--strict"],
+    undefined,
+    undefined,
+    "operator_observation",
+  ],
   ["node", ["scripts/review/identity-pair-coherence-check.mjs"]],
   ["node", ["scripts/review/identity-recovery-refuse-report-check.mjs"]],
   ["node", ["scripts/review/cli-consent-matrix-check.mjs"]],
@@ -47,7 +55,13 @@ export const commands = [
   ["node", ["scripts/review/node0-space-index-check.mjs"]],
   ["node", ["scripts/review/node0-evidence-source-registry-check.mjs"]],
   ["node", ["scripts/review/node0-local-closure-readiness-check.mjs"]],
-  ["node", ["scripts/review/node0-closure-invariants-check.mjs"]],
+  [
+    "node",
+    ["scripts/review/node0-closure-invariants-check.mjs"],
+    undefined,
+    undefined,
+    "operator_observation",
+  ],
   ["node", ["scripts/review/legacy-consent-authority-check.mjs"]],
   ["node", ["scripts/review/dema-stand-check.mjs"]],
   ["node", ["scripts/review/dema-steward-chain-check.mjs"]],
@@ -365,41 +379,80 @@ export function runChecks(
     execute = execFileSync,
     log = console.log,
     evidence = writeCheckGateEvidence,
+    removeQualificationHome = (path) =>
+      rmSync(path, { recursive: true, force: true }),
   } = {},
 ) {
   evidence(checkGateStart(checks.length));
-  for (const [index, entry] of checks.entries()) {
-    const [bin, args, extraEnv] = entry;
-    log(`> ${bin} ${args.join(" ")}`);
-    const childEnv = { ...process.env };
-    if (extraEnv && typeof extraEnv === "object") {
-      Object.assign(childEnv, extraEnv);
-    }
-    delete childEnv[CHECK_GATE_EVIDENCE_FD_ENV];
-    const options = { stdio: "inherit", env: childEnv };
-    try {
-      execute(bin, args, options);
-    } catch (error) {
-      const normalNonzeroExit =
-        Number.isInteger(error?.status) &&
-        error.status > 0 &&
-        !error?.signal;
-      const exitCode = normalNonzeroExit ? error.status : 1;
-      try {
-        evidence(
-          checkGateFailure({
-            index,
-            command: [bin, ...args],
-            exitCode,
-            maskPolicy: "authoritative",
-          }),
-        );
-      } catch {
-        log(
-          "[DEMA_CHECK_GATE_EVIDENCE_ERROR] failure evidence could not be written; the classifier will fail closed",
-        );
+  const qualificationDemaHome = mkdtempSync(
+    join(tmpdir(), "dema-check-qualification-home-"),
+  );
+  let primaryFailed = false;
+
+  try {
+    for (const [index, entry] of checks.entries()) {
+      const [bin, args, extraEnv, _legacyMetadata, gatePolicy] = entry;
+      // The fifth tuple field classifies operator-state observers; field four remains legacy metadata.
+      if (gatePolicy !== undefined && gatePolicy !== "operator_observation") {
+        throw new Error(`unsupported qualification gate policy at index ${index}`);
       }
-      throw error;
+
+      log(`> ${bin} ${args.join(" ")}`);
+      const childEnv = { ...process.env };
+      if (extraEnv && typeof extraEnv === "object") {
+        Object.assign(childEnv, extraEnv);
+      }
+      if (gatePolicy === "operator_observation") {
+        if (process.env.DEMA_HOME === undefined) delete childEnv.DEMA_HOME;
+        else childEnv.DEMA_HOME = process.env.DEMA_HOME;
+      } else {
+        childEnv.DEMA_HOME = qualificationDemaHome;
+      }
+      delete childEnv[CHECK_GATE_EVIDENCE_FD_ENV];
+      const options = { stdio: "inherit", env: childEnv };
+      try {
+        execute(bin, args, options);
+      } catch (error) {
+        const normalNonzeroExit =
+          Number.isInteger(error?.status) &&
+          error.status > 0 &&
+          !error?.signal;
+        const exitCode = normalNonzeroExit ? error.status : 1;
+        try {
+          evidence(
+            checkGateFailure({
+              index,
+              command: [bin, ...args],
+              exitCode,
+              maskPolicy: "authoritative",
+            }),
+          );
+        } catch {
+          log(
+            "[DEMA_CHECK_GATE_EVIDENCE_ERROR] failure evidence could not be written; the classifier will fail closed",
+          );
+        }
+        throw error;
+      }
+    }
+  } catch (error) {
+    primaryFailed = true;
+    throw error;
+  } finally {
+    try {
+      removeQualificationHome(qualificationDemaHome);
+    } catch (cleanupError) {
+      if (primaryFailed) {
+        try {
+          log(
+            `[DEMA_CHECK_GATE_CLEANUP_ERROR] qualification home cleanup failed: ${cleanupError.message}`,
+          );
+        } catch {
+          // Preserve the original child or evidence failure.
+        }
+      } else {
+        throw cleanupError;
+      }
     }
   }
   evidence(checkGateComplete(checks.length));
