@@ -203,15 +203,10 @@ function baseRef() {
   );
 }
 
-export function changedFiles() {
-  const range = `${baseRef()}...HEAD`;
-  const status = execFileSync(
-    "git",
-    ["diff", "--name-status", "-M", "--find-renames", range],
-    { encoding: "utf8" },
-  );
+/** @param {string} statusOutput `git diff --name-status` text */
+export function parseChangedFilesFromNameStatus(statusOutput) {
   const files = new Set();
-  for (const line of status.split("\n").filter(Boolean)) {
+  for (const line of statusOutput.split("\n").filter(Boolean)) {
     const parts = line.split("\t");
     const code = parts[0] || "";
     if (code.startsWith("R") && parts.length >= 3) {
@@ -222,6 +217,16 @@ export function changedFiles() {
     }
   }
   return [...files];
+}
+
+export function changedFiles() {
+  const range = `${baseRef()}...HEAD`;
+  const status = execFileSync(
+    "git",
+    ["diff", "--name-status", "-M", "--find-renames", range],
+    { encoding: "utf8" },
+  );
+  return parseChangedFilesFromNameStatus(status);
 }
 
 if (

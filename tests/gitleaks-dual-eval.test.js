@@ -4,6 +4,9 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
+import { readdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+
 import {
   decideDualEval,
   isLowercaseSha256Hex,
@@ -189,4 +192,23 @@ test("governance coverage includes tests/gitleaks-dual-eval.test.js", () => {
     "tests/gitleaks-dual-eval.test.js",
   ]);
   assert.deepEqual(overlays, ["review_gate"]);
+});
+
+test("buildDualEvalReport removes its private temp directory", () => {
+  const before = readdirSync(tmpdir()).filter((n) =>
+    n.startsWith("gitleaks-dual-eval-"),
+  );
+  buildDualEvalReport({
+    baseConfigText: 'title = "base"\n',
+    candidateConfigText: 'title = "candidate"\n',
+    sourceCommit: SHA_B,
+    baseCommit: SHA_A,
+    sourceDir: fixtureDir,
+    gitleaksBin: "/nonexistent/gitleaks",
+    runDetect: () => "PASS",
+  });
+  const after = readdirSync(tmpdir()).filter((n) =>
+    n.startsWith("gitleaks-dual-eval-"),
+  );
+  assert.deepEqual(after, before);
 });

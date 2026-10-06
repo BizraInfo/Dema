@@ -12,6 +12,7 @@ import {
   assertSameContentMandatoryGates,
   classifyContentOverlays,
   composeRequiredGates,
+  parseChangedFilesFromNameStatus,
 } from "../scripts/review/content-required-gates.mjs";
 import { decideDualEval } from "../scripts/review/gitleaks-dual-eval.mjs";
 
@@ -880,4 +881,25 @@ test("content-required-gates CLI skips (exit 0) when the base ref is unavailable
   const out = JSON.parse(r.stdout);
   assert.equal(out.ok, true);
   assert.equal(out.skipped, true);
+});
+
+test("parseChangedFilesFromNameStatus includes both paths of a rename", () => {
+  const files = parseChangedFilesFromNameStatus(
+    "M\tdocs/a.md\nR100\t.gitleaks.toml\tconfig/gitleaks.toml\nA\tscripts/new.mjs",
+  );
+  assert.deepEqual(files.sort(), [
+    ".gitleaks.toml",
+    "config/gitleaks.toml",
+    "docs/a.md",
+    "scripts/new.mjs",
+  ]);
+});
+
+test("scripts/check.mjs changes acquire review_gate overlay", () => {
+  const composed = composeRequiredGates({
+    branchClass: "policy/broad-scope",
+    files: ["scripts/check.mjs"],
+  });
+  assert.ok(composed.overlays.includes("review_gate"));
+  assert.ok(composed.mandatory.includes("content_bound_review_gate"));
 });
