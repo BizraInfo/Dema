@@ -36,8 +36,8 @@ test("E: synthetic non-digest credential is not classified as a digest", () => {
     join(fixtureDir, "non-digest-credential.txt"),
     "utf8",
   );
-  const match = text.match(/SYNTHETIC_API_KEY=(.+)/);
-  assert.ok(match, "fixture must contain SYNTHETIC_API_KEY");
+  const match = text.match(/SYNTHETIC_NON_DIGEST_TOKEN=(.+)/);
+  assert.ok(match, "fixture must contain SYNTHETIC_NON_DIGEST_TOKEN");
   assert.equal(isLowercaseSha256Hex(match[1].trim()), false);
 });
 

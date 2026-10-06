@@ -11,7 +11,12 @@
  */
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -284,12 +289,14 @@ export function buildDualEvalReport({
       (!basePresent && candidatePresent),
   );
 
-  const work = join(tmpdir(), `gitleaks-dual-eval-${process.pid}`);
-  mkdirSync(work, { recursive: true });
+  // Private temp dir (0700) — avoid world-writable os.tmpdir() file creates.
+  const work = mkdtempSync(join(tmpdir(), "gitleaks-dual-eval-"));
   const basePath = join(work, "gitleaks.base.toml");
   const candidatePath = join(work, "gitleaks.candidate.toml");
-  if (basePresent) writeFileSync(basePath, baseConfigText);
-  if (candidatePresent) writeFileSync(candidatePath, candidateConfigText);
+  if (basePresent) writeFileSync(basePath, baseConfigText, { mode: 0o600 });
+  if (candidatePresent) {
+    writeFileSync(candidatePath, candidateConfigText, { mode: 0o600 });
+  }
 
   const detectArgv = (configPath) => [
     "detect",
