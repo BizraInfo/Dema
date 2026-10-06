@@ -41,3 +41,46 @@ jobs:
         run: npm run build
       - name: Dependency audit
         run: npm run audit
+
+  # TEMPORARY — security-repair candidate generator.
+  # Read-only to the repository: mutates only the runner workspace, uploads the
+  # regenerated package metadata for review, and never commits/pushes.
+  dependency-repair-candidate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/dema-ui
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: packages/dema-ui/package-lock.json
+      - name: Regenerate bounded security dependency candidate
+        run: |
+          npm install --package-lock-only --save-exact next@16.4.0 sharp@0.35.5
+          npm audit fix --package-lock-only
+      - name: Audit candidate production graph
+        run: npm audit --omit=dev --audit-level=moderate
+      - name: Install candidate graph
+        run: npm ci
+      - name: Package tests
+        run: npm run test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Upload regenerated package metadata
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dema-ui-dependency-repair-candidate
+          path: |
+            packages/dema-ui/package.json
+            packages/dema-ui/package-lock.json
+          if-no-files-found: error
