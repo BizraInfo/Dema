@@ -6,7 +6,11 @@
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
     "build": "next build && cp -r .next/static .next/standalone/packages/dema-ui/.next/ && if [ -d public ]; then cp -r public .next/standalone/packages/dema-ui/; fi",
     "start": "NODE_ENV=production node .next/standalone/packages/dema-ui/server.js 2>&1 | tee server.log",
-    "lint": "eslint ."
+    "test": "node --test --test-reporter=tap tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "audit": "npm audit --omit=dev --audit-level=moderate",
+    "check": "npm run test && npm run typecheck && npm run lint && npm run build && npm run audit"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.11",
