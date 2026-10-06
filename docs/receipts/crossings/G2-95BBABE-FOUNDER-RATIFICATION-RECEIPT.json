@@ -1,0 +1,77 @@
+{
+  "payload": {
+    "actions_performed": {
+      "ci_rerun": false,
+      "merge": false,
+      "push": false
+    },
+    "authority_delta": 0,
+    "authority_source": {
+      "signature_state": "conversation_level_instruction; not a cryptographic signature",
+      "type": "founder_ruling_in_active_user_message"
+    },
+    "branch_freeze": {
+      "branch": "fix/qualification-hermeticity-consent-parity-1a",
+      "github_branch_protection_changed_or_verified": false,
+      "note": "This receipt records the governance rule; it does not claim GitHub ruleset enforcement.",
+      "operational_rule_recorded": true,
+      "receipted_head": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318"
+    },
+    "crossing_ledger": {
+      "owner_path": "/home/bizra-operating-system/Downloads/Dema/docs/CROSSING_LEDGER.md",
+      "pre_append_sha256": "65ab57d64a51d27912dd0fe6522e6fe9544768777630f78deed73f94beffe5eb"
+    },
+    "founder_ruling": "I ratify the 95bbabe push on fix/qualification-hermeticity-consent-parity-1a as within G2's landing scope; the closure-invariants operator_observation classification is accepted as a necessary hermeticity follow-up.",
+    "g3_disposition": {
+      "g3_merge_or_post_merge_dod_complete": false,
+      "merge_gate_consumed": false,
+      "merge_gate_phrase": "GO: merge the qualification repairs pr",
+      "pre_merge_bar": "CLEAR under the founder matrix policy and this one-time ratification, at exact head 95bbabe."
+    },
+    "incident": {
+      "author_metadata": "Mohamed Beshr; Co-authored-by Cursor <cursoragent@cursor.com>",
+      "commit": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318",
+      "evidence_basis": "GitHub commit API observation plus prior sealed G2 amendment gap receipt; author/co-author metadata alone was not treated as consent.",
+      "metadata_is_not_authority": true,
+      "parent": "c1485e8ea3a3dc8f407064b11fc964728c702431",
+      "subject": "fix(check): classify closure invariants as operator_observation"
+    },
+    "law_admitted": [
+      "A landed gate’s branch is frozen at its receipted head.",
+      "Any further push requires an explicit amendment GO.",
+      "Ratification is a founder-only, one-time cure."
+    ],
+    "observed_at_utc": "2026-10-05T22:54:45Z",
+    "preserved_prior_records": {
+      "gap_receipt_path": "/home/bizra-operating-system/bizra-home/outputs/campaign-lane-G2-amendment-95bbabe-20261006/G2-AMENDMENT-RECEIPT.json",
+      "gap_receipt_sha256": "cb9df6691f5a4763af8960b9856ed2e10ed7120bd33e4346887ed9ee1f5b6559",
+      "gap_receipt_status": "BOUND__AUTHORITY_NOT_ESTABLISHED; preserved unchanged as the historical evidence of the then-open gap.",
+      "original_g2_receipt_path": "/home/bizra-operating-system/bizra-home/outputs/campaign-lane-G2-qualification-20261005T1805Z/G2-LAND-RECEIPT.json",
+      "original_g2_receipt_sha256": "00c61192999f9236aecebf0436f4805c591cde2daac9bfa0fb249b6c561558a9",
+      "original_g2_receipted_head": "c1485e8ea3a3dc8f407064b11fc964728c702431"
+    },
+    "ratification_scope": {
+      "authority_delta": 0,
+      "meaning": "One-time founder cure for this exact incident; no persistent capability is added.",
+      "not_granted": [
+        "standing push authority",
+        "authority for any later commit or push",
+        "merge authority",
+        "deployment or publication authority"
+      ],
+      "ratifies_only": "The already-pushed commit 95bbabe at the exact branch and SHA above, as a G2 landing-scope hermeticity follow-up."
+    },
+    "schema": "bizra.campaign_lane.G2_95bbabe_founder_ratification.v1",
+    "subject": {
+      "base_branch": "main",
+      "base_sha": "e10d5842726d8c1b228f4bb6c23a9771d3510569",
+      "branch": "fix/qualification-hermeticity-consent-parity-1a",
+      "head_sha": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318",
+      "pr": 480,
+      "repository": "BizraInfo/Dema",
+      "url": "https://github.com/BizraInfo/Dema/pull/480"
+    },
+    "truth_label": "95BBABE_RATIFIED_WITHIN_G2_SCOPE__ONE_TIME_CURE__BRANCH_FROZEN_AT_RECEIPTED_HEAD"
+  },
+  "payload_sha256": "918d84f5594947ebe10147347a093ee2d0a721c3c5701f0da0d951ddc4022138"
+}

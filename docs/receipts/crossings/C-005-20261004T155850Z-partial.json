@@ -1,0 +1,309 @@
+{
+  "schema": "bizra.crossing_engineering_evidence.v0.1",
+  "crossing_id": "C-005",
+  "run_id": "20261004T155850Z",
+  "verdict": "PARTIAL_BLOCKED",
+  "crossing_status": "PENDING",
+  "runtime_receipt": false,
+  "scope": "Local qualification repairs and derived season synthesis; selected current owners; not an exhaustive estate audit",
+  "task_ids": [
+    "TASK-106",
+    "TASK-019"
+  ],
+  "identity": {
+    "root": "/home/bizra-operating-system/Downloads/Dema",
+    "branch": "main",
+    "head": "282b2b2903df341a0f5f5bdc626c787e6f764d70",
+    "candidate_is_dirty": true,
+    "index": "unchanged empty",
+    "baseline_modified": 118,
+    "baseline_untracked": 86
+  },
+  "preservation": {
+    "preexisting_file_count": 2978,
+    "unchanged_preexisting_count": 2961,
+    "intended_changed_preexisting_count": 17,
+    "unexpected_changes": [],
+    "missing_preexisting_files": [],
+    "scope": "Git-listed nonignored preimages; ignored artifacts outside comparison",
+    "baseline_manifest": {
+      "path": "/tmp/dema-c005-preimages.json",
+      "sha256": "dce101176b3629a3e788d257244153eb363aab28901aa177f027d99562eaab9c"
+    }
+  },
+  "candidate_manifest": {
+    "path": "/tmp/dema-c005-proof-UL78wH/current-source-manifest.json",
+    "sha256": "df2e99c51743691e2054a7843808c1a38d30b47c19ab2c37857dc77693168a6d",
+    "file_count": 2982,
+    "encoding": "sorted-key compact JSON map of repository-relative file paths to SHA256; trailing newline",
+    "excludes": [
+      "docs/receipts/crossings/C-005-20261004T155850Z-partial.json"
+    ],
+    "retention": "temporary local evidence path; selected source bindings below persist here"
+  },
+  "source_bindings": [
+    {
+      "path": "backlog/tasks/task-019 - DEMA-UI-CI-TRUTH-GATE-1A-packages-dema-ui-in-canonical-CI.md",
+      "before_sha256": "3a4a17fbda1b183e371e77f621b997d50cff7b7d4368814540a04a4c920efb1d",
+      "sha256": "fdc0700cf2897968a642711dbd4782b6a6001f80a754bd1bb50bc8260fcf6131"
+    },
+    {
+      "path": "backlog/tasks/task-106 - C-005-qualification-repair-and-proof-bound-season-synthesis.md",
+      "before_sha256": null,
+      "sha256": "7497c5f5f0d5804126a5d58502df30e5cb65ec85f1d0a91391257862e97e89d3"
+    },
+    {
+      "path": "docs/CROSSING_LEDGER.md",
+      "before_sha256": "bf933f8afa68f9326ec031595db380944891d46b3d05f737816dd30324735506",
+      "sha256": "d5e32637a3a6cffe0182b4c2e1feef9f553aca216a7588c947633ac696d61ed4"
+    },
+    {
+      "path": "docs/CROSSING_SEASON_AGENT_INSTRUCTION_v1.0.md",
+      "before_sha256": "fbba26d1ccee8d70fe022cd09bfda0c4fb86fc28c62f1ac867a088d96745f524",
+      "sha256": "232ef64dcfb0e25c2b52e9a0c0b80c47465b63f87164b429e2b66b5ab7ea5dff"
+    },
+    {
+      "path": "docs/TESTING.md",
+      "before_sha256": "f42e44d806f9758ca9c6891c33de24be8d0f038b121d06fb420a33c5b7245d81",
+      "sha256": "3cf6b5013d6991f292fbbb24c3491540278375cee5286486ebf08338f11fb86f"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-04-c005-proof-bound-synthesis.md",
+      "before_sha256": null,
+      "sha256": "bc090262f8ec16ce9da93bda44ccacdcbc1dcf0b83e812e1c1a74906a6224081"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-04-dema-ui-ci-review.patch",
+      "before_sha256": null,
+      "sha256": "d2e0022da199c531f255b17ffe23ab37774dad2dc7f66109844b684af1b29bb8"
+    },
+    {
+      "path": "packages/core/src/dema-sovereign-companion-loop.js",
+      "before_sha256": "a331cbbef98bc9c407afe8fc6c60b4e8ed0506807e0e57cafdc3388668c86d5e",
+      "sha256": "5b77b9751e1324642b274af8890bd64e620bf62330f7f47ad209b962d465995e"
+    },
+    {
+      "path": "packages/dema-ui/src/app/realm/page.tsx",
+      "before_sha256": "fef5b6490327943322623b748408a396e44d7bd7e28848316cc1417f4fa8d79c",
+      "sha256": "8d3b05bdc46e4aca5dde5b4f631d814fc22e5bc0feb6d4507a577d5aedb443d1"
+    },
+    {
+      "path": "packages/dema-ui/src/components/game/CiRaid.tsx",
+      "before_sha256": "d65aa9273fda2752c7c7d12620bb3d2e2e84da8e43c295c9bfa49e7c3617b5a6",
+      "sha256": "72b3e8625058494e9bbff35faab036c586ee1e04684a8feb740b4d383b32f074"
+    },
+    {
+      "path": "packages/dema-ui/src/components/game/RealResources.tsx",
+      "before_sha256": "d357f4236abe8b7f2fba3eb51cb516eee585759c1b1a55b3fafe0ccefca552ff",
+      "sha256": "854bd6a2e63c0598c03327485a8594831aa3532882d2f57c155f691722db9ea8"
+    },
+    {
+      "path": "packages/dema-ui/src/components/ui/carousel.tsx",
+      "before_sha256": "b7ea0dda3903d972c186f739e23da61f547bc83b5a0bf13b16856577846d5fc3",
+      "sha256": "8e8c508d1721d6456e4978944e490aa17fe7bca646fb931cb406ee7d70b5db3e"
+    },
+    {
+      "path": "packages/dema-ui/src/hooks/use-lang.ts",
+      "before_sha256": "a0c17079f6e5a15ceb116c0707f11e9d80e94f6f4e7c6035f3f0991bac2412f8",
+      "sha256": "80904be046754cf50bbee74006ad2041d48a62e985e94d0774dcfcca9ed431ca"
+    },
+    {
+      "path": "packages/dema-ui/src/hooks/use-mobile.ts",
+      "before_sha256": "ad0936f84f1df79d3697bfbff9c18f8ad58431c1cbaf2359c6a853b0fcc9f28b",
+      "sha256": "d2804754b4fae9b6517078f28d5f5e644e4afc7df208816e5427c6d8f77eba2e"
+    },
+    {
+      "path": "packages/dema-ui/tests/ui-lifecycle.proof.mjs",
+      "before_sha256": null,
+      "sha256": "1bf4cadbb5e64098e44ad51c9cc44c03a1603947c022d9e259fa4ae129d72a58"
+    },
+    {
+      "path": "scripts/review/canonical-json-v1-check.mjs",
+      "before_sha256": "08c245f49c624a7b39affdb176d02790e9c7058abf255853a7d7415e442dec03",
+      "sha256": "41891d6fd03051583104e3c8deb5ed910fd33f37f6298acca7271d614aad4378"
+    },
+    {
+      "path": "scripts/review/env-hygiene-check.mjs",
+      "before_sha256": "15050fdad849e5884d9094731d35fdf181a89a19857df1540dd9f3dfe069e33d",
+      "sha256": "d258f69502f0cc1fc385c238c87576bdf28610426eaafdbb204309e24356115e"
+    },
+    {
+      "path": "scripts/review/identity-pair-coherence-check.mjs",
+      "before_sha256": "b87b3a136db6b8925a5dc27eb2c9367eea500412eb99670aecfe9f811b541a1f",
+      "sha256": "14e1eb9c4488c761044104cdd05a26243c8862f7dbbb33795650a28eebd562d2"
+    },
+    {
+      "path": "tests/canonical-json-v1.test.js",
+      "before_sha256": "e96f47280f889dd22d6863d9d639b966d59b9f44a5ee8976fbbbbf696c3577d5",
+      "sha256": "6b5ed10ce45ddbd07fb44ecb72d5591b4a06664a593ec9100b1d7f3d3a637b7f"
+    },
+    {
+      "path": "tests/env-hygiene-check.test.js",
+      "before_sha256": "7ed57cbd571f72c4590a5e0cd4f2b0028a7ea51d628c3bfec502b5c912423502",
+      "sha256": "1863adff84ecbcbedd7677f0d953fdda727c25a9937be2f62937321ef6fbdb4f"
+    },
+    {
+      "path": "tests/identity-pair-coherence.test.js",
+      "before_sha256": "61982e7db51c18ba24c8066185a35e0ecd82a2b17a5f7aecc4cf8789929a3684",
+      "sha256": "baccb3bd640dd5c41b7a029c32567f31c90786a4284d5c7a23c4cfe459fd2dd2"
+    }
+  ],
+  "checks": [
+    {
+      "command": "12 focused root suites incl existing HHMM/hash/diffusion/SNR owners",
+      "exit": 0,
+      "result": "204 pass / 0 fail",
+      "log": "/tmp/dema-c005-proof-UL78wH/focused.log",
+      "sha256": "53c82724e599500bdc28b9e355d38a3ceaa571b3d7f532171051fbc49d63e1ed"
+    },
+    {
+      "command": "npm test with disposable DEMA_HOME",
+      "exit": 0,
+      "result": "10045 pass / 0 fail / 4 Ralph-hook skips: RALPH_STOP_HOOK_PATH unset",
+      "log": "/tmp/dema-c005-proof-UL78wH/npm-test-final.log",
+      "sha256": "2a9e91273a1035dad0bbf4d4245de464dad9e8768ca0e9156ca656c5aa4f32e0"
+    },
+    {
+      "command": "env -u DEMA_HOME npm run check",
+      "exit": 1,
+      "result": "gate214 proof-room/release_readiness: ci.dema_ui_workflow_missing; score88/100; earlier tests10080pass, coverage95.51/84.19/97.70 and boot103.049ms pass",
+      "log": "/tmp/dema-c005-proof-UL78wH/npm-check-final.log",
+      "sha256": "4e0a911bf6dd3ced93d40b05a0eae053e8c95c0ec42aa152749465f1a232d4bd"
+    },
+    {
+      "command": "node --test tests/*.test.mjs tests/ui-lifecycle.proof.mjs in copied UI fixture",
+      "exit": 0,
+      "result": "49 pass / 0 fail / 0 skip",
+      "log": "/tmp/dema-c005-proof-UL78wH/ui-tests-final.log",
+      "sha256": "0d29fb93c242139e4d4dfeda8002d18e09224d657afa374e1c3591f7a4f5c5b2"
+    },
+    {
+      "command": "npm run lint in copied UI fixture",
+      "exit": 0,
+      "result": "full package lint",
+      "log": "/tmp/dema-c005-proof-UL78wH/ui-lint-final.log",
+      "sha256": "57f8bece08630fe6799b2e087da825b5d9cba1018e844c88b47631bb465e2567"
+    },
+    {
+      "command": "npm run typecheck in copied UI fixture",
+      "exit": 0,
+      "result": "Next typegen and tsc",
+      "log": "/tmp/dema-c005-proof-UL78wH/ui-typecheck-final.log",
+      "sha256": "55e214f247780c45542620859afe7707139bf613cc25ba28992624fced9bb31b"
+    },
+    {
+      "command": "npm run build in copied-dependency UI fixture; telemetry disabled",
+      "exit": 0,
+      "result": "production compile, type validation, static generation, standalone copy",
+      "log": "/tmp/dema-c005-proof-UL78wH/ui-build-final.log",
+      "sha256": "eaf1171fe76ef5e18be82017d406024896e5d6552d4497873e59bc3f4afd1f1f"
+    },
+    {
+      "command": "npm run llm:guidance",
+      "exit": 0,
+      "result": "guidance pass",
+      "log": "/tmp/dema-c005-proof-UL78wH/llm-guidance-final.log",
+      "sha256": "a261c164c0df17c3c6804829c1796e68960a72e6344164f9f5b218ea14672dd1"
+    },
+    {
+      "command": "npm run claim:check:corpus",
+      "exit": 0,
+      "result": "current133 baseline133; no baseline mutation",
+      "log": "/tmp/dema-c005-proof-UL78wH/claim-corpus-final.log",
+      "sha256": "a18c29b52020ae8ea3bb17e5d8de247a64f8e3cec25f75b84f9a48f76e744a93"
+    },
+    {
+      "command": "git diff --check",
+      "exit": 0,
+      "result": "whitespace clean",
+      "log": "/tmp/dema-c005-proof-UL78wH/diff-check-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "runChecks(commands.slice(215)) on earlier repaired candidate",
+      "exit": 0,
+      "result": "seven commands process-level pass; local-pool semantic status BLOCKED_BY_UNRESOLVED_PROVENANCE; not final aggregate execution",
+      "log": "/tmp/dema-c005-proof-UL78wH/post-proofroom-checks.log",
+      "sha256": "a24e209370f6d07cb67d08a84d008252c76540ef31c973f2c790d243467407aa"
+    }
+  ],
+  "retained_failures": [
+    {
+      "log": "/tmp/dema-c005-proof-UL78wH/npm-check-concurrent-performance-failure.log",
+      "sha256": "e9b492ea54e6d314654dde689fe98cc707047c5bc83a6a88b8865f7a3e511ae3",
+      "exit": 1,
+      "finding": "CLI boot155.608ms > unchanged150ms budget with competing test process; contention plausible, not proved"
+    },
+    {
+      "log": "/tmp/dema-c005-proof-UL78wH/performance-isolated-diagnostic.json",
+      "sha256": "501cb220dab5e357359a50b2976c9b4ca975ed7da6c8c3e05fb021a6840b8d95",
+      "exit": 0,
+      "finding": "standalone boot104.878ms; does not erase failure"
+    },
+    {
+      "log": "/tmp/dema-c005-proof-UL78wH/ui-build.log",
+      "sha256": "fbbf44fb217afa982845fc6fbbe8bf0ca8b260c47e2da3daff6a4bcea5a3afd5",
+      "exit": 1,
+      "finding": "Turbopack refused dependency symlink outside fixture tracing root; fixed copied-dependency fixture then passed"
+    },
+    {
+      "log": "/tmp/dema-c005-proof-UL78wH/npm-check-supplied-home-refusal.log",
+      "sha256": "50f5248e91cfb95e60c5baae7d114fe1e3ccf81af3bd80d745832bba5c6ee422",
+      "exit": 1,
+      "finding": "strict environment gate refused root check with explicitly supplied DEMA_HOME; clean invocation follows"
+    },
+    {
+      "log": "/tmp/dema-c005-proof-UL78wH/ui-typecheck-wrong-directory.log",
+      "sha256": "01f8f25f6ccbb92efb04a346da9ae2892670b7149f2b2b0f64df0ab7910fe0e5",
+      "exit": 1,
+      "finding": "operator command ran from root lacking typecheck script; corrected package-directory invocation passed"
+    }
+  ],
+  "advisory_evidence": [
+    {
+      "path": "/tmp/dema-c005-proof-UL78wH/snr-advisory.json",
+      "sha256": "23b24bafa437de3229f98a7d0d3669436474690822f61476fc009651953c94a0",
+      "ceiling": "unsupported axes; held unresolved input"
+    },
+    {
+      "path": "/tmp/dema-c005-proof-UL78wH/snr-advisory-corrected.json",
+      "sha256": "2e5e07d88fc8d4ae32e9cb47ebeb98e667ec6707b7934d20bcddd25968fc12ea",
+      "ceiling": "axes corrected; held because lifecycle emissions absent; PREVIEW_ONLY"
+    },
+    {
+      "path": "/tmp/dema-c005-proof-UL78wH/fde-baseline-diagnostic.json",
+      "sha256": "8f6bd24ab66c62a9e759817628db3ed4fecc2cb92cba44ee59f2a636f8a5552e",
+      "ceiling": "UNKNOWN; autopatch ineligible; structural verifier does not grant consent"
+    }
+  ],
+  "ci_candidate": {
+    "path": "docs/superpowers/plans/2026-10-04-dema-ui-ci-review.patch",
+    "sha256": "d2e0022da199c531f255b17ffe23ab37774dad2dc7f66109844b684af1b29bb8",
+    "applied_to_primary": false,
+    "local_fixture_preview_score": 94,
+    "hosted_exact_head_execution": "NOT_RUN",
+    "required_check_binding": "UNKNOWN",
+    "locked_fresh_install": "NOT_RUN",
+    "dependency_audit": "NOT_RUN",
+    "edit_authorization": "REQUIRED_NOT_GRANTED"
+  },
+  "review": "Independent read-only pilot reviews passed source/callback and claim boundaries; no browser interaction or live SAT proof",
+  "authority": {
+    "local_repairs": "authorized by user session instruction",
+    "workflow_edit": "explicit authorization required by docs/LLM_SYSTEM_FLOW.md:153-166 and docs/RELEASE_PROCESS.md:193-206",
+    "self_consent": "cannot create human authority",
+    "production_signer_used": false,
+    "runtime_or_model_started": false,
+    "launcher_changed": false,
+    "push_or_deploy_performed": false,
+    "reward_or_settlement_issued": false
+  },
+  "proof_ceilings": {
+    "formal": "local executable invariants only",
+    "cryptographic": "byte correspondence; unsigned engineering evidence",
+    "empirical": "local test/build observations; no browser usability or live mission",
+    "economic": "NOT_COMPUTED; cost not value; simulated game impact not minted value"
+  },
+  "not_run_in_final_aggregate": "commands215..221 after proof-room failure; prior separate command evidence is scoped separately",
+  "next_frontier": "Existing TASK-019 UI qualification within C-005: review-only workflow edit consent, then separately authorized hosted exact-head and required-check evidence; no C-006 advancement"
+}
