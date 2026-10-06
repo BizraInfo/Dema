@@ -68,10 +68,13 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       # Checkout the candidate head SHA explicitly on pull_request so the
       # dual evaluator does not silently treat the merge commit as head.
+      # Credentials are not persisted so the untrusted tree cannot reuse
+      # GITHUB_TOKEN after checkout.
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
           ref: ${{ steps.ids.outputs.checkout_ref }}
+          persist-credentials: false
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: 22.x
@@ -105,8 +108,24 @@ jobs:
         run: |
           set -euo pipefail
           # Exact CI security command (bound by delivery-operating-system):
-          # node scripts/review/gitleaks-dual-eval.mjs
+          # node <trusted>/gitleaks-dual-eval.mjs
           # DETECT_CONTRACT (for readers): gitleaks detect --source . --no-banner --exit-code 1 --redact
+          #
+          # Gate Mutator ≠ Final Gate Verifier applies to the orchestrator too:
+          # prefer the dual-eval script bytes from BASE_SHA so a candidate cannot
+          # stub the verifier while leaving this workflow file unchanged.
+          TRUSTED_DIR="${RUNNER_TEMP}/trusted-gitleaks-eval"
+          mkdir -p "$TRUSTED_DIR"
+          TRUSTED_EVAL="$TRUSTED_DIR/gitleaks-dual-eval.mjs"
+          if [ -n "${BASE_SHA:-}" ] && git cat-file -e "${BASE_SHA}:scripts/review/gitleaks-dual-eval.mjs" 2>/dev/null; then
+            git show "${BASE_SHA}:scripts/review/gitleaks-dual-eval.mjs" > "$TRUSTED_EVAL"
+            echo "dual-eval source=base (${BASE_SHA})"
+          else
+            # Bootstrap only: introducing PR where base lacks the evaluator.
+            # After merge, subsequent PRs bind to base bytes above.
+            cp scripts/review/gitleaks-dual-eval.mjs "$TRUSTED_EVAL"
+            echo "dual-eval source=candidate_bootstrap (base lacks evaluator)"
+          fi
           EXTRA_ARGS=()
           if [ -n "$BASE_SHA" ]; then
             EXTRA_ARGS+=(--base-commit "$BASE_SHA")
@@ -114,7 +133,7 @@ jobs:
           if [ -n "${GITLEAKS_INDEPENDENT_ACCEPTANCE:-}" ]; then
             EXTRA_ARGS+=(--independent-acceptance "$GITLEAKS_INDEPENDENT_ACCEPTANCE")
           fi
-          node scripts/review/gitleaks-dual-eval.mjs \
+          node "$TRUSTED_EVAL" \
             --source . \
             --event "$EVENT_NAME" \
             --source-commit "$CANDIDATE_SHA" \
