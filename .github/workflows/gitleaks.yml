@@ -108,22 +108,19 @@ jobs:
         run: |
           set -euo pipefail
           # Exact CI security command (bound by delivery-operating-system):
-          # node <trusted>/gitleaks-dual-eval.mjs
+          # node scripts/review/gitleaks-dual-eval.mjs
           # DETECT_CONTRACT (for readers): gitleaks detect --source . --no-banner --exit-code 1 --redact
           #
           # Gate Mutator ≠ Final Gate Verifier applies to the orchestrator too:
-          # prefer the dual-eval script bytes from BASE_SHA so a candidate cannot
-          # stub the verifier while leaving this workflow file unchanged.
-          TRUSTED_DIR="${RUNNER_TEMP}/trusted-gitleaks-eval"
-          mkdir -p "$TRUSTED_DIR"
-          TRUSTED_EVAL="$TRUSTED_DIR/gitleaks-dual-eval.mjs"
-          if [ -n "${BASE_SHA:-}" ] && git cat-file -e "${BASE_SHA}:scripts/review/gitleaks-dual-eval.mjs" 2>/dev/null; then
-            git show "${BASE_SHA}:scripts/review/gitleaks-dual-eval.mjs" > "$TRUSTED_EVAL"
+          # materialize the dual-eval script from BASE_SHA into the fixed repo path
+          # so a candidate cannot stub the verifier while leaving this workflow unchanged.
+          DUAL_EVAL="scripts/review/gitleaks-dual-eval.mjs"
+          if [ -n "${BASE_SHA:-}" ] && git cat-file -e "${BASE_SHA}:${DUAL_EVAL}" 2>/dev/null; then
+            git show "${BASE_SHA}:${DUAL_EVAL}" > "$DUAL_EVAL"
             echo "dual-eval source=base (${BASE_SHA})"
           else
             # Bootstrap only: introducing PR where base lacks the evaluator.
             # After merge, subsequent PRs bind to base bytes above.
-            cp scripts/review/gitleaks-dual-eval.mjs "$TRUSTED_EVAL"
             echo "dual-eval source=candidate_bootstrap (base lacks evaluator)"
           fi
           EXTRA_ARGS=()
@@ -133,7 +130,7 @@ jobs:
           if [ -n "${GITLEAKS_INDEPENDENT_ACCEPTANCE:-}" ]; then
             EXTRA_ARGS+=(--independent-acceptance "$GITLEAKS_INDEPENDENT_ACCEPTANCE")
           fi
-          node "$TRUSTED_EVAL" \
+          node scripts/review/gitleaks-dual-eval.mjs \
             --source . \
             --event "$EVENT_NAME" \
             --source-commit "$CANDIDATE_SHA" \

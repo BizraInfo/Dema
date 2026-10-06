@@ -234,25 +234,26 @@ export function runGitleaksDetect({
   configPath,
   sourceDir,
   gitleaksBin,
+  gitleaksIgnorePath,
   spawn = spawnSync,
 }) {
   if (!gitleaksBin || !existsSync(gitleaksBin)) return "UNKNOWN";
-  if (!existsSync(configPath)) return "UNKNOWN";
-  const result = spawn(
-    gitleaksBin,
-    [
-      "detect",
-      "--source",
-      sourceDir,
-      "--config",
-      configPath,
-      "--no-banner",
-      "--exit-code",
-      "1",
-      "--redact",
-    ],
-    { encoding: "utf8" },
-  );
+  if (configPath != null && !existsSync(configPath)) return "UNKNOWN";
+  const argv = [
+    "detect",
+    "--source",
+    sourceDir,
+    "--gitleaks-ignore-path",
+    gitleaksIgnorePath || sourceDir,
+    "--no-banner",
+    "--exit-code",
+    "1",
+    "--redact",
+  ];
+  if (configPath != null) {
+    argv.push("--config", configPath);
+  }
+  const result = spawn(gitleaksBin, argv, { encoding: "utf8" });
   if (result.error) return "UNKNOWN";
   if (result.status === 0) return "PASS";
   if (result.status === 1) return "FAIL";
@@ -298,17 +299,21 @@ export function buildDualEvalReport({
     writeFileSync(candidatePath, candidateConfigText, { mode: 0o600 });
   }
 
-  const detectArgv = (configPath) => [
-    "detect",
-    "--source",
-    sourceDir,
-    "--config",
-    configPath,
-    "--no-banner",
-    "--exit-code",
-    "1",
-    "--redact",
-  ];
+  const detectArgv = (configPath) => {
+    const argv = [
+      "detect",
+      "--source",
+      sourceDir,
+      "--gitleaks-ignore-path",
+      sourceDir,
+      "--no-banner",
+      "--exit-code",
+      "1",
+      "--redact",
+    ];
+    if (configPath != null) argv.push("--config", configPath);
+    return argv;
+  };
 
   const basePolicy = basePresent
     ? runDetect({
@@ -476,7 +481,7 @@ if (
       sha256Hex(Buffer.from(candidateConfigText, "utf8"))
   ) {
     const status = runGitleaksDetect({
-      configPath: candidatePath,
+      configPath: null,
       sourceDir,
       gitleaksBin,
     });

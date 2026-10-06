@@ -44,16 +44,13 @@ const pick = (re, what) => {
 const version = pick(/VERSION="([^"]+)"/, "VERSION");
 const sha256 = pick(/EXPECTED_SHA256="([0-9a-f]{64})"/, "EXPECTED_SHA256");
 const urlTemplate = pick(/URL="([^"]+)"/, "URL");
-// CI security entrypoint must remain dual-eval (delivery-operating-system binds it).
-// Workflow may invoke a BASE_SHA-materialized copy ($TRUSTED_EVAL) rather than the
-// candidate path directly — Gate Mutator ≠ Final Gate Verifier for the orchestrator.
-if (
-  !/gitleaks-dual-eval\.mjs/.test(wf) ||
-  !/TRUSTED_EVAL/.test(wf)
-) {
+// CI security entrypoint must remain the fixed repo path (delivery-operating-system binds it).
+// Workflow may overwrite that path from BASE_SHA before invoke — orchestrator binding only.
+const REQUIRED_DUAL_EVAL_INVOKE = "node scripts/review/gitleaks-dual-eval.mjs";
+if (!wf.includes(REQUIRED_DUAL_EVAL_INVOKE)) {
   fail(
-    `could not find trusted dual-eval CI entrypoint in ${WORKFLOW} ` +
-      `(expected: gitleaks-dual-eval.mjs via TRUSTED_EVAL)`,
+    `could not find dual-eval CI entrypoint in ${WORKFLOW} ` +
+      `(expected literal: ${REQUIRED_DUAL_EVAL_INVOKE})`,
   );
 }
 
