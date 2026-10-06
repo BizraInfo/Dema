@@ -76,6 +76,10 @@ jobs:
               ;;
           esac
       - run: node scripts/review/pr-class.mjs --class "$BIZRA_REVIEW_CLASS"
+      # Content overlays (e.g. .gitleaks.toml) compose mandatory gates that
+      # branch naming must not suppress (DEMA-REVIEW-GATE-SEMANTIC-BINDING-1A).
+      - name: Compose content-required gates
+        run: node scripts/review/content-required-gates.mjs --class "$BIZRA_REVIEW_CLASS"
       - run: node scripts/review/proof-scope.mjs --class "$BIZRA_REVIEW_CLASS"
       - run: node scripts/review/no-overclaim.mjs --class "$BIZRA_REVIEW_CLASS"
       - run: node scripts/review/receipt-integrity.mjs --class "$BIZRA_REVIEW_CLASS"
