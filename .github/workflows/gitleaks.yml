@@ -118,10 +118,14 @@ jobs:
           if [ -n "${BASE_SHA:-}" ] && git cat-file -e "${BASE_SHA}:${DUAL_EVAL}" 2>/dev/null; then
             git show "${BASE_SHA}:${DUAL_EVAL}" > "$DUAL_EVAL"
             echo "dual-eval source=base (${BASE_SHA})"
+          elif [ -n "${BASE_SHA:-}" ] && git diff --name-status "${BASE_SHA}"..."${CANDIDATE_SHA}" -- "$DUAL_EVAL" | grep -q '^A'; then
+            # One-shot bootstrap: this PR introduces the verifier on a base that lacks it.
+            echo "dual-eval source=candidate_bootstrap (evaluator added in PR)"
+          elif [ -n "${BASE_SHA:-}" ]; then
+            echo "ERROR: base ${BASE_SHA} lacks ${DUAL_EVAL} and PR did not add it; refusing candidate stub"
+            exit 1
           else
-            # Bootstrap only: introducing PR where base lacks the evaluator.
-            # After merge, subsequent PRs bind to base bytes above.
-            echo "dual-eval source=candidate_bootstrap (base lacks evaluator)"
+            echo "dual-eval source=candidate (no base SHA bound)"
           fi
           EXTRA_ARGS=()
           if [ -n "$BASE_SHA" ]; then

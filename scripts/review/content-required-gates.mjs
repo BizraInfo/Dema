@@ -55,6 +55,12 @@ export const GOVERNANCE_GATE_MATCHERS = Object.freeze([
     rationale: "Review classifiers and gate implementations",
   },
   {
+    id: "scripts/check.mjs",
+    overlay: "review_gate",
+    test: (f) => f === "scripts/check.mjs",
+    rationale: "Qualification runner wires review gates into npm run check",
+  },
+  {
     id: "tests/review-gate.test.js",
     overlay: "review_gate",
     test: (f) => f === "tests/review-gate.test.js",
@@ -198,11 +204,24 @@ function baseRef() {
 }
 
 export function changedFiles() {
-  return execFileSync("git", ["diff", "--name-only", `${baseRef()}...HEAD`], {
-    encoding: "utf8",
-  })
-    .split("\n")
-    .filter(Boolean);
+  const range = `${baseRef()}...HEAD`;
+  const status = execFileSync(
+    "git",
+    ["diff", "--name-status", "-M", "--find-renames", range],
+    { encoding: "utf8" },
+  );
+  const files = new Set();
+  for (const line of status.split("\n").filter(Boolean)) {
+    const parts = line.split("\t");
+    const code = parts[0] || "";
+    if (code.startsWith("R") && parts.length >= 3) {
+      files.add(parts[1]);
+      files.add(parts[2]);
+    } else {
+      files.add(parts[parts.length - 1]);
+    }
+  }
+  return [...files];
 }
 
 if (

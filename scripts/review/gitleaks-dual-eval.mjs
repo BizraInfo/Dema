@@ -15,6 +15,7 @@ import {
   existsSync,
   mkdtempSync,
   readFileSync,
+  rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -315,20 +316,26 @@ export function buildDualEvalReport({
     return argv;
   };
 
-  const basePolicy = basePresent
-    ? runDetect({
-        configPath: basePath,
-        sourceDir,
-        gitleaksBin,
-      })
-    : "UNKNOWN";
-  const candidatePolicy = candidatePresent
-    ? runDetect({
-        configPath: candidatePath,
-        sourceDir,
-        gitleaksBin,
-      })
-    : "UNKNOWN";
+  let basePolicy = "UNKNOWN";
+  let candidatePolicy = "UNKNOWN";
+  try {
+    basePolicy = basePresent
+      ? runDetect({
+          configPath: basePath,
+          sourceDir,
+          gitleaksBin,
+        })
+      : "UNKNOWN";
+    candidatePolicy = candidatePresent
+      ? runDetect({
+          configPath: candidatePath,
+          sourceDir,
+          gitleaksBin,
+        })
+      : "UNKNOWN";
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
 
   const decision = decideDualEval({
     basePolicy,
