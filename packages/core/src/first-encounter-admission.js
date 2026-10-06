@@ -87,7 +87,13 @@ export function assertMetadataOnly(record) {
   if (!Number.isInteger(clean.size) || clean.size < 0) {
     throw new AdmissionBoundaryError("INVALID_SIZE");
   }
-  return clean;
+  return /** @type {{
+    relative_path: string,
+    extension: any,
+    size: number,
+    modified_time: any,
+    file_hash: any
+  }} */ (clean);
 }
 
 /**
@@ -136,7 +142,7 @@ export function normalizeInventory(records) {
   for (const f of clean) extensions[f.extension] = (extensions[f.extension] ?? 0) + 1;
   return Object.freeze({
     file_count: clean.length,
-    total_bytes: clean.reduce((n, f) => n + Number(f.size), 0),
+    total_bytes: clean.reduce((n, f) => n + f.size, 0),
     extensions: Object.freeze(extensions),
     files: Object.freeze(clean),
   });
