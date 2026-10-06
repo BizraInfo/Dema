@@ -5,7 +5,7 @@ Append-only. One entry per claim. Never rewrite prior entries — append state t
 ```json
 {
   "schema": "bizra.lane_registry.v1",
-  "updated_at_utc": "2026-10-05T21:50:54Z",
+  "updated_at_utc": "2026-10-06T06:54:45Z",
   "rule": "claim before work; duplicate → L-02 reconcile by evidence; never delete superseded",
   "projection_law": {
     "owner": "/home/bizra-operating-system/Downloads/Dema/docs/LANE-REGISTRY.md",
@@ -165,6 +165,35 @@ Append-only. One entry per claim. Never rewrite prior entries — append state t
       "evidence_sha256": "c173a49fae4f04e2d0f406aa88eae50ec8ca588ea7d745bf082267f0dcdbc72c",
       "evidence_summary": "Three red-first reproductions on the base: invalid consent/traversal seeded outside the sandbox; symlink alias entered DEMA_HOME; post-effect observation hashed an external target symlink.",
       "disposition": "CANDIDATE_FOR_REVIEW; NOT_YET_ADOPTED_AS_POLICY"
+    },
+    {
+      "item_id": "P0-HERMETICITY",
+      "title": "CHECK-DEMA-HOME-HERMETICITY-1A",
+      "claimed_by": "product-lane",
+      "transition_at": "2026-10-05T23:48:23Z",
+      "prior_disposition": "ON_PR_480_AWAIT_G3",
+      "state": "MERGED",
+      "pr": 480,
+      "source_head": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318",
+      "merge_commit": "4edcd02d98e2c4087391991353891ef5c5223296",
+      "note": "Append-only post-merge transition after G3 exact-head merge; prior AWAIT_G3 row retained above.",
+      "disposition": "LANDED_ON_MAIN",
+      "receipt_ref": "docs/receipts/crossings/G3-MERGE-RECEIPT.json"
+    },
+    {
+      "item_id": "P1-ASSETS-SCAN-CONSENT",
+      "title": "ASSETS-SCAN-CONSENT-PARITY-1A",
+      "claimed_by": "product-lane",
+      "transition_at": "2026-10-05T23:48:23Z",
+      "prior_state": "COMMITTED_PR_OPEN",
+      "prior_disposition": "AWAIT_G3_MERGE",
+      "state": "MERGED",
+      "pr": 480,
+      "source_head": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318",
+      "merge_commit": "4edcd02d98e2c4087391991353891ef5c5223296",
+      "note": "Append-only post-merge transition after G3 exact-head merge; prior AWAIT_G3_MERGE row retained above.",
+      "disposition": "LANDED_ON_MAIN",
+      "receipt_ref": "docs/receipts/crossings/G3-MERGE-RECEIPT.json"
     }
   ],
   "worktrees_owned": [
@@ -217,3 +246,5 @@ Append-only. One entry per claim. Never rewrite prior entries — append state t
 - **2026-10-05T19:01:04Z G2:** Qualification repairs committed+pushed; PR #480 @ `c1485e8ea3a3`. Awaits CI + G3. Receipt: `bizra-home/outputs/campaign-lane-G2-qualification-20261005T1805Z/G2-LAND-RECEIPT.json`.
 
 - **2026-10-05T21:50:54Z L-04 claim/defer:** Added COMPOSE-BOUNDARY-L04 as CLAIMED/DEFERRED for inclusion with 7c0edbad after the prover/product-lane merge, with one correspondence receipt binding both. Added the effect-path boundary-probe lesson as LESSON_CANDIDATE, supported by three red-first reproductions; not adopted as policy. Projection receipt: `bizra-home/outputs/campaign-lane-L04-deferred-20261005T215054Z/LANE-REGISTRY-PROJECTION-RECEIPT.json`.
+
+- **2026-10-06T06:54:45Z G3 post-merge lane transition:** Appended MERGED/`LANDED_ON_MAIN` rows for `P0-HERMETICITY` and `P1-ASSETS-SCAN-CONSENT` binding PR #480 merge commit `4edcd02d98e2c4087391991353891ef5c5223296` at source head `95bbabe3afa67f7ab9913dfb5d8a92c33ab92318`. Prior AWAIT_G3 rows retained (append-only). Next active frontier after campaign-record land: T-06 / C-005 closeout under separate GO.
