@@ -30,7 +30,7 @@ function subscribe(listener: () => void) {
 }
 
 export function useLang(): [Lang, (l: Lang) => void] {
-  const lang = useSyncExternalStore(subscribe, readLang, () => "en");
+  const lang = useSyncExternalStore(subscribe, readLang, (): Lang => "en");
 
   const setLang = useCallback((l: Lang) => {
     try {
