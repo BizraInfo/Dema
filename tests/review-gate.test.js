@@ -8,6 +8,13 @@ import {
   resolveClassForBranch,
 } from "../scripts/review/pr-class.mjs";
 import { validateProofScope } from "../scripts/review/proof-scope.mjs";
+import {
+  assertSameContentMandatoryGates,
+  classifyContentOverlays,
+  composeRequiredGates,
+  parseChangedFilesFromNameStatus,
+} from "../scripts/review/content-required-gates.mjs";
+import { decideDualEval } from "../scripts/review/gitleaks-dual-eval.mjs";
 
 const u1Files = [
   "artifacts/proofs/node0-local-urp/critic_report_001.json",
@@ -754,4 +761,145 @@ test("proof-scope skips (exit 0) when the base ref is unavailable", () => {
   const out = JSON.parse(r.stdout);
   assert.equal(out.ok, true);
   assert.equal(out.skipped, true);
+});
+
+// ---------------------------------------------------------------------------
+// DEMA-REVIEW-GATE-SEMANTIC-BINDING-1A — content-bound gate composition (A–G)
+// ---------------------------------------------------------------------------
+
+const gitleaksDiff = [
+  ".gitleaks.toml",
+  "docs/receipts/example.md",
+];
+
+test("A: same gitleaks diff keeps content-mandatory gates across branch classes", () => {
+  // campaign-records-* is rejected by workflow admission, but composition must
+  // still treat the same file list identically under docs/* (broad-scope) vs a
+  // narrow class — branch naming must not strip secret_policy gates.
+  const check = assertSameContentMandatoryGates(
+    gitleaksDiff,
+    "policy/broad-scope",
+    "proof/u1",
+  );
+  assert.equal(check.same, true, JSON.stringify(check, null, 2));
+  assert.ok(check.a.overlays.includes("secret_policy"));
+  assert.ok(check.a.mandatory.includes("gitleaks-dual-eval"));
+  assert.ok(check.a.mandatory.includes("independent_acceptance_required"));
+});
+
+test("B: docs/* + .gitleaks.toml forces content_bound_composition (not advisory-only)", () => {
+  const report = validateProofScope({
+    reviewClass: "policy/broad-scope",
+    files: gitleaksDiff,
+    branch: "docs/campaign-records-t05-20261006",
+  });
+  assert.equal(report.ok, true);
+  assert.equal(report.enforcement, "content_bound_composition");
+  assert.ok(report.overlays.includes("secret_policy"));
+  assert.ok(report.mandatory_gates.includes("gitleaks-dual-eval"));
+  assert.ok(
+    report.mandatory_gates.includes("independent_acceptance_required"),
+  );
+});
+
+test("C: ordinary docs-only change does not acquire secret_policy or review_gate", () => {
+  const files = ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"];
+  const { overlays } = classifyContentOverlays(files);
+  assert.deepEqual(overlays, []);
+  const report = validateProofScope({
+    reviewClass: "policy/broad-scope",
+    files,
+    branch: "docs/ordinary-docs-only",
+  });
+  assert.equal(report.enforcement, "advisory_reviewer_discipline");
+  assert.deepEqual(report.overlays, []);
+  assert.ok(!report.mandatory_gates.includes("gitleaks-dual-eval"));
+});
+
+test("F: review-gate mutation cannot self-certify; dual-eval blocks BASE FAIL/UNKNOWN∧CANDIDATE PASS", () => {
+  const files = ["scripts/review/proof-scope.mjs"];
+  const composed = composeRequiredGates({
+    branchClass: "policy/broad-scope",
+    files,
+  });
+  assert.ok(composed.overlays.includes("review_gate"));
+  assert.ok(composed.mandatory.includes("content_bound_review_gate"));
+  // Independent acceptance is reserved for .gitleaks.toml policy deltas,
+  // not every review-script edit (dual-eval still fail-closes POLICY_DELTA).
+  assert.ok(!composed.mandatory.includes("independent_acceptance_required"));
+  assert.equal(composed.enforcement, "content_bound_composition");
+
+  const policyDelta = composeRequiredGates({
+    branchClass: "policy/broad-scope",
+    files: [".gitleaks.toml"],
+  });
+  assert.ok(policyDelta.mandatory.includes("independent_acceptance_required"));
+  assert.ok(policyDelta.mandatory.includes("gitleaks-dual-eval"));
+
+  // Gate Mutator ≠ Final Gate Verifier: candidate PASS must not erase BASE FAIL
+  // or elevate UNKNOWN base into GREEN under a policy delta.
+  for (const basePolicy of ["FAIL", "UNKNOWN"]) {
+    const decision = decideDualEval({
+      basePolicy,
+      candidatePolicy: "PASS",
+      policyDelta: true,
+    });
+    assert.equal(decision.self_certification_blocked, true);
+    assert.equal(decision.ok, false);
+  }
+  const passPassAbsent = decideDualEval({
+    basePolicy: "PASS",
+    candidatePolicy: "PASS",
+    policyDelta: true,
+  });
+  assert.equal(passPassAbsent.ok, false);
+});
+
+test("G: branch rename with identical tree cannot reduce mandatory gate set", () => {
+  const files = [".gitleaks.toml", "scripts/review/proof-scope.mjs"];
+  const docs = composeRequiredGates({
+    branchClass: "policy/broad-scope",
+    files,
+    branch: "docs/campaign-records-t05-20261006",
+  });
+  const renamed = composeRequiredGates({
+    branchClass: "policy/broad-scope",
+    files,
+    branch: "feat/campaign-records-t05-20261006",
+  });
+  assert.deepEqual(docs.overlays, renamed.overlays);
+  assert.deepEqual(docs.mandatory, renamed.mandatory);
+  assert.equal(docs.enforcement, "content_bound_composition");
+  assert.equal(renamed.enforcement, "content_bound_composition");
+});
+
+test("content-required-gates CLI skips (exit 0) when the base ref is unavailable", () => {
+  const r = runReviewGate("content-required-gates.mjs", {
+    BIZRA_REVIEW_BASE: "refs/__nonexistent_base_ref__",
+  });
+  assert.equal(r.status, 0, r.stderr);
+  const out = JSON.parse(r.stdout);
+  assert.equal(out.ok, true);
+  assert.equal(out.skipped, true);
+});
+
+test("parseChangedFilesFromNameStatus includes both paths of a rename", () => {
+  const files = parseChangedFilesFromNameStatus(
+    "M\tdocs/a.md\nR100\t.gitleaks.toml\tconfig/gitleaks.toml\nA\tscripts/new.mjs",
+  );
+  assert.deepEqual(files.sort(), [
+    ".gitleaks.toml",
+    "config/gitleaks.toml",
+    "docs/a.md",
+    "scripts/new.mjs",
+  ]);
+});
+
+test("scripts/check.mjs changes acquire review_gate overlay", () => {
+  const composed = composeRequiredGates({
+    branchClass: "policy/broad-scope",
+    files: ["scripts/check.mjs"],
+  });
+  assert.ok(composed.overlays.includes("review_gate"));
+  assert.ok(composed.mandatory.includes("content_bound_review_gate"));
 });
