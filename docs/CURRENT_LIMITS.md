@@ -260,6 +260,7 @@ who only sees the README.
 
 | Surface                                                              | Notes                                                                                                     |
 | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Dema face-turn preview (DEMA-FACE-TURN-PREVIEW-1A) | Planned; its kernel (`packages/core/src/dema-face-turn-preview.js`), focused test, review gate, architecture note, and receipt are absent from committed `main` at `4edcd02`. The 2026-10-06 qualification run on the dirty primary at `4b7dea6` reported `ENOENT` for that kernel in `tests/dema-slice-scaffold-canonical.test.js`; this is not a clean-main result. Re-enter MEASURED only after the source and focused tests exist and required gates pass on exact committed bytes. |
 | Terminal installer URL `install.bizra.ai/dema/install.sh` (+ `.ps1`) | Endpoint does not resolve yet; planned for packaged alpha release                                         |
 | Installer SHA-256 hash publication per release tag                   | Will live in `docs/INSTALLER_ARCHITECTURE.md` when terminal installer goes live                           |
 | macOS notarization + Windows code-signing of installer binaries      | Roadmap; see `docs/INSTALLER_ARCHITECTURE.md`                                                             |
