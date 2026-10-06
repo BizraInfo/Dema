@@ -87,13 +87,7 @@ export function assertMetadataOnly(record) {
   if (!Number.isInteger(clean.size) || clean.size < 0) {
     throw new AdmissionBoundaryError("INVALID_SIZE");
   }
-  return /** @type {{
-    relative_path: string,
-    extension: any,
-    size: number,
-    modified_time: any,
-    file_hash: any
-  }} */ (clean);
+  return /** @type {{ relative_path: string, extension: any, size: number, modified_time: any, file_hash: any }} */ (clean);
 }
 
 /**
