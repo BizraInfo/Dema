@@ -11,6 +11,7 @@ import {
   decideDualEval,
   isLowercaseSha256Hex,
   buildDualEvalReport,
+  ignoreTextsDelta,
   resolveEventBinding,
   GITLEAKS_VERIFIER_CONTRACT,
 } from "../scripts/review/gitleaks-dual-eval.mjs";
@@ -192,6 +193,29 @@ test("governance coverage includes tests/gitleaks-dual-eval.test.js", () => {
     "tests/gitleaks-dual-eval.test.js",
   ]);
   assert.deepEqual(overlays, ["review_gate"]);
+});
+
+test("ignoreTextsDelta detects .gitleaksignore-only changes", () => {
+  assert.equal(ignoreTextsDelta(null, null), false);
+  assert.equal(ignoreTextsDelta("a\n", "a\n"), false);
+  assert.equal(ignoreTextsDelta("a\n", "b\n"), true);
+  assert.equal(ignoreTextsDelta(null, "new\n"), true);
+});
+
+test("buildDualEvalReport treats ignore-only delta as POLICY_DELTA", () => {
+  const report = buildDualEvalReport({
+    baseConfigText: 'title = "same"\n',
+    candidateConfigText: 'title = "same"\n',
+    baseIgnoreText: "fp-old\n",
+    candidateIgnoreText: "fp-new\n",
+    sourceCommit: SHA_B,
+    baseCommit: SHA_A,
+    sourceDir: fixtureDir,
+    gitleaksBin: "/nonexistent/gitleaks",
+    runDetect: () => "PASS",
+  });
+  assert.equal(report.POLICY_DELTA, true);
+  assert.equal(report.INDEPENDENT_ACCEPTANCE_REQUIRED, true);
 });
 
 test("buildDualEvalReport removes its private temp directory", () => {

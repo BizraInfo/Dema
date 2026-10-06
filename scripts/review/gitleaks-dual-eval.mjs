@@ -227,6 +227,21 @@ export function gitShowText(refPath, { gitExecFile = execFileSync } = {}) {
   }
 }
 
+export function normalizeIgnoreText(text) {
+  return text == null ? "" : String(text);
+}
+
+/** @returns {boolean} true when base and candidate ignore files differ (including introduce/remove). */
+export function ignoreTextsDelta(baseIgnoreText, candidateIgnoreText) {
+  const baseHash = sha256Hex(
+    Buffer.from(normalizeIgnoreText(baseIgnoreText), "utf8"),
+  );
+  const candidateHash = sha256Hex(
+    Buffer.from(normalizeIgnoreText(candidateIgnoreText), "utf8"),
+  );
+  return baseHash !== candidateHash;
+}
+
 /**
  * @param {{ configPath: string, sourceDir: string, gitleaksBin: string }} opts
  * @returns {'PASS'|'FAIL'|'UNKNOWN'}
@@ -264,6 +279,8 @@ export function runGitleaksDetect({
 export function buildDualEvalReport({
   baseConfigText,
   candidateConfigText,
+  baseIgnoreText = null,
+  candidateIgnoreText = null,
   sourceCommit,
   baseCommit,
   sourceDir,
@@ -282,31 +299,48 @@ export function buildDualEvalReport({
   const candidate_config_sha256 = candidatePresent
     ? sha256Hex(Buffer.from(candidateConfigText, "utf8"))
     : null;
+  const base_ignore_sha256 = sha256Hex(
+    Buffer.from(normalizeIgnoreText(baseIgnoreText), "utf8"),
+  );
+  const candidate_ignore_sha256 = sha256Hex(
+    Buffer.from(normalizeIgnoreText(candidateIgnoreText), "utf8"),
+  );
 
-  // Introducing or changing policy without a recoverable base is a delta.
-  const policyDelta = Boolean(
+  const configDelta = Boolean(
     (basePresent &&
       candidatePresent &&
       base_config_sha256 !== candidate_config_sha256) ||
       (!basePresent && candidatePresent),
   );
+  const policyDelta =
+    configDelta || ignoreTextsDelta(baseIgnoreText, candidateIgnoreText);
 
   // Private temp dir (0700) — avoid world-writable os.tmpdir() file creates.
   const work = mkdtempSync(join(tmpdir(), "gitleaks-dual-eval-"));
   const basePath = join(work, "gitleaks.base.toml");
   const candidatePath = join(work, "gitleaks.candidate.toml");
+  const baseIgnorePath = join(work, "gitleaks.base.ignore");
+  const candidateIgnorePath = join(work, "gitleaks.candidate.ignore");
   if (basePresent) writeFileSync(basePath, baseConfigText, { mode: 0o600 });
   if (candidatePresent) {
     writeFileSync(candidatePath, candidateConfigText, { mode: 0o600 });
   }
+  writeFileSync(baseIgnorePath, normalizeIgnoreText(baseIgnoreText), {
+    mode: 0o600,
+  });
+  writeFileSync(
+    candidateIgnorePath,
+    normalizeIgnoreText(candidateIgnoreText),
+    { mode: 0o600 },
+  );
 
-  const detectArgv = (configPath) => {
+  const detectArgv = (configPath, ignorePath) => {
     const argv = [
       "detect",
       "--source",
       sourceDir,
       "--gitleaks-ignore-path",
-      sourceDir,
+      ignorePath,
       "--no-banner",
       "--exit-code",
       "1",
@@ -324,6 +358,7 @@ export function buildDualEvalReport({
           configPath: basePath,
           sourceDir,
           gitleaksBin,
+          gitleaksIgnorePath: baseIgnorePath,
         })
       : "UNKNOWN";
     candidatePolicy = candidatePresent
@@ -331,6 +366,7 @@ export function buildDualEvalReport({
           configPath: candidatePath,
           sourceDir,
           gitleaksBin,
+          gitleaksIgnorePath: candidateIgnorePath,
         })
       : "UNKNOWN";
   } finally {
@@ -349,15 +385,19 @@ export function buildDualEvalReport({
     verifier: {
       ...GITLEAKS_VERIFIER_CONTRACT,
       binary: gitleaksBin || null,
-      invocation_base: invocationBase || (basePresent ? detectArgv(basePath) : null),
+      invocation_base:
+        invocationBase ||
+        (basePresent ? detectArgv(basePath, baseIgnorePath) : null),
       invocation_candidate:
         invocationCandidate ||
-        (candidatePresent ? detectArgv(candidatePath) : null),
+        (candidatePresent ? detectArgv(candidatePath, candidateIgnorePath) : null),
     },
     event_binding: eventBinding || null,
     base_commit: baseCommit || null,
     base_config_sha256,
     candidate_config_sha256,
+    base_ignore_sha256,
+    candidate_ignore_sha256,
     source_commit: sourceCommit || null,
     source_dir: sourceDir,
     ...decision,
@@ -456,10 +496,16 @@ if (
 
   const baseRefForShow = baseCommit || "HEAD";
   const baseConfigText = gitShowText(`${baseRefForShow}:.gitleaks.toml`);
+  const baseIgnoreText = gitShowText(`${baseRefForShow}:.gitleaksignore`);
   let candidateConfigText = null;
   const candidatePath = join(sourceDir, ".gitleaks.toml");
   if (existsSync(candidatePath)) {
     candidateConfigText = readFileSync(candidatePath, "utf8");
+  }
+  let candidateIgnoreText = null;
+  const candidateIgnoreFile = join(sourceDir, ".gitleaksignore");
+  if (existsSync(candidateIgnoreFile)) {
+    candidateIgnoreText = readFileSync(candidateIgnoreFile, "utf8");
   }
 
   if (!candidateConfigText && !baseConfigText) {
@@ -480,44 +526,64 @@ if (
     process.exit(1);
   }
 
-  // No delta: single candidate evaluation (backward compatible with prior CI).
-  if (
+  const configUnchanged =
     baseConfigText &&
     candidateConfigText &&
     sha256Hex(Buffer.from(baseConfigText, "utf8")) ===
-      sha256Hex(Buffer.from(candidateConfigText, "utf8"))
-  ) {
-    const status = runGitleaksDetect({
-      configPath: null,
-      sourceDir,
-      gitleaksBin,
-    });
-    const decision = decideDualEval({
-      basePolicy: status,
-      candidatePolicy: status,
-      policyDelta: false,
-      independentAcceptance: "ABSENT",
-    });
-    const report = {
-      schema: "bizra.dema.gitleaks_dual_eval.v0.1",
-      verifier: { ...GITLEAKS_VERIFIER_CONTRACT, binary: gitleaksBin || null },
-      event_binding: eventBinding,
-      base_commit: baseCommit,
-      base_config_sha256: sha256Hex(Buffer.from(baseConfigText, "utf8")),
-      candidate_config_sha256: sha256Hex(
-        Buffer.from(candidateConfigText, "utf8"),
-      ),
-      source_commit: sourceCommit,
-      ...decision,
-      mode: "single_policy_unchanged",
-    };
-    console.log(JSON.stringify(report, null, 2));
-    process.exit(report.exit_code);
+      sha256Hex(Buffer.from(candidateConfigText, "utf8"));
+  const ignoreUnchanged = !ignoreTextsDelta(baseIgnoreText, candidateIgnoreText);
+
+  // No delta: single candidate evaluation (backward compatible with prior CI).
+  if (configUnchanged && ignoreUnchanged) {
+    const work = mkdtempSync(join(tmpdir(), "gitleaks-dual-eval-"));
+    const ignorePath = join(work, "gitleaks.candidate.ignore");
+    try {
+      writeFileSync(ignorePath, normalizeIgnoreText(candidateIgnoreText), {
+        mode: 0o600,
+      });
+      const status = runGitleaksDetect({
+        configPath: null,
+        sourceDir,
+        gitleaksBin,
+        gitleaksIgnorePath: ignorePath,
+      });
+      const decision = decideDualEval({
+        basePolicy: status,
+        candidatePolicy: status,
+        policyDelta: false,
+        independentAcceptance: "ABSENT",
+      });
+      const report = {
+        schema: "bizra.dema.gitleaks_dual_eval.v0.1",
+        verifier: { ...GITLEAKS_VERIFIER_CONTRACT, binary: gitleaksBin || null },
+        event_binding: eventBinding,
+        base_commit: baseCommit,
+        base_config_sha256: sha256Hex(Buffer.from(baseConfigText, "utf8")),
+        candidate_config_sha256: sha256Hex(
+          Buffer.from(candidateConfigText, "utf8"),
+        ),
+        base_ignore_sha256: sha256Hex(
+          Buffer.from(normalizeIgnoreText(baseIgnoreText), "utf8"),
+        ),
+        candidate_ignore_sha256: sha256Hex(
+          Buffer.from(normalizeIgnoreText(candidateIgnoreText), "utf8"),
+        ),
+        source_commit: sourceCommit,
+        ...decision,
+        mode: "single_policy_unchanged",
+      };
+      console.log(JSON.stringify(report, null, 2));
+      process.exit(report.exit_code);
+    } finally {
+      rmSync(work, { recursive: true, force: true });
+    }
   }
 
   const report = buildDualEvalReport({
     baseConfigText,
     candidateConfigText,
+    baseIgnoreText,
+    candidateIgnoreText,
     sourceCommit,
     baseCommit,
     sourceDir,

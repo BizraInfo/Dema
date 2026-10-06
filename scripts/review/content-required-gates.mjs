@@ -21,6 +21,12 @@ export const GOVERNANCE_GATE_MATCHERS = Object.freeze([
     rationale: "Defines secret-scan allowlists/rules; mutates scan semantics",
   },
   {
+    id: ".gitleaksignore",
+    overlay: "secret_policy",
+    test: (f) => f === ".gitleaksignore",
+    rationale: "Fingerprint allowlist changes secret-scan outcomes",
+  },
+  {
     id: ".github/workflows/gitleaks.yml",
     overlay: "secret_policy",
     test: (f) => f === ".github/workflows/gitleaks.yml",
@@ -133,7 +139,7 @@ export function composeRequiredGates({ branchClass, files, branch }) {
   // Independent acceptance is required only when the secret *policy document*
   // itself changes — not for every workflow pin or review-script edit.
   // Dual-eval already fail-closes POLICY_DELTA without VERIFIED.
-  if (files.some((f) => f === ".gitleaks.toml")) {
+  if (files.some((f) => f === ".gitleaks.toml" || f === ".gitleaksignore")) {
     mandatory.add("independent_acceptance_required");
   }
   const enforcement =
