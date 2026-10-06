@@ -1,17 +1,16 @@
 #!/usr/bin/env node
-// SCAN-SECRETS — run CI's gitleaks job locally, byte-for-byte.
+// SCAN-SECRETS — run CI's gitleaks job locally, matching the dual-eval contract.
 //
 // Why this exists: `npm run check` runs NO gitleaks. Its only secret gate is
 // gate 35 (repo-claude-config-check.mjs), which applies the repo's own narrow
 // `secret-pattern.js` to `.claude/` config files. CI's `scan` job applies
-// gitleaks' full default ruleset to the entire git history. Different detector,
-// different scope, different corpus — so a green `check` never implied a green
-// `scan`, and every fixture false positive was discovered by a CI failure
-// instead of before the push.
+// gitleaks via `scripts/review/gitleaks-dual-eval.mjs` (Gate Mutator ≠ Final
+// Gate Verifier). Different detector, different scope — so a green `check`
+// never implied a green `scan`.
 //
-// The version, checksum and flags are PARSED from .github/workflows/gitleaks.yml
-// rather than restated here. A second hardcoded pin is how local silently drifts
-// from CI; there is exactly one source of truth and this reads it.
+// The version, checksum and fetch URL are PARSED from .github/workflows/gitleaks.yml
+// rather than restated here. The detect orchestration is the same dual-eval
+// entrypoint CI runs (not a second hardcoded `./gitleaks detect` line).
 //
 // Deliberately NOT wired into `npm run check`: it needs network on first run.
 // Run it before pushing a branch that adds credential-shaped test fixtures.
@@ -25,6 +24,7 @@ const WORKFLOW = ".github/workflows/gitleaks.yml";
 const CACHE = "node_modules/.cache/gitleaks";
 const VERSION_RE = /^\d+\.\d+\.\d+$/;
 const SHA256_RE = /^[0-9a-f]{64}$/;
+const DUAL_EVAL = "scripts/review/gitleaks-dual-eval.mjs";
 
 const fail = (msg) => {
   console.error(`scan:secrets — ${msg}`);
@@ -32,6 +32,7 @@ const fail = (msg) => {
 };
 
 if (!existsSync(WORKFLOW)) fail(`${WORKFLOW} not found; run from the repo root`);
+if (!existsSync(DUAL_EVAL)) fail(`${DUAL_EVAL} not found; dual-eval is the CI contract`);
 const wf = readFileSync(WORKFLOW, "utf8");
 
 const pick = (re, what) => {
@@ -43,11 +44,13 @@ const pick = (re, what) => {
 const version = pick(/VERSION="([^"]+)"/, "VERSION");
 const sha256 = pick(/EXPECTED_SHA256="([0-9a-f]{64})"/, "EXPECTED_SHA256");
 const urlTemplate = pick(/URL="([^"]+)"/, "URL");
-// The detect line carries the flags CI actually runs. Parsed so a flag change in
-// CI is inherited here instead of silently diverging.
-const detectArgs = pick(/run: \.\/gitleaks (detect [^\n]+)/, "the detect command")
-  .trim()
-  .split(/\s+/);
+// CI security entrypoint must remain dual-eval (delivery-operating-system binds it).
+if (!/node scripts\/review\/gitleaks-dual-eval\.mjs/.test(wf)) {
+  fail(
+    `could not find dual-eval CI entrypoint in ${WORKFLOW} ` +
+      `(expected: node scripts/review/gitleaks-dual-eval.mjs)`,
+  );
+}
 
 if (!VERSION_RE.test(version)) {
   fail(`refusing non-semver VERSION parsed from ${WORKFLOW}: ${version}`);
@@ -56,22 +59,7 @@ if (!SHA256_RE.test(sha256)) {
   fail(`refusing non-hex EXPECTED_SHA256 parsed from ${WORKFLOW}`);
 }
 
-// CI checkout with fetch-depth: 0 fetches origin refs; gitleaks' default walk
-// there is effectively the remote corpus. A fat local clone also keeps abandoned
-// local-only tips that CI never has (measured: default walk → hundreds of false
-// leaks). Pin the walk to `HEAD --remotes=origin` so we cover:
-//   • unpushed local HEAD commits (the pre-push corpus this gate must see)
-//   • origin remote-tracking refs (CI's fetched-ref shape)
-// without scanning junk local-only tips.
-if (!detectArgs.some((a) => a === "--log-opts" || a.startsWith("--log-opts="))) {
-  detectArgs.push("--log-opts=HEAD --remotes=origin");
-}
-
 const workflowUrl = urlTemplate.replace(/\$\{VERSION\}|\$VERSION/g, version);
-
-// Construct the fetch URL from the validated VERSION. Still require the workflow
-// URL to expand to the same string so a drifted template cannot silently point
-// elsewhere while we download the expected path.
 const fetchUrl =
   `https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz`;
 if (workflowUrl !== fetchUrl) {
@@ -82,8 +70,6 @@ if (workflowUrl !== fetchUrl) {
   );
 }
 
-// gitleaks walks history. A shallow clone silently scans a fraction of it and
-// reports clean — the same false-green this script exists to prevent.
 const shallow = spawnSync("git", ["rev-parse", "--is-shallow-repository"], {
   encoding: "utf8",
 });
@@ -94,8 +80,7 @@ if (shallow.stdout?.trim() === "true") {
 /**
  * Resolve the gitleaks binary to execute.
  * - linux/x64: download CI's pinned tarball, verify SHA-256, re-extract every run.
- * - other hosts: fail-closed on PATH gitleaks at the exact CI-pinned version
- *   (CI only publishes a linux_x64 checksum; do not invent other artifact pins).
+ * - other hosts: fail-closed on PATH gitleaks at the exact CI-pinned version.
  */
 function resolveGitleaksBinary() {
   if (process.platform === "linux" && process.arch === "x64") {
@@ -106,9 +91,6 @@ function resolveGitleaksBinary() {
     if (!existsSync(tarball)) {
       console.log(`scan:secrets — downloading gitleaks v${version}`);
       // codeql[js/file-access-to-http]: intentional pinned release fetch.
-      // VERSION is restricted to digits.digits.digits; fetchUrl is constructed
-      // from that pin to the exact gitleaks upstream path; workflow URL must
-      // match before curl; tarball SHA-256 is re-verified before extract/exec.
       const dl = spawnSync("curl", ["-sSL", fetchUrl, "-o", tarball], {
         stdio: "inherit",
       });
@@ -116,24 +98,17 @@ function resolveGitleaksBinary() {
         try {
           unlinkSync(tarball);
         } catch {
-          // best-effort: leave no partial cache that would skip retry
+          // best-effort
         }
         fail("download failed (no network?)");
       }
     }
 
-    // Re-verified on every run, not just on download: a cached tarball is still
-    // untrusted input, and hashing 10 MB costs milliseconds.
     const actual = createHash("sha256").update(readFileSync(tarball)).digest("hex");
     if (actual !== sha256) {
       fail(`SHA-256 mismatch\n  expected: ${sha256}\n  actual:   ${actual}`);
     }
 
-    // Extracted on EVERY run, never reused from cache. Verifying the tarball and then
-    // executing a binary that merely happens to sit next to it proves nothing about
-    // the binary: anything with write access to node_modules/.cache could swap it and
-    // the checksum above would still pass. Re-extracting is what binds the thing we
-    // execute to the bytes we verified, and it costs ~100ms.
     execFileSync("tar", ["-xzf", tarball, "-C", CACHE, "gitleaks"]);
     execFileSync("mv", ["-f", join(CACHE, "gitleaks"), binary]);
     execFileSync("chmod", ["+x", binary]);
@@ -145,13 +120,9 @@ function resolveGitleaksBinary() {
   if (probe.status !== 0 || !reported) {
     fail(
       `CI pins the linux_x64 build; this host is ${process.platform}/${process.arch}. ` +
-        `Install gitleaks v${version} on PATH (same version CI pins), then re-run. ` +
-        `Detect command: gitleaks ${detectArgs.join(" ")}`,
+        `Install gitleaks v${version} on PATH (same version CI pins), then re-run.`,
     );
   }
-  // Accept exact "8.30.1" / "v8.30.1", or a token in a multi-word banner.
-  // No RegExp built from VERSION — avoids incomplete-escape findings and keeps
-  // the match a plain string compare against the already-validated pin.
   const tokens = reported.split(/\s+/);
   const versionOk =
     reported === version ||
@@ -176,8 +147,34 @@ const label =
   source === "verified-tarball"
     ? `gitleaks v${version} (tarball sha256 verified, binary re-extracted)`
     : `gitleaks v${version} (PATH, version-pinned)`;
-console.log(`scan:secrets — ${label} ${detectArgs.join(" ")}`);
-const run = spawnSync(binary, detectArgs, { stdio: "inherit" });
+
+const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+let base = "";
+try {
+  base = execFileSync("git", ["merge-base", "HEAD", "origin/main"], {
+    encoding: "utf8",
+  }).trim();
+} catch {
+  base = "";
+}
+
+console.log(`scan:secrets — ${label}; invoking ${DUAL_EVAL}`);
+const args = [
+  DUAL_EVAL,
+  "--source",
+  ".",
+  "--event",
+  "local",
+  "--source-commit",
+  head,
+  "--gitleaks-bin",
+  binary,
+];
+if (base) {
+  args.push("--base-commit", base, "--pr-base-sha", base, "--pr-head-sha", head);
+}
+
+const run = spawnSync(process.execPath, args, { stdio: "inherit" });
 if (run.status === 0) console.log("scan:secrets — clean");
-else console.error("scan:secrets — leaks found (same verdict CI's `scan` job will give)");
+else console.error("scan:secrets — dual-eval failed (same contract CI's `scan` job uses)");
 process.exit(run.status ?? 2);

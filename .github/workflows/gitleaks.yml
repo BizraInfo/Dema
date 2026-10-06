@@ -99,13 +99,20 @@ jobs:
           BASE_SHA: ${{ steps.ids.outputs.base_sha }}
           CANDIDATE_SHA: ${{ steps.ids.outputs.candidate_sha }}
           MERGE_SHA: ${{ steps.ids.outputs.merge_sha }}
+          # Protected repo variable only — never set from PR body/title.
+          # Required when POLICY_DELTA (base vs candidate .gitleaks.toml differs).
+          GITLEAKS_INDEPENDENT_ACCEPTANCE: ${{ vars.GITLEAKS_INDEPENDENT_ACCEPTANCE }}
         run: |
           set -euo pipefail
           # Exact CI security command (bound by delivery-operating-system):
           # node scripts/review/gitleaks-dual-eval.mjs
+          # DETECT_CONTRACT (for readers): gitleaks detect --source . --no-banner --exit-code 1 --redact
           EXTRA_ARGS=()
           if [ -n "$BASE_SHA" ]; then
             EXTRA_ARGS+=(--base-commit "$BASE_SHA")
+          fi
+          if [ -n "${GITLEAKS_INDEPENDENT_ACCEPTANCE:-}" ]; then
+            EXTRA_ARGS+=(--independent-acceptance "$GITLEAKS_INDEPENDENT_ACCEPTANCE")
           fi
           node scripts/review/gitleaks-dual-eval.mjs \
             --source . \

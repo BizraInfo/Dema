@@ -823,8 +823,17 @@ test("F: review-gate mutation cannot self-certify; dual-eval blocks BASE FAIL/UN
   });
   assert.ok(composed.overlays.includes("review_gate"));
   assert.ok(composed.mandatory.includes("content_bound_review_gate"));
-  assert.ok(composed.mandatory.includes("independent_acceptance_required"));
+  // Independent acceptance is reserved for .gitleaks.toml policy deltas,
+  // not every review-script edit (dual-eval still fail-closes POLICY_DELTA).
+  assert.ok(!composed.mandatory.includes("independent_acceptance_required"));
   assert.equal(composed.enforcement, "content_bound_composition");
+
+  const policyDelta = composeRequiredGates({
+    branchClass: "policy/broad-scope",
+    files: [".gitleaks.toml"],
+  });
+  assert.ok(policyDelta.mandatory.includes("independent_acceptance_required"));
+  assert.ok(policyDelta.mandatory.includes("gitleaks-dual-eval"));
 
   // Gate Mutator ≠ Final Gate Verifier: candidate PASS must not erase BASE FAIL
   // or elevate UNKNOWN base into GREEN under a policy delta.

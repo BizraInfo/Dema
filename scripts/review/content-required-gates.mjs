@@ -78,11 +78,9 @@ const BASE_GATES = Object.freeze([
 const OVERLAY_GATES = Object.freeze({
   secret_policy: Object.freeze([
     "gitleaks-dual-eval",
-    "independent_acceptance_required",
   ]),
   review_gate: Object.freeze([
     "content_bound_review_gate",
-    "independent_acceptance_required",
   ]),
   workflow_required_checks: Object.freeze([
     "workflow_required_checks_review",
@@ -125,6 +123,12 @@ export function composeRequiredGates({ branchClass, files, branch }) {
     for (const gate of OVERLAY_GATES[overlay] || []) {
       mandatory.add(gate);
     }
+  }
+  // Independent acceptance is required only when the secret *policy document*
+  // itself changes — not for every workflow pin or review-script edit.
+  // Dual-eval already fail-closes POLICY_DELTA without VERIFIED.
+  if (files.some((f) => f === ".gitleaks.toml")) {
+    mandatory.add("independent_acceptance_required");
   }
   const enforcement =
     overlays.length > 0
@@ -244,6 +248,26 @@ if (
     files,
     branch,
   });
+  const needsIndependent = report.mandatory.includes(
+    "independent_acceptance_required",
+  );
+  const acceptance = String(
+    argValue("--independent-acceptance") ||
+      process.env.INDEPENDENT_ACCEPTANCE ||
+      process.env.GITLEAKS_INDEPENDENT_ACCEPTANCE ||
+      "ABSENT",
+  )
+    .trim()
+    .toUpperCase();
+  const verified = acceptance === "VERIFIED";
+  report.independent_acceptance = needsIndependent
+    ? acceptance || "ABSENT"
+    : "NOT_REQUIRED";
+  report.ok = !needsIndependent || verified;
+  if (needsIndependent && !verified) {
+    report.enforcement_failure =
+      "independent_acceptance_required but INDEPENDENT_ACCEPTANCE is not VERIFIED";
+  }
   console.log(JSON.stringify(report, null, 2));
-  process.exit(0);
+  process.exit(report.ok ? 0 : 1);
 }
