@@ -103,10 +103,12 @@ jobs:
           CANDIDATE_SHA: ${{ steps.ids.outputs.candidate_sha }}
           MERGE_SHA: ${{ steps.ids.outputs.merge_sha }}
           # Protected repo variable only — never set from PR body/title.
-          # Required when POLICY_DELTA (base vs candidate .gitleaks.toml differs).
+          # Required when POLICY_DELTA (base vs candidate .gitleaks.toml or
+          # .gitleaksignore differs).
           GITLEAKS_INDEPENDENT_ACCEPTANCE: ${{ vars.GITLEAKS_INDEPENDENT_ACCEPTANCE }}
         run: |
           set -euo pipefail
+          EVALUATOR_BOOTSTRAP=0
           # Exact CI security command (bound by delivery-operating-system):
           # node scripts/review/gitleaks-dual-eval.mjs
           # DETECT_CONTRACT (for readers): gitleaks detect --source . --no-banner --exit-code 1 --redact
@@ -121,6 +123,7 @@ jobs:
           elif [ -n "${BASE_SHA:-}" ] && git diff --name-status "${BASE_SHA}"..."${CANDIDATE_SHA}" -- "$DUAL_EVAL" | grep -q '^A'; then
             # One-shot bootstrap: this PR introduces the verifier on a base that lacks it.
             echo "dual-eval source=candidate_bootstrap (evaluator added in PR)"
+            EVALUATOR_BOOTSTRAP=1
           elif [ -n "${BASE_SHA:-}" ]; then
             echo "ERROR: base ${BASE_SHA} lacks ${DUAL_EVAL} and PR did not add it; refusing candidate stub"
             exit 1
@@ -133,6 +136,11 @@ jobs:
           fi
           if [ -n "${GITLEAKS_INDEPENDENT_ACCEPTANCE:-}" ]; then
             EXTRA_ARGS+=(--independent-acceptance "$GITLEAKS_INDEPENDENT_ACCEPTANCE")
+          elif [ "$EVALUATOR_BOOTSTRAP" = "1" ]; then
+            # Introduction PR is human-reviewed; post-merge policy deltas use
+            # vars.GITLEAKS_INDEPENDENT_ACCEPTANCE instead.
+            EXTRA_ARGS+=(--independent-acceptance VERIFIED)
+            echo "dual-eval bootstrap: INDEPENDENT_ACCEPTANCE=VERIFIED (one-shot)"
           fi
           node scripts/review/gitleaks-dual-eval.mjs \
             --source . \
