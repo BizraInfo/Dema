@@ -103,11 +103,11 @@ regexes = ['''external key custody, federation/wallet/economy behavior''']
 # object whose values are lowercase 64-hex content digests of candidate source
 # paths. `generic-api-key` treats those digests as high-entropy secrets.
 #
-# They are content hashes, not credentials. Scoped to this receipt path and
-# rule only; condition=AND so other rules on this path still fire, and the same
-# digest text elsewhere is not silenced.
+# They are content hashes, not credentials. Path + rule + digest-shaped secret
+# regex (AND) so a non-digest credential in this file is not silenced.
 [[allowlists]]
 description = "False positive: path-to-sha256 content digests in C-005 candidate source manifest receipt (not secrets)"
 targetRules = ["generic-api-key"]
 condition = "AND"
 paths = ['''(^|/)C-005-20261004T181623Z-candidate-source-manifest\.json$''']
+regexes = ['''^[0-9a-f]{64}$''']
