@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 import {
+  AGENT_PROFILE_SCHEMA,
+  computeStableProfileHash,
+} from '../../packages/agents/src/agent-profile-registry.js';
+import {
   buildAgentLaunchpadGenesisPreview,
   verifyAgentLaunchpadGenesisPreview,
 } from '../../packages/core/src/agent-launchpad-genesis-preview.js';
@@ -28,12 +32,20 @@ const mission = createMissionContract({
   },
   consent: MISSION_CONTRACT_GO_PHRASE,
 });
+const agent_profile = {
+  schema: AGENT_PROFILE_SCHEMA,
+  agent_id: 'pat.builder',
+  agent_class: 'PAT',
+  agent_role: 'Builder',
+  created_at_iso: '2026-10-08T00:00:00.000Z',
+};
 
 const report = buildAgentLaunchpadGenesisPreview({
   capsule_id: 'capsule.review-fixture.v0.1',
   creator_agent_id: 'pat.builder',
   verifier_agent_id: 'sat.verifier',
-  agent_profile_hash: h('a'),
+  agent_profile,
+  agent_profile_hash: `sha256:${computeStableProfileHash(agent_profile)}`,
   mission_contract: mission.contract,
   mission_contract_hash: mission.contract_hash,
   verification_contract_hash: h('c'),
@@ -48,6 +60,7 @@ const ok = verified.ok === true
   && report.launched === false
   && report.qualification_ready === false
   && report.mission_owner_binding?.ok === true
+  && report.profile_owner_binding?.ok === true
   && report.state === 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION';
 console.log(JSON.stringify({
   ok,
@@ -59,6 +72,7 @@ console.log(JSON.stringify({
   launched: report.launched,
   authority_delta: report.input.authority_delta,
   mission_owner_binding: report.mission_owner_binding,
+  profile_owner_binding: report.profile_owner_binding,
   verified,
 }, null, 2));
 process.exit(ok ? 0 : 1);

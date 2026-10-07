@@ -4,11 +4,16 @@ import {
   buildAgentLaunchpadGenesisPreview,
   verifyAgentLaunchpadGenesisPreview,
   AGENT_LAUNCHPAD_MISSION_OWNER,
+  AGENT_LAUNCHPAD_PROFILE_OWNER,
 } from '../packages/core/src/agent-launchpad-genesis-preview.js';
 import {
   createMissionContract,
   MISSION_CONTRACT_GO_PHRASE,
 } from '../packages/core/src/mission-contract-state.js';
+import {
+  AGENT_PROFILE_SCHEMA,
+  computeStableProfileHash,
+} from '../packages/agents/src/agent-profile-registry.js';
 import { sha256CanonicalJsonV1 } from '../packages/canon/src/sha256-canonical-json-v1.js';
 
 const H = (ch) => `sha256:${ch.repeat(64)}`;
@@ -37,13 +42,30 @@ function sealedMission() {
   });
 }
 
+function sealedProfile(creator = 'pat.builder') {
+  const [, roleRaw] = creator.split('.');
+  const agent_role = roleRaw.charAt(0).toUpperCase() + roleRaw.slice(1);
+  const agent_profile = {
+    schema: AGENT_PROFILE_SCHEMA,
+    agent_id: creator,
+    agent_class: 'PAT',
+    agent_role,
+    created_at_iso: '2026-10-08T00:00:00.000Z',
+  };
+  return {
+    agent_profile,
+    agent_profile_hash: `sha256:${computeStableProfileHash(agent_profile)}`,
+  };
+}
+
 const base = () => {
   const mission = sealedMission();
+  const profile = sealedProfile();
   return {
     capsule_id: 'capsule.research-cartographer.v0.1',
     creator_agent_id: 'pat.builder',
     verifier_agent_id: 'sat.verifier',
-    agent_profile_hash: H('a'),
+    ...profile,
     mission_contract: mission.contract,
     mission_contract_hash: mission.contract_hash,
     verification_contract_hash: H('c'),
@@ -72,8 +94,29 @@ test('valid capsule becomes structural candidate but never QUALIFICATION_READY o
   assert.equal(r.launched, false);
   assert.equal(r.mission_owner_binding.ok, true);
   assert.equal(r.mission_owner_binding.owner, AGENT_LAUNCHPAD_MISSION_OWNER);
+  assert.equal(r.profile_owner_binding.ok, true);
+  assert.equal(r.profile_owner_binding.owner, AGENT_LAUNCHPAD_PROFILE_OWNER);
   assert.equal(r.self_compliance.canonical_mission_owner_used, true);
+  assert.equal(r.self_compliance.canonical_profile_owner_used, true);
   assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+});
+
+test('1D hash-only profile digest cannot self-attest', () => {
+  const i = base();
+  delete i.agent_profile;
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.equal(r.profile_owner_binding.ok, false);
+  assert.equal(r.self_compliance.canonical_profile_owner_used, false);
+});
+
+test('1D profile body for a different agent than creator is BLOCKED', () => {
+  const i = base();
+  i.agent_profile = { ...i.agent_profile, agent_id: 'pat.critic', agent_role: 'Critic' };
+  i.agent_profile_hash = `sha256:${computeStableProfileHash(i.agent_profile)}`;
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.equal(r.profile_owner_binding.ok, false);
 });
 
 test('1C hash-only mission digest cannot self-attest', () => {
@@ -260,7 +303,7 @@ test('empty evidence yields UNKNOWN HHMM L0 and zero SNR score branch', () => {
 test('bare hex digests and non-array evidence/receipts normalize without throwing', () => {
   const i = base();
   const bare = 'f'.repeat(64);
-  i.agent_profile_hash = bare;
+  i.agent_profile_hash = i.agent_profile_hash.replace(/^sha256:/, '');
   i.verification_contract_hash = bare;
   i.mission_contract_hash = i.mission_contract_hash.replace(/^sha256:/, '');
   i.evidence = [

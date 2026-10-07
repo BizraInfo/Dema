@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 
 import {
+  AGENT_PROFILE_SCHEMA,
+  CANONICAL_AGENTS,
+  computeStableProfileHash,
+} from '../../agents/src/agent-profile-registry.js';
+import {
   CONTRACT_FIELDS,
   MISSION_CONTRACT_GO_PHRASE,
   createMissionContract,
@@ -13,6 +18,9 @@ export const AGENT_LAUNCHPAD_GENESIS_PREVIEW_TRUTH_LABEL =
 /** AGENT-LAUNCHPAD-MISSION-OWNER-BINDING-1C — mission digests bind to this owner. */
 export const AGENT_LAUNCHPAD_MISSION_OWNER =
   'packages/core/src/mission-contract-state.js#createMissionContract';
+/** AGENT-LAUNCHPAD-PROFILE-OWNER-BINDING-1D — profile digests bind to this owner. */
+export const AGENT_LAUNCHPAD_PROFILE_OWNER =
+  'packages/agents/src/agent-profile-registry.js#computeStableProfileHash';
 
 const PAT_IDS = Object.freeze([
   'pat.dema',
@@ -125,6 +133,70 @@ function bindMissionContractOwner({ mission_contract, mission_contract_hash } = 
       owner: AGENT_LAUNCHPAD_MISSION_OWNER,
       algorithm: 'bizra.canonical-json.v1+sha256',
       canonical_mission_owner_used: blockers.length === 0,
+      caller_hash_cannot_self_attest: true,
+      claimed_hash: claimed || null,
+      recomputed_hash: recomputed,
+      ok: blockers.length === 0,
+    }),
+  });
+}
+
+/// Bind caller profile identity to the canonical agent-profile owner.
+/// Hash-only self-attestation is refused. Body must name the creator and a
+/// CANONICAL_AGENTS row; stable hash re-derives through computeStableProfileHash.
+function bindAgentProfileOwner({
+  creator_agent_id,
+  agent_profile,
+  agent_profile_hash,
+} = {}) {
+  const claimed = normalizeDigest(agent_profile_hash);
+  const blockers = [];
+  const creator = text(creator_agent_id);
+  const canonical = CANONICAL_AGENTS.find((a) => a.agent_id === creator) ?? null;
+
+  if (!canonical) blockers.push('creator_not_in_canonical_agents');
+  if (agent_profile == null) {
+    blockers.push('agent_profile_body_required');
+  } else if (!agent_profile || typeof agent_profile !== 'object' || Array.isArray(agent_profile)) {
+    blockers.push('agent_profile_shape_invalid');
+  } else {
+    if (agent_profile.schema !== AGENT_PROFILE_SCHEMA) {
+      blockers.push('agent_profile_schema_invalid');
+    }
+    if (agent_profile.agent_id !== creator) {
+      blockers.push('agent_profile_creator_mismatch');
+    }
+    if (
+      canonical &&
+      (agent_profile.agent_class !== canonical.agent_class
+        || agent_profile.agent_role !== canonical.agent_role)
+    ) {
+      blockers.push('agent_profile_canonical_role_mismatch');
+    }
+    if (typeof agent_profile.created_at_iso !== 'string' || !agent_profile.created_at_iso.trim()) {
+      blockers.push('agent_profile_created_at_missing');
+    }
+  }
+  if (!claimed) blockers.push('agent_profile_hash_invalid');
+
+  let recomputed = null;
+  if (blockers.length === 0) {
+    const bare = computeStableProfileHash({
+      agent_id: agent_profile.agent_id,
+      agent_class: agent_profile.agent_class,
+      agent_role: agent_profile.agent_role,
+      created_at_iso: agent_profile.created_at_iso,
+    });
+    recomputed = normalizeDigest(bare);
+    if (recomputed !== claimed) blockers.push('agent_profile_hash_mismatch');
+  }
+
+  return Object.freeze({
+    blockers: Object.freeze(blockers),
+    binding: Object.freeze({
+      owner: AGENT_LAUNCHPAD_PROFILE_OWNER,
+      algorithm: 'agent-profile-stable-identity-sha256',
+      canonical_profile_owner_used: blockers.length === 0,
       caller_hash_cannot_self_attest: true,
       claimed_hash: claimed || null,
       recomputed_hash: recomputed,
@@ -363,12 +435,23 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
     mission_contract: input.mission_contract,
     mission_contract_hash: input.mission_contract_hash,
   });
+  const profileBind = bindAgentProfileOwner({
+    creator_agent_id: input.creator_agent_id,
+    agent_profile: input.agent_profile,
+    agent_profile_hash: input.agent_profile_hash,
+  });
 
   const normalized = {
     capsule_id: text(input.capsule_id),
     creator_agent_id: text(input.creator_agent_id),
     verifier_agent_id: text(input.verifier_agent_id),
-    agent_profile_hash: text(input.agent_profile_hash),
+    agent_profile:
+      input.agent_profile &&
+      typeof input.agent_profile === 'object' &&
+      !Array.isArray(input.agent_profile)
+        ? input.agent_profile
+        : null,
+    agent_profile_hash: profileBind.binding.claimed_hash || text(input.agent_profile_hash),
     mission_contract:
       input.mission_contract &&
       typeof input.mission_contract === 'object' &&
@@ -400,7 +483,7 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
   if (!SAT_IDS.includes(normalized.verifier_agent_id)) {
     blocked.push('verifier_must_be_existing_canonical_sat');
   }
-  if (!validDigest(normalized.agent_profile_hash)) blocked.push('agent_profile_hash_invalid');
+  blocked.push(...profileBind.blockers);
   blocked.push(...missionBind.blockers);
   if (!validDigest(normalized.verification_contract_hash)) blocked.push('verification_contract_hash_invalid');
   if (!ALLOWED_EFFECT_CLASSES.includes(normalized.effect_class)) blocked.push('effect_class_not_preview_eligible');
@@ -452,6 +535,7 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
     admitted_evidence: admitted,
     excluded_evidence: excluded,
     mission_owner_binding: missionBind.binding,
+    profile_owner_binding: profileBind.binding,
     snr,
     hhmm,
     hypergraph,
@@ -474,7 +558,10 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
         missionBind.binding.ok
           ? 'mission_owner_bound_via_canonical_json_v1'
           : 'mission_owner_binding_blocked',
-        'agent_profile_and_verification_subject_binding_still_open',
+        profileBind.binding.ok
+          ? 'profile_owner_bound_via_stable_identity_hash'
+          : 'profile_owner_binding_blocked',
+        'verification_subject_binding_still_open',
         'causal_independence_not_established_by_agent_ids',
         structuralReady ? null : 'structural_or_constitutional_blocker_present',
       ].filter(Boolean)),
@@ -484,6 +571,7 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
       canonical_pat_creator: PAT_IDS.includes(normalized.creator_agent_id),
       canonical_sat_verifier: SAT_IDS.includes(normalized.verifier_agent_id),
       canonical_mission_owner_used: missionBind.binding.ok === true,
+      canonical_profile_owner_used: profileBind.binding.ok === true,
       caller_hash_cannot_self_attest: true,
       no_protected_act: Object.values(normalized.requested_boundaries).every((v) => v === false),
       may_refuse: true,
@@ -514,13 +602,13 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
     },
     boundary: boundary(),
     what_this_proves: [
-      'A launch-capsule proposal can be structurally constrained to one canonical PAT id, one canonical SAT id, a mission contract body re-hashed by the canonical mission-contract owner algorithm, a verification digest field, a bounded effect class, evidence identities, and a zero-authority-delta contract.',
-      'Caller-supplied mission_contract_hash alone cannot self-attest: missing/mismatched body blocks STRUCTURALLY_READY.',
+      'A launch-capsule proposal can be structurally constrained to one canonical PAT id, one canonical SAT id, a mission contract body re-sealed by the canonical mission-contract owner, a profile identity body re-hashed by the canonical agent-profile stable-hash owner, a verification digest field, a bounded effect class, evidence identities, and a zero-authority-delta contract.',
+      'Caller-supplied mission_contract_hash or agent_profile_hash alone cannot self-attest: missing/mismatched bodies block STRUCTURALLY_READY.',
       'Duplicate or structurally unbound evidence cannot increase the preview evidence count.',
       'SNR, HHMM, content-addressed hash indexing, diffusion attention, hypergraph, process mining, self-critique, and self-compliance remain advisory/projection layers outside the authority path.',
     ],
     what_this_does_not_prove: [
-      'Mission-owner hash bind does not prove agent-profile subject binding, verifier causal independence, semantic admission, or signer trust.',
+      'Profile-owner and mission-owner binds do not prove verifier causal independence, semantic admission, signed profile trust, or PROD-06 readiness.',
       'No agent has been launched or executed.',
       'No human consent or FATE admission has been created or consumed.',
       'No governed runtime/effect receipt has been issued.',

@@ -135,7 +135,9 @@ function deepFreeze(value) {
 // Compute the stable identity hash — covers ONLY immutable identity
 // fields (schema + agent_id + agent_class + agent_role + created_at_iso).
 // Two profile versions for the same identity at two times share this.
-function computeStableProfileHash({
+// Exported for AGENT-LAUNCHPAD-PROFILE-OWNER-BINDING-1D so preview surfaces
+// re-derive through this owner instead of inventing a second identity hash.
+export function computeStableProfileHash({
   agent_id,
   agent_class,
   agent_role,
