@@ -104,7 +104,7 @@ hard-stop gate in that local report.
 
 It orchestrates the full gate stack with A+ performance-quality assurance:
 
-- [MEASURED] Enforces A+ perf ceilings (boot <150ms local / <250ms CI, verify <1ms) via `npm run perf` and `resolveAPlusCeilings` (same headroom as `performance-budget-gate`).
+- [MEASURED] Enforces A+ perf ceilings (boot <150ms local / <275ms CI, verify <1ms) via `npm run perf` and `resolveAPlusCeilings` (same headroom as `performance-budget-gate`).
 - Validates coverage thresholds (95/84/95) via `npm run coverage` on Node 22+ in CI.
 - `npm run release:readiness` reports whether the threshold gate is configured and observed in CI; `npm run coverage` remains the measured enforcement point.
 - Integrates release:readiness with A+ perf gate and PMBOK domains.

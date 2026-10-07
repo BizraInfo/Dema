@@ -79,6 +79,27 @@ test("dema bare invocation (no args · non-TTY) emits first-look companion JSON"
   assert.equal(parsed.boundary.runtime_execution_performed, false);
 });
 
+test("dema --safe uses the read-only first-look recovery surface", async () => {
+  const { demaRoot } = await makeFixtureDownloads();
+  const { stdout } = await execFileAsync("node", [cliPath, "--safe"], {
+    env: {
+      ...process.env,
+      DEMA_HOME: demaRoot,
+      DEMA_NODE0_ADAPTER: "",
+    },
+  });
+  const parsed = JSON.parse(stdout);
+  assert.equal(parsed.schema, "bizra.dema.first_look_home.v1");
+  assert.equal(parsed.mode, "preview_only");
+  assert.equal(parsed.boundary.runtime_execution_performed, false);
+  assert.equal(parsed.boundary.network_used, false);
+  const stateFiles = await readdir(join(demaRoot, "state")).catch((error) => {
+    assert.equal(error.code, "ENOENT");
+    return [];
+  });
+  assert.deepEqual(stateFiles, []);
+});
+
 // `dema help` (no args) now emits the topic-based root per the hierarchical
 // help system (Task #6). Full flat list is preserved at `dema help --all`.
 test("dema help (no args) emits hierarchical topic root after active-kernel refactor", async () => {
@@ -112,8 +133,14 @@ test("dema sovereign respects DEMA_HOME and fails clearly when scaffold is absen
     env: { ...process.env, HOME: fakeHome, DEMA_HOME: demaRoot },
   }).catch((e) => e);
 
+  // SOVEREIGN-CMD-SCAFFOLD-GAP (TASK-037) reworded this refusal from the bare
+  // "scaffold not found: <path>" to one that names the prerequisite and a next
+  // step. Every original assertion here is preserved in intent — nonzero exit,
+  // points at DEMA_HOME rather than HOME, no raw Python traceback — only the
+  // matched wording changed. Full refusal contract lives in
+  // tests/sovereign-scaffold-refusal.test.js.
   assert.equal(result.code, 1);
-  assert.match(result.stderr, /dema sovereign: scaffold not found/);
+  assert.match(result.stderr, /dema sovereign: unavailable/);
   assert.ok(
     result.stderr.includes(demaRoot),
     "error should point at DEMA_HOME, not HOME",

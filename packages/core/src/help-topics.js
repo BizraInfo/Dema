@@ -229,7 +229,7 @@ export const HELP_TOPICS = Object.freeze({
       Object.freeze({
         command: "sovereign",
         short_description:
-          "Render local Sovereign Mission Interface (view-only)",
+          "Render local Sovereign Mission Interface (view-only) · requires the Python scaffold shipped with the governed runtime; not created by `dema setup`",
       }),
       Object.freeze({
         command: "monetize",

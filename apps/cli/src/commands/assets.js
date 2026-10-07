@@ -2,6 +2,7 @@ import {
   buildLocalAssetInventory,
   writeLocalAssetInventory,
 } from "../../../../packages/core/src/local-asset-awareness.js";
+import { buildHomebaseScanConsent } from "../../../../packages/core/src/homebase-scan-consent.js";
 import {
   buildHomebaseAssetAwareness,
   renderHomebaseAssetAwarenessSummary,
@@ -17,11 +18,41 @@ function argValue(argv, name) {
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
-async function runAssetScan({ root, wantJson }) {
+/** Set process.exitCode and return — never process.exit mid-evidence. */
+function finish(code) {
+  process.exitCode = code;
+}
+
+async function runAssetScan({ root, wantJson, offeredConsent }) {
+  const consent = buildHomebaseScanConsent({ offeredConsent, scanRoot: root });
+  if (!consent.scan_allowed) {
+    const refused = offeredConsent !== null && !consent.consent_verified;
+    if (wantJson) {
+      console.log(
+        JSON.stringify(
+          { ...consent, scan_performed: false, scan_result: null },
+          null,
+          2,
+        ),
+      );
+    } else {
+      const instruction = refused
+        ? `Refused — the phrase did not match exactly. Expected: "${consent.expected_consent_phrase}"`
+        : `To proceed: add --consent "${consent.expected_consent_phrase}" to this command.`;
+      console.log([...consent.explanation_lines, instruction].join("\n"));
+    }
+    finish(refused ? 1 : 0);
+    return;
+  }
+
   const inventory = await buildLocalAssetInventory({ root });
   const awareness = buildHomebaseAssetAwareness({ inventory });
 
-  let output = awareness;
+  let output = {
+    ...awareness,
+    consent_verified: true,
+    scan_performed: true,
+  };
   let writeResult = null;
   if (inventory.valid) {
     writeResult = await writeLocalAssetInventory({
@@ -29,7 +60,7 @@ async function runAssetScan({ root, wantJson }) {
       inventoryOverride: inventory,
     });
     output = {
-      ...awareness,
+      ...output,
       inventory_write: Object.freeze({
         written: writeResult.written === true,
         artifact_path: writeResult.artifact_path ?? null,
@@ -40,23 +71,23 @@ async function runAssetScan({ root, wantJson }) {
 
   if (wantJson) {
     console.log(JSON.stringify(output, null, 2));
-    process.exitCode = awareness.valid ? 0 : 1;
-    process.exit(process.exitCode ?? 0);
+    finish(awareness.valid ? 0 : 1);
+    return;
   }
 
   if (!awareness.valid) {
     console.error(
       `Dema homebase assets: scan failed · ${awareness.error ?? inventory.error ?? "unknown_error"}`,
     );
-    process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
+    finish(1);
+    return;
   }
 
   console.log(renderHomebaseAssetAwarenessSummary(awareness));
   if (writeResult?.written && writeResult.artifact_path) {
     console.log(`inventory artifact: ${writeResult.artifact_path}`);
   }
-  process.exit(process.exitCode ?? 0);
+  finish(0);
 }
 
 async function runAssetShareability({ root, wantJson }) {
@@ -75,20 +106,20 @@ async function runAssetShareability({ root, wantJson }) {
 
   if (wantJson) {
     console.log(JSON.stringify(output, null, 2));
-    process.exitCode = shareability.valid ? 0 : 1;
-    process.exit(process.exitCode ?? 0);
+    finish(shareability.valid ? 0 : 1);
+    return;
   }
 
   if (!shareability.valid) {
     console.error(
       `Dema homebase shareability: failed · ${shareability.error ?? awareness.error ?? "unknown_error"}`,
     );
-    process.exitCode = 1;
-    process.exit(process.exitCode ?? 0);
+    finish(1);
+    return;
   }
 
   console.log(renderHomebaseShareabilitySummary(shareability));
-  process.exit(process.exitCode ?? 0);
+  finish(0);
 }
 
 export async function cmd_assets(ctx) {
@@ -96,16 +127,22 @@ export async function cmd_assets(ctx) {
   const sub = argv[1] ?? "";
   const wantJson = wantsJson(argv);
   const root = argValue(argv, "--root") || process.env.DEMA_LOCAL_ASSET_ROOT;
+  const offeredConsent = argValue(argv, "--consent") ?? null;
 
   if (sub === "scan") {
     if (!root) {
       const err = { error: "missing_scan_root", hint: "pass --root <path>" };
       if (wantJson) console.log(JSON.stringify(err, null, 2));
-      else console.error("Usage: dema assets scan --root <path> [--json]");
-      process.exitCode = 1;
-      process.exit(process.exitCode ?? 0);
+      else {
+        console.error(
+          'Usage: dema assets scan --root <path> [--consent "<phrase>"] [--json]',
+        );
+      }
+      finish(1);
+      return;
     }
-    await runAssetScan({ root, wantJson });
+    await runAssetScan({ root, wantJson, offeredConsent });
+    return;
   }
 
   if (sub === "shareability") {
@@ -118,16 +155,16 @@ export async function cmd_assets(ctx) {
       else {
         console.error("Usage: dema assets shareability --root <path> [--json]");
       }
-      process.exitCode = 1;
-      process.exit(process.exitCode ?? 0);
+      finish(1);
+      return;
     }
     await runAssetShareability({ root, wantJson });
+    return;
   }
 
   console.error(
-    "Usage: dema assets scan --root <path> [--json]\n" +
+    'Usage: dema assets scan --root <path> [--consent "<phrase>"] [--json]\n' +
       "       dema assets shareability --root <path> [--json]",
   );
-  process.exitCode = 1;
-  process.exit(process.exitCode ?? 0);
+  finish(1);
 }

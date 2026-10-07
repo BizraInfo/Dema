@@ -1,0 +1,25 @@
+{
+  "schema": "bizra.skill-manifest/v1",
+  "generated_at": "2026-08-30T20:38:09.091Z",
+  "source_root": "skills-src",
+  "skill_id": "proof-closeout",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "202f25d962e4a83bb1e4256fc5cc4ac743ab61fec4c7f283aebb1195fc779f11",
+      "size": 1494
+    },
+    {
+      "path": "contract.json",
+      "sha256": "a407c90b4aa6043cd6c7cab1bfdac6f5cb1a892f960b35f743d042028f203926",
+      "size": 1447
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "f152e0e35ff4e469298f70e0ee4469ced9d2a3284b9e098fe040c8ca325307e9",
+      "size": 358
+    }
+  ],
+  "total_files": 3,
+  "total_bytes": 3299
+}

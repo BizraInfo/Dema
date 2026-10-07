@@ -23,10 +23,11 @@ const p = (n) => join(DEMA_HOME, RECOVERY_DIR, n);
 // (fired in CI as RCA-03 "Unexpected end of JSON input"). rename() is atomic
 // within the directory, so readers see the old bytes or the new — never partial.
 const write = (n, o) => {
-  mkdirSync(dirname(p(n)), { recursive: true });
-  const tmp = `${p(n)}.tmp-${process.pid}`;
+  const target = p(n);
+  const tmp = `${target}.tmp.${process.pid}`;
+  mkdirSync(dirname(target), { recursive: true });
   writeFileSync(tmp, JSON.stringify(o, null, 2));
-  renameSync(tmp, p(n));
+  renameSync(tmp, target);
 };
 
 const TX = NODE0_RECOVERY_TRANSACTION_ID;

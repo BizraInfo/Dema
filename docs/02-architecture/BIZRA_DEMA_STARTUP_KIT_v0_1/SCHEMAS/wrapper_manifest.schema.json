@@ -1,0 +1,57 @@
+{
+  "$id": "https://bizra.local/schemas/wrapper_manifest.v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "authority_behavior": {
+      "const": "NEVER_GRANTS_AUTHORITY"
+    },
+    "capabilities": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "kind": {
+      "enum": [
+        "MODEL",
+        "HARNESS",
+        "TOOL",
+        "MCP",
+        "A2A",
+        "MEMORY",
+        "SANDBOX",
+        "PROVIDER",
+        "EFFECT"
+      ]
+    },
+    "schema": {
+      "const": "bizra.wrapper.manifest.v0.1"
+    },
+    "side_effects": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "upstream": {
+      "type": "object"
+    },
+    "wrapper_id": {
+      "type": "string"
+    },
+    "wrapper_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema",
+    "wrapper_id",
+    "wrapper_version",
+    "kind",
+    "upstream",
+    "capabilities",
+    "authority_behavior"
+  ],
+  "type": "object"
+}

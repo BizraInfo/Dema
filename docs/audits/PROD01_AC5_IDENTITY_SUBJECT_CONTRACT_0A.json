@@ -1,0 +1,201 @@
+{
+    "schema": "bizra.dema.prod01_ac5_identity_subject_contract.v0.1",
+    "truth_label": "PROD01_AC5_IDENTITY_SUBJECT_CONTRACT_0A",
+    "verdict": "RED_BLOCKED_PENDING_CANON_CODE_RECONCILIATION",
+    "frozen_at": "2026-08-26T20:44:00Z",
+    "authorization_scope": "GO 0A read-only only \u2014 no activation, no key generation, no principal mutation, no runtime, no PAT/SAT, no PROD-02",
+    "scope": {
+        "inspected_only": [
+            "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+            "docs/canon/canon_registry.json",
+            "packages/core/src/profiles.js",
+            "packages/core/src/dema-identity-root-canon.js",
+            "packages/core/src/onboarding-seal.js",
+            "C6b principal-status evidence: /data/bizra/node0-closure/runtime/prod01-runtime-persistence-3a/evidence/pre/principal-status.json and /post/principal-status.json",
+            "C6b package descriptor: /data/bizra/node0-closure/runtime/prod01-runtime-persistence-3a/PACKAGE_DESCRIPTOR.json",
+            "PROD-01 reconciliation: docs/audits/PROD01_ACCEPTANCE_TRUTH_RECONCILIATION_1A.md",
+            "Rust principal contract: /data/bizra/node0-closure/worktrees/prod01-mission-recovery-1a-8f744/bizra-omega/bizra-cognition-gateway/src/contracts.rs"
+        ],
+        "current_dema_checkout": "7f4ce3a7f06a201821cc557887d768ab978aced9",
+        "current_dema_tree": "f6c3a2cf08b140f7584fe658fe3437dc45712fc4"
+    },
+    "evidence_hashes": {
+        "topology_canon": "70b15aeed848c633a4f29c51bf73c918dafd0f56474799d56d1b73fc9c4106ff",
+        "topology_canon_path": "docs/canon/BIZRA_TOPOLOGY_CANON.md",
+        "canon_registry": "0d549cdb96bcaa67dfd946c7dda0c5c2e43e875a22f65d3432eedd310b9bf171",
+        "canon_registry_path": "docs/canon/canon_registry.json",
+        "profile_impl": "6ba51591d1a88983ba6794d51583cbc2bb498912187da34dee1d960e683e04bf",
+        "profile_impl_path": "packages/core/src/profiles.js",
+        "profile_impl_detail": "deriveNodeUid = sha256(operator|ordinal|device) -> bizra_node_<ordinal>_<12hex> ; companion_of binds companion device to primary node_uid",
+        "dema_identity_root_canon": "73b7a8513cf345cd3a0bfcc41e19ad81c0dd7db6a20f463aec519ef0209c1b60",
+        "dema_identity_root_canon_path": "packages/core/src/dema-identity-root-canon.js",
+        "onboarding_seal": "131f68996f68a9ba73baafb4cd03fdc6240abaeba80406895e26441711130592",
+        "onboarding_seal_path": "packages/core/src/onboarding-seal.js",
+        "principal_status_schema": "bizra.node0.principal_identity_status.v0.2",
+        "principal_status_contract_rs": "53730ea8f0b7f9ba237c417419e9cba99a8808e90fccbd2906b319356b849934",
+        "principal_status_contract_rs_path": "/data/bizra/node0-closure/worktrees/prod01-mission-recovery-1a-8f744/bizra-omega/bizra-cognition-gateway/src/contracts.rs",
+        "principal_status_evidence_pre": "49f091f97f77f5af6ef691e0f768bb0ae9a22cc6a00a3b7b5e7595507f98d2d2",
+        "principal_status_evidence_post": "49f091f97f77f5af6ef691e0f768bb0ae9a22cc6a00a3b7b5e7595507f98d2d2",
+        "principal_status_evidence_path_pre": "/data/bizra/node0-closure/runtime/prod01-runtime-persistence-3a/evidence/pre/principal-status.json",
+        "principal_status_evidence_path_post": "/data/bizra/node0-closure/runtime/prod01-runtime-persistence-3a/evidence/post/principal-status.json",
+        "c6b_package_descriptor": "341ed689a78be7b7fa4965330da95b9bd5a147797621a71c592cc826278240cd",
+        "c6b_package_descriptor_path": "/data/bizra/node0-closure/runtime/prod01-runtime-persistence-3a/PACKAGE_DESCRIPTOR.json",
+        "reconciliation_audit": "docs/audits/PROD01_ACCEPTANCE_TRUTH_RECONCILIATION_1A.md",
+        "reconciliation_c6b_ac5_verdict": "FAIL ABSENT identityVerified=false"
+    },
+    "identity_anchor_state": {
+        "status": "ABSENT_NO_SEALED_IDENTITY_YET",
+        "explanation": "Authoritative identity anchor does not yet exist \u2014 C6b forbade principal activation, both pre/post principal-status report ABSENT with evidenceState profilePresent=false, activeChainRecordFound=false, canonicalPayloadAvailable=false. This is correct negative result, not missing prose.",
+        "current_chain_head_observed": "69500a19186b3648b765df212747236cfc365d544ae52c78863a614146f05890",
+        "current_chain_length_observed": 9,
+        "activation_requires": "EXPLICIT_GO",
+        "authority_delta": 0
+    },
+    "dominant_uncertainty_resolved": "AC5 principal must represent HUMAN_NODE, not DEVICE or RUNTIME",
+    "drift_detected": {
+        "canon_intent": "NODE = HUMAN; second device is companion under same ordinal with companion_of binding to primary node_uid; Node1 is different human after registry onboarding (BIZRA_TOPOLOGY_CANON.md:117, 145-152)",
+        "code_reality": "buildUserProfile deriveNodeUid hashes operator|ordinal|device into node_uid, making node_uid device-specific; human-ness not separately parameterized; changing device_label changes node_uid deterministically (profile-foundation-preview.test.js:381 distinct across devices)",
+        "impact": "Field named node_uid suggests human node identity but is device-bound; binding AC5 principal to current node_uid would prove laptop identity, not Node0 human sovereign identity \u2014 technically green, semantically wrong",
+        "adversarial_test_confirming_drift": "mumu_n0 vs mumu_n0_phone have different node_uid even though both are Node0 (profiles.js:27 + tests:401)",
+        "language_independence_correct": "language does NOT mutate node_uid (profiles.js:27, test:443) \u2014 presentation vs identity properly separated"
+    },
+    "frozen_hierarchy": {
+        "human_node": {
+            "field": "human_node_id",
+            "derivation": "sha256(operator|ordinal) truncated 12hex half of current seed WITHOUT device; stable across all personal companion devices; registry-assigned ordinal never guessed/skipped/duplicated (canon_registry.json node_ordinal_law)",
+            "ordinal": "node_ordinal integer, Node0=0 origin, Node1=first invited human",
+            "stability_across_restart": "SAME",
+            "stability_across_device_add": "SAME",
+            "companion_devices_share_ordinal": true
+        },
+        "device": {
+            "field": "device_id",
+            "current_realization": "existing node_uid = sha256(operator|ordinal|device_label) \u2014 this is device_id, not human_node_id; retain for device-specific binding",
+            "device_label": "string nullable, primary null, companion e.g. 'phone' or hostname",
+            "companion_of": "nullable, for companion devices binds to primary human_node_id or primary device_id; null for primary",
+            "uniqueness": "unique per laptop/phone/workstation",
+            "stability_across_restart": "SAME (same device)",
+            "new_device_creates": "new device_id, same human_node_id"
+        },
+        "dema": {
+            "field": "dema_id",
+            "meaning": "persistent companion identity for DEMA face (distinct from runtime pid)",
+            "current_state": "not yet separately persisted; Dema reads profile but does not mint identity; dema_id to be bound at onboarding seal or profile persistence",
+            "stability_across_restart": "SAME"
+        },
+        "runtime": {
+            "field": "runtime_instance_id",
+            "meaning": "process/runtime instance identifier for one gateway start",
+            "pid": "ephemeral OS pid, must change after SIGKILL",
+            "stability_across_restart": "MAY CHANGE (new instance after kill)",
+            "pid_must_change": true,
+            "replaceable": true
+        },
+        "crypto_principal": {
+            "field": "principal_id",
+            "key_subject": "HUMAN_NODE",
+            "declaration": "AC5 cryptographic principal MUST represent HUMAN_NODE sovereign identity, not DEVICE nor RUNTIME; public_key_fingerprint binds to human_node_id, not device_id",
+            "public_key_fingerprint": "sha256/Ed25519 pubkey fingerprint bound to human_node_id",
+            "seal_ref": "identity_seal_ref = hash of sealed activation receipt (PrincipalActivation 0x61) linking principalProfileHash + nodePubkey + activationReceiptRef",
+            "verifiedIdentity_fields_when_VERIFIED": [
+                "principalId",
+                "principalProfileHash",
+                "nodePubkey",
+                "activationReceiptRef",
+                "receiptId",
+                "timestampNs",
+                "prevChain"
+            ],
+            "stability_across_restart": "SAME (human_node_id, principal_id, fingerprint, seal_ref valid successor)",
+            "never_infer_subject_from_field_name": true
+        }
+    },
+    "proposed_Node0Principal_shape": {
+        "Node0Principal": {
+            "human_node_id": "string bizra_human_<ordinal>_<12hex> derived operator|ordinal",
+            "node_ordinal": 0,
+            "active_device": {
+                "device_id": "string bizra_node_<ordinal>_<12hex> existing node_uid",
+                "device_label": "string|null",
+                "companion_of": "human_node_id|null"
+            },
+            "runtime": {
+                "runtime_instance_id": "string opaque",
+                "pid": "integer ephemeral"
+            },
+            "crypto": {
+                "principal_id": "string",
+                "key_subject": "HUMAN_NODE",
+                "public_key_fingerprint": "hex",
+                "seal_ref": "receipt hash of PrincipalActivation"
+            }
+        },
+        "across_restart": {
+            "human_node_id": "SAME",
+            "device_id": "SAME (same device)",
+            "principal_id": "SAME",
+            "public_key_fingerprint": "SAME",
+            "identity_seal_ref": "SAME / valid successor seal",
+            "runtime_instance_id": "MAY CHANGE",
+            "pid": "MUST CHANGE after killed process"
+        },
+        "bridge_eligible_requires": "verdict VERIFIED + identityVerified=true + chainContinuityVerified=true + canonicalPayloadAvailable=true (contracts.rs:420-530)"
+    },
+    "adversarial_validations": [
+        {
+            "check": "device identity treated as human identity",
+            "result": "BLOCKED",
+            "evidence": "canon says second device is not Node1; code currently conflates via node_uid; contract separates human_node_id vs device_id"
+        },
+        {
+            "check": "process PID treated as durable identity",
+            "result": "BLOCKED",
+            "evidence": "principal_status spec: operationEffects pid ephemeral, verifiedIdentity null when ABSENT; restart must change pid (PROD01 reconcilation PID 4046477->4046570)"
+        },
+        {
+            "check": "public key has no declared subject",
+            "result": "BLOCKED",
+            "evidence": "contract declares key_subject=HUMAN_NODE explicitly; never infer from node_uid field name"
+        },
+        {
+            "check": "restart requires same runtime_instance_id",
+            "result": "BLOCKED",
+            "evidence": "runtime replaceable by design; only human_node+principal stable"
+        },
+        {
+            "check": "companion device would accidentally become Node1",
+            "result": "BLOCKED",
+            "evidence": "companion_of binding preserves ordinal 0 for founder phone; Node1 requires registry-assigned ordinal 1 for different operator"
+        },
+        {
+            "check": "principal subject unspecified",
+            "result": "BLOCKED until contract \u2014 now FROZEN to HUMAN_NODE"
+        },
+        {
+            "check": "principal status ABSENT misinterpreted as passing",
+            "result": "BLOCKED",
+            "evidence": "current C6b evidence is correctly ABSENT (49f091f...), fail-closed; AC5 remains OPEN per docs/audits/PROD01_ACCEPTANCE_TRUTH_RECONCILIATION_1A.md:78"
+        }
+    ],
+    "frozen_relationships": [
+        "human_node_id 1---* device_id (each device companion_of human_node_id)",
+        "human_node_id 1---1 crypto principal_id (key_subject HUMAN_NODE)",
+        "device_id 1---* runtime_instance_id (each start on that device)",
+        "runtime_instance_id 1---1 pid (ephemeral)",
+        "dema_id 1---1 human_node_id (persistent companion, not per-device mint)"
+    ],
+    "unlock_condition": "Only after this contract is GREEN may AC5 qualification package bind the correct identity; package must reference human_node_id + key_subject=HUMAN_NODE, not device_id alone",
+    "forbidden_in_0A": [
+        "activation",
+        "runtime start",
+        "key creation",
+        "principal mutation",
+        "ABSENT -> VERIFIED",
+        "PAT/SAT changes",
+        "PROD-02",
+        "external network",
+        "commit/push/merge",
+        "authority increase"
+    ],
+    "verdict_detail": "RED is correct for 0A \u2014 the subject ambiguity existed and is now frozen; no runtime was executed, so no GREEN activation possible; contract itself is GREEN as a frozen specification awaiting AC5 proof"
+}

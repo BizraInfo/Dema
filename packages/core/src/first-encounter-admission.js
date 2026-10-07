@@ -87,7 +87,7 @@ export function assertMetadataOnly(record) {
   if (!Number.isInteger(clean.size) || clean.size < 0) {
     throw new AdmissionBoundaryError("INVALID_SIZE");
   }
-  return clean;
+  return /** @type {{ relative_path: string, extension: any, size: number, modified_time: any, file_hash: any }} */ (clean);
 }
 
 /**
@@ -150,6 +150,16 @@ function derivePhrase(scope) {
   return `READ ${scope.file_count} FILES IN ${scope.root_real_path}`;
 }
 
+/**
+ * Build the exact consent contract for one metadata inventory.
+ * @param {{
+ *   root_label?: unknown,
+ *   root_real_path: string,
+ *   inventory: { file_count: number, total_bytes: number },
+ *   mission_question?: unknown,
+ *   manifest_hash?: string | null
+ * }} input
+ */
 export function buildConsentContract({
   root_label,
   root_real_path,

@@ -34,6 +34,14 @@ const JSON_MODE = process.argv.includes("--json");
 // generated kernels at the anchor below. Any canon importer NOT in this list
 // (outside tests and this gate) still fails the scan.
 export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
+  // NODE0-1D FATE effect admission — verdict refs bind policy/authority
+  // semantics with the same canonical bytes as Situation and Action commitments.
+  "packages/fate/src/fate.js",
+  // Founder closure candidate: Situation and Action commitments use the
+  // canonical bytes; registration is adoption review only and does not
+  // promote the candidate or grant runtime authority.
+  "packages/core/src/founder-useful-system.js",
+  "packages/core/src/founder-pat-harness.js",
   "packages/mission/src/mission-corridor.js",
   // Gate C, C3 — the disk-bound closure orchestrator and CLI derive the exact
   // prepared-effect / transaction identity with canonical JSON v1. Registration
@@ -192,6 +200,36 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // what stops an edited artefact keeping its hash.
   "packages/core/src/node0-deployment-remote-write-adapter.js",
   "scripts/proof/node0-deployment-remote-write-proof.mjs",
+  "packages/core/src/dema-master-registry-effective-config.js",
+  "packages/core/src/openrouter-admission-policy-compiler.js",
+  "packages/core/src/pot-claim-scope.js",
+  // NODE0-ESTATE-MAP-0A — a later verifier re-derives the outcome from the
+  // caller-supplied registry and observations, so the decision identity must
+  // remain stable across key order. Registration proves canon adoption only;
+  // the component remains pure and does not observe or mutate any root.
+  "packages/core/src/node0-estate-map.js",
+  "packages/core/src/node0-sse-envelope-stream.js",
+  "packages/core/src/node0-sse-realm-composition.js",
+  "packages/core/src/dema-presence.js",
+  "packages/core/src/drs-realm-contracts.js",
+  "packages/core/src/drs-presence-reducer.js",
+  "packages/core/src/drs-fixture-publisher.js",
+  "packages/core/src/node0-fate-staged-effect.js",
+  // NODE0-GENESIS-FINAL-SPRINT-1A — governed proposal and local realm
+  // consumers. These hashes cross process boundaries in the mission bridge
+  // and URP journal, so canonical JSON adoption is load-bearing here.
+  "packages/core/src/bizra-prompt-mission-bridge.js",
+  // FOUNDER-ESTATE-WORKFLOW-1B — the read-only estate observation/report
+  // identity crosses the durable mission receipt boundary, so its result hash
+  // uses the same canonical bytes as the receipt verifier.
+  "packages/core/src/founder-estate-workflow.js",
+  "packages/core/src/constitutional-attention-allocator.js",
+  "packages/genesis/src/urp0-kernel.js",
+  "packages/genesis/src/urp0-mission-kernel.js",
+  "packages/genesis/src/urp0-sat-evidence.js",
+  "packages/genesis/src/urp0-sat5.js",
+  "scripts/genesis/urp0-runtime.mjs",
+  "scripts/genesis/urp0-store.mjs",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
@@ -353,6 +391,8 @@ function scanForForbiddenImporters() {
   const scanDirs = ["packages", "apps", "bin", "scripts"];
   const allowed = new Set([
     "scripts/review/canonical-json-v1-check.mjs",
+    "scripts/review/node0-sse-realm-composition-check.mjs",
+    "scripts/review/bizra-prompt-compiler-check.mjs",
     ...CANONICAL_JSON_V1_REGISTERED_CONSUMERS,
   ]);
   for (const dir of scanDirs) {
@@ -367,6 +407,9 @@ function scanForForbiddenImporters() {
       if (!/\.(js|mjs|cjs)$/.test(e.name)) continue;
       const abs = join(e.parentPath ?? e.path, e.name);
       const rel = relative(REPO_ROOT, abs).replaceAll("\\", "/");
+      // Build output is not a production source surface; scanning generated
+      // Next chunks would report transitive imports as unreviewed consumers.
+      if (rel.includes("/.next/")) continue;
       if (rel.startsWith("packages/canon/")) continue;
       if (allowed.has(rel)) continue;
       const src = readFileSync(abs, "utf8");
