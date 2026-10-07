@@ -1,0 +1,472 @@
+import { createHash } from 'node:crypto';
+
+export const AGENT_LAUNCHPAD_GENESIS_PREVIEW_SCHEMA =
+  'bizra.dema.agent_launchpad_genesis_preview.v0.1';
+export const AGENT_LAUNCHPAD_GENESIS_PREVIEW_TRUTH_LABEL =
+  'AGENT_LAUNCHPAD_GENESIS_PREVIEW_ONLY';
+
+const PAT_IDS = Object.freeze([
+  'pat.dema',
+  'pat.guardian',
+  'pat.reasoner',
+  'pat.builder',
+  'pat.critic',
+  'pat.archivist',
+  'pat.teacher',
+]);
+const SAT_IDS = Object.freeze([
+  'sat.verifier',
+  'sat.compliance',
+  'sat.resource',
+  'sat.economist',
+  'sat.evolution',
+]);
+const ALLOWED_EFFECT_CLASSES = Object.freeze([
+  'C0_PURE',
+  'C1_OBSERVE',
+  'C2_DRAFT',
+  'C3_REVERSIBLE_LOCAL',
+]);
+const EPISTEMIC = new Set(['OBSERVED', 'MEASURED', 'VERIFIED']);
+const FRESHNESS = new Set(['CURRENT', 'STALE', 'UNKNOWN']);
+const SHA256 = /^(?:sha256:)?[0-9a-f]{64}$/;
+
+function stableStringify(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map((v) => stableStringify(v) ?? 'null').join(',')}]`;
+  }
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().flatMap((k) => {
+      const v = stableStringify(value[k]);
+      return v === undefined ? [] : [`${JSON.stringify(k)}:${v}`];
+    }).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function sha256Canonical(value) {
+  return `sha256:${createHash('sha256').update(stableStringify(value), 'utf8').digest('hex')}`;
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+function text(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function validDigest(value) {
+  return typeof value === 'string' && SHA256.test(value);
+}
+
+function normalizeEvidence(evidence = []) {
+  if (!Array.isArray(evidence)) return [];
+  return evidence.map((e, i) => ({
+    id: text(e?.id) || `evidence.${i}`,
+    kind: text(e?.kind) || 'unknown',
+    ref: text(e?.ref),
+    digest: text(e?.digest),
+    epistemic: text(e?.epistemic) || 'UNKNOWN',
+    freshness: text(e?.freshness) || 'UNKNOWN',
+    independent: e?.independent === true,
+    scope_match: e?.scope_match === true,
+  }));
+}
+
+function evaluateEvidence(evidence) {
+  const admitted = [];
+  const excluded = [];
+  const digestSeen = new Map();
+
+  for (const e of evidence) {
+    const gaps = [];
+    if (!e.ref) gaps.push('ref_missing');
+    if (!validDigest(e.digest)) gaps.push('digest_missing_or_malformed');
+    if (!EPISTEMIC.has(e.epistemic)) gaps.push('epistemic_not_admissible');
+    if (!FRESHNESS.has(e.freshness)) gaps.push('freshness_invalid');
+    if (e.scope_match !== true) gaps.push('scope_mismatch');
+
+    if (gaps.length > 0) {
+      excluded.push({ id: e.id, gaps });
+      continue;
+    }
+
+    const key = e.digest.startsWith('sha256:') ? e.digest : `sha256:${e.digest}`;
+    if (digestSeen.has(key)) {
+      excluded.push({
+        id: e.id,
+        gaps: ['duplicate_evidence_digest'],
+        duplicate_of: digestSeen.get(key),
+      });
+      continue;
+    }
+    digestSeen.set(key, e.id);
+    admitted.push({ ...e, digest: key });
+  }
+
+  return { admitted, excluded };
+}
+
+function boundary() {
+  return Object.freeze({
+    runtime_execution_performed: false,
+    human_consent_manufactured: false,
+    fate_admission_manufactured: false,
+    signer_or_key_operation_performed: false,
+    dema_home_mutated: false,
+    network_used: false,
+    push_performed: false,
+    merge_performed: false,
+    deployment_performed: false,
+    publication_performed: false,
+    token_minted: false,
+    reward_settled: false,
+    federation_used: false,
+    public_agent_identity_emitted: false,
+  });
+}
+
+function buildHypergraph({ creator, verifier, missionHash, profileHash, verificationHash, evidence }) {
+  const nodes = [
+    { id: creator, type: 'PAT_AGENT' },
+    { id: verifier, type: 'SAT_VERIFIER' },
+    { id: profileHash, type: 'AGENT_PROFILE_COMMITMENT' },
+    { id: missionHash, type: 'MISSION_CONTRACT_COMMITMENT' },
+    { id: verificationHash, type: 'VERIFICATION_CONTRACT_COMMITMENT' },
+    ...evidence.map((e) => ({ id: e.digest, type: 'EVIDENCE', evidence_id: e.id })),
+  ];
+  const hyperedges = [
+    {
+      id: 'identity_and_mission_binding',
+      members: [creator, profileHash, missionHash],
+      relation: 'binds',
+    },
+    {
+      id: 'verification_independence_binding',
+      members: [creator, verifier, verificationHash],
+      relation: 'must_remain_causally_separate_for_acceptance',
+    },
+    {
+      id: 'evidence_support',
+      members: [missionHash, verificationHash, ...evidence.map((e) => e.digest)],
+      relation: 'supports_qualification_only',
+    },
+  ];
+  return Object.freeze({
+    nodes: Object.freeze(nodes),
+    hyperedges: Object.freeze(hyperedges),
+    authority_edges_diffused: false,
+    semantic_similarity_grants_truth: false,
+  });
+}
+
+function buildHhmmProjection({ blocked, admittedEvidenceCount, independentEvidenceCount }) {
+  const system = blocked.length === 0 ? 'LOCAL_CANDIDATE' : 'DESIGNED';
+  const mission = blocked.length === 0 ? 'PLAN' : 'UNDERSTAND';
+  const evidence = independentEvidenceCount > 0
+    ? 'MEASURED'
+    : admittedEvidenceCount > 0
+      ? 'OBSERVED'
+      : 'UNKNOWN';
+  return Object.freeze({
+    L2_system: system,
+    L1_mission: mission,
+    L0_evidence: evidence,
+    advisory_only: true,
+    may_transition_authority: false,
+    note: 'The projection may rank the likely phase; it cannot move the mission into authorization, execution, settlement, or launch.',
+  });
+}
+
+function buildSNR({ admittedEvidenceCount, independentEvidenceCount, excludedEvidenceCount, blockerCount }) {
+  const signal = admittedEvidenceCount + independentEvidenceCount;
+  const noise = excludedEvidenceCount + blockerCount;
+  const score = signal + noise === 0 ? 0 : Number((signal / (signal + noise)).toFixed(4));
+  return Object.freeze({
+    score,
+    signal,
+    noise,
+    ranking_only: true,
+    can_promote_epistemic_state: false,
+    can_grant_authority: false,
+    law: 'AmplificationQuality <= AdmissionQuality',
+  });
+}
+
+
+function buildEvidenceHashTable(admitted, excluded) {
+  const table = {};
+  for (const e of admitted) {
+    table[e.digest] = Object.freeze({
+      evidence_id: e.id,
+      ref: e.ref,
+      epistemic: e.epistemic,
+      freshness: e.freshness,
+      declared_independent: e.independent,
+      scope_match: e.scope_match,
+      admitted_for_attention: true,
+    });
+  }
+  for (const e of excluded) {
+    const key = `excluded:${e.id}`;
+    table[key] = Object.freeze({
+      evidence_id: e.id,
+      admitted_for_attention: false,
+      gaps: Object.freeze([...(e.gaps ?? [])]),
+    });
+  }
+  return Object.freeze({
+    table: Object.freeze(table),
+    duplicate_weight_rule: 'same_digest_adds_zero_epistemic_weight',
+    authority: 'NONE',
+  });
+}
+
+function buildDiffusionAttention({ admitted, independentEvidenceCount, hypergraph }) {
+  const evidenceMass = Math.min(1, admitted.length / 4);
+  const independenceMass = Math.min(1, independentEvidenceCount / 2);
+  return Object.freeze({
+    mode: 'ATTENTION_ONLY',
+    mission_attention: Number((0.65 * evidenceMass + 0.35 * independenceMass).toFixed(4)),
+    verification_attention: Number((0.35 * evidenceMass + 0.65 * independenceMass).toFixed(4)),
+    node_count: hypergraph.nodes.length,
+    hyperedge_count: hypergraph.hyperedges.length,
+    contradiction_damping: true,
+    unverified_source_amplification: 0,
+    authority_edges_diffused: false,
+    may_change_truth_label: false,
+    may_change_consent: false,
+  });
+}
+
+function buildInspectableReasoningGraph({ state, admitted, excluded }) {
+  const evidenceNodes = admitted.map((e) => ({
+    id: `e:${e.id}`,
+    type: 'EVIDENCE',
+    digest: e.digest,
+  }));
+  return Object.freeze({
+    disclosure: 'INSPECTABLE_DECISION_GRAPH_NOT_PRIVATE_CHAIN_OF_THOUGHT',
+    nodes: Object.freeze([
+      ...evidenceNodes,
+      { id: 'c:structural_candidate', type: 'CLAIM', label: state },
+      { id: 'h:canonical_binding', type: 'HYPOTHESIS', label: 'canonical subject binding still requires an external owner/verifier' },
+      { id: 'g:prod06', type: 'GATE', label: 'PROD-06 real effect + observation + trusted receipt + recovery' },
+      { id: 's:next', type: 'SPEARPOINT', label: 'bind the capsule compiler to canonical profile/mission/verifier owners without widening authority' },
+    ]),
+    edges: Object.freeze([
+      ...evidenceNodes.map((n) => ({ from: n.id, to: 'c:structural_candidate', relation: 'supports_shape' })),
+      { from: 'c:structural_candidate', to: 'h:canonical_binding', relation: 'does_not_establish' },
+      { from: 'h:canonical_binding', to: 'g:prod06', relation: 'blocked_by' },
+      { from: 'g:prod06', to: 's:next', relation: 'selects_spearpoint' },
+    ]),
+    excluded_evidence_count: excluded.length,
+    authority: 'NONE',
+  });
+}
+
+function buildProcessMining(receiptRefs, chatRefs) {
+  const blocked = [];
+  if (Array.isArray(chatRefs) && chatRefs.length > 0) {
+    blocked.push('chat_history_not_admissible_as_operational_truth');
+  }
+  const receipts = Array.isArray(receiptRefs)
+    ? receiptRefs.filter((r) => typeof r === 'string' && validDigest(r))
+      .map((r) => r.startsWith('sha256:') ? r : `sha256:${r}`)
+    : [];
+  return Object.freeze({
+    source: 'receipt_refs_only',
+    receipt_refs: Object.freeze([...new Set(receipts)]),
+    chat_history_used: false,
+    blocked_by: Object.freeze(blocked),
+    result: receipts.length > 0 ? 'CANDIDATE_TRACE_SET' : 'NO_ADMISSIBLE_TRACE_SET',
+    may_promote_learning: false,
+  });
+}
+
+export function buildAgentLaunchpadGenesisPreview(input = {}) {
+  const normalized = {
+    capsule_id: text(input.capsule_id),
+    creator_agent_id: text(input.creator_agent_id),
+    verifier_agent_id: text(input.verifier_agent_id),
+    agent_profile_hash: text(input.agent_profile_hash),
+    mission_contract_hash: text(input.mission_contract_hash),
+    verification_contract_hash: text(input.verification_contract_hash),
+    effect_class: text(input.effect_class),
+    authority_delta: Number.isFinite(input.authority_delta) ? input.authority_delta : null,
+    evidence: normalizeEvidence(input.evidence),
+    receipt_refs: Array.isArray(input.receipt_refs) ? [...input.receipt_refs] : [],
+    chat_refs: Array.isArray(input.chat_refs) ? [...input.chat_refs] : [],
+    requested_boundaries: {
+      mint: input?.requested_boundaries?.mint === true,
+      reward_settlement: input?.requested_boundaries?.reward_settlement === true,
+      federation: input?.requested_boundaries?.federation === true,
+      public_launch: input?.requested_boundaries?.public_launch === true,
+      signer_or_key: input?.requested_boundaries?.signer_or_key === true,
+      dema_home_mutation: input?.requested_boundaries?.dema_home_mutation === true,
+    },
+  };
+
+  const blocked = [];
+  if (!normalized.capsule_id) blocked.push('capsule_id_missing');
+  if (!PAT_IDS.includes(normalized.creator_agent_id)) {
+    blocked.push('creator_must_be_existing_canonical_pat');
+  }
+  if (!SAT_IDS.includes(normalized.verifier_agent_id)) {
+    blocked.push('verifier_must_be_existing_canonical_sat');
+  }
+  if (!validDigest(normalized.agent_profile_hash)) blocked.push('agent_profile_hash_invalid');
+  if (!validDigest(normalized.mission_contract_hash)) blocked.push('mission_contract_hash_invalid');
+  if (!validDigest(normalized.verification_contract_hash)) blocked.push('verification_contract_hash_invalid');
+  if (!ALLOWED_EFFECT_CLASSES.includes(normalized.effect_class)) blocked.push('effect_class_not_preview_eligible');
+  if (normalized.authority_delta !== 0) blocked.push('authority_delta_must_equal_zero');
+
+  for (const [name, enabled] of Object.entries(normalized.requested_boundaries)) {
+    if (enabled) blocked.push(`forbidden_boundary_requested:${name}`);
+  }
+
+  const { admitted, excluded } = evaluateEvidence(normalized.evidence);
+  const independentEvidenceCount = admitted.filter((e) => e.independent).length;
+  const processMining = buildProcessMining(normalized.receipt_refs, normalized.chat_refs);
+  blocked.push(...processMining.blocked_by);
+
+  const structuralReady = blocked.length === 0;
+  const state = structuralReady ? 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION' : 'BLOCKED';
+  const snr = buildSNR({
+    admittedEvidenceCount: admitted.length,
+    independentEvidenceCount,
+    excludedEvidenceCount: excluded.length,
+    blockerCount: blocked.length,
+  });
+  const hhmm = buildHhmmProjection({
+    blocked,
+    admittedEvidenceCount: admitted.length,
+    independentEvidenceCount,
+  });
+  const hypergraph = buildHypergraph({
+    creator: normalized.creator_agent_id,
+    verifier: normalized.verifier_agent_id,
+    missionHash: normalized.mission_contract_hash,
+    profileHash: normalized.agent_profile_hash,
+    verificationHash: normalized.verification_contract_hash,
+    evidence: admitted,
+  });
+  const evidenceHashTable = buildEvidenceHashTable(admitted, excluded);
+  const diffusionAttention = buildDiffusionAttention({ admitted, independentEvidenceCount, hypergraph });
+  const reasoningGraph = buildInspectableReasoningGraph({ state, admitted, excluded });
+
+  const content = {
+    schema: AGENT_LAUNCHPAD_GENESIS_PREVIEW_SCHEMA,
+    truth_label: AGENT_LAUNCHPAD_GENESIS_PREVIEW_TRUTH_LABEL,
+    input: normalized,
+    state,
+    qualification_candidate: structuralReady,
+    qualification_ready: false,
+    launched: false,
+    launch_state: 'DESIGNED_BLOCKED_BY_PROD06_REAL_EFFECT_AND_RUNTIME_RECEIPT',
+    admitted_evidence: admitted,
+    excluded_evidence: excluded,
+    snr,
+    hhmm,
+    hypergraph,
+    evidence_hash_table: evidenceHashTable,
+    diffusion_reasoning_amplifier: diffusionAttention,
+    inspectable_reasoning_graph: reasoningGraph,
+    process_mining: processMining,
+    consent: {
+      self_consent: false,
+      human_consent_manufactured: false,
+      exact_human_grant_required_for_consequential_effect: true,
+      status: 'NOT_CONSUMED_IN_PREVIEW',
+    },
+    self_critique: {
+      can_hold: true,
+      can_grant: false,
+      findings: Object.freeze([
+        admitted.length === 0 ? 'no_admitted_evidence' : null,
+        independentEvidenceCount === 0 ? 'no_declared_independent_evidence' : null,
+        'canonical_subject_binding_not_verified_by_pure_kernel',
+        'causal_independence_not_established_by_agent_ids',
+        structuralReady ? null : 'structural_or_constitutional_blocker_present',
+      ].filter(Boolean)),
+    },
+    self_compliance: {
+      authority_delta_zero: normalized.authority_delta === 0,
+      canonical_pat_creator: PAT_IDS.includes(normalized.creator_agent_id),
+      canonical_sat_verifier: SAT_IDS.includes(normalized.verifier_agent_id),
+      no_protected_act: Object.values(normalized.requested_boundaries).every((v) => v === false),
+      may_refuse: true,
+      may_grant_authority: false,
+    },
+    pulse: {
+      verified: false,
+      status: 'NOT_VERIFIED',
+      blocked_by: Object.freeze([
+        'prod06_real_effect_not_bound',
+        'human_grant_not_consumed',
+        'fate_admission_not_consumed',
+        'independent_postcondition_not_bound',
+        'trusted_runtime_receipt_not_bound',
+        'restart_exactly_once_not_bound',
+        'human_usefulness_not_measured',
+      ]),
+    },
+    proof_of_truth_convergence: {
+      formal: structuralReady ? 2 : 1,
+      cryptographic: validDigest(normalized.agent_profile_hash) && validDigest(normalized.mission_contract_hash) ? 1 : 0,
+      empirical: 0,
+      economic: 0,
+      level: 1,
+      ceiling: 'IMPLEMENTED_PREVIEW_CONTRACT_ONLY_NO_CANONICAL_BINDING',
+    },
+    boundary: boundary(),
+    what_this_proves: [
+      'A launch-capsule proposal can be structurally constrained to one canonical PAT id, one canonical SAT id, mission/verification digest fields, a bounded effect class, evidence identities, and a zero-authority-delta contract.',
+      'Duplicate or structurally unbound evidence cannot increase the preview evidence count.',
+      'SNR, HHMM, content-addressed hash indexing, diffusion attention, hypergraph, process mining, self-critique, and self-compliance remain advisory/projection layers outside the authority path.',
+    ],
+    what_this_does_not_prove: [
+      'Digest shape does not prove canonical subject binding, semantic admission, signer trust, or causal verifier independence.',
+      'No agent has been launched or executed.',
+      'No human consent or FATE admission has been created or consumed.',
+      'No governed runtime/effect receipt has been issued.',
+      'No Proof-of-Impact, reward, token, marketplace, federation, or public identity is live.',
+      'QUALIFICATION_READY is not PROD-06 readiness and is not Node0 closure.',
+    ],
+  };
+
+  const report_hash = sha256Canonical(content);
+  return deepFreeze({ ...content, report_hash });
+}
+
+export function verifyAgentLaunchpadGenesisPreview(report) {
+  const blocked_by = [];
+  if (!report || report.schema !== AGENT_LAUNCHPAD_GENESIS_PREVIEW_SCHEMA) {
+    return Object.freeze({ ok: false, blocked_by: ['invalid_schema'] });
+  }
+  if (report.truth_label !== AGENT_LAUNCHPAD_GENESIS_PREVIEW_TRUTH_LABEL) {
+    blocked_by.push('invalid_truth_label');
+  }
+  if (!report.input || typeof report.input !== 'object') {
+    blocked_by.push('input_missing');
+  } else {
+    const rebuilt = buildAgentLaunchpadGenesisPreview(report.input);
+    if (rebuilt.report_hash !== report.report_hash) blocked_by.push('semantic_rederivation_mismatch');
+  }
+  if (report.launched !== false) blocked_by.push('preview_cannot_be_launched');
+  if (report.boundary && Object.values(report.boundary).some((v) => v !== false)) {
+    blocked_by.push('boundary_not_false');
+  }
+  return Object.freeze({
+    ok: blocked_by.length === 0,
+    blocked_by: Object.freeze(blocked_by),
+    verification_mode: 'semantic_rederivation_v0_1',
+    authority_eligible: false,
+  });
+}
+
+export const CANONICAL_LAUNCHPAD_PAT_IDS = PAT_IDS;
+export const CANONICAL_LAUNCHPAD_SAT_IDS = SAT_IDS;
