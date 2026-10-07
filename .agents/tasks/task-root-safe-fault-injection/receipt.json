@@ -4,7 +4,7 @@
   "feature_id": "FEAT-001",
   "head_sha": "ced248e41382a8c87b61918fd8fff9af5458e30f",
   "classification": "OUTWARD/environmental",
-  "root_cause": "The test suite runs as root (uid=0). Root bypasses DAC permission bits, so chmod-based fault injection (0o000/0o500/0o400) is a no-op: a 0o000 file is still readable and a 0o500/0o400 target is still writable. The permission-dependent assertions in three test files therefore fail because the injected fault never fires. The production code under test (packages/receipts/**, packages/mission/**) is correct and was NOT changed. CI runs on GitHub ubuntu-latest (non-root) where these same tests pass.",
+  "root_cause": "The test suite runs as root (uid=0). Root bypasses DAC permission bits, so chmod-based fault injection (0o000/0o500/0o400) still changes mode bits but the expected read/write denial may not occur: a 0o000 file may still be readable and a 0o500/0o400 target may still be writable. The permission-dependent assertions in three test files therefore fail because the injected fault never fires. The production code under test (packages/receipts/**, packages/mission/**) is correct and was NOT changed. CI runs on GitHub ubuntu-latest (non-root) where these same tests pass.",
   "fix": "Mirror the canonical in-repo precedent (tests/first-encounter-admission.test.js: canEnforceModes probe + honest t.skip). Each permission-dependent case now probes, hermetically and restoring permissions in a finally block, whether the specific denial it relies on actually occurs for the current process. If modes are not enforced, the case is skipped with the honest reason 'filesystem does not enforce modes for this process' (c4b2a adds the clarifying parenthetical about root bypassing DAC). The real assertions are preserved unchanged, so they still run and pass on a mode-enforcing host. The G8 classifier allowlist was NOT modified; name-only masking was NOT used.",
   "files_changed": [
     "tests/authorship-key-store-negative.test.js",
@@ -33,12 +33,28 @@
     "tests/c4b2a-mechanical-rollback-wiring.test.js": {
       "skipped": 22,
       "cases": [
-        "C4B2A-02", "C4B2A-03", "C4B2A-06", "C4B2A-10", "C4B2A-20",
-        "C4B2AH-07", "C4B2AH-08", "C4B2AH-16", "C4B2AH-17",
-        "C4B2AS-01", "C4B2AS-02", "C4B2AS-03", "C4B2AS-04", "C4B2AS-06",
-        "C4B2AS-10", "C4B2AS-11/12/13", "C4B2AS-22", "C4B2AS-23",
-        "C4B2AM-11/12/13/14", "C4B2AM-15/16",
-        "C4D-TAIL-01b", "C4D-TAIL-01"
+        "C4B2A-02",
+        "C4B2A-03",
+        "C4B2A-06",
+        "C4B2A-10",
+        "C4B2A-20",
+        "C4B2AH-07",
+        "C4B2AH-08",
+        "C4B2AH-16",
+        "C4B2AH-17",
+        "C4B2AS-01",
+        "C4B2AS-02",
+        "C4B2AS-03",
+        "C4B2AS-04",
+        "C4B2AS-06",
+        "C4B2AS-10",
+        "C4B2AS-11/12/13",
+        "C4B2AS-22",
+        "C4B2AS-23",
+        "C4B2AM-11/12/13/14",
+        "C4B2AM-15/16",
+        "C4D-TAIL-01b",
+        "C4D-TAIL-01"
       ],
       "probe": "canEnforceDirWriteDenial(): mkdir a probe dir, spawnSync chmod 0500 (the SAME seam the fixtures use), attempt writeFileSync inside it; true when the write is denied (enforced), false otherwise. Cached once per process.",
       "note": "All 22 depend, directly or via crossBoundaryDuringOutage()/atEffectApplied(), on the chmod-0500 events-dir write outage actually firing."

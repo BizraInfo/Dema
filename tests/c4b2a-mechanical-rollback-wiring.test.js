@@ -130,6 +130,23 @@ function canEnforceDirWriteDenial() {
 const SKIP_NO_MODE_ENFORCEMENT =
   "filesystem does not enforce modes for this process (root bypasses DAC; the permission-based fault-injection seam cannot fire)";
 
+// Evaluate once so CI (mode-enforcing) keeps a single skip-decision branch instead
+// of N uncovered in-body `if (!probe) t.skip` sites that drag global branch coverage.
+const SKIP_WHEN_NO_MODE_ENFORCEMENT = canEnforceDirWriteDenial()
+  ? false
+  : SKIP_NO_MODE_ENFORCEMENT;
+
+test("C4B2A-probe: mode-enforcement cache returns a stable boolean and both cached values", () => {
+  const first = canEnforceDirWriteDenial();
+  assert.equal(typeof first, "boolean");
+  assert.equal(canEnforceDirWriteDenial(), first);
+  const saved = modeEnforcementProbe;
+  modeEnforcementProbe = !saved;
+  assert.equal(canEnforceDirWriteDenial(), !saved);
+  modeEnforcementProbe = saved;
+  assert.equal(canEnforceDirWriteDenial(), saved);
+});
+
 let fixtureSeq = 0;
 
 async function fixture() {
@@ -376,8 +393,7 @@ test("C4B2A-01: partial rename (target linked, source unlink pending) restores b
   assert.equal(proof.restoration_verified, true);
 });
 
-test("C4B2A-02: effect reached post-state but EFFECT_APPLIED publication failed", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2A-02: effect reached post-state but EFFECT_APPLIED publication failed", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   let applyCalls = 0;
@@ -417,8 +433,7 @@ test("C4B2A-02: effect reached post-state but EFFECT_APPLIED publication failed"
   assert.equal(proof.restored_hash, durableBeforeHash(state));
 });
 
-test("C4B2A-03: durability-uncertain publication never mutates and never retries", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2A-03: durability-uncertain publication never mutates and never retries", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   // Cross the boundary during an outage: durable head EFFECT_INTENT_PERSISTED,
@@ -567,8 +582,7 @@ test("C4B2A-05: an already-restored world reports ALREADY_BEFORE_STATE, no secon
   assert.equal(existsSync(f.targetPath), false);
 });
 
-test("C4B2A-06: VERIFIED persistence failure rolls back exactly once", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2A-06: VERIFIED persistence failure rolls back exactly once", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   // Trip the outage on undo — inside the reversibility corridor, after
@@ -684,8 +698,7 @@ test("C4B2A-09: restoration hash mismatch yields RECOVERY_REQUIRED, no false ter
   assert.notEqual(state.terminal_outcome, "EXECUTION_FAILED_ROLLED_BACK");
 });
 
-test("C4B2A-10: failure publishing ROLLBACK_STARTED never calls the helper", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2A-10: failure publishing ROLLBACK_STARTED never calls the helper", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   let helperCalls = 0;
@@ -967,8 +980,7 @@ test("C4B2A-19: no raw nonce, source bytes, or inverse plan enters a rollback ev
   }
 });
 
-test("C4B2A-20: a fresh process recovers from disk alone", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2A-20: a fresh process recovers from disk alone", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   // The first process crosses the boundary during an outage and dies without
@@ -1237,8 +1249,7 @@ async function freezeAdjudication(f, intendedOutcome, stage = "EFFECT_APPLY") {
   return appended;
 }
 
-test("C4B2AH-07: a retry with a different failure cannot change the frozen outcome", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AH-07: a retry with a different failure cannot change the frozen outcome", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   await crossBoundaryDuringOutage(f, base);
@@ -1259,8 +1270,7 @@ test("C4B2AH-07: a retry with a different failure cannot change the frozen outco
   assert.equal(state.terminal_outcome, "EXECUTION_FAILED_ROLLED_BACK");
 });
 
-test("C4B2AH-08: an unknown retry failure cannot downgrade a frozen outcome", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AH-08: an unknown retry failure cannot downgrade a frozen outcome", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   await crossBoundaryDuringOutage(f, base);
@@ -1453,8 +1463,7 @@ test("C4B2AH-15: a complete proven suffix classifies VERIFIED_ROLLBACK end to en
   );
 });
 
-test("C4B2AH-16: uncertainty where the attempted event is canonical resumes safely", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AH-16: uncertainty where the attempted event is canonical resumes safely", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   // Head is EFFECT_APPLIED: the event whose publication was uncertain won.
@@ -1477,8 +1486,7 @@ test("C4B2AH-16: uncertainty where the attempted event is canonical resumes safe
   assert.equal(readFileSync(f.sourcePath, "utf8"), BODY);
 });
 
-test("C4B2AH-17: uncertainty where the prior head is canonical rolls back from it", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AH-17: uncertainty where the prior head is canonical rolls back from it", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   let applyCalls = 0;
@@ -1591,15 +1599,13 @@ async function atEffectApplied() {
   return { f, base, descriptor: readDescriptor(f) };
 }
 
-test("C4B2AS-01: ROLLBACK_STARTED with empty evidence is refused, nothing published", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AS-01: ROLLBACK_STARTED with empty evidence is refused, nothing published", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f } = await atEffectApplied();
   const before = await replay(f);
   await refusedWithoutPublication(f, null, before, await rawAppend(f, "ROLLBACK_STARTED", []), "empty evidence");
 });
 
-test("C4B2AS-02: ROLLBACK_STARTED with an unrelated legacy schema is refused", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AS-02: ROLLBACK_STARTED with an unrelated legacy schema is refused", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f } = await atEffectApplied();
   const before = await replay(f);
   for (const refs of [
@@ -1610,8 +1616,7 @@ test("C4B2AS-02: ROLLBACK_STARTED with an unrelated legacy schema is refused", a
   }
 });
 
-test("C4B2AS-03: ROLLED_BACK without the completed-evidence schema is refused", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AS-03: ROLLED_BACK without the completed-evidence schema is refused", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f, descriptor } = await atEffectApplied();
   const started = await rawAppend(f, "ROLLBACK_STARTED", [{
     schema: CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
@@ -1630,8 +1635,7 @@ test("C4B2AS-03: ROLLED_BACK without the completed-evidence schema is refused", 
   }
 });
 
-test("C4B2AS-04: RECOVERY_REQUIRED without the recovery schema is refused", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AS-04: RECOVERY_REQUIRED without the recovery schema is refused", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f, descriptor } = await atEffectApplied();
   await rawAppend(f, "ROLLBACK_STARTED", [{
     schema: CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
@@ -1670,8 +1674,7 @@ test("C4B2AS-05: rollback RESOLVED without the terminal schema is refused", asyn
   assert.equal(resolvedEvent.evidence_refs[0].schema, CORRIDOR_ROLLBACK_TERMINAL_EVIDENCE_SCHEMA);
 });
 
-test("C4B2AS-06: terminal evidence disagreeing with the event outcome is refused", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AS-06: terminal evidence disagreeing with the event outcome is refused", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f, descriptor } = await atEffectApplied();
   await rawAppend(f, "ROLLBACK_STARTED", [{
     schema: CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
@@ -1750,8 +1753,7 @@ test("C4B2AS-09: a legacy chain with no current schema stays replayable and unqu
   );
 });
 
-test("C4B2AS-10: a chain with BEFORE_STATE_VERIFIED but legacy ROLLBACK_STARTED fails replay", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AS-10: a chain with BEFORE_STATE_VERIFIED but legacy ROLLBACK_STARTED fails replay", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f, descriptor } = await atEffectApplied();
   // Hand-write a chain whose ROLLBACK_STARTED predates the current schema, then
   // add a current marker. One current marker must not license the rest.
@@ -1764,8 +1766,7 @@ test("C4B2AS-10: a chain with BEFORE_STATE_VERIFIED but legacy ROLLBACK_STARTED 
   assert.match(String(legacyStart.reason), /rollback_started/);
 });
 
-test("C4B2AS-11/12/13: malformed current rollback evidence cannot be written", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AS-11/12/13: malformed current rollback evidence cannot be written", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f, descriptor } = await atEffectApplied();
   const good = {
     schema: CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
@@ -1985,8 +1986,7 @@ test("C4B2AS-21: a fabricated state cannot authorise a restoration the disk refu
   void base;
 });
 
-test("C4B2AS-22: a stale expected head is disclosed, never used as authority", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AS-22: a stale expected head is disclosed, never used as authority", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   await crossBoundaryDuringOutage(f, base);
@@ -2016,8 +2016,7 @@ test("C4B2AS-22: a stale expected head is disclosed, never used as authority", a
   assert.notEqual(bound.state.head_event_hash, stale.head_event_hash);
 });
 
-test("C4B2AS-23: no supplied state at all still derives a fresh disk context", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AS-23: no supplied state at all still derives a fresh disk context", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   await crossBoundaryDuringOutage(f, base);
@@ -2225,8 +2224,7 @@ test("C4B2AM-10: a retry after VERIFIED_ROLLBACK returns the same verified resul
   assert.equal((await replay(f)).sequence, seq);
 });
 
-test("C4B2AM-11/12/13/14: malformed adjudication fields are refused", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AM-11/12/13/14: malformed adjudication fields are refused", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f, descriptor } = await atEffectApplied();
   const good = {
     schema: CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
@@ -2256,8 +2254,7 @@ test("C4B2AM-11/12/13/14: malformed adjudication fields are refused", async (t) 
   assert.equal((await rawAppend(f, "ROLLBACK_STARTED", [good])).appended, true, "the valid shape still lands");
 });
 
-test("C4B2AM-15/16: a RESOLVED outcome disagreeing with the durable adjudication is refused", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4B2AM-15/16: a RESOLVED outcome disagreeing with the durable adjudication is refused", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f, descriptor } = await atEffectApplied();
   const adj = {
     schema: CORRIDOR_ROLLBACK_STARTED_EVIDENCE_SCHEMA,
@@ -2851,8 +2848,7 @@ async function takeOwnershipAway(f, verified) {
 // Task 2 therefore DEPENDS ON the Task 9 child-process harness. TAIL-01/TAIL-02
 // are withheld until that harness exists rather than shipped as assertions that
 // pass without the fence.
-test("C4D-TAIL-01b: the current owner still restores exactly once", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4D-TAIL-01b: the current owner still restores exactly once", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const { f, fencingToken } = await ownedRollbackFixture();
   let manifestCalls = 0;
   const base = f.build();
@@ -2948,8 +2944,7 @@ function runCrashWorker(f) {
   return acq.token;
 }
 
-test("C4D-TAIL-01: a successor resuming a crashed worker's rollback must be fenced before restoring", async (t) => {
-  if (!canEnforceDirWriteDenial()) { t.skip(SKIP_NO_MODE_ENFORCEMENT); return; }
+test("C4D-TAIL-01: a successor resuming a crashed worker's rollback must be fenced before restoring", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
   const f = await fixture();
   const base = f.build();
   const outage = await crossBoundaryDuringOutage(f, base, { blockOn: "undo" });

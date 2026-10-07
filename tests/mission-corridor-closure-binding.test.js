@@ -14,7 +14,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, execFile, spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile, readdir, chmod, unlink } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, readdir, chmod, unlink, appendFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -52,7 +52,6 @@ async function canEnforceWriteDenial() {
   const probe = join(dir, "probe");
   await writeFile(probe, "x");
   await chmod(probe, 0o400);
-  const { appendFile } = await import("node:fs/promises");
   try {
     await appendFile(probe, "y");
     return false; // permissions not enforced here (root / no-perm filesystem)
@@ -63,6 +62,11 @@ async function canEnforceWriteDenial() {
       await chmod(probe, 0o600);
     } catch {
       // best-effort restore
+    }
+    try {
+      await rm(dir, { recursive: true, force: true });
+    } catch {
+      // best-effort cleanup
     }
   }
 }

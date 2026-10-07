@@ -36,7 +36,7 @@ function freshHome() {
 // The two load-adversarial cases below depend on a real primitive error:
 // a 0o000 file must be UNREADABLE so the loader returns null. When the running
 // identity bypasses DAC permission bits (root, or a filesystem that ignores
-// modes), the chmod is a no-op and the restriction is simply not observable —
+// modes), chmod still changes mode bits but the expected read denial may not occur —
 // so the test skips honestly rather than asserting something it did not create.
 // Returns true when 0o000 is actually enforced (the read throws), false otherwise.
 function canEnforceFileModes() {
@@ -58,6 +58,10 @@ function canEnforceFileModes() {
     }
   }
 }
+
+const SKIP_WHEN_NO_MODE_ENFORCEMENT = canEnforceFileModes()
+  ? false
+  : "filesystem does not enforce modes for this process";
 
 after(() => {
   for (const dir of tempDirs) {
@@ -248,16 +252,12 @@ describe("initAuthorshipKey — no-clobber adversarial", () => {
 // ── loadPrivateKey / loadPublicKey adversarial ─────────────────────────────
 
 describe("loadPrivateKey — adversarial", () => {
-  it("returns null for a zero-permission (unreadable) private key file", async (t) => {
+  it("returns null for a zero-permission (unreadable) private key file", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
     const home = freshHome();
     const inited = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       demaHome: home,
     });
-    if (!canEnforceFileModes()) {
-      t.skip("filesystem does not enforce modes for this process");
-      return;
-    }
     // make unreadable by owner — open(O_RDONLY) will fail
     chmodSync(inited.private_key_path, 0o000);
     const result = await loadPrivateKey(home);
@@ -301,16 +301,12 @@ describe("loadPublicKey — adversarial", () => {
     assert.equal(await loadPublicKey(home), null);
   });
 
-  it("returns null for an unreadable public key file", async (t) => {
+  it("returns null for an unreadable public key file", { skip: SKIP_WHEN_NO_MODE_ENFORCEMENT }, async () => {
     const home = freshHome();
     const inited = await initAuthorshipKey({
       consent: KEY_INIT_CONSENT_PHRASE,
       demaHome: home,
     });
-    if (!canEnforceFileModes()) {
-      t.skip("filesystem does not enforce modes for this process");
-      return;
-    }
     chmodSync(inited.public_key_path, 0o000);
     assert.equal(await loadPublicKey(home), null);
   });
