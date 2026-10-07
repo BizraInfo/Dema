@@ -57,7 +57,12 @@ function isPathWithinScope(path, scopeRoot) {
     scopeRoot.length === 0
   )
     return false;
-  return path.startsWith(scopeRoot);
+  // Path containment, not string prefix. `/scope-evil` extends the string
+  // `/scope` but is a SIBLING, not a descendant. A bare startsWith admits it —
+  // the false-GREEN direction for a gate whose invariant is "never touches
+  // paths outside declared scope_root".
+  const root = scopeRoot.endsWith("/") ? scopeRoot.slice(0, -1) : scopeRoot;
+  return path === root || path.startsWith(`${root}/`);
 }
 
 export function buildFileAccessPreview({ declared_scope_root = "" } = {}) {

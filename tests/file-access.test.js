@@ -155,3 +155,59 @@ test("Summary + exports", () => {
   assert.ok(Object.isFrozen(FILE_ACCESS_OP_KINDS));
   assert.ok(Object.isFrozen(FILE_ACCESS_REQUIRED_BLOCKED_EFFECTS));
 });
+
+// ── PATH-CONTAINMENT-1A ──────────────────────────────────────────────────
+//
+// `isPathWithinScope` declared "File access never touches paths outside
+// declared scope_root" and implemented it with a bare string prefix. A sibling
+// directory whose NAME EXTENDS the scope root — /scope-evil against /scope —
+// therefore read as inside. This is the false-GREEN direction: a scope gate
+// admitting exactly what it exists to refuse.
+
+test("File access · sibling that name-extends the scope root is outside scope", () => {
+  const scope = "/home/u/scope";
+  for (const outside of [
+    "/home/u/scope-evil/secret.txt",
+    "/home/u/scopeX/a.txt",
+    "/home/u/scope.bak/a.txt",
+  ]) {
+    const r = buildFileOpRequest({
+      scope_root: scope,
+      path: outside,
+      op_kind: "read",
+      purpose: "containment probe",
+    });
+    assert.equal(
+      r.within_declared_scope,
+      false,
+      `${outside} must not be within ${scope}`,
+    );
+    assert.ok(
+      r.violations.some((v) => v.startsWith("path_outside_scope")),
+      `${outside} must raise path_outside_scope`,
+    );
+  }
+});
+
+test("File access · scope root and true descendants remain inside", () => {
+  // Control: a fix that refuses everything would satisfy the test above and be
+  // useless. This proves the containment check still admits what it should.
+  const scope = "/home/u/scope";
+  for (const inside of [
+    "/home/u/scope",
+    "/home/u/scope/a.txt",
+    "/home/u/scope/nested/b.txt",
+  ]) {
+    const r = buildFileOpRequest({
+      scope_root: scope,
+      path: inside,
+      op_kind: "read",
+      purpose: "containment control",
+    });
+    assert.equal(
+      r.within_declared_scope,
+      true,
+      `${inside} must be within ${scope}`,
+    );
+  }
+});
