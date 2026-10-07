@@ -210,6 +210,87 @@ test('forged qualification_ready fails body-bound verify even with original repo
   );
 });
 
+test('verify fails closed on invalid schema, truth label, missing input, hash mismatch, and boundary poison', () => {
+  assert.equal(verifyAgentLaunchpadGenesisPreview(null).ok, false);
+  assert.deepEqual(verifyAgentLaunchpadGenesisPreview({ schema: 'nope' }).blocked_by, ['invalid_schema']);
+
+  const r = buildAgentLaunchpadGenesisPreview(base());
+  assert.ok(verifyAgentLaunchpadGenesisPreview({ ...r, truth_label: 'WRONG' }).blocked_by.includes('invalid_truth_label'));
+  assert.ok(verifyAgentLaunchpadGenesisPreview({ ...r, input: null }).blocked_by.includes('input_missing'));
+  assert.ok(
+    verifyAgentLaunchpadGenesisPreview({ ...r, report_hash: H('0') }).blocked_by.includes('semantic_rederivation_mismatch'),
+  );
+  assert.ok(
+    verifyAgentLaunchpadGenesisPreview({
+      ...r,
+      boundary: { ...r.boundary, network_used: true },
+    }).blocked_by.includes('boundary_not_false'),
+  );
+});
+
+test('non-independent admitted evidence projects HHMM L0 as OBSERVED', () => {
+  const i = base();
+  i.evidence = [
+    {
+      id: 'e1', kind: 'test', ref: 'tests/example.test.js', digest: H('d'),
+      epistemic: 'MEASURED', freshness: 'CURRENT', independent: false, scope_match: true,
+    },
+  ];
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.hhmm.L0_evidence, 'OBSERVED');
+});
+
+test('unknown verifier SAT id is BLOCKED', () => {
+  const i = base();
+  i.verifier_agent_id = 'sat.not-a-canonical';
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+});
+
+test('empty evidence yields UNKNOWN HHMM L0 and zero SNR score branch', () => {
+  const i = base();
+  i.evidence = [];
+  i.receipt_refs = [];
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.hhmm.L0_evidence, 'UNKNOWN');
+  assert.equal(r.snr.score, 0);
+  assert.equal(r.process_mining.result, 'NO_ADMISSIBLE_TRACE_SET');
+});
+
+test('bare hex digests and non-array evidence/receipts normalize without throwing', () => {
+  const i = base();
+  const bare = 'f'.repeat(64);
+  i.agent_profile_hash = bare;
+  i.verification_contract_hash = bare;
+  i.mission_contract_hash = i.mission_contract_hash.replace(/^sha256:/, '');
+  i.evidence = [
+    {
+      id: 'e1', kind: 'test', ref: 'tests/example.test.js', digest: bare,
+      epistemic: 'MEASURED', freshness: 'CURRENT', independent: true, scope_match: true,
+    },
+  ];
+  i.receipt_refs = [bare, 12, null];
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION');
+  assert.equal(r.admitted_evidence[0].digest, `sha256:${bare}`);
+  assert.equal(r.process_mining.result, 'CANDIDATE_TRACE_SET');
+});
+
+test('shape and effect refusals cover remaining blocked branches', () => {
+  for (const patch of [
+    { capsule_id: '' },
+    { agent_profile_hash: 'not-a-digest' },
+    { effect_class: 'C9_FORBIDDEN' },
+    { mission_contract: ['array'] },
+  ]) {
+    const r = buildAgentLaunchpadGenesisPreview({ ...base(), ...patch });
+    assert.equal(r.state, 'BLOCKED', JSON.stringify(patch));
+  }
+  const nonArrayEvidence = buildAgentLaunchpadGenesisPreview({ ...base(), evidence: { not: 'array' } });
+  assert.equal(Array.isArray(nonArrayEvidence.admitted_evidence), true);
+  assert.equal(nonArrayEvidence.admitted_evidence.length, 0);
+});
+
 test('public preview boundary remains all false', () => {
   const r = buildAgentLaunchpadGenesisPreview(base());
   assert.ok(Object.values(r.boundary).every((v) => v === false));
