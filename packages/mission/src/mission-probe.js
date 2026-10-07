@@ -43,6 +43,11 @@ const STATIC_CHECKED_KEYS = [
   "prompt_executed",
   "external_call_performed",
   "public_network_used",
+  // CORRECTION-1B added these two capability-disclosure keys to the health
+  // boundary. They are classified with their siblings rather than left
+  // unclassified — an unclassified boundary key is a claim nobody is checking.
+  "local_loopback_used",
+  "child_process_invoked",
 ];
 const DECLARED_NOT_OBSERVABLE_KEYS = [
   "raw_corpus_scan_performed",
@@ -52,6 +57,25 @@ const DECLARED_NOT_OBSERVABLE_KEYS = [
   "receipt_mint_performed",
   "federation_invoked",
   "node_connection_performed",
+];
+
+// PROMOTION-CORRECTION-1C item 17.
+//
+// This list excluded `node0-adapter.js`, so once CORRECTION-1B wired health to
+// the real adapter the scan stopped covering the chain's actual transport
+// capability — and kept reporting "0 forbidden imports" about a chain that can
+// now spawn a child process and open a local connection. The claim was not
+// false about the files it read; it was false about the question it appeared to
+// answer.
+//
+// The fix is NOT to keep the number at zero. The capability is real, so the
+// probe now scans two tiers and reports them differently:
+//   PURE tier      — must contain zero transport capability. Non-zero is a defect.
+//   TRANSPORT tier — capability EXPECTED. Its presence is disclosed, not failed,
+//                    and the receipt is required to admit it.
+const TRANSPORT_SOURCE_FILES = [
+  "packages/node-adapter/src/node0-adapter.js",
+  "packages/node-adapter/src/gateway-http-adapter.js",
 ];
 
 const SOURCE_FILES = [
@@ -67,10 +91,10 @@ const SOURCE_FILES = [
   "packages/core/src/preview-boundary.js",
 ];
 
-async function scanForbiddenImports(repoRoot) {
+async function scanForbiddenImports(repoRoot, files = SOURCE_FILES) {
   let totalForbidden = 0;
   const details = [];
-  for (const rel of SOURCE_FILES) {
+  for (const rel of files) {
     let content;
     try {
       content = await readFile(join(repoRoot, rel), "utf8");
@@ -108,6 +132,10 @@ async function probeBoundary(home, repoRoot) {
   const newFiles = afterFiles.filter((f) => !beforeFiles.includes(f));
   const boundary = result.attests?.boundary || {};
   const scan = await scanForbiddenImports(repoRoot);
+  // Item 17: the transport tier is scanned SEPARATELY. Capability here is
+  // expected, so it is disclosed rather than failed — and the receipt is then
+  // required to admit it instead of denying it.
+  const transportScan = await scanForbiddenImports(repoRoot, TRANSPORT_SOURCE_FILES);
 
   const evidence = {};
   const failures = [];
@@ -135,7 +163,29 @@ async function probeBoundary(home, repoRoot) {
     };
   }
   if (scan.forbidden > 0) {
-    failures.push(`static check found ${scan.forbidden} forbidden imports`);
+    failures.push(`static check found ${scan.forbidden} forbidden imports in the PURE tier`);
+  }
+
+  // The transport tier is reachable from health as of CORRECTION-1B. Its
+  // capability is a fact about the chain, so it is reported — and the ONLY
+  // failure mode is a receipt that denies what the chain can do. A boundary
+  // claiming `network_used:false` and `child_process_invoked:false` while the
+  // reachable adapter contains both is the exact laundering this probe exists
+  // to catch, one layer further out than it used to look.
+  evidence.transport_tier = {
+    level: "STATIC_CHECKED",
+    files: TRANSPORT_SOURCE_FILES.length,
+    capability_present: transportScan.forbidden > 0,
+    capability_hits: transportScan.forbidden,
+    reachable_from_health: true,
+    note: "capability is EXPECTED here; the receipt must disclose it, not deny it",
+  };
+  if (transportScan.forbidden === 0) {
+    // Not a pass — a surprise. If the adapters ever contain no transport at
+    // all, this list is stale and is silently covering nothing again.
+    failures.push(
+      "transport tier shows zero capability — TRANSPORT_SOURCE_FILES is probably stale",
+    );
   }
 
   const allBoundaryKeys = Object.keys(boundary);
