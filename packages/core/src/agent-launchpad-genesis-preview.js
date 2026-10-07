@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
 
-import { verifyCanonicalJsonHashV1 } from '../../canon/src/sha256-canonical-json-v1.js';
-import { CONTRACT_FIELDS } from './mission-contract-state.js';
+import {
+  CONTRACT_FIELDS,
+  MISSION_CONTRACT_GO_PHRASE,
+  createMissionContract,
+} from './mission-contract-state.js';
 
 export const AGENT_LAUNCHPAD_GENESIS_PREVIEW_SCHEMA =
   'bizra.dema.agent_launchpad_genesis_preview.v0.1';
@@ -82,10 +85,11 @@ function exactContractFieldKeys(body) {
   return expected.every((key, index) => actual[index] === key);
 }
 
-/// Bind caller mission body to the canonical mission-contract hash owner.
-/// Hash-only self-attestation is refused. Does not call createMissionContract
-/// (would require inventing/consuming consent); hash re-derivation uses the
-/// same sha256CanonicalJsonV1 bytes that createMissionContract seals.
+/// Bind caller mission body to the canonical mission-contract owner.
+/// Hash-only self-attestation is refused. Re-seals through createMissionContract
+/// so vacuous/invalid semantics that a keys-only hash check would accept are
+/// blocked. The GO phrase here is the owner's validation API gate — not a
+/// manufactured human consent event (boundary.human_consent_manufactured stays false).
 function bindMissionContractOwner({ mission_contract, mission_contract_hash } = {}) {
   const claimed = normalizeDigest(mission_contract_hash);
   const blockers = [];
@@ -98,9 +102,21 @@ function bindMissionContractOwner({ mission_contract, mission_contract_hash } = 
 
   let recomputed = null;
   if (blockers.length === 0) {
-    const check = verifyCanonicalJsonHashV1(mission_contract, claimed);
-    recomputed = check.recomputed_hash ?? null;
-    if (!check.ok) blockers.push('mission_contract_hash_mismatch');
+    try {
+      const sealed = createMissionContract({
+        fields: {
+          ...mission_contract,
+          acceptance_criteria: [...mission_contract.acceptance_criteria],
+          prohibited_outcomes: [...mission_contract.prohibited_outcomes],
+          completion_conditions: [...mission_contract.completion_conditions],
+        },
+        consent: MISSION_CONTRACT_GO_PHRASE,
+      });
+      recomputed = sealed.contract_hash;
+      if (sealed.contract_hash !== claimed) blockers.push('mission_contract_hash_mismatch');
+    } catch (err) {
+      blockers.push(typeof err?.code === 'string' ? err.code : 'mission_contract_semantics_invalid');
+    }
   }
 
   return Object.freeze({
@@ -529,9 +545,22 @@ export function verifyAgentLaunchpadGenesisPreview(report) {
     blocked_by.push('input_missing');
   } else {
     const rebuilt = buildAgentLaunchpadGenesisPreview(report.input);
-    if (rebuilt.report_hash !== report.report_hash) blocked_by.push('semantic_rederivation_mismatch');
+    if (rebuilt.report_hash !== report.report_hash) {
+      blocked_by.push('semantic_rederivation_mismatch');
+    }
+    // Bind submitted body (excluding report_hash) to the rebuilt body so a
+    // caller cannot forge qualification_ready/launched/etc. while keeping the
+    // original report_hash that only covers the honest rebuild path.
+    const { report_hash: _submittedHash, ...submittedBody } = report;
+    const { report_hash: _rebuiltHash, ...rebuiltBody } = rebuilt;
+    if (sha256Canonical(submittedBody) !== sha256Canonical(rebuiltBody)) {
+      blocked_by.push('report_body_mismatch');
+    }
   }
   if (report.launched !== false) blocked_by.push('preview_cannot_be_launched');
+  if (report.qualification_ready !== false) {
+    blocked_by.push('qualification_ready_must_be_false');
+  }
   if (report.boundary && Object.values(report.boundary).some((v) => v !== false)) {
     blocked_by.push('boundary_not_false');
   }

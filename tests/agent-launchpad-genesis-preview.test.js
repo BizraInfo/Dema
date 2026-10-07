@@ -9,6 +9,7 @@ import {
   createMissionContract,
   MISSION_CONTRACT_GO_PHRASE,
 } from '../packages/core/src/mission-contract-state.js';
+import { sha256CanonicalJsonV1 } from '../packages/canon/src/sha256-canonical-json-v1.js';
 
 const H = (ch) => `sha256:${ch.repeat(64)}`;
 
@@ -102,6 +103,23 @@ test('1C malformed mission shape is BLOCKED', () => {
   assert.equal(r.mission_owner_binding.ok, false);
 });
 
+test('1C vacuous mission semantics are BLOCKED even when body hash matches keys-only digest', () => {
+  const i = base();
+  const vacuous = {
+    ...i.mission_contract,
+    acceptance_criteria: [],
+    acceptance_contract: {},
+    iteration_budget: -1,
+  };
+  i.mission_contract = vacuous;
+  // Attacker hashes the vacuous body with the byte algorithm but skips owner validation.
+  i.mission_contract_hash = sha256CanonicalJsonV1(vacuous);
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.equal(r.mission_owner_binding.ok, false);
+  assert.equal(r.qualification_candidate, false);
+});
+
 test('unknown thirteenth agent cannot become creator', () => {
   const i = base();
   i.creator_agent_id = 'pat.thirteenth';
@@ -179,6 +197,17 @@ test('tampered report fails semantic re-derivation', () => {
   const r = buildAgentLaunchpadGenesisPreview(base());
   const forged = { ...r, launched: true, report_hash: r.report_hash };
   assert.equal(verifyAgentLaunchpadGenesisPreview(forged).ok, false);
+});
+
+test('forged qualification_ready fails body-bound verify even with original report_hash', () => {
+  const r = buildAgentLaunchpadGenesisPreview(base());
+  const forged = { ...r, qualification_ready: true };
+  const v = verifyAgentLaunchpadGenesisPreview(forged);
+  assert.equal(v.ok, false);
+  assert.ok(
+    v.blocked_by.includes('report_body_mismatch')
+      || v.blocked_by.includes('qualification_ready_must_be_false'),
+  );
 });
 
 test('public preview boundary remains all false', () => {
