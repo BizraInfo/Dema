@@ -164,7 +164,7 @@ The four primary rails (`check`, `BIZRA Review Gate`, `CodeQL`, `gitleaks`) must
 | ---------------- | --------------------------------------------------------------------------- |
 | Checkout         | `actions/checkout@de0fac2e` with `fetch-depth: 0` (full history)            |
 | Install gitleaks | Direct binary download · v8.30.1 · SHA-256 verified                         |
-| Scan             | `./gitleaks detect --source . --no-banner --verbose --exit-code 1 --redact` |
+| Scan             | `node scripts/review/gitleaks-dual-eval.mjs` (pinned gitleaks v8.30.1 dual base/candidate eval) |
 
 **SHA-256 pin on the gitleaks binary:** `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb`. The download URL is GitHub Releases (`gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz`). A SHA-256 mismatch fails the workflow before scanning — the binary itself is trust-pinned.
 

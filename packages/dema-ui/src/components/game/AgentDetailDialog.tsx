@@ -54,7 +54,7 @@ export function AgentDetailDialog({
               {/* The agent carries this from fleet-canon.ts. The detail view is where a
                   user goes to understand an agent — the maturity must be visible here. */}
               <div className="mt-1.5">
-                <TruthLabelBadge label={agent.truthLabel} size="xs" />
+                <TruthLabelBadge label={agent.truthLabel ?? "UNKNOWN"} size="xs" />
               </div>
               <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1">

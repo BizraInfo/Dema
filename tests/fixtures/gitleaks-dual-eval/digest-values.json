@@ -1,0 +1,8 @@
+{
+  "schema": "bizra.dema.gitleaks_dual_eval.fixture.v0.1",
+  "note": "Synthetic lowercase 64-hex digests only — not credentials.",
+  "digests": {
+    "artifact-a.bin": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "artifact-b.bin": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}

@@ -28,3 +28,11 @@ bd21b536d00ada72867021275df0810d540aa156:backlog/docs/audits/bizra-pdmlc-baselin
 #    all other rules remain scanned.
 797810e58c48fac0d423a1da6b6b550b1935c74a:eval season plan e.md:generic-api-key:5360
 797810e58c48fac0d423a1da6b6b550b1935c74a:sessionlast.md:generic-api-key:2531
+# Tip-commit re-fingerprints (same locations; gitleaks keys findings by the
+# commit that currently carries the blob in the scanned walk).
+01dbf8ffb7a9c251645967be1d4d08f16716e2f7:eval season plan e.md:generic-api-key:5360
+01dbf8ffb7a9c251645967be1d4d08f16716e2f7:sessionlast.md:generic-api-key:2531
+
+# 5) C-005 candidate source manifest: one JSON line of path→sha256 content hashes
+#    (evidence record, not credentials). Fingerprint-scoped to the introducing commit.
+4b7dea6f541ea444461cc8f5f234418dc6ed5d13:docs/receipts/crossings/C-005-20261004T181623Z-candidate-source-manifest.json:generic-api-key:1

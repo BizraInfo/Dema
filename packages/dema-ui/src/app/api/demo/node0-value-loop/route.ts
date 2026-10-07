@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-// @ts-expect-error — plain ESM kernel
 import {
   buildNode0KillerDemoValueLoopCli,
   verifyNode0KillerDemoValueLoopCli,

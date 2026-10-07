@@ -157,6 +157,7 @@ export const commands = [
   ["node", ["scripts/review/npc-intent-binder-hardening-check.mjs"]],
   ["node", ["scripts/review/kernel-purity-check.mjs"]],
   ["node", ["scripts/review/no-overclaim.mjs"]],
+  ["node", ["scripts/review/content-required-gates.mjs"]],
   ["node", ["scripts/review/proof-scope.mjs"]],
   ["node", ["scripts/review/agent-dna-root-coherence.mjs"]],
   ["node", ["scripts/review/negative-verdict-reason-gate.mjs"]],
