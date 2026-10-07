@@ -1,0 +1,15 @@
+{
+  "task_id": "task-root-safe-fault-injection",
+  "task_description": "Repair the single OUTWARD/environmental root cause of all 25 current `npm test` failures in the Dema repo: the suite runs as root (uid=0), and root bypasses DAC permission bits, so the chmod-based fault-injection seams in three test files never fire and their adversarial assertions fail. The code under test is correct; CI (non-root) is green. Fix by mirroring the canonical in-repo pattern (tests/first-encounter-admission.test.js: probe whether modes are enforced, else t.skip with an honest reason), so the full suite is G8-clean on this host without faking any pass and without weakening the no-false-GREEN classifier. Update CURRENT_LIMITS.md honestly and emit a proof receipt bound to HEAD.",
+  "status": "completed",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null,
+  "head_sha": "01dbf8ffb7a9c251645967be1d4d08f16716e2f7",
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "Independently re-ran all three affected files (# tests 142, # pass 117, # fail 0, # skipped 25 — exactly the previously-failing 2+22+1 set) and the full `npm test` (# tests 10126, # pass 10080, # fail 0, # skipped 46; [G8 GATE] 'Clean run: 0 failures, 0 not-ok lines. Exit 0'; FULL_EXIT=0). No build step exists for the JS path (zero deps); no Dockerfile for this slice so docker_build skipped. Test-quality verified by reading the diff: the skip guards are CONDITIONAL (each probes real mode enforcement via a hermetic canEnforce* helper and restores perms in finally), the real assertions are preserved unchanged under the guard, so they still run and would fail on a mode-enforcing host (CI ubuntu-latest) if the production code regressed — this is honest skip-on-root, not a blanket skip or false-GREEN. Confirmed scripts/ci/classify-known-harness-failures.mjs has ZERO line changes and packages/** has ZERO line changes (only mode-bit noise pre-existing in the working tree); the only content changes are tests/authorship-key-store-negative.test.js (+37/-2), tests/c4b2a-mechanical-rollback-wiring.test.js (+83/-23), tests/mission-corridor-closure-binding.test.js (+34/-1), docs/CURRENT_LIMITS.md (+2), and the new receipt.json. CURRENT_LIMITS note is SHA-bound and explicitly states skip != pass."
+  }
+}

@@ -1,12 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const BIN = fileURLToPath(new URL("../bin/dema", import.meta.url));
+const CONSENT = "GO: scan homebase metadata only";
 
 function freshFixture() {
   const root = mkdtempSync(join(tmpdir(), "hb-asset-cli-"));
@@ -25,12 +32,55 @@ function scan(args, env = {}) {
   });
 }
 
-test("dema assets scan --json emits awareness schema and metadata boundary", () => {
+function inventoryExists(home) {
+  return existsSync(join(home, "realm", "local-assets", "inventory-v0.1.json"));
+}
+
+test("dema assets scan requires consent before scanning or writing inventory", () => {
   const root = freshFixture();
   const home = mkdtempSync(join(tmpdir(), "hb-asset-home-"));
   try {
-    const out = scan(["--root", root, "--json"], { DEMA_HOME: home });
+    const output = JSON.parse(scan(["--root", root, "--json"], { DEMA_HOME: home }));
+    assert.equal(output.scan_allowed, false);
+    assert.equal(output.scan_performed, false);
+    assert.equal(output.scan_result, null);
+    assert.equal(output.boundary.homebase_scan_performed, false);
+    assert.equal(inventoryExists(home), false);
+    const human = scan(["--root", root], { DEMA_HOME: home });
+    assert.match(human, /GO: scan homebase metadata only/);
+    assert.match(human, /NOT read file contents/i);
+    assert.equal(inventoryExists(home), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("wrong assets scan consent exits non-zero without writing inventory", () => {
+  const root = freshFixture();
+  const home = mkdtempSync(join(tmpdir(), "hb-asset-home-"));
+  try {
+    assert.throws(
+      () => scan(["--root", root, "--consent", "scan please"], { DEMA_HOME: home }),
+      (error) => error.status === 1,
+    );
+    assert.equal(inventoryExists(home), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("exact consent lets assets scan emit awareness and write inventory", () => {
+  const root = freshFixture();
+  const home = mkdtempSync(join(tmpdir(), "hb-asset-home-"));
+  try {
+    const out = scan(["--root", root, "--consent", CONSENT, "--json"], {
+      DEMA_HOME: home,
+    });
     const j = JSON.parse(out);
+    assert.equal(j.consent_verified, true);
+    assert.equal(j.scan_performed, true);
     assert.equal(j.schema, "bizra.dema.homebase_asset_awareness.v0.1");
     assert.equal(j.truth_label, "DEMA_HOMEBASE_ASSET_AWARENESS_METADATA_ONLY");
     assert.equal(j.boundary.file_content_read, false);
@@ -41,6 +91,7 @@ test("dema assets scan --json emits awareness schema and metadata boundary", () 
     assert.ok(Array.isArray(j.monetization_candidates));
     assert.ok(Array.isArray(j.risk_flags));
     assert.equal(j.inventory_write?.written, true);
+    assert.equal(inventoryExists(home), true);
     const raw = JSON.stringify(j);
     assert.equal(raw.includes("SECRET=true"), false);
     assert.equal(raw.includes(".env"), false);
@@ -52,14 +103,18 @@ test("dema assets scan --json emits awareness schema and metadata boundary", () 
 
 test("human summary discloses metadata-only boundary and gem counts", () => {
   const root = freshFixture();
+  const home = mkdtempSync(join(tmpdir(), "hb-asset-home-"));
   try {
-    const out = scan(["--root", root]);
+    const out = scan(["--root", root, "--consent", CONSENT], {
+      DEMA_HOME: home,
+    });
     assert.match(out, /metadata only/i);
     assert.match(out, /hidden gems/i);
     assert.match(out, /no content/i);
     assert.match(out, /no network/i);
   } finally {
     rmSync(root, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
   }
 });
 

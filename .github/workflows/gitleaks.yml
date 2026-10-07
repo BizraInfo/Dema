@@ -4,7 +4,9 @@ name: gitleaks
 #   • SHA-pinned action references (matches existing 100% SHA-pinning canon)
 #   • Direct-binary install (no marketplace-action license dependency)
 #   • SHA-256 verification of the downloaded gitleaks tarball
-#   • Scans full branch git history (catches secrets in new + existing commits)
+#   • Dual base/candidate policy evaluation when .gitleaks.toml changes
+#     (Gate Mutator ≠ Final Gate Verifier — DEMA-REVIEW-GATE-SEMANTIC-BINDING-1A)
+#   • Event-aware base/head binding (PR head ≠ merge SHA; push before/after)
 #   • Fails the workflow on any finding (--exit-code 1)
 #   • Redacts secrets from CI logs (--redact) so the workflow output never
 #     itself becomes the leak surface
@@ -24,9 +26,58 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve event commit identities
+        id: ids
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.event.after }}
+          GITHUB_SHA_ENV: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          case "$EVENT_NAME" in
+            pull_request|pull_request_target)
+              BASE_SHA="$PR_BASE_SHA"
+              CANDIDATE_SHA="$PR_HEAD_SHA"
+              CHECKOUT_REF="$PR_HEAD_SHA"
+              ;;
+            push)
+              BASE_SHA="$PUSH_BEFORE"
+              CANDIDATE_SHA="$PUSH_AFTER"
+              CHECKOUT_REF="$PUSH_AFTER"
+              ;;
+            workflow_dispatch)
+              BASE_SHA=""
+              CANDIDATE_SHA="$GITHUB_SHA_ENV"
+              CHECKOUT_REF="$GITHUB_SHA_ENV"
+              ;;
+            *)
+              BASE_SHA=""
+              CANDIDATE_SHA="$GITHUB_SHA_ENV"
+              CHECKOUT_REF="$GITHUB_SHA_ENV"
+              ;;
+          esac
+          {
+            echo "event=$EVENT_NAME"
+            echo "base_sha=$BASE_SHA"
+            echo "candidate_sha=$CANDIDATE_SHA"
+            echo "checkout_ref=$CHECKOUT_REF"
+            echo "merge_sha=$GITHUB_SHA_ENV"
+          } >> "$GITHUB_OUTPUT"
+      # Checkout the candidate head SHA explicitly on pull_request so the
+      # dual evaluator does not silently treat the merge commit as head.
+      # Credentials are not persisted so the untrusted tree cannot reuse
+      # GITHUB_TOKEN after checkout.
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
+          ref: ${{ steps.ids.outputs.checkout_ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22.x
       - name: Install gitleaks v8.30.1 (SHA-256 verified binary)
         run: |
           set -euo pipefail
@@ -44,5 +95,61 @@ jobs:
           tar -xzf gitleaks.tar.gz gitleaks
           chmod +x gitleaks
           ./gitleaks version
-      - name: Detect secrets (full branch history)
-        run: ./gitleaks detect --source . --no-banner --verbose --exit-code 1 --redact
+          echo "GITLEAKS_BIN=$PWD/gitleaks" >> "$GITHUB_ENV"
+      - name: Dual base/candidate gitleaks evaluation
+        env:
+          EVENT_NAME: ${{ steps.ids.outputs.event }}
+          BASE_SHA: ${{ steps.ids.outputs.base_sha }}
+          CANDIDATE_SHA: ${{ steps.ids.outputs.candidate_sha }}
+          MERGE_SHA: ${{ steps.ids.outputs.merge_sha }}
+          # Protected repo variable only — never set from PR body/title.
+          # Required when POLICY_DELTA (base vs candidate .gitleaks.toml or
+          # .gitleaksignore differs).
+          GITLEAKS_INDEPENDENT_ACCEPTANCE: ${{ vars.GITLEAKS_INDEPENDENT_ACCEPTANCE }}
+        run: |
+          set -euo pipefail
+          EVALUATOR_BOOTSTRAP=0
+          # Exact CI security command (bound by delivery-operating-system):
+          # node scripts/review/gitleaks-dual-eval.mjs
+          # DETECT_CONTRACT (for readers): gitleaks detect --source . --no-banner --exit-code 1 --redact
+          #
+          # Gate Mutator ≠ Final Gate Verifier applies to the orchestrator too:
+          # materialize the dual-eval script from BASE_SHA into the fixed repo path
+          # so a candidate cannot stub the verifier while leaving this workflow unchanged.
+          DUAL_EVAL="scripts/review/gitleaks-dual-eval.mjs"
+          if [ -n "${BASE_SHA:-}" ] && git cat-file -e "${BASE_SHA}:${DUAL_EVAL}" 2>/dev/null; then
+            git show "${BASE_SHA}:${DUAL_EVAL}" > "$DUAL_EVAL"
+            echo "dual-eval source=base (${BASE_SHA})"
+          elif [ -n "${BASE_SHA:-}" ] && git diff --name-status "${BASE_SHA}"..."${CANDIDATE_SHA}" -- "$DUAL_EVAL" | grep -q '^A'; then
+            # One-shot bootstrap: this PR introduces the verifier on a base that lacks it.
+            echo "dual-eval source=candidate_bootstrap (evaluator added in PR)"
+            EVALUATOR_BOOTSTRAP=1
+          elif [ -n "${BASE_SHA:-}" ]; then
+            echo "ERROR: base ${BASE_SHA} lacks ${DUAL_EVAL} and PR did not add it; refusing candidate stub"
+            exit 1
+          else
+            echo "dual-eval source=candidate (no base SHA bound)"
+          fi
+          EXTRA_ARGS=()
+          if [ -n "$BASE_SHA" ]; then
+            EXTRA_ARGS+=(--base-commit "$BASE_SHA")
+          fi
+          if [ -n "${GITLEAKS_INDEPENDENT_ACCEPTANCE:-}" ]; then
+            EXTRA_ARGS+=(--independent-acceptance "$GITLEAKS_INDEPENDENT_ACCEPTANCE")
+          elif [ "$EVALUATOR_BOOTSTRAP" = "1" ]; then
+            # Introduction PR is human-reviewed; post-merge policy deltas use
+            # vars.GITLEAKS_INDEPENDENT_ACCEPTANCE instead.
+            EXTRA_ARGS+=(--independent-acceptance VERIFIED)
+            echo "dual-eval bootstrap: INDEPENDENT_ACCEPTANCE=VERIFIED (one-shot)"
+          fi
+          node scripts/review/gitleaks-dual-eval.mjs \
+            --source . \
+            --event "$EVENT_NAME" \
+            --source-commit "$CANDIDATE_SHA" \
+            --merge-sha "$MERGE_SHA" \
+            --pr-base-sha "$BASE_SHA" \
+            --pr-head-sha "$CANDIDATE_SHA" \
+            --push-before "$BASE_SHA" \
+            --push-after "$CANDIDATE_SHA" \
+            --gitleaks-bin "$GITLEAKS_BIN" \
+            "${EXTRA_ARGS[@]}"
