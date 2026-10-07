@@ -1,0 +1,237 @@
+{
+  "schema": "bizra.crossing_receipt.v0.1",
+  "crossing_id": "C-001",
+  "run_id": "20261002T211702Z",
+  "trigger_phrase_sha256": null,
+  "trigger_phrase_scope": "C-001 has no GO phrase. null binds that absence. It is not the hash of a phrase.",
+  "before_identity": {
+    "head": "30973a4005cbcbbd1267fcdba63e21528cbf5f89",
+    "head_scope": "git rev-parse HEAD at the binding pass",
+    "dirty_paths": 204,
+    "dirty_paths_scope": "git status --short before this run's campaign files: 117 modified, 87 untracked"
+  },
+  "instruction_copy": {
+    "path": "docs/CROSSING_SEASON_AGENT_INSTRUCTION_v1.0.md",
+    "sha256": "fbba26d1ccee8d70fe022cd09bfda0c4fb86fc28c62f1ac867a088d96745f524",
+    "sha256_scope": "bytes of that path after the copy was written, 253 lines"
+  },
+  "head_integrity": {
+    "head_loads_without_untracked_files": false,
+    "evidence": "packages/core/src/dema-sovereign-companion-loop.js at HEAD imports ./dema-face-turn-preview.js; git cat-file reports that target exists on disk but not in HEAD"
+  },
+  "bindings": [
+    {
+      "path": "/home/bizra-operating-system/Documents/Codex/2026-10-02/DEMA_MUMU_PRODUCT_EXECUTION_CONTRACT_1A.md",
+      "sha256": "d0fc99155e61a2328d408963d6a519a3a7ec724529614ad98f7bbd7730250a63",
+      "sha256_scope": "bytes of the contract file, 20207 bytes",
+      "state": "EXTERNAL",
+      "matches_cited_prefix": true
+    },
+    {
+      "path": "packages/core/src/dema-face-turn-preview.js",
+      "sha256": "b7e4148adf5b692bbc9e4ec7c85fc005af131cf6a28d218b6e624e1a860169b3",
+      "sha256_scope": "working-tree bytes",
+      "state": "NEW",
+      "stratum": "FACE_TURN_WHOLE_FILE"
+    },
+    {
+      "path": "tests/dema-face-turn-preview.test.js",
+      "sha256": "6acf58df198cc6707f26033f54e09b8461e735632338645cef27b3b4c714dc10",
+      "sha256_scope": "working-tree bytes",
+      "state": "NEW",
+      "stratum": "FACE_TURN_WHOLE_FILE"
+    },
+    {
+      "path": "scripts/review/dema-face-turn-preview-check.mjs",
+      "sha256": "6dfa6d86a32de475f9a922e3e0cb6ca969ecd1cab656c2304d5199f60a772bb1",
+      "sha256_scope": "working-tree bytes",
+      "state": "NEW",
+      "stratum": "FACE_TURN_WHOLE_FILE"
+    },
+    {
+      "path": "docs/02-architecture/DEMA_FACE_TURN_PREVIEW_v0_1.md",
+      "sha256": "6ee599c61902ab71648475d387009d4faeec6818b10eb77588f7f224b6ec74e2",
+      "sha256_scope": "working-tree bytes",
+      "state": "NEW",
+      "stratum": "FACE_TURN_WHOLE_FILE"
+    },
+    {
+      "path": "docs/receipts/DEMA_FACE_TURN_PREVIEW_1A.md",
+      "sha256": "39320a236ef88720ba07633e36841d4a1709a1329b4e5cae7cc50dd5fa8b4693",
+      "sha256_scope": "working-tree bytes",
+      "state": "NEW",
+      "stratum": "FACE_TURN_WHOLE_FILE"
+    },
+    {
+      "path": "docs/CURRENT_LIMITS.md",
+      "sha256": "ab05d9088b2dcaa679f9e9384edf6aeec754991b5c98746c170ff50a2b9a8669",
+      "sha256_scope": "dirty working-tree bytes, not HEAD",
+      "state": "DIRTY",
+      "stratum": "FACE_TURN_MIXED_EXCLUDED"
+    },
+    {
+      "path": "docs/TESTING.md",
+      "sha256": "f42e44d806f9758ca9c6891c33de24be8d0f038b121d06fb420a33c5b7245d81",
+      "sha256_scope": "dirty working-tree bytes, not HEAD",
+      "state": "DIRTY",
+      "stratum": "FACE_TURN_MIXED_EXCLUDED"
+    },
+    {
+      "path": "packages/core/src/dema-capability-truth-registry.js",
+      "sha256": "a4c2feaf89b23fed5ae3589b77665496fec868e8dd7d9afad7135a6c875c3459",
+      "sha256_scope": "dirty working-tree bytes, not HEAD",
+      "state": "DIRTY",
+      "stratum": "FACE_TURN_MIXED_EXCLUDED"
+    },
+    {
+      "path": "scripts/check.mjs",
+      "sha256": "67fdba6fd4479ef9ed2e53ed45bbf164c0005c9b7b55155e9aca4d24576c5efd",
+      "sha256_scope": "dirty working-tree bytes, not HEAD",
+      "state": "DIRTY",
+      "stratum": "FACE_TURN_MIXED_EXCLUDED"
+    },
+    {
+      "path": "scripts/review/canonical-json-v1-check.mjs",
+      "sha256": "08c245f49c624a7b39affdb176d02790e9c7058abf255853a7d7415e442dec03",
+      "sha256_scope": "dirty working-tree bytes, not HEAD",
+      "state": "DIRTY",
+      "stratum": "FACE_TURN_MIXED_EXCLUDED"
+    },
+    {
+      "path": "packages/core/src/dema-sovereign-companion-loop.js",
+      "sha256": "a331cbbef98bc9c407afe8fc6c60b4e8ed0506807e0e57cafdc3388668c86d5e",
+      "sha256_scope": "working-tree bytes of a clean tracked file",
+      "state": "CLEAN",
+      "stratum": "HEAD_IMPORTER"
+    },
+    {
+      "path": "tests/dema-return-situation.test.js",
+      "sha256": "20692c50028e17bcad3099b8308accebe15b963803b6ab4a5bd8123ec0e4361c",
+      "sha256_scope": "pre-edit working-tree bytes for C-003 attribution",
+      "state": "NEW",
+      "stratum": "STAGE1_CITED"
+    },
+    {
+      "path": "tests/dema-first-return-tui.test.js",
+      "sha256": "619c1186f0cf11cface4251bcec1b60b93dea8693f220a021de83703c4b9ac75",
+      "sha256_scope": "pre-edit working-tree bytes for C-003 attribution",
+      "state": "NEW",
+      "stratum": "STAGE1_CITED"
+    },
+    {
+      "path": "tests/dema-first-look-home.test.js",
+      "sha256": "9b2aad0402a5cc14e1c0d655eea3f9c0e6faf60ae2026a017e305b619d19e535",
+      "sha256_scope": "pre-edit working-tree bytes for C-003 attribution",
+      "state": "DIRTY",
+      "stratum": "STAGE1_CITED"
+    },
+    {
+      "path": "tests/dema-ui-first-encounter-ax.test.js",
+      "sha256": "da6716780dedbaea613d018bbb7214a8155263581450b1d4106e0a21a13cafd8",
+      "sha256_scope": "pre-edit working-tree bytes for C-003 attribution",
+      "state": "NEW",
+      "stratum": "STAGE1_CITED"
+    },
+    {
+      "path": "Dema/docs/root-canon/root-canon.manifest.json",
+      "sha256": "1c150f368fd231745754461832498d6f601e92c0292cd5693c99fabeebc0303e",
+      "sha256_scope": "bytes before and after the nested diagnostic; the two hashes matched",
+      "state": "CLEAN",
+      "stratum": "NESTED_MANIFEST"
+    }
+  ],
+  "actions": [
+    "Wrote docs/CROSSING_SEASON_AGENT_INSTRUCTION_v1.0.md from the handed instruction.",
+    "Hashed that copy.",
+    "Created docs/CROSSING_LEDGER.md with all ten crossings PENDING.",
+    "Partitioned git status. Did not clean or stage any path.",
+    "Hashed the contract, five whole-file face-turn paths, five mixed dirty paths, the HEAD importer, and four Stage 1 tests named in contract section 9.",
+    "Ran node --test tests/root-canon.test.js with cwd Dema/. Did not repeat it.",
+    "Wrote this receipt. The ledger close is the following append, not a fact this file claims as already done."
+  ],
+  "results": {
+    "partition": {
+      "modified": 117,
+      "untracked_before_campaign_files": 87,
+      "face_turn_whole_file": 5,
+      "face_turn_mixed_excluded": 5,
+      "stage1_cited": 4,
+      "other": 190
+    },
+    "missing_enumerations": {
+      "face_turn_count_in_instruction": 11,
+      "face_turn_paths_named_in_instruction": 0,
+      "stage1_count_in_instruction": 15,
+      "stage1_paths_named_by_contract_section_9": 4,
+      "unnamed_remainder": "The counts 11 and 15 have no path list. Disk did not invent the missing names."
+    },
+    "c002_whole_file_allowlist": [
+      "packages/core/src/dema-face-turn-preview.js",
+      "tests/dema-face-turn-preview.test.js",
+      "scripts/review/dema-face-turn-preview-check.mjs",
+      "docs/02-architecture/DEMA_FACE_TURN_PREVIEW_v0_1.md",
+      "docs/receipts/DEMA_FACE_TURN_PREVIEW_1A.md"
+    ],
+    "c002_consequence": "A later commit of those five files would make the HEAD import resolvable. It would leave registry, check.mjs, TESTING.md, CURRENT_LIMITS.md, and canonical-json-v1-check.mjs uncommitted. The slice would be partially committed. HEAD would load. The wiring would remain a working-tree problem.",
+    "separable_hunks_not_an_allowlist": {
+      "scripts/check.mjs": "one added command line, separate from the hermeticity hunks",
+      "docs/TESTING.md": "one table row and one command line, among other hunks",
+      "scripts/review/canonical-json-v1-check.mjs": "one consumer line, separate from the council-resource hunk",
+      "packages/core/src/dema-capability-truth-registry.js": "the required-id line and the capability object, separate from mission-supervisor hunks",
+      "docs/CURRENT_LIMITS.md": "one inserted row already inside the MEASURED section; the row text says promotion waits on npm test and npm run check. Excluded from C-002."
+    },
+    "focused": "not run",
+    "npm_test": "not run",
+    "npm_run_check": "not run",
+    "probes": {
+      "nested_root_canon": {
+        "cwd": "Dema",
+        "command": "node --test tests/root-canon.test.js",
+        "exit": 0,
+        "pass": 19,
+        "fail": 0,
+        "refusal_cases": 18,
+        "positive_cases": 1,
+        "kind": "diagnostic observation, not a campaign gate",
+        "manifest_restored": true,
+        "path_split": "consistent with a green nested cwd; parent-cwd red was not re-run, so the cause is not confirmed"
+      }
+    }
+  },
+  "failure_attribution": {
+    "this_slice": [],
+    "pre_existing": [
+      "HEAD imports an untracked face-turn module",
+      "five dirty files mix face-turn edits with other edits",
+      "CURRENT_LIMITS dirty row sits in the MEASURED section before C-005",
+      "instruction counts 11 and 15 were not path lists",
+      "three cited Stage 1 tests are untracked and one is dirty"
+    ]
+  },
+  "verdict": "GREEN",
+  "non_proofs": [
+    "This receipt does not establish Stage 1, a CANDIDATE checkpoint, or source-to-delivery.",
+    "It does not establish that the face-turn preview is MEASURED.",
+    "It does not establish the path-split hypothesis as the cause of any parent-cwd failure.",
+    "It does not establish npm test or npm run check.",
+    "The five-file list is the whole-file set a later GO may commit. It is not itself a commit."
+  ],
+  "did_not": [
+    "commit",
+    "push",
+    "merge",
+    "deploy",
+    "promote a truth-label row",
+    "bind the launcher",
+    "dispose the nested checkout",
+    "edit product source",
+    "run npm test",
+    "run npm run check",
+    "restore the contract or any witness",
+    "stage the mixed dirty files"
+  ],
+  "authority_delta": 0,
+  "effects_started": 0,
+  "next_crossing": "C-002",
+  "next_gate": "GO: commit this run only"
+}

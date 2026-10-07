@@ -1,0 +1,18 @@
+{
+  "schema": "bizra.crossing_receipt.correction.v1",
+  "generated_at_utc": "2026-10-06T07:41:42Z",
+  "corrects": "docs/receipts/crossings/T-01-20261005T163548Z.json",
+  "original_bytes_unchanged": true,
+  "field_path": "evidence[path=https://github.com/BizraInfo/Dema/blob/e10d5842726d8c1b228f4bb6c23a9771d3510569/scripts/genesis/urp0-server.mjs].blob_sha256",
+  "recorded_value": "e102ece1cdd12f5df434d40f3d8271a39f1cdd9a",
+  "recorded_field_name": "blob_sha256",
+  "correction": {
+    "actual_algorithm": "git_blob_sha1",
+    "git_blob_sha1": "e102ece1cdd12f5df434d40f3d8271a39f1cdd9a",
+    "verified_at_commit": "e10d5842726d8c1b228f4bb6c23a9771d3510569",
+    "verified_path": "scripts/genesis/urp0-server.mjs",
+    "content_sha256": "f1f5d0c476d7d6b8ada1cdbe065c16eb676defde9a11f7bb2422453118f2d370",
+    "note": "The original field name blob_sha256 is mislabeled: the 40-hex value is the git blob object id (SHA-1), confirmed via git rev-parse <commit>:<path>. A SHA-256 digest of the blob bytes is recorded here as content_sha256. Original receipt bytes were not edited."
+  },
+  "truth_label": "ADDITIVE_CORRECTION__ORIGINAL_RECEIPT_UNCHANGED"
+}
