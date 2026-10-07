@@ -63,6 +63,7 @@ test("NCG-01b hermetic floor: only the acceptance adapter → exactly one settle
     (row) => row.status === INVARIANT_STATUS.SATISFIED,
   );
   assert.deepEqual(settled.map((row) => row.id), ["acceptance_is_model_blind"]);
+
 });
 
 test("NCG-02 the gate publishes the true settled count, not a hopeful one", () => {
@@ -74,12 +75,21 @@ test("NCG-02 the gate publishes the true settled count, not a hopeful one", () =
   );
   // Every settled row must name the adapter that settled it. If the count ever
   // rises, it must rise because an adapter landed — never because the gate
-  // started guessing. The one settled row today binds to an attestation hash.
+  // started guessing.
   assert.equal(r.adapters_registered, CLOSURE_EVIDENCE_ADAPTERS.length);
+  const registeredInvariants = new Set(
+    CLOSURE_EVIDENCE_ADAPTERS.map((adapter) => adapter.invariant_id),
+  );
   for (const row of r.invariants) {
     if (row.status !== INVARIANT_STATUS.UNKNOWN) {
       assert.ok(row.source, `${row.id} is settled and must name its source`);
       assert.match(row.source, /sha256:[0-9a-f]{64}/, `${row.id} source must bind to an artifact`);
+      if (row.status === INVARIANT_STATUS.SATISFIED) {
+        assert.ok(
+          registeredInvariants.has(row.id),
+          `${row.id} is satisfied but no registered adapter observes it`,
+        );
+      }
     }
   }
   // The acceptance row is ALWAYS among the settled — the machine-independent
@@ -91,6 +101,7 @@ test("NCG-02 the gate publishes the true settled count, not a hopeful one", () =
   assert.ok(
     settled.some((row) => row.id === "acceptance_is_model_blind"),
     "acceptance row must always settle",
+
   );
 });
 

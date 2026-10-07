@@ -175,3 +175,33 @@ test("NBC-07 an unpartitioned disk is judged whole, not skipped", () => {
   });
   assert.equal(unmounted.bases[0].dark_capacity_gb, 500);
 });
+
+test("NBC-09 the review gate proves the law on fixtures AND proves its own controls fire", async () => {
+  const { runNode0BaseConstellationCheck } = await import(
+    "../scripts/review/node0-base-constellation-check.mjs"
+  );
+  const result = runNode0BaseConstellationCheck();
+
+  // A green gate must say WHAT it verified — an empty check list must not pass.
+  assert.equal(result.ok, true);
+  assert.ok(Array.isArray(result.checks));
+  assert.ok(result.checks.length >= 8, "gate must run a named check list");
+  for (const check of result.checks) {
+    assert.equal(typeof check.id, "string");
+    assert.equal(check.ok, true, `${check.id}: ${check.detail}`);
+    assert.ok(check.detail.length > 0, `${check.id} must state what it saw`);
+  }
+
+  // The tamper controls are the gate's own planted positives: each forged
+  // envelope must be REFUSED with its exact named reason, so a vacuous
+  // verify (one that stops refusing) turns this gate red, not green.
+  const ids = result.checks.map((c) => c.id);
+  for (const control of [
+    "tamper_dark_capacity_refused",
+    "tamper_base_count_refused",
+    "tamper_attached_not_enrolled_refused",
+  ]) {
+    assert.ok(ids.includes(control), `missing control: ${control}`);
+  }
+  assert.equal(result.schema, NODE0_BASE_CONSTELLATION_SCHEMA);
+});

@@ -137,6 +137,7 @@ export const commands = [
   ["node", ["scripts/review/drs-fixture-publisher-check.mjs"]],
   ["node", ["scripts/review/node0-fate-staged-effect-check.mjs"]],
   ["node", ["scripts/review/dema-capability-truth-registry-check.mjs"]],
+  ["node", ["scripts/review/node0-base-constellation-check.mjs"]],
   ["node", ["scripts/review/boundary-vocab-unification-check.mjs"]],
   ["node", ["scripts/review/dema-fde-dual-diagnostic-check.mjs"]],
   ["node", ["scripts/review/node0-ci-vendor-availability-check.mjs"]],
