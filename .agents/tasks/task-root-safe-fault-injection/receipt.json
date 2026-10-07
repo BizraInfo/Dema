@@ -2,7 +2,7 @@
   "schema": "bizra.dema.task_proof_receipt.v1",
   "task_id": "task-root-safe-fault-injection",
   "feature_id": "FEAT-001",
-  "head_sha": "01dbf8ffb7a9c251645967be1d4d08f16716e2f7",
+  "head_sha": "ced248e41382a8c87b61918fd8fff9af5458e30f",
   "classification": "OUTWARD/environmental",
   "root_cause": "The test suite runs as root (uid=0). Root bypasses DAC permission bits, so chmod-based fault injection (0o000/0o500/0o400) is a no-op: a 0o000 file is still readable and a 0o500/0o400 target is still writable. The permission-dependent assertions in three test files therefore fail because the injected fault never fires. The production code under test (packages/receipts/**, packages/mission/**) is correct and was NOT changed. CI runs on GitHub ubuntu-latest (non-root) where these same tests pass.",
   "fix": "Mirror the canonical in-repo precedent (tests/first-encounter-admission.test.js: canEnforceModes probe + honest t.skip). Each permission-dependent case now probes, hermetically and restoring permissions in a finally block, whether the specific denial it relies on actually occurs for the current process. If modes are not enforced, the case is skipped with the honest reason 'filesystem does not enforce modes for this process' (c4b2a adds the clarifying parenthetical about root bypassing DAC). The real assertions are preserved unchanged, so they still run and pass on a mode-enforcing host. The G8 classifier allowlist was NOT modified; name-only masking was NOT used.",
@@ -11,7 +11,11 @@
     "tests/c4b2a-mechanical-rollback-wiring.test.js",
     "tests/mission-corridor-closure-binding.test.js",
     "docs/CURRENT_LIMITS.md",
-    ".agents/tasks/task-root-safe-fault-injection/receipt.json"
+    ".agents/tasks/task-root-safe-fault-injection/receipt.json",
+    ".agents/tasks/task-root-safe-fault-injection/context.json",
+    ".agents/tasks/task-root-safe-fault-injection/task.json",
+    ".agents/tasks/task-root-safe-fault-injection/features/FEAT-001.json",
+    ".agents/tasks/task-root-safe-fault-injection/2026-10-06-151902-review.md"
   ],
   "files_not_changed": [
     "scripts/ci/classify-known-harness-failures.mjs",
