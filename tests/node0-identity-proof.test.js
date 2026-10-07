@@ -344,4 +344,108 @@ describe("NODE0-IDENTITY-1A · buildNode0IdentityProof / verify", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  it("rejects malformed identity inputs before any authority-bearing acceptance", async () => {
+    const home = await freshHome();
+    try {
+      const { r, pubkeyPem } = await buildProof(home);
+      const verify = (proof, operatorPubkeyPem = pubkeyPem) =>
+        verifyNode0IdentityProof({ proof, operatorPubkeyPem }).reason;
+
+      assert.equal(
+        node0IdentityCommitment({ createdAtIso: CREATED }),
+        null,
+      );
+      assert.equal(
+        (
+          await buildNode0IdentityProof({
+            demaHome: home,
+            consentProof: {},
+            createdAtIso: "not-an-iso-date",
+          })
+        ).error,
+        "created_at_iso_required",
+      );
+      assert.equal(verify(null), "proof_missing_or_malformed");
+      assert.equal(
+        verify({ ...r.proof, schema: "wrong.schema" }),
+        "proof_schema_mismatch",
+      );
+      assert.equal(verify(r.proof, "not-a-public-key"), "external_pubkey_required");
+
+      const { node0_identity_id, ...missingField } = r.proof;
+      assert.equal(
+        verify(missingField),
+        "structural_missing_field_node0_identity_id",
+      );
+      assert.equal(
+        verify({ ...r.proof, node0_identity_proof_hash: "not-a-hash" }),
+        "node0_identity_proof_hash_invalid",
+      );
+      assert.equal(
+        verify({ ...r.proof, claim_boundary: [] }),
+        "claim_boundary_invalid",
+      );
+      assert.equal(
+        verify({ ...r.proof, node0_identity_signature_b64: {} }),
+        "signature_invalid",
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("covers remaining fail-closed input distinctions", async () => {
+    const home = await freshHome();
+    const emptyHome = await freshHome();
+    try {
+      const { r, pubkeyPem } = await buildProof(home);
+      const verify = (proof, operatorPubkeyPem = pubkeyPem) =>
+        verifyNode0IdentityProof({ proof, operatorPubkeyPem }).reason;
+
+      assert.equal(
+        (
+          await buildNode0IdentityProof({
+            demaHome: home,
+            consentProof: {},
+          })
+        ).error,
+        "created_at_iso_required",
+      );
+      assert.equal(
+        (
+          await buildNode0IdentityProof({
+            demaHome: home,
+            consentProof: "not-an-object",
+            createdAtIso: CREATED,
+          })
+        ).error,
+        "consent_proof_required",
+      );
+      assert.equal(
+        (
+          await buildNode0IdentityProof({
+            demaHome: emptyHome,
+            consentProof: {},
+            createdAtIso: CREATED,
+          })
+        ).error,
+        "no_authorship_key",
+      );
+
+      assert.equal(verify([]), "proof_missing_or_malformed");
+      assert.equal(verify(r.proof, null), "external_pubkey_required");
+      assert.equal(
+        verify({ ...r.proof, node0_identity_id: null }),
+        "structural_missing_field_node0_identity_id",
+      );
+      assert.equal(
+        verify({ ...r.proof, node0_identity_signature_b64: "" }),
+        "signature_invalid",
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+      await rm(emptyHome, { recursive: true, force: true });
+    }
+  });
 });

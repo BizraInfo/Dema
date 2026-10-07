@@ -1,0 +1,89 @@
+{
+  "$id": "https://bizra.local/schemas/model_execution_envelope.v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "authority": {
+      "properties": {
+        "authority_ceiling": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "authority_ceiling"
+      ],
+      "type": "object"
+    },
+    "context_evidence_refs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "effective_config": {
+      "type": "object"
+    },
+    "harness": {
+      "properties": {
+        "digest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "mission_id": {
+      "type": "string"
+    },
+    "model": {
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "qualification": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revision": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "name",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "schema": {
+      "const": "bizra.model.execution.v0.1"
+    }
+  },
+  "required": [
+    "schema",
+    "mission_id",
+    "harness",
+    "model",
+    "effective_config",
+    "authority"
+  ],
+  "type": "object"
+}

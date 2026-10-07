@@ -142,23 +142,41 @@ required and independent.
 
 ---
 
-## 5. Node0-local SAT vs future shared-URP SAT
+## 5. Node0 Genesis-hosted URP SAT vs future multi-node shared-URP SAT
 
 Per [`../canon/BIZRA_TOPOLOGY_CANON.md`](../canon/BIZRA_TOPOLOGY_CANON.md) (cited in
 the companion doc): each human node mints PAT-7 locally and contributes SAT-5 into
-one shared Universal Resource Pool. **That cross-node shared pool is federation and
-remains `forbidden-until-proven`** (see NODE0 checklist forbidden claims:
-`public federation live`, `Node1/Node2 network live`).
+one shared Universal Resource Pool. **SAT custody, logical location, loyalty, and
+authority are always URP/system-side, never human/PAT-side.**
 
-For Node0, do not wait for the network. Node0 must already demonstrate the SAT
-pattern **locally**:
+At Genesis, Node0 may physically host the one URP on the same machine because no
+second node exists yet. That is physical co-location only. It MUST NOT be described
+as local SAT, user-owned SAT, or SAT inside the human node. The constitutional
+membrane remains logically intact even when both domains temporarily share one
+physical host.
+
+That cross-node shared pool is federation and remains `forbidden-until-proven`
+(see NODE0 checklist forbidden claims: `public federation live`, `Node1/Node2
+network live`). Node0 therefore does not wait for federation: it must demonstrate
+the **URP-resident SAT pattern on one physical machine without collapsing the
+membrane**:
 
 ```text
-PAT proposes → SAT audits → MuMu consents → action executes →
-receipt proves → reward follows verification.
+LOCAL HUMAN DOMAIN                 SYSTEM / URP DOMAIN
+MuMu -> Dema -> PAT proposal  ->  membrane -> SAT audit
+                                      |
+MuMu consent authorizes attempt      |
+                                      v
+governed action <- PERMIT/REFUSE <- SAT constitutional verdict
+       |
+       v
+receipt proves -> reward only after verified impact
 ```
 
-New nodes extend this loop; they do not complete missing organs.
+The human controls PAT and consent. The human has no ownership or management
+authority over SAT. SAT serves the BIZRA constitution and the whole system. New
+nodes add SAT capacity into the same URP; they do not create per-user SAT domains
+or complete missing organs.
 
 ---
 

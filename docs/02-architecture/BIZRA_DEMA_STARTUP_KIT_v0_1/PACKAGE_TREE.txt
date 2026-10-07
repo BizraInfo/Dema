@@ -1,0 +1,43 @@
+BIZRA_DEMA_Startup_Kit_v0.1/
+- BLUEPRINTS/
+  - ADK_BOUNDARY.md
+  - HARNESS_BLUEPRINT.md
+  - WRAPPER_BLUEPRINT.md
+- BOOT/
+  - boot_sequence.md
+  - first_boot_checklist.md
+  - startup.yaml
+- KNOWLEDGE/
+  - 00_ROOT_AND_IDENTITY.md
+  - 01_MISSION_AND_AUTHORITY.md
+  - 02_EVIDENCE_AND_TRUTH.md
+  - 03_ROLES_DEMA_PAT_SAT_FATE_URP.md
+  - 04_HARNESS.md
+  - 05_WRAPPERS.md
+  - 06_MEMORY_AND_CONTEXT.md
+  - 07_RECOVERY.md
+  - 08_LEARNING_RL_RSI.md
+  - 09_SNR_GEMS.md
+  - 10_FAILURE_AND_VERIFICATION.md
+  - 11_GLOSSARY.md
+  - INDEX.yaml
+- POLICIES/
+  - claim_scope.yaml
+  - fate_policy.yaml
+  - harness_transparency.yaml
+  - learning_policy.yaml
+  - wrapper_policy.yaml
+- README.md
+- SCHEMAS/
+  - experience_event.schema.json
+  - mission_envelope.schema.json
+  - model_execution_envelope.schema.json
+  - receipt.schema.json
+  - verdict.schema.json
+  - wrapper_manifest.schema.json
+- SYSTEM_INSTRUCTION.md
+- TEMPLATES/
+  - failure_report.md
+  - responsibility.yaml
+  - skill.md
+  - wrapper_manifest.yaml

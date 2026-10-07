@@ -1,0 +1,15 @@
+schema: bizra.responsibility.v0.1
+responsibility_id: example.read_only
+mission:
+  authority_ceiling: 0
+  required_rails: [F, K, E]
+topology:
+  proposer: PAT
+  verifier: SAT
+capabilities: []
+effects:
+  class: READ_ONLY
+recovery:
+  non_vacuity_witness_required: true
+impact:
+  measurement_plan: null

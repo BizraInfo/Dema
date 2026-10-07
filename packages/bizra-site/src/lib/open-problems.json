@@ -1,0 +1,42 @@
+{
+  "schema": "bizra.site.open_problems.v0_1",
+  "source": "docs/CURRENT_LIMITS.md",
+  "generated_from_ledger_rows": 211,
+  "total_open": 4,
+  "by_kind": {
+    "blocked": 0,
+    "designed": 3,
+    "preview": 1,
+    "planned": 0
+  },
+  "problems": [
+    {
+      "surface": "**DEMA mission worker-handoff kernel** — the minimum provable model-substitution case: a declared mission changes worker/model and records the swap as ONE deterministic hash-chained MISSION_CHECKPOINT (checkpoint_type WORKER_HANDOFF) in the existing NODE0-REALM-STATE-KERNEL-1A event log — no parallel state machine, no model router, no persistence, no new authority. Fail-closed unless the mission is already declared, the worker actually changes, every before/after invariant hash (mission_contract, acceptance_criteria, consent_scope, source_checkpoint) is equal, consent is an exact byte match, and authority_delta is 0; the verifier replays the whole returned history and rejects a forged-and-rehashed authority increase, a false continuity proof, extra envelope/event/payload fields, non-normalized set ordering, or a non-canonical all-false boundary. Proves mission continuity SURVIVES a model/worker swap with the mission contract, acceptance, consent scope, source checkpoint, and authority invariant — the state lives in the realm chain, not the model. Durable persistence, restart recovery, automatic failover, worker selection, model invocation, and independent authenticity NOT implemented; the reducer records the checkpoint seq but does not yet project current_worker. (DEMA-MISSION-WORKER-HANDOFF-0A)",
+      "status": "PREVIEW_ONLY",
+      "kind": "preview",
+      "meaning": "A surface exists and is honest about performing nothing.",
+      "evidence": "packages/core/src/dema-mission-worker-handoff.js + tests/dema-mission-worker-handoff.test.js (28 tests) + scripts/review/dema-mission-worker-handoff-check.mjs (in npm run check) + docs/02-architecture/DEMA_MISSION_WORKER_HANDOFF_v0_1.md + docs/receipts/DEMA_MISSION_WORKER_HANDOFF_0A.md. No execution, daemon, network, token, wallet, model-invocation, or federation; boundary all-false; authority_delta 0."
+    },
+    {
+      "surface": "Proof-of-Impact / token economy",
+      "status": "DESIGNED_NOT_LIVE",
+      "kind": "designed",
+      "meaning": "The design exists. Nothing runs it yet.",
+      "evidence": "docs/02-architecture/dema-urp-resource-offer-v0.1.md, docs/02-architecture/DUAL_TOKEN_POI_ECONOMY_v0_1.md"
+    },
+    {
+      "surface": "Absence Steward Preview",
+      "status": "DESIGNED_NOT_LIVE",
+      "kind": "designed",
+      "meaning": "The design exists. Nothing runs it yet.",
+      "evidence": "docs/02-architecture/ABSENCE_STEWARD_PREVIEW_v0_1.md"
+    },
+    {
+      "surface": "Absence Steward Return Review",
+      "status": "DESIGNED_NOT_LIVE",
+      "kind": "designed",
+      "meaning": "The design exists. Nothing runs it yet.",
+      "evidence": "docs/02-architecture/ABSENCE_STEWARD_RETURN_REVIEW_v0_1.md"
+    }
+  ]
+}

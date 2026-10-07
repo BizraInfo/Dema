@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bizra.local/schemas/capability_cartridge.v0.1.json",
+  "type": "object",
+  "required": ["schema", "capability_id", "kind", "provider_identity", "capabilities", "effects", "requires_fate", "self_grant"],
+  "properties": {
+    "schema": {"const": "bizra.capability_cartridge.v0.1"},
+    "capability_id": {"type": "string"},
+    "kind": {"type": "string"},
+    "provider_identity": {
+      "type": "object",
+      "required": ["name", "revision"],
+      "properties": {
+        "name": {"type": "string"},
+        "repository": {"type": ["string", "null"]},
+        "revision": {"type": "string"},
+        "source_sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "license": {"type": ["string", "null"]}
+      }
+    },
+    "capabilities": {"type": "array", "items": {"type": "string"}},
+    "effects": {"type": "array", "items": {"type": "string"}},
+    "network": {"type": "string"},
+    "filesystem": {"type": "string"},
+    "secrets_source": {"type": ["string", "null"]},
+    "sandbox": {"type": ["string", "null"]},
+    "requires_fate": {"const": true},
+    "self_grant": {"const": false},
+    "qualification_refs": {"type": "array", "items": {"type": "string"}},
+    "revocation_status": {"type": "string"}
+  },
+  "additionalProperties": true
+}

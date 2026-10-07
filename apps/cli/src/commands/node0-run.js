@@ -287,11 +287,18 @@ export async function judgeRun({ demaHome, runId, targetMs, intervalMs = DEFAULT
     anchor: await readAnchor({ demaHome, runId }),
     runId,
   });
+  const header = records.find((r) => r?.kind === ENDURANCE_HEADER_KIND) ?? records[0];
+  // Gap judgment must use the interval sealed in the run header, not the
+  // caller's current --interval-ms flag (which can silently relax BROKEN gaps).
+  const committedIntervalMs =
+    Number.isFinite(header?.interval_ms) && header.interval_ms > 0
+      ? header.interval_ms
+      : intervalMs;
   const samples = records.filter((r) => r?.kind !== ENDURANCE_HEADER_KIND);
   const verdict = evaluateEndurance({
     samples,
     targetMs,
-    maxGapMs: intervalMs * GAP_MULTIPLIER,
+    maxGapMs: committedIntervalMs * GAP_MULTIPLIER,
   });
 
   if (!chain.ok && chain.chain_state !== "ABSENT") {
@@ -494,6 +501,17 @@ export async function cmdNode0Run(ctx) {
       // the damage into an otherwise-clean tail. Refuse; a new --run-id is free.
       console.error(
         `Dema error: refusing to extend run '${runId}' — ${resumed.chain_state}: ${resumed.reason}. `
+        + "Nothing was written. Start a new --run-id.",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    const header = existing.find((r) => r?.kind === ENDURANCE_HEADER_KIND) ?? existing[0];
+    const currentCodeHash = await measureRunnerCodeHash();
+    if (header?.runner_code_hash !== currentCodeHash) {
+      console.error(
+        `Dema error: refusing to extend run '${runId}' — runner_code_hash_mismatch. `
+        + "The sealed header was produced by different runner bytes than this process. "
         + "Nothing was written. Start a new --run-id.",
       );
       process.exitCode = 1;

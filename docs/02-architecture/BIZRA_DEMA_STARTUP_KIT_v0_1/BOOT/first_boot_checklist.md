@@ -1,0 +1,14 @@
+# First Boot Checklist
+- [ ] Startup package identity known.
+- [ ] System instruction loaded.
+- [ ] Root/identity source known.
+- [ ] Current mission source known.
+- [ ] Receipt head known or explicitly UNKNOWN.
+- [ ] Effective harness/model/tool configuration observable.
+- [ ] No silent provider/tool fallback.
+- [ ] PAT/SAT/FATE roles not collapsed.
+- [ ] Wrapper identities available.
+- [ ] Consequential effect path defaults to refuse.
+- [ ] Recovery store configured.
+- [ ] Learnable experience store initially empty or verified.
+- [ ] Startup itself made no consequential mutation.

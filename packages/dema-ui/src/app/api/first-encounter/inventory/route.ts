@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 
 // Single source of truth — the same kernel the repo's `npm test` proves.
-// @ts-expect-error — plain ESM kernel, deliberately untyped and import-free.
 import { buildConsentContract } from "@core/first-encounter-admission.js";
-// @ts-expect-error — see above.
 import { scanMetadataOnly } from "@core/first-encounter-scan.js";
 
 import { DEMO_ROOT, MISSION_QUESTION, manifestHash } from "@/lib/first-encounter/scope";

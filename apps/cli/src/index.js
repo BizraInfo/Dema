@@ -152,7 +152,8 @@ function argValue(argv, name) {
 const HELP = `Dema CLI
 
 Usage:
-  dema              Active kernel — banner + setup-or-status + next safe task
+  dema              Sovereign Homebase — orientation + one safe next step
+  dema --safe       Sovereign Recovery Shell — read-only local orientation
   dema chat         Interactive shell (same surface as the bare CLI)
 
 Orientation:
@@ -286,9 +287,12 @@ Orientation:
   dema authorship key migrate [--json]
                     One-time explicit migration of a legacy flat keypair into the
                     immutable generation store + atomic active pointer (requires --consent)
-  dema authorship key rotate [--json]
+  dema authorship key rotate [--json] [--envelope <path>] [--dema-home <path>]
                     Retire the active generation + install a replacement under the
                     active-pointer model (requires --consent + ceremony envelope)
+                    Mint the envelope first with:
+                      node scripts/node0-rotation-consent-envelope.mjs
+                    It is single-use, bound to one DEMA_HOME, and expires.
   dema authorship sign <artifact-path> [--json]
                     Sign a local artifact (requires --consent)
   dema authorship latest [--json]
@@ -428,14 +432,14 @@ Local asset awareness:
                     content hashing. Checkpoints write only under
                     DEMA_HOME/node0-index/checkpoints. No dedup apply, move,
                     delete, network, model, mint, wallet, SAT, or federation.
-  dema assets scan [--json] [--root <path>]
+  dema assets scan [--json] --root <path> [--consent "<phrase>"]
                     DEMA-HOMEBASE-ASSET-AWARENESS-1A metadata-only homebase
-                    asset awareness. Scans declared root (default ~/Downloads or
-                    DEMA_LOCAL_ASSET_ROOT) for metadata only — clusters, hidden-
-                    gem candidates, monetization candidates, risk flags. Also writes
-                    inventory artifact under DEMA_HOME/realm/local-assets/
-                    inventory-v0.1.json (mode 0600). No content reads, no symlink
-                    following, no network, no upload, no mutation inside scanned root.
+                    scan. Without exact consent, shows the scan scope and does not
+                    inspect the root. Exact "GO: scan homebase metadata only"
+                    consent permits metadata inspection and inventory write under
+                    DEMA_HOME/realm/local-assets/inventory-v0.1.json (mode 0600).
+                    No content reads, symlink following, network, upload, or
+                    mutation inside the scanned root.
   dema assets shareability [--json] [--root <path>]
                     DEMA-HOMEBASE-SHAREABILITY-1A metadata-only shareability
                     analysis. Classifies clusters into shareable, content-consent,
@@ -1375,7 +1379,12 @@ const COMMAND_TABLE = {
   help: cmd_help,
 };
 
-async function dispatch(argv) {
+function finishDispatch(interactive, code = 0) {
+  if (!interactive) process.exit(process.exitCode ?? code);
+  return { handled: true, exit_code: code };
+}
+
+async function dispatch(argv, { interactive = false } = {}) {
   const command = argv[0] ?? "active";
   const subcommand = argv[1];
 
@@ -1400,22 +1409,26 @@ async function dispatch(argv) {
     } else {
       console.log(`dema ${version}`);
     }
-    process.exit(process.exitCode ?? 0);
+    return finishDispatch(interactive);
   }
 
   // First-look companion home (DEMA-QUALITY-DELIVERY-SPINE-1A).
   // Bare `dema` routes to human-first companion output.
   // Technical homebase preview: `dema homebase` (JSON/TUI · phase-5 legacy surface).
   const isBareInvocation =
-    (command === "active" || command === "" || command === "--json") &&
+    (command === "active" ||
+      command === "" ||
+      command === "--json" ||
+      command === "--safe") &&
     !argv.includes("--chat") &&
     !argv.includes("--interactive");
   if (isBareInvocation) {
     const wantJson =
       argv.includes("--json") ||
-      !process.stdout.isTTY ||
-      Boolean(process.env.DEMA_NO_TUI) ||
-      process.env.NODE_ENV === "test";
+      (!interactive &&
+        (!process.stdout.isTTY ||
+          Boolean(process.env.DEMA_NO_TUI) ||
+          process.env.NODE_ENV === "test"));
     const { join: pathJoin } = await import("node:path");
     const { homedir } = await import("node:os");
     const demaHome = process.env.DEMA_HOME || pathJoin(homedir(), ".dema");
@@ -1423,7 +1436,7 @@ async function dispatch(argv) {
     if (showIntro) {
       const introStream = wantJson ? process.stderr : process.stdout;
       introStream.write(renderIntroLine() + "\n\n");
-      await recordIntroSeen({ home: demaHome });
+      if (command !== "--safe") await recordIntroSeen({ home: demaHome });
     }
     const { gatherFirstLookContext, buildFirstLookHome, renderFirstLookHome } =
       await import("../../../packages/core/src/dema-first-look-home.js");
@@ -1433,19 +1446,19 @@ async function dispatch(argv) {
     const envelope = buildFirstLookHome(ctx);
     if (wantJson) {
       process.stdout.write(JSON.stringify(envelope, null, 2) + "\n");
-      process.exit(process.exitCode ?? 0);
+      return finishDispatch(interactive);
     }
     const opts = resolveFormatterOptsFromEnv(process.env);
     process.stdout.write(
       renderFirstLookHome(envelope, { noColor: opts.noColor }) + "\n",
     );
-    process.exit(process.exitCode ?? 0);
+    return finishDispatch(interactive);
   }
 
   // Route through the command table (Track 2 dispatcher refactor). Each command
   // token maps to a named handler in COMMAND_TABLE; the switch was replaced by
   // this O(1) lookup. Unknown commands fall through to the suggester below.
-  const ctx = { argv, command, subcommand };
+  const ctx = { argv, command, subcommand, interactive };
   const handler = Object.hasOwn(COMMAND_TABLE, command)
     ? COMMAND_TABLE[command]
     : null;
@@ -1469,6 +1482,7 @@ async function dispatch(argv) {
   }
   lines.push("", "Type `dema help` to see everything I can do.");
   console.log(lines.join("\n"));
+  return { refused: true, reason: "unknown_command" };
 }
 
 async function runActiveKernel({ interactive = false, force = false } = {}) {
@@ -1478,7 +1492,7 @@ async function runActiveKernel({ interactive = false, force = false } = {}) {
   if (interactive) {
     await runShell({
       greeting: banner,
-      dispatchCommand: dispatch,
+      dispatchCommand: (argv) => dispatch(argv, { interactive: true }),
       statusProvider: () => statusWithLocalIdentity(),
       councilPatDispatchFormatter: (chatResult) => {
         const preview = buildCouncilSeatPatDispatchPreview({

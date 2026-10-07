@@ -1,0 +1,110 @@
+{
+  "schema": "bizra.dema.census_receipt.v0.1",
+  "receipt_kind": "CENSUS_RECEIPT",
+  "mission_id": "ORGANIZE-MUMU-ESTATE-001",
+  "mission_authorization": "GO: Execute MISSION ORGANIZE-MUMU-ESTATE-001. Point BGL at the full corpus. Census only — count, hash, classify. Seal the receipt. I am walking away. The system works for me.",
+  "timestamp": "2026-08-31T01:25:04+04:00",
+  "scope": "/home/bizra-operating-system/Downloads",
+  "census": {
+    "total_files_scanned": 427981,
+    "total_bytes": 109539715733,
+    "unique_file_sizes": 40150,
+    "duplicate_ratio_percent": 90.61,
+    "type_breakdown": {
+      "code": {
+        "js": 129187,
+        "ts": 58277,
+        "mjs": 18356,
+        "cjs": 9903,
+        "cts": 8652,
+        "mts": 3298,
+        "tsx": 2872,
+        "py": 18926,
+        "h": 10177,
+        "total": 249648
+      },
+      "document": {
+        "md": 20737,
+        "txt": 2718,
+        "mdx": 1303,
+        "pdf": 1037,
+        "total": 25795
+      },
+      "data": {
+        "json": 16461,
+        "map": 46441,
+        "meta": 1310,
+        "sst": 1277,
+        "total": 65489
+      },
+      "asset": {
+        "svg": 11530,
+        "png": 2125,
+        "total": 13655
+      },
+      "cache": {
+        "pyc": 14779,
+        "total": 14779
+      }
+    },
+    "largest_objects": [
+      {
+        "path": "models/GLM-4.7-Flash-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf",
+        "bytes": 18132721216,
+        "label": "LLM model weight"
+      },
+      {
+        "path": "models/Qwen3VL-8B-Uncensored-HauhauCS-Aggressive-Q8_0.gguf",
+        "bytes": 8709519456,
+        "label": "LLM model weight"
+      },
+      {
+        "path": "models/Gemma-4-E4B-Uncensored-HauhauCS-Aggressive-Q8_K_P.gguf",
+        "bytes": 8133226464,
+        "label": "LLM model weight"
+      },
+      {
+        "path": "models/Nemotron3-Nano-4B-Uncensored-HauhauCS-Aggressive-Q8_K_P.gguf",
+        "bytes": 4688272928,
+        "label": "LLM model weight"
+      },
+      {
+        "path": "archives/My_books-20260424T185740Z-3-002.zip",
+        "bytes": 2024589323,
+        "label": "Book archive"
+      }
+    ],
+    "timestamps": {
+      "oldest": "1970-01-01T04:00:00+04:00",
+      "newest": "2026-08-31T01:16:47+04:00"
+    }
+  },
+  "bgl_library": {
+    "unique_objects": 122,
+    "verified": 122,
+    "failed": 0,
+    "sources_registered": 5,
+    "by_type": {
+      "archive": 1,
+      "code": 47,
+      "document": 55,
+      "unknown": 19
+    }
+  },
+  "provenance": {
+    "census_tool": "find + du + sort + uniq (filesystem census)",
+    "bgl_tool": "bgl verify-v2 + bgl stats",
+    "hash_algorithm": "SHA-256 (BGL object store)",
+    "every_number_traceable": true,
+    "receipt_hash": "sha256:d0a914cb6e6ea022419a9bbbedb5becaec7089d29a4fc167a310df49d68168aa"
+  },
+  "boundary": {
+    "census_only": true,
+    "no_mutation": true,
+    "no_content_read": true,
+    "metadata_only": true,
+    "dedup_by_size_not_content": true
+  },
+  "what_this_proves": "The founder's Downloads estate contains 427,981 files (109GB) across code, documents, data, assets, and cache. 90.61% are size-duplicates. The BGL library has ingested and verified 122 unique objects from 5 registered sources.",
+  "what_this_does_not_prove": "Content-level deduplication (size-only), semantic classification, or that any file is trustworthy. The census is a count, not a judgment."
+}

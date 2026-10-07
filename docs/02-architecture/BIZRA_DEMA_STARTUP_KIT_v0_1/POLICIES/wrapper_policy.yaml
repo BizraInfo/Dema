@@ -1,0 +1,17 @@
+schema: bizra.wrapper.policy.v0.1
+default: REFUSE_UNKNOWN_WRAPPER
+requirements:
+  exact_identity: true
+  declared_capabilities: true
+  declared_side_effects: true
+  schemas: true
+  effective_config_visible: true
+  stable_error_codes: true
+  evidence_emission: true
+prohibited:
+  - infer_consent
+  - grant_fate_authority
+  - widen_scope
+  - silent_tool_addition
+  - silent_upstream_substitution
+  - treat_upstream_success_as_bizra_verdict

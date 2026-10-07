@@ -24,6 +24,20 @@ export const PRE_PUSH_PUBLISH_GATES = Object.freeze([
     exit_only: true,
     timeout_ms: 30_000,
   },
+  // Runs early and fails closed: a leaked credential should stop the push before
+  // the slow gates spend minutes on it. `npm run check` has no gitleaks — its only
+  // secret gate applies the repo's narrow secret-pattern.js to `.claude/` config —
+  // so without this the CI `scan` job was the first thing to see a leak, after the
+  // push. The script parses gitleaks' pinned version, checksum and flags out of the
+  // workflow, so this gate cannot drift from CI. First run needs network; the
+  // verified binary is then cached, so later runs work offline. `--skip-gates`
+  // remains the explicit, visible override.
+  {
+    id: "scan_secrets",
+    argv: ["npm", "run", "scan:secrets"],
+    exit_only: true,
+    timeout_ms: 180_000,
+  },
   {
     id: "artifact_011_preflight_gate",
     argv: ["node", "scripts/review/artifact-011-preflight-gate.mjs"],

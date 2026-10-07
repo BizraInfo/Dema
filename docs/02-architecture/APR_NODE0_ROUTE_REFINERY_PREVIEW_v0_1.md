@@ -1,6 +1,6 @@
 # APR Node0 Route Refinery Preview v0.1
 
-**Slice:** `APR-NODE0-ROUTE-REFINERY-PREVIEW-1A`  
+**Slice:** `APR-NODE0-ROUTE-REFINERY-PREVIEW-1A`
 **Truth label:** `APR_NODE0_ROUTE_REFINERY_PREVIEW_ONLY`
 
 ## Purpose

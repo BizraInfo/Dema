@@ -3,6 +3,10 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 import { resolveClassForBranch, currentBranch } from "./pr-class.mjs";
+import {
+  classifyContentOverlays,
+  composeRequiredGates,
+} from "./content-required-gates.mjs";
 
 const U1_FILES = new Set([
   "artifacts/proofs/node0-local-urp/critic_report_001.json",
@@ -23,10 +27,13 @@ const U1_FILES = new Set([
 
 const GATE_FILES = new Set([
   ".github/workflows/bizra-review.yml",
+  "scripts/review/content-required-gates.mjs",
+  "scripts/review/gitleaks-dual-eval.mjs",
   "scripts/review/no-overclaim.mjs",
   "scripts/review/pr-class.mjs",
   "scripts/review/proof-scope.mjs",
   "scripts/review/receipt-integrity.mjs",
+  "tests/gitleaks-dual-eval.test.js",
   "tests/review-gate.test.js",
 ]);
 
@@ -169,21 +176,43 @@ export function changedFiles() {
     .filter(Boolean);
 }
 
-export function validateProofScope({ reviewClass, files }) {
+export function validateProofScope({ reviewClass, files, branch }) {
   const policy = REVIEW_CLASSES[reviewClass];
   if (!policy) throw new Error(`Unsupported proof-scope class: ${reviewClass}`);
 
+  const { overlays } = classifyContentOverlays(files);
+  const composition = composeRequiredGates({
+    branchClass: reviewClass,
+    files,
+    branch,
+  });
+
   // Broad-scope classes (empty primaryFiles + empty requiredFiles) intentionally
-  // skip per-file allowlist enforcement. Reviewer discipline takes over for
-  // acceptance-style PRs that legitimately span many feature areas. The full
-  // file list is still recorded in the JSON output for reviewer visibility.
+  // skip per-file allowlist enforcement for ordinary multi-area PRs.
+  // Content overlays (e.g. .gitleaks.toml) still force content_bound_composition:
+  // branch naming must not suppress governance/security gates required by the diff.
   if (policy.primaryFiles.size === 0 && policy.requiredFiles.length === 0) {
+    if (overlays.length > 0) {
+      return {
+        schema: "bizra.dema.review.proof_scope.v0.1",
+        ok: true,
+        class: reviewClass,
+        changed_files: files,
+        enforcement: "content_bound_composition",
+        overlays,
+        mandatory_gates: composition.mandatory,
+        allowed_files: [],
+        allowed_gate_files: [...GATE_FILES],
+      };
+    }
     return {
       schema: "bizra.dema.review.proof_scope.v0.1",
       ok: true,
       class: reviewClass,
       changed_files: files,
       enforcement: "advisory_reviewer_discipline",
+      overlays: [],
+      mandatory_gates: composition.mandatory,
       allowed_files: [],
       allowed_gate_files: [...GATE_FILES],
     };
@@ -215,6 +244,9 @@ export function validateProofScope({ reviewClass, files }) {
     ok: true,
     class: reviewClass,
     changed_files: files,
+    enforcement: overlays.length > 0 ? "content_bound_composition" : "class_file_allowlist",
+    overlays,
+    mandatory_gates: composition.mandatory,
     allowed_files: [...policy.primaryFiles],
     allowed_gate_files: [...GATE_FILES],
   };

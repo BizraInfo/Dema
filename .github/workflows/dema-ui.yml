@@ -1,0 +1,46 @@
+name: Dema UI
+
+# DEMA-UI-CI-TRUTH-GATE-1A — dedicated proof rail for packages/dema-ui.
+# Root CI does not install, type-check, lint, build, or audit this package.
+# This workflow therefore fails closed on UI defects instead of projecting
+# root-green status onto the product surface.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dema-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    defaults:
+      run:
+        working-directory: packages/dema-ui
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: packages/dema-ui/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Package tests
+        run: node --test --test-reporter=tap tests/*.test.mjs tests/ui-lifecycle.proof.mjs
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Production build
+        run: npm run build
+      - name: Dependency audit
+        run: npm run audit

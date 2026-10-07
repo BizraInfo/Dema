@@ -437,6 +437,41 @@ deployment remains `DERIVED` until direct alias metadata is retained. None of
 this proves Node0 activation, signer trust, federation, persistence,
 full-system health, token state, economic state, or governed receipt issuance.
 
+## TASK-030 receipt-binding recheck — 2026-08-04
+
+[MEASURED] A new credential-free scan of the same fixed `62` routes completed
+at `2026-08-04T15:31:37.984Z` with:
+
+- `0` request errors,
+- `0` known forbidden-phrase hits,
+- `0` public receipt-link matches,
+- response-digest-set SHA-256
+  `f292f19a51da003147582e79e5c07b96bc780d7057c4f9220f34ebd611d8279a`,
+- route-result-set SHA-256
+  `4efd76fc884a078eadeb92314be7b54b25a0adf0ca44bdb1a3efd6fa76ac34eb`.
+
+The root body remained
+`473052c4bbcf7bf6092bbd9c075abf70c12e6b517878fe32c5ba3521fcaf18dd`
+and exposed `BIZRA-PUBLIC-001`, `BIZRA-PUBLIC-002`, and
+`BIZRA-PUBLIC-003`. `/api/health` exposed `BIZRA-PUBLIC-004`; the
+request-time body hash was
+`0b3d2ea5f8b6e0dae8bffa3f8ecffcb6e5583addd5d6cb5c5e0fc3d12f0a31c2`.
+`/api/beta/status` exposed `BIZRA-PUBLIC-005`; its request-time body hash was
+`13e644533d3fbfe502cacbd8a11bc05aab602c18a8c00ea1985d987cc8546165`.
+
+Each claim exposed commit evidence and no governed receipt hash or public
+receipt link. The resulting five-claim manifest is
+[`evidence/bizra-ai-public-claim-receipt-binding-2026-08-04.json`](evidence/bizra-ai-public-claim-receipt-binding-2026-08-04.json).
+The pure validator and review gate are:
+
+- `scripts/audit/public-claim-receipt-binding-core.mjs`
+- `scripts/review/public-claim-receipt-binding-check.mjs`
+- `tests/public-claim-receipt-binding.test.js`
+
+The manifest is structurally `VALID` and closure is
+`BLOCKED_PENDING_RECEIPT_BINDING`. This distinction prevents a coherent record
+of an open blocker from being laundered into task completion.
+
 ## Receipt and signer boundary
 
 [DECLARED] No Claim Receipt or other cryptographic receipt is created by this slice.

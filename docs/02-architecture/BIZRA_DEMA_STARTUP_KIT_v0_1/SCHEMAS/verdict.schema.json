@@ -1,0 +1,43 @@
+{
+  "$id": "https://bizra.local/schemas/verdict.v0.1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "authority_delta": {
+      "maximum": 0,
+      "type": "integer"
+    },
+    "evidence_refs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "reason_codes": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "bizra.verdict.v0.1"
+    },
+    "verdict": {
+      "enum": [
+        "PASS",
+        "REFUSE",
+        "BLOCK",
+        "UNKNOWN",
+        "CONTRADICTED",
+        "RECOVERY_REQUIRED"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "verdict",
+    "reason_codes",
+    "authority_delta"
+  ],
+  "type": "object"
+}

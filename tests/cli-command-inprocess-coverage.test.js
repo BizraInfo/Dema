@@ -237,7 +237,15 @@ test("deterministic command render branches are covered in process", async () =>
   const assetScan = await captureCommand(
     () =>
       cmd_assets({
-        argv: ["assets", "scan", "--root", tempRoot, "--json"],
+        argv: [
+          "assets",
+          "scan",
+          "--root",
+          tempRoot,
+          "--consent",
+          "GO: scan homebase metadata only",
+          "--json",
+        ],
       }),
     { env: { DEMA_HOME: join(tempRoot, ".dema") } },
   );

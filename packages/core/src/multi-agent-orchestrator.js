@@ -9,6 +9,11 @@
 // Pure-function v0.1 · message-bus pattern as data structures · no I/O.
 
 import { buildPreviewBoundary } from "./preview-boundary.js";
+// ORCHESTRATOR-ISNAD-SEAL-1A — the pipeline declares `audit_trail_required` and
+// supplied no trail. `sealCapsuleBody` already content-addresses a chain of
+// transmission and refuses to grant authority; it is reused verbatim rather than
+// reinvented, so the delegation carries provenance before anything may dispatch.
+import { sealCapsuleBody } from "./fde-isnad-replay-capsule-preview.js";
 import {
   buildPATMissionScribePreview,
   buildPATMissionScribeEffectCap,
@@ -250,6 +255,46 @@ export function runVerificationPipeline({
         ? "pipeline_verified"
         : "pipeline_violated";
 
+  // Chain of transmission for this delegation: what was submitted, who verified
+  // it, and what was concluded. Roles come from LINEAGE_ROLES — none invented
+  // here. Sealing hashes the chain, so a different delegation cannot reuse an
+  // earlier seal, and it can never grant authority.
+  const lineage = [];
+  lineage.push({
+    step: lineage.length,
+    role: "origin",
+    ref_hash: safeArtifact?.schema || "no_artifact",
+  });
+  lineage.push({
+    step: lineage.length,
+    role: "author_or_model",
+    ref_hash: safeArtifact?.truth_label || "no_truth_label",
+  });
+  for (const sat of sats_run) {
+    lineage.push({ step: lineage.length, role: "verifier", ref_hash: sat });
+  }
+  for (const sat of sats_failed) {
+    lineage.push({
+      step: lineage.length,
+      role: "counterevidence",
+      ref_hash: sat,
+    });
+  }
+  lineage.push({
+    step: lineage.length,
+    role: "status",
+    ref_hash: overall_verdict,
+  });
+
+  const delegation_isnad = sealCapsuleBody({
+    source_lineage: lineage,
+    diagnosis: overall_verdict,
+    route: "orchestrator_verification_pipeline",
+    authority_delta: 0,
+    execution_allowed: false,
+    mint_allowed: false,
+  });
+
   return Object.freeze({
     schema: VERIFICATION_PIPELINE_SCHEMA,
     truth_label: all_passed
@@ -266,6 +311,7 @@ export function runVerificationPipeline({
     overall_verdict,
     passed: all_passed,
     audit_trail_required: true,
+    delegation_isnad,
     receipt_shape_ready: all_passed,
     boundary: buildPreviewBoundary(),
   });

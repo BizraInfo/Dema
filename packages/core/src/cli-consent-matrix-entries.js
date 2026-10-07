@@ -237,8 +237,8 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
   row(
     "assets",
     ["read_only", "preview_only", "local_write"],
-    "subcommand_gated",
-    "scan writes metadata inventory after consent; shareability remains read-only",
+    "exact_phrase",
+    "assets scan does not inspect or write before exact `GO: scan homebase metadata only` consent; shareability remains read-only",
     ["tests/homebase-asset-awareness-cli.test.js", "tests/homebase-shareability-cli.test.js"],
   ),
   row(

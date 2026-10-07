@@ -9,26 +9,34 @@ const cliPath = fileURLToPath(
   new URL("../apps/cli/src/index.js", import.meta.url),
 );
 
+async function runUnknownCommand(command) {
+  let error;
+  try {
+    await execFileAsync("node", [cliPath, command], {
+      env: { ...process.env, NODE_ENV: "test" },
+    });
+  } catch (caught) {
+    error = caught;
+  }
+  assert.ok(error, `${command} must reject at the direct CLI boundary`);
+  assert.equal(error.code, 1);
+  return error;
+}
+
 test("dema tell → suggests memory show bizra-context and help", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "tell"], {
-    env: { ...process.env, NODE_ENV: "test" },
-  });
-  assert.match(stdout, /Did you mean/);
-  assert.match(stdout, /memory show bizra-context/);
-  assert.match(stdout, /dema help/);
+  const error = await runUnknownCommand("tell");
+  assert.match(error.stdout, /Did you mean/);
+  assert.match(error.stdout, /memory show bizra-context/);
+  assert.match(error.stdout, /dema help/);
 });
 
 test("dema staus → suggests status", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "staus"], {
-    env: { ...process.env, NODE_ENV: "test" },
-  });
-  assert.match(stdout, /Did you mean/);
-  assert.match(stdout, /dema status/);
+  const error = await runUnknownCommand("staus");
+  assert.match(error.stdout, /Did you mean/);
+  assert.match(error.stdout, /dema status/);
 });
 
 test("dema xyzqwerty → couldn't find a close match message", async () => {
-  const { stdout } = await execFileAsync("node", [cliPath, "xyzqwerty"], {
-    env: { ...process.env, NODE_ENV: "test" },
-  });
-  assert.match(stdout, /couldn't find a close match/);
+  const error = await runUnknownCommand("xyzqwerty");
+  assert.match(error.stdout, /couldn't find a close match/);
 });

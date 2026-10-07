@@ -1,0 +1,315 @@
+{
+  "schema": "bizra.startup_kit.manifest.v0.2",
+  "package": "BIZRA_DEMA_Startup_Kit_v0.2",
+  "status": "PROPOSED_DESIGN_SPECIFICATION",
+  "authority_delta": 0,
+  "generated_utc": "2026-08-25T18:53:46.868258+00:00",
+  "source_anchors": {
+    "remote_main": "b233539993ac394b66f28b9e392d187b1c3ec901",
+    "remote_main_tree": "a19ab43f958a99c8a78bfb40da59e1fe020ff6d7",
+    "startup_v0_1": "docs/02-architecture/BIZRA_DEMA_STARTUP_KIT_v0_1",
+    "local_candidate_id_source_bound": "8479c822a3a7f54ece75fa5903397fb167501023"
+  },
+  "files": [
+    {
+      "path": "BOOT/boot_sequence.md",
+      "sha256": "59b8b75d7e8d7ff0401eb7c4478d0b8bec997f74110bbe499cca133b6a5e659b",
+      "bytes": 995
+    },
+    {
+      "path": "BOOT/first_boot_checklist.md",
+      "sha256": "b4ba3c6732ddcc65b2f345321660617400c182ac929d48277b995e702dc04e7d",
+      "bytes": 1068
+    },
+    {
+      "path": "BOOT/reentry_checklist.md",
+      "sha256": "0eb2912b99bc0a819ef6d4095d7f6451bb6235b33ad71ba45265bebecab93970",
+      "bytes": 698
+    },
+    {
+      "path": "BOOT/startup.yaml",
+      "sha256": "c4a1180874d37f91d590db50b1339977da9c5d7aa118a5e9dfda1de0f138e822",
+      "bytes": 860
+    },
+    {
+      "path": "CURRENT_STATE.md",
+      "sha256": "c8e4e2c13605546fdee33a32b6979f0d9ab24b3e0ec75e0daa9c087e27c5ad7b",
+      "bytes": 4490
+    },
+    {
+      "path": "DATA/FILE_CARD_SCHEMA.json",
+      "sha256": "03fb25e89ec81bf1777dab43b31cc9e24fe64e3c7496d47875cf5ae36930f2ac",
+      "bytes": 1155
+    },
+    {
+      "path": "DATA/KNOWLEDGE_CARD_SCHEMA.json",
+      "sha256": "b8707b3543a5f429255724a4da320fb00a637b2a1e597c6974e3b60c6a4a5420",
+      "bytes": 1072
+    },
+    {
+      "path": "DATA/NODE0_DATA_ESTATE.md",
+      "sha256": "a31530103b3906ac02b1d5237806f6bb4eacc4253f7770e2487fedc45a278a3c",
+      "bytes": 1236
+    },
+    {
+      "path": "DATA/NODE0_DIRECTORY_LAYOUT.md",
+      "sha256": "51a7a3e4f829a418a6151e7ea15604c5d0ac42e667d9811bd05d5a32cef2b587",
+      "bytes": 1698
+    },
+    {
+      "path": "DATA/PROCESSING_PIPELINE.md",
+      "sha256": "c7ea152b6d99e01df87a9e0a73bc71f5205b7845a687c4145e7d62421ffead75",
+      "bytes": 1881
+    },
+    {
+      "path": "DOD/DATA_ESTATE_DOD.md",
+      "sha256": "44ec21eff6e4db23777ab0eb32e2be98975537bac2126e6696bf356b820adffd",
+      "bytes": 1894
+    },
+    {
+      "path": "DOD/NODE0_DOD.md",
+      "sha256": "282ccfa13522dfe5c1e73823aa8d96e84a7e65e37f592e8efcef8e0002496ff4",
+      "bytes": 4763
+    },
+    {
+      "path": "INSTALL_DEMA_DATA_STEWARD.md",
+      "sha256": "1cf26de0e0d08d4d76165c9b9e5e4c4a1ff2f83a0dee3adac2173636aa58c12c",
+      "bytes": 1139
+    },
+    {
+      "path": "KNOWLEDGE/00_ROOT_AND_IDENTITY.md",
+      "sha256": "bfd6ac25ebc99135c8e292a8635939c7f2d25d191618203b36ed15053b13dc6d",
+      "bytes": 471
+    },
+    {
+      "path": "KNOWLEDGE/01_MISSION_AND_AUTHORITY.md",
+      "sha256": "f75c4cf84eb118abadc0d244671489d33e98b4e80c35acbc9c765b3ad1a76ed9",
+      "bytes": 477
+    },
+    {
+      "path": "KNOWLEDGE/02_EVIDENCE_AND_TRUTH.md",
+      "sha256": "45bac26e113509badf6036fd57ac907ed8f52d4cc12973aaa5950f93389305c6",
+      "bytes": 477
+    },
+    {
+      "path": "KNOWLEDGE/03_ROLES_DEMA_PAT_SAT_FATE_URP.md",
+      "sha256": "2ece574b605834ee37bd2353eaee0abc4ea68b816cb5f6c0c3dd976b76b83809",
+      "bytes": 511
+    },
+    {
+      "path": "KNOWLEDGE/04_HARNESS_AND_PLUGINS.md",
+      "sha256": "2fece9e99fb14c7f782953ef3bd070d4bac8eb2bb8d2374e42e09aca202725f5",
+      "bytes": 637
+    },
+    {
+      "path": "KNOWLEDGE/05_WRAPPERS_AND_CAPABILITY_CARTRIDGES.md",
+      "sha256": "1031b466ecfeb7b091b351e6025fae1e3d337d7b7b3986678f0155e7afa48b09",
+      "bytes": 527
+    },
+    {
+      "path": "KNOWLEDGE/06_MEMORY_AND_CONTEXT.md",
+      "sha256": "445ade48b57e93d3aa60e4d1330be0f85060c2561edae4e1a868d126a47a6304",
+      "bytes": 611
+    },
+    {
+      "path": "KNOWLEDGE/07_RECOVERY.md",
+      "sha256": "071b7d5c802bf106ed326ced3202f3fb220a7640c124c5e86090f4455197b434",
+      "bytes": 432
+    },
+    {
+      "path": "KNOWLEDGE/08_LEARNING_RL_RSI.md",
+      "sha256": "6ec269eb2eea7bb92b16f1ae83f66bd435f9540b14de6a1c578c7e1dda474b60",
+      "bytes": 460
+    },
+    {
+      "path": "KNOWLEDGE/09_SNR_GEMS.md",
+      "sha256": "7cd89dfed103dc5f8c9adb43d61d47373a2b708a7901ca5ff9acf81c29e29a04",
+      "bytes": 484
+    },
+    {
+      "path": "KNOWLEDGE/10_FAILURE_AND_VERIFICATION.md",
+      "sha256": "87da9c1a1139fc389a5af739ef433cff40036fa32b0fd3d52744e7c3ed4ef2e2",
+      "bytes": 569
+    },
+    {
+      "path": "KNOWLEDGE/11_GLOSSARY.md",
+      "sha256": "877bcc901d491b5b18a8218b7cfbddc34d3df29a6af7992392a1d8a873985275",
+      "bytes": 970
+    },
+    {
+      "path": "KNOWLEDGE/12_GOOGLE_KNOWLEDGE_SYSTEM.md",
+      "sha256": "fa90dfccbf2d601b70b4769bde8668f4a42b75aa2f946390ded7a624d34f260e",
+      "bytes": 3602
+    },
+    {
+      "path": "KNOWLEDGE/13_WORLD_ADAPTERS_OBSERVERS_ACTUATORS.md",
+      "sha256": "201b18a31b54d0968733fad315352a96b564a884846091214bc22e1849aa3103",
+      "bytes": 860
+    },
+    {
+      "path": "KNOWLEDGE/INDEX.yaml",
+      "sha256": "a3760098316c877ebab2393a07e31f9c7930e34134753cd44eae1af85dac0102",
+      "bytes": 873
+    },
+    {
+      "path": "LOCAL_AGENT_RUNBOOK.md",
+      "sha256": "210b420045b866fd35fbafa2d34157acd0b81819a31ae278940c1d4fb049a25d",
+      "bytes": 3633
+    },
+    {
+      "path": "MEMORY/00_IDENTITY_ANCHORS.md",
+      "sha256": "1372aaff79e2f75e699581cd8a30b198f8dd7a793e594c717999bb3616245ce9",
+      "bytes": 695
+    },
+    {
+      "path": "MEMORY/01_CURRENT_MISSION.md",
+      "sha256": "9e0a4aa943f455386e8c2c2111524bf36809956401183829ef3c63249413f040",
+      "bytes": 1114
+    },
+    {
+      "path": "MEMORY/02_AUTHORITY_AND_CONSENT.md",
+      "sha256": "dea2a3b26cb69d276ea33ea717b4c1e8e0505243066c90024138cd00de15af1f",
+      "bytes": 884
+    },
+    {
+      "path": "MEMORY/03_CURRENT_PROOF_STATE.md",
+      "sha256": "b6d1d5cbdf32d463e0fcafea482d938822ca4f28b832551e0e730db6a1c25562",
+      "bytes": 870
+    },
+    {
+      "path": "MEMORY/04_EPISODIC_LEDGER.md",
+      "sha256": "bfbbd3ee09e6b456225d25a2ff62f62857d54f5f35f7cf2930a2cbd38c7acc5b",
+      "bytes": 1123
+    },
+    {
+      "path": "MEMORY/05_SEMANTIC_KNOWLEDGE.md",
+      "sha256": "cfc30f65bdc2bf71b80748722630803ee9f2570763a8a3eb0b648b76e0caf5ad",
+      "bytes": 660
+    },
+    {
+      "path": "MEMORY/06_PROCEDURAL_KNOWHOW.md",
+      "sha256": "fc6d74a8ef37813cb5de7848fd0e3af64b4f6c0f03a2d326a1a3b2fc909da1fe",
+      "bytes": 778
+    },
+    {
+      "path": "MEMORY/07_OPEN_LOOPS.md",
+      "sha256": "5c8fdf838e089414dbd59bcd8093a16eda7dc84cb6c672b09455a121348888af",
+      "bytes": 962
+    },
+    {
+      "path": "MEMORY/08_DECISION_GRAPH.md",
+      "sha256": "515af950577c84566dcc576ec021dae8221c381398c47d9a2c7c5e594dcfcb5f",
+      "bytes": 751
+    },
+    {
+      "path": "MEMORY/09_GOLDEN_SET.md",
+      "sha256": "217d8e9f1520fdab0990f907359a5fa4937421b6684684c3c9f022a7b2290a58",
+      "bytes": 722
+    },
+    {
+      "path": "MEMORY/MEMORY_INDEX.yaml",
+      "sha256": "2b02078d74c8cccdb1a9e1ecb3f78652d7c9642b9e0d14f6f47b8d9ea218ab85",
+      "bytes": 561
+    },
+    {
+      "path": "MEMORY/README.md",
+      "sha256": "ddb1fee7cd87ed75068d6c5d471d85896b2d280201dfbef621362cdd02634555",
+      "bytes": 401
+    },
+    {
+      "path": "PACKAGE_TREE.txt",
+      "sha256": "4876eadb71a1aaafa3b6227db4c44eb48905b03b6e1f3d03d51eaa64dd33555f",
+      "bytes": 1752
+    },
+    {
+      "path": "POLICIES/claim_scope.yaml",
+      "sha256": "7086272792be039b60fe7d9f17bc3622a6454e7c97875e50fb0109025fea86ca",
+      "bytes": 432
+    },
+    {
+      "path": "POLICIES/data_steward_policy.yaml",
+      "sha256": "36b5a58d1a800a5f9b8303e985a4def3bf048f01c9f555417a8ea255ffb7386a",
+      "bytes": 473
+    },
+    {
+      "path": "POLICIES/google_knowledge_policy.yaml",
+      "sha256": "d90fa519dd3e774ec0e5c8c132daea1f4a49d00085f120a663ca9e7b313e5773",
+      "bytes": 412
+    },
+    {
+      "path": "POLICIES/learning_policy.yaml",
+      "sha256": "f79d00bcd937c4fbb905169e9f5ffe5373d44652477befd7cec0b720d2034ec1",
+      "bytes": 510
+    },
+    {
+      "path": "POLICIES/plugin_policy.yaml",
+      "sha256": "dd249819bfd2d2f2e477a924e26942b8f0bc891f06d1cc3a188af59098c3d020",
+      "bytes": 496
+    },
+    {
+      "path": "README.md",
+      "sha256": "c2338954d881f11a7848feafd99f4b9df79ddc787101f50856f58f30e0a04374",
+      "bytes": 2170
+    },
+    {
+      "path": "ROADMAP_NODE0_CLOSE.md",
+      "sha256": "3c70096654646f19da0848a90e6f288993dc20bd449c58867ec89533aa64ad0b",
+      "bytes": 8459
+    },
+    {
+      "path": "SCHEMAS/capability_cartridge.schema.json",
+      "sha256": "3214c23847e39f04a4b10c9fe39be8508707872e7f2d847505215ca70cb77804",
+      "bytes": 1354
+    },
+    {
+      "path": "SCHEMAS/experience_event.schema.json",
+      "sha256": "c6f7cd0222d6b4a7e409fc5a36dd0343fc2d644c5636b8c7f538883ee829e43a",
+      "bytes": 848
+    },
+    {
+      "path": "SCHEMAS/file_card.schema.json",
+      "sha256": "03fb25e89ec81bf1777dab43b31cc9e24fe64e3c7496d47875cf5ae36930f2ac",
+      "bytes": 1155
+    },
+    {
+      "path": "SCHEMAS/knowledge_card.schema.json",
+      "sha256": "b8707b3543a5f429255724a4da320fb00a637b2a1e597c6974e3b60c6a4a5420",
+      "bytes": 1072
+    },
+    {
+      "path": "SYSTEM_INSTRUCTION.md",
+      "sha256": "481ca7b5128e28c8856dea7d3eb23fafadb20ffbe9b979a2886a0ab753b0cf8b",
+      "bytes": 8276
+    },
+    {
+      "path": "TEMPLATES/decision_node.yaml",
+      "sha256": "78ac14ec7a7bacc4c1433a5713435e0b53b0fc14d6cba0174054a41ae4fb6eee",
+      "bytes": 260
+    },
+    {
+      "path": "TEMPLATES/golden_set_case.yaml",
+      "sha256": "69a9ec2f5394239da9b14f165aac0a7c898d14fc95e51dadb28991cf75b4035d",
+      "bytes": 219
+    },
+    {
+      "path": "TEMPLATES/knowledge_card.yaml",
+      "sha256": "9c079a8bd06619d6d5ba99ae6d17cd0437a10203350e257e342753ad6dcbf417",
+      "bytes": 335
+    },
+    {
+      "path": "TEMPLATES/memory_record.yaml",
+      "sha256": "61f5f51faa9a5d19336405930a7b0d54b4080c6bb83583d39df6bbef2e583e48",
+      "bytes": 332
+    },
+    {
+      "path": "TEMPLATES/stewardship_receipt.yaml",
+      "sha256": "64ef84411e85eddc6d45536682240543965dfa574ca6469bb12f6d95087bc003",
+      "bytes": 315
+    },
+    {
+      "path": "TOOLS/verify_manifest.py",
+      "sha256": "100e25ae2134230cd1b1a45faac651528678cc7848451cb95a402c76dbe4eefe",
+      "bytes": 1476
+    }
+  ]
+}

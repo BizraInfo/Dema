@@ -38,7 +38,7 @@ CI secret-scan (`.github/workflows/gitleaks.yml`). No invented commands.
 | claims | `npm run claim:check` | claims | cryptographic_evidence | yes |
 | proof-seal | `npm run pre-push:seal` | proof_seal | cryptographic_evidence | yes |
 | operator-prep | `npm run layer-a5:prep` | operator_prep | cryptographic_evidence | warning-only |
-| security | `gitleaks detect --source . --no-banner --verbose --exit-code 1 --redact` (CI) | security | empirical | yes |
+| security | `node scripts/review/gitleaks-dual-eval.mjs` (CI) | security | empirical | yes |
 | env-hygiene | `npm run env-hygiene` | env_hygiene | empirical | yes |
 | artifact-safety | `npm run eval:layer1` | artifact_safety | empirical | yes |
 | release-readiness | `npm run release:readiness` | release_readiness | empirical | yes |

@@ -199,6 +199,18 @@ export default function FirstEncounter() {
               >
                 Realm view
               </a>
+              <a
+                href="/mission"
+                style={{
+                  border: `1px solid ${TEAL}55`,
+                  color: TEAL,
+                  padding: "0.9rem 1.6rem",
+                  fontSize: 15,
+                  textDecoration: "none",
+                }}
+              >
+                Speak to DEMA
+              </a>
             </div>
             <p style={{ marginTop: "2rem", fontSize: 13, color: "#64798F" }}>
               Demonstration scope is pinned to a synthetic project folder. No network. No account.

@@ -1,0 +1,56 @@
+{
+  "schema": "bizra.skill-registry/v1",
+  "created_at": "2026-08-30T21:54:00+04:00",
+  "registry_version": "1.0.0",
+  "skills": [
+    {
+      "skill_id": "dema-data-steward",
+      "version": "1.0.0",
+      "contract_path": "skills-src/dema-data-steward/contract.json",
+      "manifest_path": "skills-src/dema-data-steward/manifest.json"
+    },
+    {
+      "skill_id": "dema-slice-scaffold",
+      "version": "1.0.0",
+      "contract_path": "skills-src/dema-slice-scaffold/contract.json",
+      "manifest_path": "skills-src/dema-slice-scaffold/manifest.json"
+    },
+    {
+      "skill_id": "model-eval-baseline",
+      "version": "1.0.0",
+      "contract_path": "skills-src/model-eval-baseline/contract.json",
+      "manifest_path": "skills-src/model-eval-baseline/manifest.json"
+    },
+    {
+      "skill_id": "proof-closeout",
+      "version": "1.0.0",
+      "contract_path": "skills-src/proof-closeout/contract.json",
+      "manifest_path": "skills-src/proof-closeout/manifest.json"
+    },
+    {
+      "skill_id": "run-dema",
+      "version": "1.0.0",
+      "contract_path": "skills-src/run-dema/contract.json",
+      "manifest_path": "skills-src/run-dema/manifest.json"
+    },
+    {
+      "skill_id": "self-loop-engineering",
+      "version": "1.0.0",
+      "contract_path": "skills-src/self-loop-engineering/contract.json",
+      "manifest_path": "skills-src/self-loop-engineering/manifest.json"
+    }
+  ],
+  "projection_targets": [".claude", ".agents"],
+  "routing_policy": {
+    "source": ".claude/proven-config.json",
+    "body_weight": 1.5,
+    "mmr_lambda": 0.5,
+    "status": "SOURCE_BOUND_NOT_REPRODUCED"
+  },
+  "convergence": {
+    "formal": 2,
+    "cryptographic": 1,
+    "empirical": 2,
+    "economic": 0
+  }
+}

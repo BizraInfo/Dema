@@ -1,0 +1,15 @@
+schema: bizra.wrapper.manifest.v0.1
+wrapper_id: vendor.component
+wrapper_version: 0.1.0
+kind: MODEL
+upstream:
+  vendor: ""
+  artifact: ""
+  version: ""
+capabilities: []
+side_effects: []
+effective_config:
+  visible: true
+authority_behavior: NEVER_GRANTS_AUTHORITY
+qualification:
+  status: DISCOVERED

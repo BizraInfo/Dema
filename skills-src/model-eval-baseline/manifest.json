@@ -1,0 +1,25 @@
+{
+  "schema": "bizra.skill-manifest/v1",
+  "generated_at": "2026-08-30T20:38:09.091Z",
+  "source_root": "skills-src",
+  "skill_id": "model-eval-baseline",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "5c6347df787ea464bbc129d193df5e46193f471a048332bf3c71a79a2a2c25b2",
+      "size": 1381
+    },
+    {
+      "path": "contract.json",
+      "sha256": "a6b4da89d3d7ec077c029e33b36e9cde9b6994a0f9648e9383b52f0deb012a23",
+      "size": 1573
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "de955be63b0a259a8dab563c8334295ec2f0b7f78dd9c4ff33db26dc9faf5847",
+      "size": 363
+    }
+  ],
+  "total_files": 3,
+  "total_bytes": 3317
+}

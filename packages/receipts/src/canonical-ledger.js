@@ -20,10 +20,12 @@
 import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
-import { loadPublicKey } from "./authorship-key-store.js";
+import { loadPublicKey, loadGenerationPublicKey } from "./authorship-key-store.js";
+import { fingerprintPublicKeyPem as fingerprintOfPem } from "./authorship-signature.js";
 import {
   buildCanonicalReceipt,
   verifyCanonicalChain,
+  verifyCanonicalAuthorityChain,
   CANONICAL_RECEIPT_CONSENT_PHRASE,
 } from "./canonical-receipt.js";
 
@@ -57,15 +59,30 @@ export async function loadCanonicalLedger({ demaHome } = {}) {
     .map((line) => JSON.parse(line));
 }
 
-/** Verify the whole on-disk ledger chain. Empty ledger is a verified empty chain. */
+/**
+ * Verify the whole on-disk ledger chain. Empty ledger is a verified empty chain.
+ *
+ * CONTRACT MIGRATION 2026-08-11 (ISNAD-AUTHORITY-SUCCESSION-1A). `pubkeyPem` is
+ * now the ROOT-TRUST ANCHOR — the key the chain is anchored on — and no longer
+ * "the one key that signed every entry". For a home whose authorship key has
+ * never rotated these are the same key, which is why existing callers and their
+ * tests are unaffected.
+ *
+ * After a rotation they differ, and the difference is the point: passing the
+ * CURRENT active key now fails loudly rather than appearing to verify a history
+ * that key never signed. A caller wanting today's authority should ask the key
+ * store for it, not infer it from a chain — those are two different jobs and
+ * collapsing them is what this slice exists to undo.
+ */
 export async function verifyCanonicalLedger({ demaHome, pubkeyPem } = {}) {
   const entries = await loadCanonicalLedger({ demaHome });
   if (entries.length === 0) {
     return Object.freeze({ verified: true, total_entries: 0 });
   }
-  // PROOF-SPINE-GUARD-1A: verifyCanonicalChain now rejects empty sigs (#107)
-  // and empty genesis bodies (#101). This is the on-disk spine guard.
-  return verifyCanonicalChain({ entries, pubkeyPem });
+  // PROOF-SPINE-GUARD-1A: structural rejection of empty sigs (#107) and empty
+  // genesis bodies (#101) is preserved inside the walk. This is the on-disk
+  // spine guard, now authority-aware.
+  return verifyCanonicalAuthorityChain({ entries, genesisPubkeyPem: pubkeyPem });
 }
 
 /**
@@ -119,12 +136,45 @@ export async function appendCanonicalReceipt({
     if (!pubkey) {
       return Object.freeze({ appended: false, error: "no_authorship_key" });
     }
-    const v = verifyCanonicalChain({ entries, pubkeyPem: pubkey });
+
+    // ISNAD-AUTHORITY-SUCCESSION-1A. This pre-check used to verify every entry
+    // against the CURRENT active key, which meant a rotation permanently closed
+    // the ledger: measured at 0952c16, the append after a rotation returned
+    // ledger_chain_broken / signature_invalid on entries the retired key had
+    // legitimately signed.
+    //
+    // It now walks the authority forward. The anchor is the key that signed
+    // entry 0, resolved from the archived generations, and the trusted key
+    // advances only across a valid two-half succession link.
+    //
+    // BOUNDARY — this is an INTEGRITY check, not an ancestry proof. It is
+    // anchored on the chain's own first signer, so it proves the chain is
+    // internally consistent and lands on the key about to append. It cannot
+    // prove the first signer was ever legitimate; only a caller supplying an
+    // external genesis key to verifyCanonicalAuthorityChain can do that, which
+    // is why the two jobs stay separate functions.
+    const rootFp = entries[0]?.operator_public_key_fingerprint;
+    const rootPem = (await loadGenerationPublicKey(demaHome, rootFp)) ?? pubkey;
+    const v = verifyCanonicalAuthorityChain({ entries, genesisPubkeyPem: rootPem });
     if (!v.verified) {
       return Object.freeze({
         appended: false,
         error: "ledger_chain_broken",
         reason: v.reason,
+      });
+    }
+
+    // The signer about to append must be the authority the chain established —
+    // or, when the chain ends on an authorized-but-uncommitted succession, the
+    // exact successor that predecessor named. Any other key is unannounced.
+    const signerFp = fingerprintOfPem(pubkey);
+    const isEstablished = signerFp === v.final_authority_fingerprint;
+    const isNamedSuccessor = v.pending_successor?.successor_fingerprint === signerFp;
+    if (!isEstablished && !isNamedSuccessor) {
+      return Object.freeze({
+        appended: false,
+        error: "ledger_chain_broken",
+        reason: "signer_is_not_the_established_authority",
       });
     }
   }

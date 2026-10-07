@@ -161,10 +161,18 @@ export async function buildHealthSnapshot({
   // An injected statusFn is TEST_INJECTION by construction — the caller is the
   // source, so it can exercise composition and never bridge readiness.
   const source = status.adapter?.source ?? status.source ?? null;
+  // Real gateway-composed status exposes top-level `source` + `gateway.reachable`
+  // and does not set `adapter.available`. Treat that as observed bridge evidence.
+  const gatewayObserved =
+    typeof source === "string" &&
+    source.startsWith("gateway") &&
+    status.gateway?.reachable === true;
+  const adapterAvailable =
+    status.adapter?.available === true || gatewayObserved;
   const evidenceClass =
     typeof statusFn === "function"
       ? "TEST_INJECTION"
-      : status.adapter?.available !== true
+      : !adapterAvailable
         ? "NONE"
         : typeof source === "string" && source.startsWith("gateway")
           ? "OBSERVED"
@@ -246,7 +254,7 @@ export async function buildHealthSnapshot({
       // `available` is fail-closed on the claim, exactly as gatewayProbe is:
       // only an explicit `true` counts as bridged. Absent, null and undefined
       // are all "we did not observe a bridge".
-      available: status.adapter?.available === true,
+      available: adapterAvailable,
       activation_gate: status.activationGate ?? null,
       source: status.adapter?.source ?? status.source ?? null,
       ...(status.adapter?.reason ? { reason: status.adapter.reason } : {}),

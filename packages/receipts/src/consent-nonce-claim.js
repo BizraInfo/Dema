@@ -28,8 +28,8 @@
 //
 // I/O tier by design (allowlisted). All paths under DEMA_HOME. No network.
 
-import { createHash } from "node:crypto";
-import { mkdir, writeFile, readFile, access } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { access, link, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -43,6 +43,14 @@ export const CONSENT_NONCE_RELDIR = join("consent", "nonces-v1");
 export const LEGACY_NAMESPACES = Object.freeze({
   cliReservation: join("missions", "consent-nonces"),
   weldRegistry: join("consent", "nonces"),
+  // THIRD superseded store, added 2026-08-10 during the verdict-attest cutover.
+  // `consent-nonce-registry.js` (the non-atomic writer verdict-attest used) keeps
+  // ONE aggregate file rather than one file per nonce, so it needs a membership
+  // read rather than a path probe. It was missing here, which meant every nonce
+  // attest had ever consumed was invisible to this authority — cutting attest
+  // over without it would have silently dropped that replay protection. Found by
+  // KEYCONSENT-2B DOD-10.4, which exists for exactly this.
+  attestRegistryFile: join("consent", "used-nonces.json"),
 });
 
 // PATH KEY ONLY. Domain-separated so this digest can never collide with any
@@ -143,6 +151,32 @@ async function legacyRefs(home, nonce) {
       }));
     }
   }
+  // Aggregate-file store: membership, not existence. Unreadable-but-present is an
+  // ERROR, never "absent" \u2014 an unreadable registry is not an empty one, and this
+  // path decides whether consent may be spent again.
+  const attestFile = join(home, LEGACY_NAMESPACES.attestRegistryFile);
+  const attestProbe = await probePath(attestFile);
+  if (attestProbe.error) {
+    errors.push(Object.freeze({ namespace: LEGACY_NAMESPACES.attestRegistryFile, error: attestProbe.error }));
+  } else if (attestProbe.present) {
+    let holds = null;
+    try {
+      const parsed = JSON.parse(await readFile(attestFile, "utf8"));
+      const entries = parsed && typeof parsed === "object" ? (parsed.nonces ?? parsed.entries ?? parsed) : null;
+      if (Array.isArray(entries)) holds = entries.some((e) => (typeof e === "string" ? e : e?.nonce) === nonce);
+      else if (entries && typeof entries === "object") holds = Object.prototype.hasOwnProperty.call(entries, nonce);
+    } catch {
+      holds = null;
+    }
+    if (holds === null) {
+      // Present but unparseable: cannot prove unused, so never grant.
+      errors.push(Object.freeze({ namespace: LEGACY_NAMESPACES.attestRegistryFile, error: "unreadable_or_unrecognised_shape" }));
+    } else if (holds) {
+      refs.push(Object.freeze({
+        namespace: LEGACY_NAMESPACES.attestRegistryFile, key: "raw-in-aggregate", status: "LEGACY_CONSUMED",
+      }));
+    }
+  }
   return Object.freeze({ refs: Object.freeze(refs), errors: Object.freeze(errors) });
 }
 
@@ -186,9 +220,33 @@ export async function claimConsentNonce(p = {}) {
   const path = claimPath(home, digest);
   await mkdir(claimDir(home), { recursive: true, mode: 0o700 });
 
+  let claimed = false;
   try {
-    // THE claim. One exclusive create; the filesystem picks the winner.
-    await writeFile(path, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+    // Publish the complete record with an exclusive hard-link. Creating the
+    // final path with O_EXCL and writing it afterwards leaves a brief window in
+    // which a loser can read a truncated JSON claim. The temp-file + link pair
+    // makes the winner visible only after its bytes are complete.
+    const temp = `${path}.tmp-${process.pid}-${randomUUID()}`;
+    await writeFile(temp, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx", mode: 0o600 });
+    let linkError = null;
+    try {
+      await link(temp, path);
+      claimed = true;
+    } catch (err) {
+      linkError = err;
+    }
+    let cleanupError = null;
+    try {
+      await unlink(temp);
+    } catch (err) {
+      cleanupError = err;
+    }
+    if (linkError && linkError?.code !== "EEXIST") throw linkError;
+    if (claimed) return Object.freeze({ claimed: true, claim: Object.freeze(record) });
+    if (cleanupError && cleanupError?.code !== "ENOENT") throw cleanupError;
+    const existingClaim = new Error("claim_path_already_exists");
+    existingClaim.code = "EEXIST";
+    throw existingClaim;
   } catch (err) {
     if (err?.code !== "EEXIST") {
       // Cannot prove unused ⇒ never grant. An unwritable registry is not an empty one.

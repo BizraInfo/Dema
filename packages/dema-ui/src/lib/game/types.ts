@@ -101,7 +101,7 @@ export interface AgentDef {
   team?: "PAT" | "SAT" | null;
   serves?: "user" | "system";
   family?: string;
-  truthLabel?: TruthLabel;
+  truthLabel: TruthLabel;
 }
 
 export type ZoneId =
