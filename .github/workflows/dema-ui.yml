@@ -17,6 +17,9 @@ permissions:
 jobs:
   dema-ui:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
     defaults:
       run:
         working-directory: packages/dema-ui
@@ -32,7 +35,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Package tests
-        run: npm run test
+        run: node --test --test-reporter=tap tests/*.test.mjs tests/ui-lifecycle.proof.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Lint

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Panel, StatBar, TruthLabelBadge } from "./primitives";
 import { RefreshCw } from "lucide-react";
@@ -39,12 +39,6 @@ interface NodeResources {
   receipts: Observation<number>;
 }
 
-async function fetchNodeResources(signal?: AbortSignal): Promise<NodeResources> {
-  const res = await fetch("/api/node-resources", { cache: "no-store", signal });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-
 function UnavailableChip({ label }: { label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md border border-muted-foreground/30 bg-muted-foreground/5 px-2 py-1 font-mono text-[11px] text-muted-foreground">
@@ -77,34 +71,39 @@ export function RealResources() {
   const [data, setData] = useState<NodeResources | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const request = useRef<AbortController | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setData(await fetchNodeResources());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "fetch failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback((signal: AbortSignal) =>
+    fetch("/api/node-resources", { cache: "no-store", signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((observation) => {
+        if (!signal.aborted) setData(observation);
+      })
+      .catch((err) => {
+        if (!signal.aborted) setError(err instanceof Error ? err.message : "fetch failed");
+      })
+      .finally(() => {
+        if (!signal.aborted) setLoading(false);
+      }), []);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchNodeResources(controller.signal).then(
-      (result) => {
-        setData(result);
-        setLoading(false);
-      },
-      (err) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        setError(err instanceof Error ? err.message : "fetch failed");
-        setLoading(false);
-      },
-    );
-    return () => controller.abort();
-  }, []);
+    request.current = controller;
+    void load(controller.signal);
+    return () => request.current?.abort();
+  }, [load]);
+
+  const refresh = () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setLoading(true);
+    setError(null);
+    void load(controller.signal);
+  };
 
   return (
     <Panel
@@ -115,7 +114,7 @@ export function RealResources() {
         <div className="flex items-center gap-2">
           {data && <TruthLabelBadge label="LOCAL_ONLY" size="xs" />}
           <button
-            onClick={load}
+            onClick={refresh}
             disabled={loading}
             className="grid size-6 place-items-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-card/60 disabled:opacity-50"
             aria-label="Refresh telemetry"

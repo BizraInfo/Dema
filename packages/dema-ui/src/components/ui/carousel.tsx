@@ -58,14 +58,20 @@ function Carousel({
     },
     plugins
   )
-  const [canScrollPrev, setCanScrollPrev] = React.useState(false)
-  const [canScrollNext, setCanScrollNext] = React.useState(false)
-
-  const onSelect = React.useCallback((api: CarouselApi) => {
-    if (!api) return
-    setCanScrollPrev(api.canScrollPrev())
-    setCanScrollNext(api.canScrollNext())
-  }, [])
+  const subscribe = React.useCallback((onChange: () => void) => {
+    api?.on("reInit", onChange)
+    api?.on("select", onChange)
+    return () => {
+      api?.off("reInit", onChange)
+      api?.off("select", onChange)
+    }
+  }, [api])
+  // A primitive bitmask keeps the snapshot stable when navigation is unchanged.
+  const getSnapshot = React.useCallback(() =>
+    (api?.canScrollPrev() ? 1 : 0) | (api?.canScrollNext() ? 2 : 0), [api])
+  const navigation = React.useSyncExternalStore(subscribe, getSnapshot, () => 0)
+  const canScrollPrev = (navigation & 1) !== 0
+  const canScrollNext = (navigation & 2) !== 0
 
   const scrollPrev = React.useCallback(() => {
     api?.scrollPrev()
@@ -92,19 +98,6 @@ function Carousel({
     if (!api || !setApi) return
     setApi(api)
   }, [api, setApi])
-
-  React.useEffect(() => {
-    if (!api) return
-    const frame = requestAnimationFrame(() => onSelect(api))
-    api.on("reInit", onSelect)
-    api.on("select", onSelect)
-
-    return () => {
-      cancelAnimationFrame(frame)
-      api.off("reInit", onSelect)
-      api.off("select", onSelect)
-    }
-  }, [api, onSelect])
 
   return (
     <CarouselContext.Provider

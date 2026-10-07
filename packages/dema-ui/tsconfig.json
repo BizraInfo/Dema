@@ -10,7 +10,6 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
     "module": "esnext",
@@ -30,8 +29,12 @@
       ],
       "@core/*": [
         "../core/src/*"
+      ],
+      "@node-adapter/*": [
+        "../node-adapter/src/*"
       ]
-    }
+    },
+    "allowImportingTsExtensions": true
   },
   "include": [
     "next-env.d.ts",

@@ -10,6 +10,13 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
+function namedTestBlock(source, name) {
+  const start = source.indexOf(`test("${name}"`);
+  if (start < 0) return "";
+  const next = source.indexOf('\ntest("', start + 1);
+  return source.slice(start, next < 0 ? source.length : next);
+}
+
 test("Lighthouse archives exclude operator-session transcripts", async () => {
   const { stdout } = await execFileAsync(
     "git",
@@ -82,8 +89,37 @@ test("review regression: mission profile uses one byte read and safe name fallba
 });
 
 test("review regression: interrupted raids fence stale callbacks", async () => {
-  const raid = await readFile(join(root, "packages/dema-ui/src/components/game/CiRaid.tsx"), "utf8");
-  assert.match(raid, /const runGeneration = useRef\(0\);/);
-  assert.match(raid, /generation !== runGeneration\.current/);
-  assert.match(raid, /runGeneration\.current \+= 1/);
+  // Root CI owns this dependency-free contract; the package workflow executes
+  // the TypeScript-backed behavioral proof itself.
+  const [lifecycle, workflow] = await Promise.all([
+    readFile(join(root, "packages/dema-ui/tests/ui-lifecycle.proof.mjs"), "utf8"),
+    readFile(join(root, ".github/workflows/dema-ui.yml"), "utf8"),
+  ]);
+
+  const resetUnmount = namedTestBlock(
+    lifecycle,
+    "raid reset and unmount cancel pending work without a demo completion",
+  );
+  assert.notEqual(resetUnmount, "", "reset/unmount lifecycle proof must remain present");
+  assert.match(resetUnmount, /=== "reset"/);
+  assert.match(resetUnmount, /raid\.timers\.size, 0/);
+  assert.match(resetUnmount, /await pending/);
+  assert.match(resetUnmount, /raid\.h\.unmount\(\)/);
+  assert.match(resetUnmount, /raid\.receipts\(\), 0/);
+
+  const restart = namedTestBlock(
+    lifecycle,
+    "individual raid gates cancel on reset and can complete after restart",
+  );
+  assert.notEqual(restart, "", "reset/restart lifecycle proof must remain present");
+  assert.match(restart, /=== "reset"/);
+  assert.match(restart, /raid\.timers\.size, 0/);
+  assert.match(restart, /raid\.receipts\(\), 0/);
+  assert.equal((restart.match(/await raid\.next\(\)/g) ?? []).length, 2);
+  assert.match(restart, /raid\.receipts\(\), 1/);
+
+  const packageTestsStep = workflow.match(/-\s*name:\s*Package tests\s*\r?\n\s*run:\s*([^\r\n]+)/);
+  assert.ok(packageTestsStep, "dema-ui workflow must retain its package test step");
+  assert.match(packageTestsStep[1], /\bnode\s+--test\b/);
+  assert.match(packageTestsStep[1], /tests\/ui-lifecycle\.proof\.mjs/);
 });

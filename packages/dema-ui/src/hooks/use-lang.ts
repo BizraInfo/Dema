@@ -3,43 +3,53 @@
 // Language preference for Dema's bilingual surfaces (EN / AR).
 // Local-only: stored in localStorage, never transmitted.
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import type { Lang } from "@/lib/lifecycle";
 
 const KEY = "dema.lang";
 const listeners = new Set<() => void>();
+let volatileLang: Lang = "en";
+let memoryOnly = false;
 
-function readLang(): Lang {
+function getSnapshot(): Lang {
+  if (memoryOnly) return volatileLang;
   try {
-    return window.localStorage.getItem(KEY) === "ar" ? "ar" : "en";
+    const stored = window.localStorage.getItem(KEY);
+    return stored === "ar" ? "ar" : "en";
   } catch {
-    return "en";
+    return volatileLang;
   }
 }
 
-function subscribe(listener: () => void) {
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
   const onStorage = (event: StorageEvent) => {
-    if (event.key === KEY) listener();
+    if (event.key === KEY || event.key === null) {
+      memoryOnly = false;
+      onChange();
+    }
   };
-  listeners.add(listener);
   window.addEventListener("storage", onStorage);
   return () => {
-    listeners.delete(listener);
+    listeners.delete(onChange);
     window.removeEventListener("storage", onStorage);
   };
 }
 
+function setLang(lang: Lang) {
+  volatileLang = lang;
+  try {
+    window.localStorage.setItem(KEY, lang);
+    memoryOnly = false;
+  } catch {
+    // The local preference still works when persistence is unavailable.
+    memoryOnly = true;
+  }
+  for (const listener of listeners) listener();
+}
+
+const getServerSnapshot = (): Lang => "en";
+
 export function useLang(): [Lang, (l: Lang) => void] {
-  const lang = useSyncExternalStore(subscribe, readLang, (): Lang => "en");
-
-  const setLang = useCallback((l: Lang) => {
-    try {
-      window.localStorage.setItem(KEY, l);
-    } catch {
-      // ignore — preference simply won't persist
-    }
-    for (const listener of listeners) listener();
-  }, []);
-
-  return [lang, setLang];
+  return [useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot), setLang];
 }

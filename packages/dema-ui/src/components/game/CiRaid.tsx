@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useGame } from "@/lib/game/store";
 import { CI_GATES, COLOR_CLASS } from "@/lib/game/data";
@@ -12,6 +12,21 @@ import { Check, X, Loader2, Play, RotateCcw, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 
 const GATE_COST = 4; // compute per gate
+
+// This delay belongs to the local game simulation, never to a real CI runner.
+function waitForGate(ms: number, signal: AbortSignal): Promise<boolean> {
+  if (signal.aborted) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const finish = (completed: boolean) => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      resolve(completed);
+    };
+    const onAbort = () => finish(false);
+    const timer = setTimeout(() => finish(true), ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
 
 export function CiRaid() {
   const resources = useGame((s) => s.resources);
@@ -25,53 +40,36 @@ export function CiRaid() {
   const [states, setStates] = useState<GateState[]>(CI_GATES.map(() => "idle"));
   const [running, setRunning] = useState<number | null>(null);
   const raidDone = useRef(false);
-  const runGeneration = useRef(0);
+  const activeRun = useRef<AbortController | null>(null);
 
   const allPassed = states.every((s) => s === "passed");
   const anyFailed = states.some((s) => s === "failed");
   const canRun = (i: number) => i === 0 || states[i - 1] === "passed";
 
-  const finishRaid = (generation: number) => {
-    if (generation !== runGeneration.current) return;
-    if (raidDone.current) return;
-    raidDone.current = true;
-    const rec = forgeReceipt({
-      label: "CI Release Verdict · all gates green",
-      mission: "ciRaid",
-      rails: { empirical: true, formal: true },
-    });
-    setRail("empirical", true);
-    awardXp("ciRanger", 40);
-    awardXp("satJudge", 15);
-    addResource("impactTokens", 5);
-    completeMission("ciRaid", 5);
-    toast.success("Release Verdict ✓", { description: `receipt ${rec.hash.slice(0, 10)}…` });
-  };
-
-  const runGate = (i: number) => {
-    if (running !== null || states[i] !== "idle" || !canRun(i)) return;
+  const runGate = async (i: number) => {
+    if (activeRun.current || running !== null || states[i] !== "idle" || !canRun(i)) return;
     const cur = useGame.getState();
     if (cur.resources.compute < GATE_COST) {
       setStates((s) => s.map((v, idx) => (idx === i ? "failed" : v)));
       toast.error("Red gate storm", { description: "Out of compute. Budget exhausted." });
       return;
     }
+    const controller = new AbortController();
+    activeRun.current = controller;
     setRunning(i);
     setStates((s) => s.map((v, idx) => (idx === i ? "running" : v)));
     cur.spendResources({ compute: GATE_COST });
-    const generation = runGeneration.current;
-    setTimeout(() => {
-      if (generation !== runGeneration.current) return;
-      setStates((s) => s.map((v, idx) => (idx === i ? "passed" : v)));
-      setRunning(null);
-      toast.success(`${CI_GATES[i].name} ✓`, { description: CI_GATES[i].desc });
-      if (i === CI_GATES.length - 1) finishRaid(generation);
-    }, CI_GATES[i].weight);
+    if (!await waitForGate(CI_GATES[i].weight, controller.signal) || activeRun.current !== controller) return;
+    activeRun.current = null;
+    setStates((s) => s.map((v, idx) => (idx === i ? "passed" : v)));
+    setRunning(null);
+    toast.success(`${CI_GATES[i].name} ✓`, { description: CI_GATES[i].desc });
   };
 
   const runAll = async () => {
-    if (running !== null) return;
-    const generation = runGeneration.current;
+    if (activeRun.current || running !== null) return;
+    const controller = new AbortController();
+    activeRun.current = controller;
     const working = [...states];
     for (let i = 0; i < CI_GATES.length; i++) {
       if (working[i] === "passed") continue;
@@ -80,27 +78,51 @@ export function CiRaid() {
         setStates((s) => s.map((v, idx) => (idx === i ? "failed" : v)));
         working[i] = "failed";
         toast.error("Red gate storm", { description: "Out of compute. Budget exhausted." });
+        activeRun.current = null;
+        setRunning(null);
         break;
       }
       setRunning(i);
       setStates((s) => s.map((v, idx) => (idx === i ? "running" : v)));
       cur.spendResources({ compute: GATE_COST });
-      await new Promise((res) => setTimeout(res, CI_GATES[i].weight));
-      if (generation !== runGeneration.current) return;
+      if (!await waitForGate(CI_GATES[i].weight, controller.signal) || activeRun.current !== controller) return;
       working[i] = "passed";
       setStates((s) => s.map((v, idx) => (idx === i ? "passed" : v)));
       setRunning(null);
       toast.success(`${CI_GATES[i].name} ✓`, { description: CI_GATES[i].desc });
     }
-    if (working.every((state) => state === "passed")) finishRaid(generation);
+    if (activeRun.current === controller) activeRun.current = null;
   };
 
   const reset = () => {
-    runGeneration.current += 1;
+    activeRun.current?.abort();
+    activeRun.current = null;
     setStates(CI_GATES.map(() => "idle"));
     raidDone.current = false;
     setRunning(null);
   };
+
+  useEffect(() => () => {
+    activeRun.current?.abort();
+    activeRun.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (allPassed && !raidDone.current) {
+      raidDone.current = true;
+      const rec = forgeReceipt({
+        label: "Demo CI verdict · simulated gates complete",
+        mission: "ciRaid",
+        rails: { empirical: true, formal: true },
+      });
+      setRail("empirical", true);
+      awardXp("ciRanger", 40);
+      awardXp("satJudge", 15);
+      addResource("impactTokens", 5);
+      completeMission("ciRaid", 5);
+      toast.success("Demo verdict ✓", { description: `local demo reference ${rec.hash.slice(0, 10)}…` });
+    }
+  }, [allPassed, addResource, awardXp, completeMission, forgeReceipt, setRail]);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
@@ -108,7 +130,7 @@ export function CiRaid() {
         title="CI Gate Raid"
         glyph="🏹"
         accent="verified"
-        subtitle="Mission 6 · CI Ranger. Raid through tests, lint, security, guidance, proof export & release verdict. Keep compute in budget."
+        subtitle="Local game simulation · CI Ranger. Simulated gates and resources do not prove a real CI run or release."
         right={
           <div className="flex items-center gap-3 text-xs font-mono">
             <span className="text-snr">⛏ {Math.round(resources.compute)}</span>
@@ -201,14 +223,14 @@ export function CiRaid() {
                 )}
               </div>
               <span className={cn("font-mono text-xs uppercase", allPassed ? "text-verified" : anyFailed ? "text-fail" : "text-muted-foreground")}>
-                {allPassed ? "DELIVERY PROVEN" : anyFailed ? "RAID HALTED" : "AWAITING GATES"}
+                {allPassed ? "DEMO COMPLETE" : anyFailed ? "RAID HALTED" : "AWAITING GATES"}
               </span>
               {allPassed && <StarRating value={5} />}
             </div>
           </div>
           <div className="glass rounded-xl border border-border p-3 text-[11px] text-muted-foreground">
             <p className="font-mono uppercase tracking-wider text-proof">raid doctrine</p>
-            <p className="mt-1.5 leading-snug">Each gate costs {GATE_COST} compute. A red gate storm halts the release. All gates green ⇒ empirical proof rail lit.</p>
+            <p className="mt-1.5 leading-snug">Each simulated gate costs {GATE_COST} game compute. A red gate halts this demo. Completion and its local reference are not release evidence or minted value.</p>
           </div>
         </div>
       </div>
