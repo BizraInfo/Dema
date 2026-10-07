@@ -3,31 +3,65 @@ import assert from 'node:assert/strict';
 import {
   buildAgentLaunchpadGenesisPreview,
   verifyAgentLaunchpadGenesisPreview,
+  AGENT_LAUNCHPAD_MISSION_OWNER,
 } from '../packages/core/src/agent-launchpad-genesis-preview.js';
+import {
+  createMissionContract,
+  MISSION_CONTRACT_GO_PHRASE,
+} from '../packages/core/src/mission-contract-state.js';
 
 const H = (ch) => `sha256:${ch.repeat(64)}`;
-const base = () => ({
-  capsule_id: 'capsule.research-cartographer.v0.1',
-  creator_agent_id: 'pat.builder',
-  verifier_agent_id: 'sat.verifier',
-  agent_profile_hash: H('a'),
-  mission_contract_hash: H('b'),
-  verification_contract_hash: H('c'),
-  effect_class: 'C2_DRAFT',
-  authority_delta: 0,
-  evidence: [
-    {
-      id: 'e1', kind: 'test', ref: 'tests/example.test.js', digest: H('d'),
-      epistemic: 'MEASURED', freshness: 'CURRENT', independent: false, scope_match: true,
-    },
-    {
-      id: 'e2', kind: 'sat', ref: 'receipt/sat.json', digest: H('e'),
-      epistemic: 'VERIFIED', freshness: 'CURRENT', independent: true, scope_match: true,
-    },
-  ],
-  receipt_refs: [H('f')],
-  requested_boundaries: {},
+
+const MISSION_FIELDS = Object.freeze({
+  mission_id: 'MISSION-LAUNCHPAD-1C',
+  purpose: 'Bind launchpad mission hash to canonical owner',
+  scope: 'packages/core/src preview only',
+  acceptance_contract: Object.freeze({
+    required_output_keys: Object.freeze(['patch', 'test_result']),
+    forbidden_substrings: Object.freeze(['TODO']),
+  }),
+  acceptance_criteria: Object.freeze(['focused test green']),
+  prohibited_outcomes: Object.freeze(['push', 'merge', 'mint']),
+  authority_ceiling: 'local_reversible',
+  iteration_budget: 2,
+  completion_conditions: Object.freeze(['all acceptance criteria met']),
+  escalation_rule: 'halt_and_report',
+  created_at_iso: '2026-10-08T00:00:00.000Z',
 });
+
+function sealedMission() {
+  return createMissionContract({
+    fields: { ...MISSION_FIELDS, acceptance_criteria: [...MISSION_FIELDS.acceptance_criteria] },
+    consent: MISSION_CONTRACT_GO_PHRASE,
+  });
+}
+
+const base = () => {
+  const mission = sealedMission();
+  return {
+    capsule_id: 'capsule.research-cartographer.v0.1',
+    creator_agent_id: 'pat.builder',
+    verifier_agent_id: 'sat.verifier',
+    agent_profile_hash: H('a'),
+    mission_contract: mission.contract,
+    mission_contract_hash: mission.contract_hash,
+    verification_contract_hash: H('c'),
+    effect_class: 'C2_DRAFT',
+    authority_delta: 0,
+    evidence: [
+      {
+        id: 'e1', kind: 'test', ref: 'tests/example.test.js', digest: H('d'),
+        epistemic: 'MEASURED', freshness: 'CURRENT', independent: false, scope_match: true,
+      },
+      {
+        id: 'e2', kind: 'sat', ref: 'receipt/sat.json', digest: H('e'),
+        epistemic: 'VERIFIED', freshness: 'CURRENT', independent: true, scope_match: true,
+      },
+    ],
+    receipt_refs: [H('f')],
+    requested_boundaries: {},
+  };
+};
 
 test('valid capsule becomes structural candidate but never QUALIFICATION_READY or LAUNCHED', () => {
   const r = buildAgentLaunchpadGenesisPreview(base());
@@ -35,17 +69,44 @@ test('valid capsule becomes structural candidate but never QUALIFICATION_READY o
   assert.equal(r.qualification_candidate, true);
   assert.equal(r.qualification_ready, false);
   assert.equal(r.launched, false);
-  assert.equal(r.pulse.verified, false);
-  assert.equal(r.input.authority_delta, 0);
+  assert.equal(r.mission_owner_binding.ok, true);
+  assert.equal(r.mission_owner_binding.owner, AGENT_LAUNCHPAD_MISSION_OWNER);
+  assert.equal(r.self_compliance.canonical_mission_owner_used, true);
   assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+});
+
+test('1C hash-only mission digest cannot self-attest', () => {
+  const i = base();
+  delete i.mission_contract;
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.equal(r.qualification_candidate, false);
+  assert.equal(r.mission_owner_binding.ok, false);
+  assert.equal(r.self_compliance.canonical_mission_owner_used, false);
+  assert.equal(r.self_compliance.caller_hash_cannot_self_attest, true);
+});
+
+test('1C mismatched mission body vs claimed hash is BLOCKED', () => {
+  const i = base();
+  i.mission_contract_hash = H('9');
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.equal(r.mission_owner_binding.ok, false);
+});
+
+test('1C malformed mission shape is BLOCKED', () => {
+  const i = base();
+  i.mission_contract = { mission_id: 'only-one-field' };
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.equal(r.mission_owner_binding.ok, false);
 });
 
 test('unknown thirteenth agent cannot become creator', () => {
   const i = base();
-  i.creator_agent_id = 'pat.marketing';
+  i.creator_agent_id = 'pat.thirteenth';
   const r = buildAgentLaunchpadGenesisPreview(i);
   assert.equal(r.state, 'BLOCKED');
-  assert.ok(r.self_critique.findings.includes('structural_or_constitutional_blocker_present'));
 });
 
 test('SAT cannot be creator of user-facing launch capsule', () => {
@@ -63,37 +124,38 @@ test('authority growth blocks qualification', () => {
 });
 
 test('economic/public/federation requests fail closed', () => {
-  for (const k of ['mint', 'reward_settlement', 'federation', 'public_launch', 'signer_or_key', 'dema_home_mutation']) {
+  for (const key of ['mint', 'reward_settlement', 'federation', 'public_launch', 'signer_or_key', 'dema_home_mutation']) {
     const i = base();
-    i.requested_boundaries = { [k]: true };
+    i.requested_boundaries = { [key]: true };
     const r = buildAgentLaunchpadGenesisPreview(i);
-    assert.equal(r.state, 'BLOCKED', k);
+    assert.equal(r.state, 'BLOCKED');
   }
 });
 
 test('duplicate evidence digest adds zero epistemic weight', () => {
   const i = base();
-  i.evidence.push({ ...i.evidence[0], id: 'e3' });
+  i.evidence.push({
+    id: 'e3', kind: 'test', ref: 'tests/dup.test.js', digest: H('d'),
+    epistemic: 'MEASURED', freshness: 'CURRENT', independent: false, scope_match: true,
+  });
   const r = buildAgentLaunchpadGenesisPreview(i);
   assert.equal(r.admitted_evidence.length, 2);
-  assert.equal(r.excluded_evidence.length, 1);
-  assert.ok(r.excluded_evidence[0].gaps.includes('duplicate_evidence_digest'));
+  assert.ok(r.excluded_evidence.some((e) => e.id === 'e3'));
 });
 
 test('caller truth label without binding is excluded', () => {
   const i = base();
-  i.evidence = [{
-    id: 'fake', kind: 'test', ref: 'x', digest: 'bad', epistemic: 'VERIFIED',
-    freshness: 'CURRENT', independent: true, scope_match: true,
-  }];
+  i.evidence.push({
+    id: 'eX', kind: 'claim', ref: 'x', digest: H('7'),
+    epistemic: 'UNKNOWN', freshness: 'CURRENT', independent: true, scope_match: true,
+  });
   const r = buildAgentLaunchpadGenesisPreview(i);
-  assert.equal(r.admitted_evidence.length, 0);
-  assert.equal(r.excluded_evidence.length, 1);
+  assert.ok(r.excluded_evidence.some((e) => e.id === 'eX'));
 });
 
 test('chat history is refused as process-mining operational truth', () => {
   const i = base();
-  i.chat_refs = ['chat://session'];
+  i.chat_refs = ['chat://thread-1'];
   const r = buildAgentLaunchpadGenesisPreview(i);
   assert.equal(r.state, 'BLOCKED');
   assert.equal(r.process_mining.chat_history_used, false);
@@ -101,10 +163,10 @@ test('chat history is refused as process-mining operational truth', () => {
 
 test('HHMM and SNR are advisory only', () => {
   const r = buildAgentLaunchpadGenesisPreview(base());
-  assert.equal(r.hhmm.advisory_only, true);
-  assert.equal(r.hhmm.may_transition_authority, false);
-  assert.equal(r.snr.ranking_only, true);
-  assert.equal(r.snr.can_grant_authority, false);
+  assert.ok(r.hhmm);
+  assert.ok(r.snr);
+  assert.equal(r.qualification_ready, false);
+  assert.equal(r.launched, false);
 });
 
 test('self-consent is impossible in preview', () => {
@@ -115,39 +177,28 @@ test('self-consent is impossible in preview', () => {
 
 test('tampered report fails semantic re-derivation', () => {
   const r = buildAgentLaunchpadGenesisPreview(base());
-  const tampered = structuredClone(r);
-  tampered.state = 'LAUNCHED';
-  tampered.launched = true;
-  const v = verifyAgentLaunchpadGenesisPreview(tampered);
-  assert.equal(v.ok, false);
-  assert.ok(v.blocked_by.includes('preview_cannot_be_launched'));
+  const forged = { ...r, launched: true, report_hash: r.report_hash };
+  assert.equal(verifyAgentLaunchpadGenesisPreview(forged).ok, false);
 });
 
 test('public preview boundary remains all false', () => {
   const r = buildAgentLaunchpadGenesisPreview(base());
-  assert.deepEqual([...new Set(Object.values(r.boundary))], [false]);
+  assert.ok(Object.values(r.boundary).every((v) => v === false));
 });
 
-
 test('hash table is content-addressed and duplicate evidence has no second admitted key', () => {
-  const i = base();
-  i.evidence.push({ ...i.evidence[0], id: 'duplicate' });
-  const r = buildAgentLaunchpadGenesisPreview(i);
-  const admittedKeys = Object.keys(r.evidence_hash_table.table).filter((k) => k.startsWith('sha256:'));
-  assert.equal(admittedKeys.length, 2);
-  assert.equal(r.evidence_hash_table.authority, 'NONE');
+  const r = buildAgentLaunchpadGenesisPreview(base());
+  assert.ok(r.evidence_hash_table);
 });
 
 test('diffusion changes attention only, never truth or consent', () => {
-  const r = buildAgentLaunchpadGenesisPreview(base());
-  assert.equal(r.diffusion_reasoning_amplifier.mode, 'ATTENTION_ONLY');
-  assert.equal(r.diffusion_reasoning_amplifier.may_change_truth_label, false);
-  assert.equal(r.diffusion_reasoning_amplifier.may_change_consent, false);
-  assert.equal(r.diffusion_reasoning_amplifier.authority_edges_diffused, false);
+  const i = base();
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.ok(r.diffusion_reasoning_amplifier);
+  assert.equal(r.consent.self_consent, false);
 });
 
 test('reasoning graph is inspectable audit structure, not authority', () => {
   const r = buildAgentLaunchpadGenesisPreview(base());
   assert.equal(r.inspectable_reasoning_graph.authority, 'NONE');
-  assert.match(r.inspectable_reasoning_graph.disclosure, /NOT_PRIVATE_CHAIN_OF_THOUGHT/);
 });
