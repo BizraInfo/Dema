@@ -8,9 +8,6 @@ const nextConfig: NextConfig = {
   // from the kernel the UI enforces.
   outputFileTracingRoot: join(import.meta.dirname, "../.."),
   /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   reactStrictMode: false,
 };
 
