@@ -75,7 +75,7 @@ export function AgentPanel({ asSheet = false }: { asSheet?: boolean }) {
                   data but never rendered — a label the user cannot see is a comment, not a
                   disclosure. The roster is DESIGNED_NOT_LIVE and must say so on screen. */}
               <div className="mt-1">
-                <TruthLabelBadge label={a.truthLabel} size="xs" />
+                <TruthLabelBadge label={a.truthLabel ?? "UNKNOWN"} size="xs" />
               </div>
             </div>
           </button>

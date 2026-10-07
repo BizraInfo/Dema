@@ -27,7 +27,7 @@
 // mission and exits. authority_delta 0.
 
 import { spawn } from "node:child_process";
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -40,7 +40,13 @@ const REQUIRE_DEAD = !process.argv.includes("--recover-while-alive"); // control
 
 const dir = join(DEMA_HOME, "node0", "recovery");
 const p = (n) => join(dir, n);
-const write = (n, o) => { mkdirSync(dirname(p(n)), { recursive: true }); writeFileSync(p(n), JSON.stringify(o, null, 2)); };
+const write = (n, o) => {
+  const target = p(n);
+  const tmp = `${target}.tmp.${process.pid}`;
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(tmp, JSON.stringify(o, null, 2));
+  renameSync(tmp, target);
+};
 const read = (n) => (existsSync(p(n)) ? JSON.parse(readFileSync(p(n), "utf8")) : null);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 

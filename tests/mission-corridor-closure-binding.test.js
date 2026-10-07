@@ -14,7 +14,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync, execFile, spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile, readdir, chmod, unlink } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, readdir, chmod, unlink, appendFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
@@ -37,6 +37,39 @@ const ID = "ccb-closure-probe";
 
 const newHome = () => mkdtemp(join(tmpdir(), "ccb-"));
 const future = () => new Date(Date.now() + 3_600_000).toISOString();
+
+// Mirror of the canonical probe in tests/first-encounter-admission.test.js.
+// CCB-19 injects a write fault by chmod'ing the journal to 0o400 and then
+// asserting the append is interrupted with EACCES/permission denied. When the
+// running identity bypasses DAC permission bits (root, or a filesystem that
+// ignores modes), writing a 0o400 file still succeeds, so the fault never
+// fires and the assertion is not meaningful — the test skips honestly rather
+// than asserting something it did not create.
+// Returns true when a 0o400 file is actually write-protected (the write
+// throws), false otherwise.
+async function canEnforceWriteDenial() {
+  const dir = await mkdtemp(join(tmpdir(), "ccb-probe-"));
+  const probe = join(dir, "probe");
+  await writeFile(probe, "x");
+  await chmod(probe, 0o400);
+  try {
+    await appendFile(probe, "y");
+    return false; // permissions not enforced here (root / no-perm filesystem)
+  } catch {
+    return true;
+  } finally {
+    try {
+      await chmod(probe, 0o600);
+    } catch {
+      // best-effort restore
+    }
+    try {
+      await rm(dir, { recursive: true, force: true });
+    } catch {
+      // best-effort cleanup
+    }
+  }
+}
 
 function run(home, args, { allowFail = false } = {}) {
   try {
@@ -671,7 +704,11 @@ describe("CCB · corridor closure BINDING — real consent, real nonces, real le
     }
   });
 
-  test("CCB-19: C2 resolves before corridor COMPLETE and a failed journal append recovers exactly", async () => {
+  test("CCB-19: C2 resolves before corridor COMPLETE and a failed journal append recovers exactly", async (t) => {
+    if (!(await canEnforceWriteDenial())) {
+      t.skip("filesystem does not enforce modes for this process");
+      return;
+    }
     const home = await newHome();
     await startedCorridor(home);
     await walkToCheckpoint(home);

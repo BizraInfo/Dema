@@ -29,8 +29,12 @@
       ],
       "@core/*": [
         "../core/src/*"
+      ],
+      "@node-adapter/*": [
+        "../node-adapter/src/*"
       ]
-    }
+    },
+    "allowImportingTsExtensions": true
   },
   "include": [
     "next-env.d.ts",

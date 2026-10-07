@@ -1,0 +1,15 @@
+schema: bizra.capability_plugin.policy.v0.1
+capability_plane: PLUGGABLE
+constitutional_plane: ANCHORED
+ordinary_plugin_may_not_redefine:
+  - human_sovereignty
+  - root_identity
+  - authority_conservation
+  - fate_semantics
+  - consent_law
+  - receipt_validity
+  - unknown_semantics
+  - provenance_law
+  - responsibility_transition_law
+plugin_states: [DISCOVERED, SOURCE_BOUND, QUALIFIED, ADMITTED, SELECTED, AUTHORIZED, EXECUTED, OBSERVED, RECEIPTED, REVOKED]
+installed_implies_authorized: false

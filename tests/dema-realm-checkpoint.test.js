@@ -92,7 +92,7 @@ describe("gatherDemaRealmCheckpoint — absent state", () => {
     }
   });
 
-  it("malformed checkpoint JSON safely treated as absent", async () => {
+  it("malformed checkpoint JSON is visible and safely excluded from continuation", async () => {
     const home = freshHome();
     try {
       mkdirSync(join(home, "realm"), { recursive: true });
@@ -101,7 +101,7 @@ describe("gatherDemaRealmCheckpoint — absent state", () => {
         demaHome: home,
         now: FIXED_NOW,
       });
-      assert.equal(s.truth_label, "CHECKPOINT_ABSENT");
+      assert.equal(s.truth_label, "CHECKPOINT_MALFORMED");
       assert.equal(s.checkpoint_present, false);
     } finally {
       rmSync(home, { recursive: true, force: true });

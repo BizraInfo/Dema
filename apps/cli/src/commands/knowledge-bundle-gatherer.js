@@ -7,7 +7,7 @@
 // owns every effect.
 
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { DEFAULT_KNOWLEDGE_BUNDLE_PATH } from "../../../../packages/core/src/dema-knowledge-bundle-reader.js";
@@ -44,28 +44,39 @@ export function gatherKnowledgeBundle({ path } = {}) {
     };
   }
 
-  const folders = [];
-  for (const entry of readdirSync(bundlePath, { withFileTypes: true })) {
-    // Dot-directories (.git, .claude, …) are machinery, never card folders —
-    // measured on the first live run against the real bundle.
-    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
-    const folderPath = join(bundlePath, entry.name);
-    const cards = [];
-    for (const fileEntry of readdirSync(folderPath, { withFileTypes: true })) {
-      if (!fileEntry.isFile() || !fileEntry.name.endsWith(".md")) continue;
-      const filePath = join(folderPath, fileEntry.name);
-      const raw = readFileSync(filePath);
-      const front = scanFrontmatter(raw.toString("utf8"));
-      cards.push({
-        file: `${entry.name}/${fileEntry.name}`,
-        bytes: statSync(filePath).size,
-        sha256: createHash("sha256").update(raw).digest("hex"),
-        type: front.type,
-        title: front.title,
-        has_source: front.has_source,
-      });
+  let folders;
+  try {
+    folders = [];
+    for (const entry of readdirSync(bundlePath, { withFileTypes: true })) {
+      // Dot-directories (.git, .claude, …) are machinery, never card folders —
+      // measured on the first live run against the real bundle.
+      if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+      const folderPath = join(bundlePath, entry.name);
+      const cards = [];
+      for (const fileEntry of readdirSync(folderPath, { withFileTypes: true })) {
+        if (!fileEntry.isFile() || !fileEntry.name.endsWith(".md")) continue;
+        const filePath = join(folderPath, fileEntry.name);
+        const raw = readFileSync(filePath);
+        const front = scanFrontmatter(raw.toString("utf8"));
+        cards.push({
+          file: `${entry.name}/${fileEntry.name}`,
+          // Derive bytes from the same buffer that was hashed — never a second
+          // path observation that can race the digest.
+          bytes: raw.length,
+          sha256: createHash("sha256").update(raw).digest("hex"),
+          type: front.type,
+          title: front.title,
+          has_source: front.has_source,
+        });
+      }
+      folders.push({ name: entry.name, cards });
     }
-    folders.push({ name: entry.name, cards });
+  } catch (err) {
+    return {
+      ok: false,
+      bundle_path: bundlePath,
+      error: `knowledge bundle unreadable: ${err?.code || err?.message || "read_failed"}`,
+    };
   }
 
   return {

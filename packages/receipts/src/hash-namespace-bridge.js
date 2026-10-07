@@ -68,6 +68,7 @@ export const HASH_BRIDGE_REASON_CODES = Object.freeze([
   "BRIDGE_HASH_MISMATCH",
   "FOREIGN_DIGEST_MISMATCH",
   "FOREIGN_VERIFIER_INVALID",
+  "RECOMPUTABILITY_MISMATCH",
 ]);
 
 const HEX_RE = /^[0-9a-f]+$/;
@@ -199,10 +200,17 @@ export function verifyBridgeReceipt(receipt, options = {}) {
   const bound = buildHashBinding(receipt.foreign);
   if (!bound.ok) return fail("BRIDGE_RECEIPT_MALFORMED");
 
+  // Re-derive recomputability from the registry — never trust the receipt field.
+  const expected_recomputable =
+    HASH_ALGORITHMS[bound.binding.alg].locally_recomputable;
+  if (receipt.foreign_recomputable_here !== expected_recomputable) {
+    return fail("RECOMPUTABILITY_MISMATCH");
+  }
+
   const body = {
     schema: receipt.schema,
     foreign: { alg: receipt.foreign.alg, digest: receipt.foreign.digest },
-    foreign_recomputable_here: receipt.foreign_recomputable_here,
+    foreign_recomputable_here: expected_recomputable,
     local_body: receipt.local_body,
   };
   if (sha256Hex(stableStringify(body)) !== receipt.bridge_hash) {

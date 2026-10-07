@@ -114,7 +114,7 @@ export function verifyKnowledgeBundleView(envelope) {
   const folders = Array.isArray(envelope?.folders) ? envelope.folders : [];
   let total = 0;
   const typeCounts = {};
-  let violations = 0;
+  const derivedViolations = [];
   for (const folder of folders) {
     const cards = Array.isArray(folder.cards) ? folder.cards : [];
     if (cards.length !== folder.card_count) {
@@ -124,14 +124,42 @@ export function verifyKnowledgeBundleView(envelope) {
     for (const cardRow of cards) {
       const typeKey = cardRow.type || "untyped";
       typeCounts[typeKey] = (typeCounts[typeKey] ?? 0) + 1;
-      if (cardLawMissing(cardRow).length > 0) violations += 1;
+      const missing = cardLawMissing(cardRow);
+      if (missing.length > 0) {
+        derivedViolations.push({ file: cardRow.file, missing: [...missing].sort() });
+      }
     }
   }
   if (total !== envelope.card_count) {
     return Object.freeze({ ok: false, reason: "card_count_mismatch" });
   }
-  if (violations !== envelope.law_violation_count) {
+  if (derivedViolations.length !== envelope.law_violation_count) {
     return Object.freeze({ ok: false, reason: "law_violation_count_mismatch" });
+  }
+  const declaredViolations = Array.isArray(envelope.law_violations)
+    ? envelope.law_violations
+    : null;
+  if (!declaredViolations || declaredViolations.length !== derivedViolations.length) {
+    return Object.freeze({ ok: false, reason: "law_violations_mismatch" });
+  }
+  const normDeclared = sortByKey(
+    declaredViolations.map((row) => ({
+      file: row?.file,
+      missing: Array.isArray(row?.missing) ? [...row.missing].sort() : [],
+    })),
+    "file",
+  );
+  const normDerived = sortByKey(derivedViolations, "file");
+  for (let i = 0; i < normDerived.length; i += 1) {
+    const a = normDeclared[i];
+    const b = normDerived[i];
+    if (
+      a.file !== b.file ||
+      a.missing.length !== b.missing.length ||
+      a.missing.some((m, j) => m !== b.missing[j])
+    ) {
+      return Object.freeze({ ok: false, reason: "law_violations_mismatch" });
+    }
   }
   const declaredTypes = envelope.type_counts ?? {};
   const declaredKeys = Object.keys(declaredTypes).sort();

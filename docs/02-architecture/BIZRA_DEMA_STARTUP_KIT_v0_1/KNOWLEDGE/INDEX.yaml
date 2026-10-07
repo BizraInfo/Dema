@@ -1,0 +1,19 @@
+version: bizra.knowledge.index.v0.1
+always_load:
+  - 00_ROOT_AND_IDENTITY.md
+  - 01_MISSION_AND_AUTHORITY.md
+  - 02_EVIDENCE_AND_TRUTH.md
+  - 03_ROLES_DEMA_PAT_SAT_FATE_URP.md
+on_demand:
+  harness: [04_HARNESS.md]
+  integration: [05_WRAPPERS.md]
+  memory: [06_MEMORY_AND_CONTEXT.md]
+  recovery: [07_RECOVERY.md]
+  learning: [08_LEARNING_RL_RSI.md]
+  research: [09_SNR_GEMS.md]
+  verification: [10_FAILURE_AND_VERIFICATION.md]
+  terminology: [11_GLOSSARY.md]
+rules:
+  - "Do not load all knowledge merely because it exists."
+  - "Prefer minimum evidence-complete context."
+  - "Current mission and receipt state outrank cached summaries."

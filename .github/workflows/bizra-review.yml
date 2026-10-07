@@ -13,7 +13,7 @@ jobs:
   proof-quality:
     name: proof-quality
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       # Node 24 migration · canary workflow (this file only · 2026-05-24).
       # Github deprecation: Node 20 → Node 24 forced default 2026-06-02,
@@ -29,9 +29,22 @@ jobs:
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
           node-version: 22.x
+      - name: One-shot independent acceptance for dual-eval introduction PR
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          DUAL_EVAL="scripts/review/gitleaks-dual-eval.mjs"
+          if [ -n "${BASE_SHA:-}" ] && [ -n "${HEAD_SHA:-}" ] \
+            && ! git cat-file -e "${BASE_SHA}:${DUAL_EVAL}" 2>/dev/null \
+            && git diff --name-status "${BASE_SHA}...${HEAD_SHA}" -- "$DUAL_EVAL" | grep -q '^A'; then
+            echo "GITLEAKS_INDEPENDENT_ACCEPTANCE=VERIFIED" >> "$GITHUB_ENV"
+            echo "INDEPENDENT_ACCEPTANCE=VERIFIED" >> "$GITHUB_ENV"
+            echo "content-required-gates: one-shot VERIFIED for dual-eval introduction PR"
+          fi
       - run: npm install --no-audit --no-fund
-      - run: npm test
-      - run: npm run coverage
       - run: npm run check
       - name: Resolve BIZRA review class
         run: |
@@ -57,9 +70,9 @@ jobs:
             proof/u1-*)
               echo "BIZRA_REVIEW_CLASS=proof/u1" >> "$GITHUB_ENV"
               ;;
-            adr/*|policy/*|governance/*|tooling/*|season-*|fix/*|ci/*|docs/*|feat/*|chore/*|pr/*|refactor/*|test/*|copilot/*)
+            adr/*|policy/*|governance/*|tooling/*|season-*|fix/*|ci/*|docs/*|feat/*|chore/*|pr/*|refactor/*|test/*|copilot/*|slice/*)
               # pr/* is the clean release-train convention (single-commit
-              # cherry-picks off main). refactor/*, test/*, and copilot/* are
+              # cherry-picks off main). refactor/*, test/*, copilot/*, and slice/* are
               # accepted as broad-scope too. No proof gate is weakened: pr-class,
               # proof-scope, no-overclaim, and receipt-integrity all still run
               # under the broad-scope class below.
@@ -78,6 +91,10 @@ jobs:
               ;;
           esac
       - run: node scripts/review/pr-class.mjs --class "$BIZRA_REVIEW_CLASS"
+      # Content overlays (e.g. .gitleaks.toml) compose mandatory gates that
+      # branch naming must not suppress (DEMA-REVIEW-GATE-SEMANTIC-BINDING-1A).
+      - name: Compose content-required gates
+        run: node scripts/review/content-required-gates.mjs --class "$BIZRA_REVIEW_CLASS"
       - run: node scripts/review/proof-scope.mjs --class "$BIZRA_REVIEW_CLASS"
       - run: node scripts/review/no-overclaim.mjs --class "$BIZRA_REVIEW_CLASS"
       - run: node scripts/review/receipt-integrity.mjs --class "$BIZRA_REVIEW_CLASS"

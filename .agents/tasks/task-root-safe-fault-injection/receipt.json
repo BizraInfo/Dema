@@ -1,0 +1,89 @@
+{
+  "schema": "bizra.dema.task_proof_receipt.v1",
+  "task_id": "task-root-safe-fault-injection",
+  "feature_id": "FEAT-001",
+  "head_sha": "eae01b89392ebe0f6739710933110e9a0d461e31",
+  "classification": "OUTWARD/environmental",
+  "root_cause": "The test suite runs as root (uid=0). Root bypasses DAC permission bits, so chmod-based fault injection (0o000/0o500/0o400) still changes mode bits but the expected read/write denial may not occur: a 0o000 file may still be readable and a 0o500/0o400 target may still be writable. The permission-dependent assertions in three test files therefore fail because the injected fault never fires. The production code under test (packages/receipts/**, packages/mission/**) is correct and was NOT changed. CI runs on GitHub ubuntu-latest (non-root) where these same tests pass.",
+  "fix": "Mirror the canonical in-repo precedent (tests/first-encounter-admission.test.js: canEnforceModes probe + honest t.skip). Each permission-dependent case now probes, hermetically and restoring permissions in a finally block, whether the specific denial it relies on actually occurs for the current process. If modes are not enforced, the case is skipped with the honest reason 'filesystem does not enforce modes for this process' (c4b2a adds the clarifying parenthetical about root bypassing DAC). The real assertions are preserved unchanged, so they still run and pass on a mode-enforcing host. The G8 classifier allowlist was NOT modified; name-only masking was NOT used.",
+  "files_changed": [
+    "tests/authorship-key-store-negative.test.js",
+    "tests/c4b2a-mechanical-rollback-wiring.test.js",
+    "tests/mission-corridor-closure-binding.test.js",
+    "docs/CURRENT_LIMITS.md",
+    ".agents/tasks/task-root-safe-fault-injection/receipt.json",
+    ".agents/tasks/task-root-safe-fault-injection/context.json",
+    ".agents/tasks/task-root-safe-fault-injection/task.json",
+    ".agents/tasks/task-root-safe-fault-injection/features/FEAT-001.json",
+    ".agents/tasks/task-root-safe-fault-injection/2026-10-06-151902-review.md"
+  ],
+  "files_not_changed": [
+    "scripts/ci/classify-known-harness-failures.mjs",
+    "packages/** (all production code under test)"
+  ],
+  "skip_breakdown": {
+    "tests/authorship-key-store-negative.test.js": {
+      "skipped": 2,
+      "cases": [
+        "returns null for a zero-permission (unreadable) private key file",
+        "returns null for an unreadable public key file"
+      ],
+      "probe": "canEnforceFileModes(): writeFileSync a probe file, chmod 0o000, attempt readFileSync; true when the read throws (enforced), false otherwise"
+    },
+    "tests/c4b2a-mechanical-rollback-wiring.test.js": {
+      "skipped": 22,
+      "cases": [
+        "C4B2A-02",
+        "C4B2A-03",
+        "C4B2A-06",
+        "C4B2A-10",
+        "C4B2A-20",
+        "C4B2AH-07",
+        "C4B2AH-08",
+        "C4B2AH-16",
+        "C4B2AH-17",
+        "C4B2AS-01",
+        "C4B2AS-02",
+        "C4B2AS-03",
+        "C4B2AS-04",
+        "C4B2AS-06",
+        "C4B2AS-10",
+        "C4B2AS-11/12/13",
+        "C4B2AS-22",
+        "C4B2AS-23",
+        "C4B2AM-11/12/13/14",
+        "C4B2AM-15/16",
+        "C4D-TAIL-01b",
+        "C4D-TAIL-01"
+      ],
+      "probe": "canEnforceDirWriteDenial(): mkdir a probe dir, spawnSync chmod 0500 (the SAME seam the fixtures use), attempt writeFileSync inside it; true when the write is denied (enforced), false otherwise. Cached once per process.",
+      "note": "All 22 depend, directly or via crossBoundaryDuringOutage()/atEffectApplied(), on the chmod-0500 events-dir write outage actually firing."
+    },
+    "tests/mission-corridor-closure-binding.test.js": {
+      "skipped": 1,
+      "cases": [
+        "CCB-19: C2 resolves before corridor COMPLETE and a failed journal append recovers exactly"
+      ],
+      "probe": "canEnforceWriteDenial(): writeFile a probe, chmod 0o400, attempt appendFile; true when the append is denied (enforced), false otherwise"
+    }
+  },
+  "commands": [
+    {
+      "command": "node --test tests/authorship-key-store-negative.test.js tests/c4b2a-mechanical-rollback-wiring.test.js tests/mission-corridor-closure-binding.test.js",
+      "observed_after": "# tests 142, # pass 117, # fail 0, # skipped 25",
+      "note": "The 25 skipped cases are exactly the previously-failing cases (2 + 22 + 1)."
+    },
+    {
+      "command": "npm test",
+      "observed_before": "# fail 25 (22 c4b2a + 2 authorship + 1 mission CCB-19), G8 gate FAIL",
+      "observed_after": "# tests 10126, # pass 10080, # fail 0, # skipped 46; [G8 GATE] Clean run: 0 failures, 0 not-ok lines. Exit 0",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --stat (content only, mode-bit noise excluded)",
+      "observed_after": "docs/CURRENT_LIMITS.md (+2), tests/authorship-key-store-negative.test.js (+39/-), tests/c4b2a-mechanical-rollback-wiring.test.js (+106/-), tests/mission-corridor-closure-binding.test.js (+35/-); scripts/ci/classify-known-harness-failures.mjs and packages/** have NO content changes"
+    }
+  ],
+  "proves": "The harness is now honest on non-mode-enforcing hosts: a fault that cannot be injected is skipped (not faked), and the full npm test suite is G8-clean (# fail 0, 0 unrecognized not-ok lines, exit 0) on this root sandbox without weakening the no-false-GREEN classifier.",
+  "does_not_prove": "A skip is not a pass. The adversarial permission-denial invariants exercised by the 25 guarded cases remain VERIFIED only on a mode-enforcing (non-root) environment such as CI ubuntu-latest, and are UNVERIFIED on root. This slice does not run the governed Rust runtime, does not mint or claim any value, and does not close Node0."
+}

@@ -314,15 +314,31 @@ export async function signPreviewReceiptWithKeyStore(options = {}) {
   // signed with the real operator key store — while the caller believed key
   // loading was disabled. On a signing path an ignored option is not a
   // convenience; it is an authority widening, so it refuses instead.
-  const {
-    preview,
-    consent,
-    demaHome,
-    loadActiveKeyPairFn = loadActiveKeyPair,
-    signedAt,
-  } = options;
+  // Own string keys only: inherited prototypes and non-enumerable smuggled
+  // loaders must not silently widen or hide authority.
+  const ownOptionKeys = Reflect.ownKeys(options).filter(
+    (key) => typeof key === "string",
+  );
+  const preview = Object.prototype.hasOwnProperty.call(options, "preview")
+    ? options.preview
+    : undefined;
+  const consent = Object.prototype.hasOwnProperty.call(options, "consent")
+    ? options.consent
+    : undefined;
+  const demaHome = Object.prototype.hasOwnProperty.call(options, "demaHome")
+    ? options.demaHome
+    : undefined;
+  const signedAt = Object.prototype.hasOwnProperty.call(options, "signedAt")
+    ? options.signedAt
+    : undefined;
+  const loadActiveKeyPairFn = Object.prototype.hasOwnProperty.call(
+    options,
+    "loadActiveKeyPairFn",
+  )
+    ? options.loadActiveKeyPairFn
+    : loadActiveKeyPair;
   const plan = planPreviewReceiptSigning({ consent, input: preview });
-  const unrecognized = Object.keys(options).filter(
+  const unrecognized = ownOptionKeys.filter(
     (key) => !KEY_STORE_SIGNING_OPTIONS.includes(key),
   );
   if (unrecognized.length > 0) {

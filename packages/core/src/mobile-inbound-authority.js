@@ -109,7 +109,11 @@ export function evaluateMobileInbound({
     return fail("REPLAY_DETECTED");
   }
   const command = message.text.trim().toLowerCase();
-  const spec = MOBILE_COMMAND_TABLE[command];
+  // Own-key only: inherited Object.prototype names (constructor/__proto__/…)
+  // must never resolve as declared commands.
+  const spec = Object.prototype.hasOwnProperty.call(MOBILE_COMMAND_TABLE, command)
+    ? MOBILE_COMMAND_TABLE[command]
+    : undefined;
   if (!spec) {
     return fail("COMMAND_NOT_DECLARED");
   }
@@ -174,6 +178,8 @@ export function verifyMobileCrossingReceipt(receipt) {
   if (
     !isPlainObject(receipt) ||
     receipt.schema !== MOBILE_INBOUND_SCHEMA ||
+    !isNonEmptyString(receipt.platform) ||
+    !MOBILE_PLATFORMS.includes(receipt.platform) ||
     !isNonEmptyString(receipt.platform_message_id) ||
     !isNonEmptyString(receipt.sender_id_sha256) ||
     !isNonEmptyString(receipt.text_sha256) ||

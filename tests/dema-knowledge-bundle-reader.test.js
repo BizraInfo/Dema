@@ -142,3 +142,17 @@ test("KBR-07 deterministic and order-stable: folder and card order cannot change
   const b = buildKnowledgeBundleView(shuffled);
   assert.deepEqual(a, b);
 });
+
+test("KBR-verify refuses replaced law_violations rows that keep the count", () => {
+  const view = buildKnowledgeBundleView(fixtureObservations());
+  assert.equal(view.law_violation_count > 0, true);
+  const tampered = {
+    ...view,
+    law_violations: view.law_violations.map((row, i) =>
+      i === 0 ? { file: "forged/path.md", missing: ["type"] } : row,
+    ),
+  };
+  const res = verifyKnowledgeBundleView(tampered);
+  assert.equal(res.ok, false);
+  assert.equal(res.reason, "law_violations_mismatch");
+});

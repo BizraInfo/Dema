@@ -238,3 +238,39 @@ describe("MOBILE-INBOUND-AUTHORITY-0A · crossing receipt", () => {
     }
   });
 });
+
+describe("MOBILE-INBOUND-AUTHORITY-0A · prototype-safe command lookup", () => {
+  it("constructor_and_proto_text_are_COMMAND_NOT_DECLARED", () => {
+    for (const text of ["constructor", "__proto__", "toString", "hasOwnProperty"]) {
+      const v = evalOk({ text });
+      assert.equal(v.ok, false, text);
+      assert.equal(v.reason, "COMMAND_NOT_DECLARED", text);
+    }
+  });
+
+  it("verify_refuses_receipt_without_a_declared_platform", () => {
+    const built = buildMobileCrossingReceipt({
+      message: MSG,
+      pinnedOperatorSenderId: OPERATOR,
+      seenMessageIds: [],
+      decidedAt: AT,
+    });
+    assert.equal(built.ok, true);
+    const bad = { ...built.receipt, platform: "not-a-platform" };
+    // Recompute hash so the failure is semantic, not hash mismatch.
+    const body = {
+      schema: bad.schema,
+      platform: bad.platform,
+      platform_message_id: bad.platform_message_id,
+      sender_id_sha256: bad.sender_id_sha256,
+      text_sha256: bad.text_sha256,
+      verdict: { ...bad.verdict },
+      channel_live: bad.channel_live,
+      decided_at: bad.decided_at,
+    };
+    bad.crossing_hash = sha256Hex(stableStringify(body));
+    const res = verifyMobileCrossingReceipt(bad);
+    assert.equal(res.ok, false);
+    assert.equal(res.reason, "CROSSING_RECEIPT_MALFORMED");
+  });
+});

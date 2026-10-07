@@ -6,6 +6,7 @@ import {
   NODE0_DEPLOYMENT_REMOTE_WRITE_SCOPE,
   REMOTE_WRITE_VERDICTS,
   REQUIRED_FACETS,
+  deploymentSurfaceFacetCounts,
   evaluateDeploymentSurface,
 } from "../packages/core/src/node0-deployment-remote-write.js";
 
@@ -84,12 +85,16 @@ describe("node0 deployment remote-write · unmeasured is never clean", () => {
 });
 
 describe("node0 deployment remote-write · every exposure is a finding", () => {
-  it("DRW-10: a listener on a non-loopback address is an external write path", () => {
+  it("DRW-10 AMENDED 2026-08-25: a non-loopback listener alone is exposure, NOT a write path", () => {
+    // Operator audit REMOTE-WRITE-CORRELATION-CONTRACT-1A: this test formerly
+    // asserted listener ⇒ EXTERNAL_WRITE_PATH_PRESENT — the exact inference
+    // ruled defective (ExternalReachability ≠ ExternalWriteAuthority). A
+    // listener alone now settles nothing; see the CRW block below.
     const s = clone(cleanSurface());
     s.listeners.push({ address: "0.0.0.0", port: 8000, proto: "tcp" });
     const r = evaluateDeploymentSurface(s);
-    assert.equal(r.verdict, "EXTERNAL_WRITE_PATH_PRESENT");
-    assert.equal(r.external_write_path_present, true);
+    assert.equal(r.verdict, "INCOMPLETE");
+    assert.equal(r.external_write_path_present, false);
     assert.ok(r.findings.some((f) => f.kind === "non_loopback_listener"));
   });
 
@@ -153,10 +158,61 @@ describe("node0 deployment remote-write · the roots must not be writable BY ANY
   });
 });
 
+describe("node0 deployment remote-write · the prose cannot outlive its verdict", () => {
+  const sha = (s) => s ?? "";
+
+  it("DRW-45: a VIOLATED artefact never claims 'carried no path' — the field must agree with the verdict", () => {
+    const o = artefact({
+      facts: {
+        verdict: "EXTERNAL_WRITE_PATH_PRESENT",
+        reason: "test",
+        external_write_path_present: true,
+        findings: [],
+        facet_counts: {},
+      },
+    });
+    assert.ok(o);
+    assert.equal(o.remote_write_verdict, "EXTERNAL_WRITE_PATH_PRESENT");
+    assert.ok(
+      !/no path|carried no/i.test(sha(o.what_this_proves)),
+      `prose contradicts a violated observation: ${o.what_this_proves}`,
+    );
+    assert.match(String(o.what_this_proves), /VIOLATED|external write path/i);
+  });
+
+  it("DRW-46: a SATISFIED artefact is the only one allowed the clean-surface claim", () => {
+    const clean = artefact();
+    assert.match(String(clean.what_this_proves), /carried no path/i);
+
+    for (const v of ["EXTERNAL_WRITE_PATH_PRESENT", "INCOMPLETE"]) {
+      const o = artefact({
+        facts: {
+          verdict: v,
+          reason: "test",
+          external_write_path_present: v === "EXTERNAL_WRITE_PATH_PRESENT",
+          findings: [],
+          facet_counts: {},
+        },
+      });
+      assert.doesNotMatch(String(o.what_this_proves), /carried no path/i, `${v} must not read clean`);
+    }
+  });
+
+  it("DRW-47 MUTATION CONTROL: prose stays inside the hashed body", () => {
+    // The claim is evidence: flipping a word must break verification, so the
+    // prose cannot be edited after the fact without detection.
+    const o = artefact();
+    assert.equal(verifyDeploymentRemoteWriteHash(o, sha256CanonicalJsonV1), true);
+    const tampered = { ...o, what_this_proves: String(o.what_this_proves).replace(/host/, "HOST") };
+    assert.equal(verifyDeploymentRemoteWriteHash(tampered, sha256CanonicalJsonV1), false);
+  });
+});
+
 describe("node0 deployment remote-write · negative-control integrity", () => {
-  it("DRW-30: every exposure case is reachable — a always-clean evaluator would fail here", () => {
+  it("DRW-30: every DIRECT-WRITE exposure case is reachable — an always-clean evaluator would fail here", () => {
+    // AMENDED 2026-08-25: the pure-listener member moved out — reachability
+    // alone is INCOMPLETE under the correlation contract (CRW-01).
     const mutations = [
-      (s) => { s.listeners.push({ address: "0.0.0.0", port: 9, proto: "tcp" }); return s; },
       (s) => { s.mounts.push({ target: "/home/x/.dema/z", fstype: "nfs4", source: "nas:/x" }); return s; },
       (s) => { s.state_roots[0].other_writable = true; return s; },
       (s) => { s.root_files[0].writable = true; return s; },
@@ -171,24 +227,83 @@ describe("node0 deployment remote-write · negative-control integrity", () => {
     // simply refusing everything
     assert.equal(evaluateDeploymentSurface(cleanSurface()).verdict, "NO_EXTERNAL_WRITE_PATH");
   });
+
+  it("DRW-44b DERIVATION BINDING: hand-edited verdict with carry-evidence mismatch is rejected", () => {
+    // The audit exploit deleted carried findings, relabelled the result clean,
+    // preserved contradictory summary fields, and recomputed the unkeyed hash.
+    // v0.2 binds the original non-loopback listener in `surface`, so the adapter
+    // re-derives INCOMPLETE and refuses the forged clean admission.
+    const source = artefact({ surface: listenerSurface() });
+    const { observation_hash: _h, ...body } = source;
+    const forgedBody = {
+      ...body,
+      remote_write_verdict: "NO_EXTERNAL_WRITE_PATH",
+      remote_write_reason: "contradictory_reason_preserved",
+      external_write_path_present: true,
+      findings: [],
+      facet_counts: {},
+    };
+    const forged = { ...forgedBody, observation_hash: sha256CanonicalJsonV1(forgedBody) };
+    assert.ok(verifyDeploymentRemoteWriteHash(forged, sha256CanonicalJsonV1), "forged hash must verify");
+    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(forged), now: NOW }), null);
+    assert.equal(
+      remoteWriteDeploymentDiagnostic({ readFile: reader(forged), now: NOW }).state,
+      "DERIVATION_MISMATCH",
+    );
+  });
 });
 
 // ── the adapter · the highest bar in the ledger ───────────────────────────────
 import {
   remoteWriteDeploymentObservation,
   remoteWriteDeploymentDiagnostic,
+  currentRemoteWriteCollectorHash,
   currentRemoteWriteKernelHash,
   REMOTE_WRITE_INVARIANT_ID,
 } from "../packages/core/src/node0-deployment-remote-write-adapter.js";
-import { buildDeploymentRemoteWriteObservation } from "../packages/core/src/node0-deployment-remote-write.js";
+import {
+  buildDeploymentRemoteWriteObservation,
+  verifyDeploymentRemoteWriteHash,
+} from "../packages/core/src/node0-deployment-remote-write.js";
 import { sha256CanonicalJsonV1 } from "../packages/canon/src/sha256-canonical-json-v1.js";
 
 const KH = currentRemoteWriteKernelHash();
-function artefact({ verdict = "NO_EXTERNAL_WRITE_PATH", evidenceClass = "OBSERVED", findings = [] } = {}) {
+const CH = currentRemoteWriteCollectorHash();
+const OBSERVED_AT = "2026-08-31T12:00:00.000Z";
+const NOW = Date.parse("2026-08-31T12:30:00.000Z");
+
+function listenerSurface() {
+  const s = clone(cleanSurface());
+  s.listeners.push({ address: "0.0.0.0", port: 8000, proto: "tcp" });
+  return s;
+}
+
+function writableSurface() {
+  const s = clone(cleanSurface());
+  s.root_files[0].writable = true;
+  return s;
+}
+
+function factsFor(surface) {
+  return { ...evaluateDeploymentSurface(surface), facet_counts: deploymentSurfaceFacetCounts(surface) };
+}
+
+function artefact({
+  surface = cleanSurface(),
+  facts = factsFor(surface),
+  evidenceClass = "OBSERVED",
+  observedAt = OBSERVED_AT,
+  executedCodeHash = KH,
+  collectorCodeHash = CH,
+} = {}) {
   return buildDeploymentRemoteWriteObservation({
-    facts: { verdict, reason: null, external_write_path_present: verdict === "EXTERNAL_WRITE_PATH_PRESENT", findings, facet_counts: {} },
-    evidenceClass, observedAt: "2026-08-19T00:00:00.000Z",
-    executedCodeHash: KH, hash: sha256CanonicalJsonV1,
+    facts,
+    surface,
+    evidenceClass,
+    observedAt,
+    executedCodeHash,
+    collectorCodeHash,
+    hash: sha256CanonicalJsonV1,
   });
 }
 const reader = (o) => () => JSON.stringify(o);
@@ -196,7 +311,7 @@ const enoent = () => { const e = new Error("nope"); e.code = "ENOENT"; throw e; 
 
 describe("node0 deployment remote-write · adapter", () => {
   it("DRW-40: a clean host artefact settles the row with observed:false", () => {
-    const o = remoteWriteDeploymentObservation({ readFile: reader(artefact()) });
+    const o = remoteWriteDeploymentObservation({ readFile: reader(artefact()), now: NOW });
     assert.ok(o);
     assert.equal(o.observed, false);          // required:false -> SATISFIED
     assert.equal(o.scope, "node0_deployment_remote_write");
@@ -204,16 +319,17 @@ describe("node0 deployment remote-write · adapter", () => {
 
   it("DRW-41: a surface that FOUND a write path REFUTES the row with observed:true", () => {
     const o = remoteWriteDeploymentObservation({
-      readFile: reader(artefact({ verdict: "EXTERNAL_WRITE_PATH_PRESENT", findings: [{ kind: "writable_root_file", path: "bizra.pdf" }] })),
+      readFile: reader(artefact({ surface: writableSurface() })),
+      now: NOW,
     });
     assert.ok(o, "a measured exposure must be able to refute, not fall silent");
     assert.equal(o.observed, true);           // required:false -> VIOLATED
   });
 
   it("DRW-42: an INCOMPLETE artefact settles NOTHING — the sandbox case", () => {
-    const a = artefact({ verdict: "INCOMPLETE" });
-    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(a) }), null);
-    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(a) }).state, "NOT_CLEAN_ELIGIBLE");
+    const a = artefact({ surface: listenerSurface() });
+    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(a), now: NOW }), null);
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(a), now: NOW }).state, "NOT_CLEAN_ELIGIBLE");
   });
 
   it("DRW-43: a missing artefact is silence, not a clean surface", () => {
@@ -224,19 +340,143 @@ describe("node0 deployment remote-write · adapter", () => {
 
   it("DRW-44 MUTATION CONTROL: tampered body, foreign kernel bytes, relabelled scope", () => {
     const tampered = { ...artefact(), remote_write_verdict: "NO_EXTERNAL_WRITE_PATH", findings: [{ kind: "x" }] };
-    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(tampered) }), null);
-    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(tampered) }).state, "HASH_UNVERIFIED");
+    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(tampered), now: NOW }), null);
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(tampered), now: NOW }).state, "HASH_UNVERIFIED");
 
     const a = artefact();
-    const { observed_at: t, observation_hash: _h, ...body } = a;
+    const { observation_hash: _h, ...body } = a;
     const foreign = { ...body, executed_code_hash: `sha256:${"0".repeat(64)}` };
-    const forged = { ...foreign, observed_at: t, observation_hash: sha256CanonicalJsonV1(foreign) };
-    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(forged) }), null);
-    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(forged) }).state, "KERNEL_BYTES_MISMATCH");
+    const forged = { ...foreign, observation_hash: sha256CanonicalJsonV1(foreign) };
+    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(forged), now: NOW }), null);
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(forged), now: NOW }).state, "KERNEL_BYTES_MISMATCH");
 
     const relabel = { ...body, scope: "node0_runtime_kill_resume" };
-    const forged2 = { ...relabel, observed_at: t, observation_hash: sha256CanonicalJsonV1(relabel) };
-    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(forged2) }), null);
-    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(forged2) }).state, "SCHEMA_MISMATCH");
+    const forged2 = { ...relabel, observation_hash: sha256CanonicalJsonV1(relabel) };
+    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(forged2), now: NOW }), null);
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(forged2), now: NOW }).state, "SCHEMA_MISMATCH");
+  });
+
+  it("DRW-45 v0.2: each rehashed decision-bearing mismatch is refused", () => {
+    const source = artefact({ surface: listenerSurface() });
+    const { observation_hash: _h, ...body } = source;
+    const controls = [
+      { remote_write_verdict: "NO_EXTERNAL_WRITE_PATH" },
+      { remote_write_reason: "contradictory_reason_preserved" },
+      { external_write_path_present: true },
+      { findings: [] },
+      { facet_counts: { ...body.facet_counts, listeners: 0 } },
+    ];
+    for (const mutation of controls) {
+      const forgedBody = { ...body, ...mutation };
+      const forged = { ...forgedBody, observation_hash: sha256CanonicalJsonV1(forgedBody) };
+      assert.ok(verifyDeploymentRemoteWriteHash(forged, sha256CanonicalJsonV1));
+      assert.equal(remoteWriteDeploymentObservation({ readFile: reader(forged), now: NOW }), null);
+      assert.equal(
+        remoteWriteDeploymentDiagnostic({ readFile: reader(forged), now: NOW }).state,
+        "DERIVATION_MISMATCH",
+      );
+    }
+  });
+
+  it("DRW-46 v0.2: timestamp and collector bytes are admission-bound", () => {
+    const source = artefact();
+    const timestampTamper = { ...source, observed_at: "2026-08-31T12:01:00.000Z" };
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(timestampTamper), now: NOW }).state, "HASH_UNVERIFIED");
+
+    const { observation_hash: _h, ...body } = source;
+    const collectorForgery = { ...body, collector_code_hash: `sha256:${"0".repeat(64)}` };
+    const forged = { ...collectorForgery, observation_hash: sha256CanonicalJsonV1(collectorForgery) };
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(forged), now: NOW }).state, "COLLECTOR_BYTES_MISMATCH");
+  });
+
+  it("DRW-47 v0.2: stale, future, legacy, and surface-less artefacts cannot settle the row", () => {
+    const stale = artefact({ observedAt: "2026-08-30T12:00:00.000Z" });
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(stale), now: NOW }).state, "OBSERVATION_STALE");
+
+    const future = artefact({ observedAt: "2026-08-31T12:36:00.000Z" });
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(future), now: NOW }).state, "OBSERVATION_FUTURE_DATED");
+
+    const source = artefact();
+    const { observation_hash: _h, ...body } = source;
+    const legacyBody = { ...body, schema: "bizra.dema.node0_deployment_remote_write_observation.v0.1" };
+    const legacy = { ...legacyBody, observation_hash: sha256CanonicalJsonV1(legacyBody) };
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(legacy), now: NOW }).state, "LEGACY_DERIVATION_UNVERIFIED");
+
+    const { surface: _surface, ...surfaceLessBody } = body;
+    const surfaceLess = { ...surfaceLessBody, observation_hash: sha256CanonicalJsonV1(surfaceLessBody) };
+    assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(surfaceLess), now: NOW }).state, "DERIVATION_UNVERIFIED");
+  });
+});
+
+// ── correlation contract · REMOTE-WRITE-CORRELATION-CONTRACT-1A ──────────────
+// Operator audit 2026-08-25: ExternalReachability ≠ ExternalWriteAuthority.
+// A listener proves EXPOSURE, not a write route. Only findings whose very
+// structure binds an external write capability to sovereign state (sync mount
+// over state root, writable state root/file, root under sync mount, hash
+// drift) may assert EXTERNAL_WRITE_PATH_PRESENT. Reachability-only surfaces
+// settle NOTHING — INCOMPLETE — which blocks closure exactly as hard as
+// VIOLATED does, without claiming an uncorrelated causal fact.
+import {
+  DIRECT_WRITE_FINDING_KINDS,
+  REACHABILITY_ONLY_FINDING_KINDS,
+} from "../packages/core/src/node0-deployment-remote-write.js";
+
+describe("node0 deployment remote-write · correlation contract (Trace ≠ Diagnosis)", () => {
+  const listenerOnly = () => {
+    const s = clone(cleanSurface());
+    s.listeners.push({ address: "0.0.0.0", port: 8000, proto: "tcp" });
+    return evaluateDeploymentSurface(s);
+  };
+
+  it("CRW-01: reachability alone is INCOMPLETE — never EXTERNAL_WRITE_PATH_PRESENT", () => {
+    const r = listenerOnly();
+    assert.equal(r.verdict, "INCOMPLETE");
+    assert.notEqual(r.verdict, "EXTERNAL_WRITE_PATH_PRESENT");
+    assert.equal(r.external_write_path_present, false);
+    assert.match(String(r.reason), /reachability_without_write_correlation/);
+    assert.match(String(r.reason), /non_loopback_listener/);
+  });
+
+  it("CRW-02 VISIBILITY CONTROL: refused correlation still carries every finding", () => {
+    const r = listenerOnly();
+    assert.equal(r.findings.length, 1);
+    assert.equal(r.findings[0].kind, "non_loopback_listener");
+  });
+
+  it("CRW-03: each DIRECT-WRITE kind remains independently sufficient for VIOLATED", () => {
+    const cases = [
+      (s) => { s.mounts.push({ target: "/home/x/.dema", fstype: "fuse.gvfsd-fuse", source: "gvfsd" }); },
+      (s) => { s.state_roots[0].other_writable = true; },
+      (s) => { s.root_files[0].writable = true; },
+      (s) => { s.root_files[0].sha256 = "9".repeat(64); },
+      (s) => { s.root_files[0].under_sync_mount = true; },
+    ];
+    for (const mutate of cases) {
+      const s = clone(cleanSurface());
+      mutate(s);
+      const r = evaluateDeploymentSurface(s);
+      assert.equal(r.verdict, "EXTERNAL_WRITE_PATH_PRESENT", JSON.stringify(r.findings));
+    }
+  });
+
+  it("CRW-04 MIXED: one direct-write finding dominates; listeners ride along as context", () => {
+    const s = clone(cleanSurface());
+    s.listeners.push({ address: "0.0.0.0", port: 8000, proto: "tcp" });
+    s.state_roots[0].group_writable = true;
+    const r = evaluateDeploymentSurface(s);
+    assert.equal(r.verdict, "EXTERNAL_WRITE_PATH_PRESENT");
+    assert.ok(r.findings.some((f) => f.kind === "writable_state_root"));
+    assert.ok(r.findings.some((f) => f.kind === "non_loopback_listener"));
+  });
+
+  it("CRW-05 TAXONOMY: the two tiers are exhaustive and disjoint over known kinds", () => {
+    const all = new Set([...DIRECT_WRITE_FINDING_KINDS, ...REACHABILITY_ONLY_FINDING_KINDS]);
+    for (const k of ["non_loopback_listener", "sync_mount_over_state_root", "writable_state_root",
+      "writable_root_file", "root_file_under_sync_mount", "root_file_hash_drift"]) {
+      assert.ok(all.has(k), `unclassified finding kind: ${k}`);
+    }
+    for (const k of DIRECT_WRITE_FINDING_KINDS) {
+      assert.ok(!REACHABILITY_ONLY_FINDING_KINDS.includes(k));
+    }
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Panel, StatBar, TruthLabelBadge } from "./primitives";
 import { RefreshCw } from "lucide-react";
@@ -70,25 +70,40 @@ function BoundaryChip({ label, obs }: { label: string; obs: Observation<boolean>
 export function RealResources() {
   const [data, setData] = useState<NodeResources | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const request = useRef<AbortController | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/node-resources", { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData(await res.json());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "fetch failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback((signal: AbortSignal) =>
+    fetch("/api/node-resources", { cache: "no-store", signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((observation) => {
+        if (!signal.aborted) setData(observation);
+      })
+      .catch((err) => {
+        if (!signal.aborted) setError(err instanceof Error ? err.message : "fetch failed");
+      })
+      .finally(() => {
+        if (!signal.aborted) setLoading(false);
+      }), []);
 
   useEffect(() => {
-    load();
+    const controller = new AbortController();
+    request.current = controller;
+    void load(controller.signal);
+    return () => request.current?.abort();
   }, [load]);
+
+  const refresh = () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setLoading(true);
+    setError(null);
+    void load(controller.signal);
+  };
 
   return (
     <Panel
@@ -99,7 +114,7 @@ export function RealResources() {
         <div className="flex items-center gap-2">
           {data && <TruthLabelBadge label="LOCAL_ONLY" size="xs" />}
           <button
-            onClick={load}
+            onClick={refresh}
             disabled={loading}
             className="grid size-6 place-items-center rounded-md border border-border/60 text-muted-foreground transition-colors hover:bg-card/60 disabled:opacity-50"
             aria-label="Refresh telemetry"

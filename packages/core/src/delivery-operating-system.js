@@ -143,18 +143,21 @@ const GATE_DEFS = Object.freeze([
   },
   {
     id: "security",
-    command: "gitleaks detect --source . --no-banner --verbose --exit-code 1 --redact",
+    command: "node scripts/review/gitleaks-dual-eval.mjs",
     npm_script: null,
     ci_enforced: true,
     category: "security",
     rail: "empirical",
-    purpose: "Secret-scan the full branch history for leaked credentials.",
+    purpose:
+      "Dual base/candidate secret-scan with event-bound commit identity (Gate Mutator ≠ Final Gate Verifier).",
     blocks_release: true,
-    evidence_artifact: ".github/workflows/gitleaks.yml (gitleaks v8 detect step)",
+    evidence_artifact:
+      ".github/workflows/gitleaks.yml (gitleaks v8.30.1 dual-eval step)",
     failure_policy: "fail_closed",
     owner_role: "security",
     cadence: "per_pr",
-    notes: "Exact CI command from gitleaks.yml; enforced in CI, not a local npm script.",
+    notes:
+      "Exact CI command from gitleaks.yml; POLICY_DELTA requires BASE=PASS ∧ CANDIDATE=PASS ∧ INDEPENDENT_ACCEPTANCE=VERIFIED; enforced in CI, not a local npm script.",
   },
   {
     id: "env-hygiene",

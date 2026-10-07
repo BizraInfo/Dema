@@ -1,4 +1,4 @@
-// Inline canon teacher: 28 grounded vocabulary entries for BIZRA/Dema concepts.
+// Inline canon teacher: 29 grounded vocabulary entries for BIZRA/Dema concepts.
 // Source anchors: docs/canon/BIZRA_TOPOLOGY_CANON.md,
 //   docs/public/third-fact-v0.1.md, docs/LIGHTHOUSE.md,
 //   docs/06-adr/ADR-005-operator-actions-require-explicit-consent.md.
@@ -15,6 +15,16 @@ const SCHEMA = "bizra.dema.canon_glossary_entry.v0.1";
 // not as an entry-level truth_label. Allowed labels validated in canon-glossary.test.js.
 
 const RAW_ENTRIES = [
+  {
+    concept: "doctor",
+    title: "Doctor · Node0 readiness check",
+    short:
+      "The five-predicate readiness check `dema doctor` runs, and what each predicate means.",
+    long: "`dema doctor` answers one question: is this node safe to act, and if not, why. It checks five predicates and never mutates anything. Activation gate — whether a governed Node0 runtime is reporting a gate. BLOCKED means none is, and only a bridged runtime can move it, not `dema setup`; EXPLICIT_GO_REQUIRED means a runtime is reporting and still demands a typed human GO. Daemon — whether a background process is running. Dema runs none, so `n/a-via-gateway` is the healthy answer, and a running daemon is a failure rather than a success: it means something started that should not have. Ready — the runtime's own claim that it can serve work, mirrored from the adapter payload rather than set locally. Console ready — whether the operator console surface is reachable. Gateway probe — reachability of the HTTP gateway, read from the adapter's structured `gateway.reachable` field, reported as n/a when no gateway is configured, which is normal for preview-only use. The verdict is `blocked` unless every predicate passes. Blocked is the correct resting state for a local preview node; it is not an error to fix.",
+    truth_label: "MEASURED",
+    see_also: ["artifact-011", "adr-005", "truth-label", "boundary"],
+    doc_anchor: "docs/QUICKSTART.md",
+  },
   {
     concept: "ihsan",
     title: "Ihsan",

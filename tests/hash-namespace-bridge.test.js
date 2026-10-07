@@ -236,3 +236,28 @@ describe("DEMA-HASH-NAMESPACE-BRIDGE-1A · verifyBridgeReceipt", () => {
     }
   });
 });
+
+  it("refuses_a_flipped_foreign_recomputable_here_even_when_rehashed", () => {
+    const built = buildBridgeReceipt({
+      foreign: { alg: "blake3", digest: "a".repeat(64) },
+      localBody: { note: "x" },
+    });
+    assert.equal(built.ok, true);
+    assert.equal(built.receipt.foreign_recomputable_here, false);
+    const flipped = {
+      ...built.receipt,
+      foreign: { ...built.receipt.foreign },
+      foreign_recomputable_here: true,
+    };
+    const body = {
+      schema: flipped.schema,
+      foreign: { alg: flipped.foreign.alg, digest: flipped.foreign.digest },
+      foreign_recomputable_here: true,
+      local_body: flipped.local_body,
+    };
+    flipped.bridge_hash = sha256Hex(stableStringify(body));
+    const res = verifyBridgeReceipt(flipped);
+    assert.equal(res.ok, false);
+    assert.equal(res.reason, "RECOMPUTABILITY_MISMATCH");
+  });
+
