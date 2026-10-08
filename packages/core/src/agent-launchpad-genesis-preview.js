@@ -75,6 +75,17 @@ function text(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+/// Deep-clone plain JSON-like values so preview freeze cannot seal caller drafts.
+function clonePlain(value) {
+  if (value == null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map((item) => clonePlain(item));
+  const out = {};
+  for (const [key, child] of Object.entries(value)) {
+    out[key] = clonePlain(child);
+  }
+  return out;
+}
+
 function validDigest(value) {
   return typeof value === 'string' && SHA256.test(value);
 }
@@ -110,20 +121,29 @@ function bindMissionContractOwner({ mission_contract, mission_contract_hash } = 
 
   let recomputed = null;
   if (blockers.length === 0) {
-    try {
-      const sealed = createMissionContract({
-        fields: {
-          ...mission_contract,
-          acceptance_criteria: [...mission_contract.acceptance_criteria],
-          prohibited_outcomes: [...mission_contract.prohibited_outcomes],
-          completion_conditions: [...mission_contract.completion_conditions],
-        },
-        consent: MISSION_CONTRACT_GO_PHRASE,
-      });
-      recomputed = sealed.contract_hash;
-      if (sealed.contract_hash !== claimed) blockers.push('mission_contract_hash_mismatch');
-    } catch (err) {
-      blockers.push(typeof err?.code === 'string' ? err.code : 'mission_contract_semantics_invalid');
+    const listFields = [
+      mission_contract.acceptance_criteria,
+      mission_contract.prohibited_outcomes,
+      mission_contract.completion_conditions,
+    ];
+    if (listFields.some((field) => !Array.isArray(field))) {
+      blockers.push('mission_contract_shape_invalid');
+    } else {
+      try {
+        const sealed = createMissionContract({
+          fields: {
+            ...mission_contract,
+            acceptance_criteria: [...mission_contract.acceptance_criteria],
+            prohibited_outcomes: [...mission_contract.prohibited_outcomes],
+            completion_conditions: [...mission_contract.completion_conditions],
+          },
+          consent: MISSION_CONTRACT_GO_PHRASE,
+        });
+        recomputed = sealed.contract_hash;
+        if (sealed.contract_hash !== claimed) blockers.push('mission_contract_hash_mismatch');
+      } catch (err) {
+        blockers.push(typeof err?.code === 'string' ? err.code : 'mission_contract_semantics_invalid');
+      }
     }
   }
 
@@ -207,16 +227,22 @@ function bindAgentProfileOwner({
 
 function normalizeEvidence(evidence = []) {
   if (!Array.isArray(evidence)) return [];
-  return evidence.map((e, i) => ({
-    id: text(e?.id) || `evidence.${i}`,
-    kind: text(e?.kind) || 'unknown',
-    ref: text(e?.ref),
-    digest: text(e?.digest),
-    epistemic: text(e?.epistemic) || 'UNKNOWN',
-    freshness: text(e?.freshness) || 'UNKNOWN',
-    independent: e?.independent === true,
-    scope_match: e?.scope_match === true,
-  }));
+  const seenIds = new Set();
+  return evidence.map((e, i) => {
+    let id = text(e?.id) || `evidence.${i}`;
+    if (seenIds.has(id)) id = `${id}#${i}`;
+    seenIds.add(id);
+    return {
+      id,
+      kind: text(e?.kind) || 'unknown',
+      ref: text(e?.ref),
+      digest: text(e?.digest),
+      epistemic: text(e?.epistemic) || 'UNKNOWN',
+      freshness: text(e?.freshness) || 'UNKNOWN',
+      independent: e?.independent === true,
+      scope_match: e?.scope_match === true,
+    };
+  });
 }
 
 function evaluateEvidence(evidence) {
@@ -431,13 +457,26 @@ function buildProcessMining(receiptRefs, chatRefs) {
 }
 
 export function buildAgentLaunchpadGenesisPreview(input = {}) {
+  const agentProfileDraft =
+    input.agent_profile &&
+    typeof input.agent_profile === 'object' &&
+    !Array.isArray(input.agent_profile)
+      ? clonePlain(input.agent_profile)
+      : null;
+  const missionContractDraft =
+    input.mission_contract &&
+    typeof input.mission_contract === 'object' &&
+    !Array.isArray(input.mission_contract)
+      ? clonePlain(input.mission_contract)
+      : null;
+
   const missionBind = bindMissionContractOwner({
-    mission_contract: input.mission_contract,
+    mission_contract: missionContractDraft,
     mission_contract_hash: input.mission_contract_hash,
   });
   const profileBind = bindAgentProfileOwner({
     creator_agent_id: input.creator_agent_id,
-    agent_profile: input.agent_profile,
+    agent_profile: agentProfileDraft,
     agent_profile_hash: input.agent_profile_hash,
   });
 
@@ -445,19 +484,9 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
     capsule_id: text(input.capsule_id),
     creator_agent_id: text(input.creator_agent_id),
     verifier_agent_id: text(input.verifier_agent_id),
-    agent_profile:
-      input.agent_profile &&
-      typeof input.agent_profile === 'object' &&
-      !Array.isArray(input.agent_profile)
-        ? input.agent_profile
-        : null,
+    agent_profile: agentProfileDraft,
     agent_profile_hash: profileBind.binding.claimed_hash || text(input.agent_profile_hash),
-    mission_contract:
-      input.mission_contract &&
-      typeof input.mission_contract === 'object' &&
-      !Array.isArray(input.mission_contract)
-        ? input.mission_contract
-        : null,
+    mission_contract: missionContractDraft,
     mission_contract_hash: missionBind.binding.claimed_hash || text(input.mission_contract_hash),
     verification_contract_hash: text(input.verification_contract_hash),
     effect_class: text(input.effect_class),
@@ -532,6 +561,7 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
     qualification_ready: false,
     launched: false,
     launch_state: 'DESIGNED_BLOCKED_BY_PROD06_REAL_EFFECT_AND_RUNTIME_RECEIPT',
+    structural_blockers: Object.freeze([...blocked]),
     admitted_evidence: admitted,
     excluded_evidence: excluded,
     mission_owner_binding: missionBind.binding,

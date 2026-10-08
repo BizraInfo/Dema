@@ -177,6 +177,92 @@ test('1C vacuous mission semantics are BLOCKED even when body hash matches keys-
   assert.equal(r.qualification_candidate, false);
 });
 
+test('1C string list fields are not coerced into a different bindable body', () => {
+  const i = base();
+  i.mission_contract = {
+    ...i.mission_contract,
+    acceptance_criteria: 'green',
+  };
+  // Hash of the string-shaped body must not become a structural candidate via array coercion.
+  i.mission_contract_hash = sha256CanonicalJsonV1(i.mission_contract);
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.equal(r.mission_owner_binding.ok, false);
+  assert.ok(r.structural_blockers.includes('mission_contract_shape_invalid'));
+});
+
+test('preview clones mission/profile drafts so caller objects stay mutable', () => {
+  const mission = sealedMission();
+  const profile = sealedProfile();
+  // Fresh mutable drafts (not the already-frozen owner outputs).
+  const agent_profile = {
+    ...profile.agent_profile,
+    skills: ['draft'],
+    current_task_ownership: 'caller',
+  };
+  const mission_contract = {
+    ...MISSION_FIELDS,
+    acceptance_criteria: [...MISSION_FIELDS.acceptance_criteria],
+    prohibited_outcomes: [...MISSION_FIELDS.prohibited_outcomes],
+    completion_conditions: [...MISSION_FIELDS.completion_conditions],
+    acceptance_contract: { ...MISSION_FIELDS.acceptance_contract },
+  };
+  const i = {
+    ...base(),
+    agent_profile,
+    agent_profile_hash: `sha256:${computeStableProfileHash(agent_profile)}`,
+    mission_contract,
+    mission_contract_hash: mission.contract_hash,
+  };
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION');
+  agent_profile.skills.push('post-preview');
+  agent_profile.current_task_ownership = 'still-caller';
+  mission_contract.acceptance_criteria.push('post-preview');
+  assert.deepEqual(agent_profile.skills, ['draft', 'post-preview']);
+  assert.equal(agent_profile.current_task_ownership, 'still-caller');
+  assert.ok(mission_contract.acceptance_criteria.includes('post-preview'));
+  assert.equal(r.input.agent_profile.skills.length, 1);
+  assert.notEqual(r.input.agent_profile, agent_profile);
+  assert.notEqual(r.input.mission_contract, mission_contract);
+});
+
+test('structural blockers name verification digest and effect-class refusals', () => {
+  const badDigest = buildAgentLaunchpadGenesisPreview({
+    ...base(),
+    verification_contract_hash: 'not-a-digest',
+  });
+  assert.equal(badDigest.state, 'BLOCKED');
+  assert.ok(badDigest.structural_blockers.includes('verification_contract_hash_invalid'));
+
+  const badEffect = buildAgentLaunchpadGenesisPreview({
+    ...base(),
+    effect_class: 'C9_FORBIDDEN',
+  });
+  assert.equal(badEffect.state, 'BLOCKED');
+  assert.ok(badEffect.structural_blockers.includes('effect_class_not_preview_eligible'));
+});
+
+test('duplicate evidence ids keep distinct excluded hash-table entries', () => {
+  const i = base();
+  i.evidence = [
+    {
+      id: 'dup', kind: 'test', ref: '', digest: H('1'),
+      epistemic: 'MEASURED', freshness: 'CURRENT', independent: false, scope_match: false,
+    },
+    {
+      id: 'dup', kind: 'test', ref: 'tests/x.test.js', digest: 'bad',
+      epistemic: 'MEASURED', freshness: 'CURRENT', independent: false, scope_match: false,
+    },
+  ];
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.excluded_evidence.length, 2);
+  assert.ok(r.evidence_hash_table.table['excluded:dup']);
+  assert.ok(r.evidence_hash_table.table['excluded:dup#1']);
+  assert.ok(r.evidence_hash_table.table['excluded:dup'].gaps.includes('ref_missing'));
+  assert.ok(r.evidence_hash_table.table['excluded:dup#1'].gaps.includes('digest_missing_or_malformed'));
+});
+
 test('unknown thirteenth agent cannot become creator', () => {
   const i = base();
   i.creator_agent_id = 'pat.thirteenth';
@@ -354,15 +440,30 @@ test('public preview boundary remains all false', () => {
 });
 
 test('hash table is content-addressed and duplicate evidence has no second admitted key', () => {
-  const r = buildAgentLaunchpadGenesisPreview(base());
-  assert.ok(r.evidence_hash_table);
+  const i = base();
+  const before = buildAgentLaunchpadGenesisPreview(i);
+  const digests = before.admitted_evidence.map((e) => e.digest);
+  assert.ok(digests.length >= 1);
+  for (const digest of digests) {
+    assert.equal(before.evidence_hash_table.table[digest]?.admitted_for_attention, true);
+  }
+  i.evidence.push({
+    id: 'e-dup', kind: 'test', ref: 'tests/dup2.test.js', digest: digests[0],
+    epistemic: 'MEASURED', freshness: 'CURRENT', independent: true, scope_match: true,
+  });
+  const after = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(after.admitted_evidence.length, before.admitted_evidence.length);
+  assert.ok(after.excluded_evidence.some((e) => e.gaps?.includes('duplicate_evidence_digest')));
+  assert.equal(after.snr.signal, before.snr.signal);
 });
 
 test('diffusion changes attention only, never truth or consent', () => {
-  const i = base();
-  const r = buildAgentLaunchpadGenesisPreview(i);
-  assert.ok(r.diffusion_reasoning_amplifier);
-  assert.equal(r.consent.self_consent, false);
+  const low = buildAgentLaunchpadGenesisPreview({ ...base(), evidence: [] });
+  const high = buildAgentLaunchpadGenesisPreview(base());
+  assert.ok(high.diffusion_reasoning_amplifier.mission_attention > low.diffusion_reasoning_amplifier.mission_attention);
+  assert.equal(high.diffusion_reasoning_amplifier.may_change_truth_label, false);
+  assert.equal(high.diffusion_reasoning_amplifier.may_change_consent, false);
+  assert.equal(high.consent.self_consent, false);
 });
 
 test('reasoning graph is inspectable audit structure, not authority', () => {
