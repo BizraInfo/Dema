@@ -119,6 +119,20 @@ test('1D profile body for a different agent than creator is BLOCKED', () => {
   assert.equal(r.profile_owner_binding.ok, false);
 });
 
+test('1D profile shape/schema/created_at refusals stay owner-bound fail-closed', () => {
+  for (const patch of [
+    { agent_profile: ['not-an-object'] },
+    { agent_profile: { ...sealedProfile().agent_profile, schema: 'wrong.schema' } },
+    { agent_profile: { ...sealedProfile().agent_profile, created_at_iso: '   ' } },
+  ]) {
+    const r = buildAgentLaunchpadGenesisPreview({ ...base(), ...patch });
+    assert.equal(r.state, 'BLOCKED', JSON.stringify(patch.agent_profile?.schema ?? patch.agent_profile));
+    assert.equal(r.profile_owner_binding.ok, false);
+    assert.equal(r.qualification_ready, false);
+    assert.equal(r.launched, false);
+  }
+});
+
 test('1C hash-only mission digest cannot self-attest', () => {
   const i = base();
   delete i.mission_contract;
