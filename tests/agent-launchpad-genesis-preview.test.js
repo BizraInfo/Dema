@@ -269,7 +269,6 @@ test('duplicate evidence ids keep distinct excluded hash-table entries', () => {
 });
 
 test('clonePlain preserves own __proto__ data keys for mission nesting', () => {
-  const mission = sealedMission();
   const mission_contract = {
     ...MISSION_FIELDS,
     acceptance_criteria: [...MISSION_FIELDS.acceptance_criteria],
