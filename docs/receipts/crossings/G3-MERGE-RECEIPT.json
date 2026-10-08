@@ -1,0 +1,79 @@
+{
+  "payload": {
+    "actions_not_performed": [
+      "branch deletion",
+      "local primary reset or checkout",
+      "push of campaign records",
+      "post-merge test rerun"
+    ],
+    "authority_delta": 0,
+    "authorization": {
+      "cryptographic_signature": "not present; human authority is the active user instruction",
+      "phrase": "GO: merge the qualification repairs pr",
+      "source": "exact G3 GO in active user message"
+    },
+    "crossing_ledger": {
+      "path": "/home/bizra-operating-system/Downloads/Dema/docs/CROSSING_LEDGER.md",
+      "pre_append_sha256": "b8989e49356fcc8bdea7dbc1b7c4fb9d9893e82af51aa9c330b73650b05ff3c4"
+    },
+    "generated_at_utc": "2026-10-05T23:54:16Z",
+    "merge_action": {
+      "base_before_merge": "e10d5842726d8c1b228f4bb6c23a9771d3510569",
+      "base_branch": "main",
+      "match_head_commit": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318",
+      "merge_commit": "4edcd02d98e2c4087391991353891ef5c5223296",
+      "merge_commit_parents": [
+        "e10d5842726d8c1b228f4bb6c23a9771d3510569",
+        "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318"
+      ],
+      "merged_at_utc": "2026-10-05T23:48:23Z",
+      "method": "merge commit",
+      "pr": 480,
+      "remote_main_after_merge": "4edcd02d98e2c4087391991353891ef5c5223296",
+      "repository": "BizraInfo/Dema",
+      "source_branch": "fix/qualification-hermeticity-consent-parity-1a",
+      "source_branch_deleted": false,
+      "source_head": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318",
+      "state": "MERGED",
+      "url": "https://github.com/BizraInfo/Dema/pull/480"
+    },
+    "post_merge_closeout": {
+      "campaign_record_commit": "DEFERRED",
+      "dirty_partition": {
+        "branch": "feat/compose-dema-cli-fate-staged-effect-1a",
+        "head": "7c0edbad5a7624dd73b5edee71f8ed6349e9b975",
+        "path": "/home/bizra-operating-system/Downloads/Dema",
+        "porcelain_bytes_sha256": "452bd04287799fda261cb2f4e02ef722cac846b1f6b86190b6da7789f8e7d00a",
+        "porcelain_entry_count": 225,
+        "reason": "Preserve the pre-existing dirty compose checkout; syncing or committing through it could alter unrelated work. No reset, stash, rebase, or cleanup was performed."
+      },
+      "full_T05_dod_complete": false,
+      "merge_action_complete": true,
+      "merge_gate_consumed": true,
+      "primary_sync": "DEFERRED",
+      "separate_primary_sync_go_needed": "No new merge GO is needed; a safe disposition for the dirty primary must be selected before T-05 closeout can be marked complete.",
+      "tests": "No new tests were run after merge; the qualification evidence is the exact-head CI recorded above."
+    },
+    "pre_merge_gate_evidence": {
+      "exact_head_check_run_conclusions": "all success",
+      "exact_head_check_runs": 10,
+      "g2_ratification_receipt_path": "/home/bizra-operating-system/bizra-home/outputs/campaign-lane-G3-founder-rulings-20261006/G2-95BBABE-FOUNDER-RATIFICATION-RECEIPT.json",
+      "g2_ratification_receipt_sha256": "091c03d64159dac8871b9d3c939d6b2fe7006f93330ce842b952a230ff2ad21e",
+      "node20_policy_receipt_path": "/home/bizra-operating-system/bizra-home/outputs/campaign-lane-G3-founder-rulings-20261006/NODE20-MATRIX-POLICY-RULING.json",
+      "node20_policy_receipt_sha256": "a3457ab5332b0bf413b40f1e8e14b6c0c05e0fb3f8009d9ab7dfc8ade9eb26ea",
+      "node22_qualification_steps": "all six success at exact head",
+      "pr_merge_state": "CLEAN",
+      "pr_mergeable": "MERGEABLE",
+      "pr_review_decision": "APPROVED",
+      "qualification_limit": "Node-20 step conclusions remain API-reported skipped; founder policy classifies those conditional steps as documented smoke-leg exclusions."
+    },
+    "preserved_prior_receipt": {
+      "path": "/home/bizra-operating-system/bizra-home/outputs/campaign-lane-G2-amendment-95bbabe-20261006/G2-AMENDMENT-RECEIPT.json",
+      "sha256": "cb9df6691f5a4763af8960b9856ed2e10ed7120bd33e4346887ed9ee1f5b6559",
+      "status": "BOUND__AUTHORITY_NOT_ESTABLISHED; unchanged historical record"
+    },
+    "schema": "bizra.campaign_lane.G3_exact_head_merge.v1",
+    "truth_label": "PR480_MERGED_AT_EXACT_RATIFIED_HEAD__LOCAL_PRIMARY_SYNC_DEFERRED"
+  },
+  "payload_sha256": "4c73b965f865a1bb00623b239109be4a43aac3a61fb966c78a5c0f9abdb6c41a"
+}

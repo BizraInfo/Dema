@@ -1,0 +1,116 @@
+{
+  "schema": "bizra.crossing_receipt.v0.1",
+  "crossing_id": "C-002",
+  "run_id": "20261002T214158Z",
+  "trigger_phrase_sha256": "5c440d3fc865282f89cd1c631d6cadb4743498c4911cd849e7fa98cad851b187",
+  "trigger_phrase_scope": "sha256 of the exact UTF-8 C-002 gate string in docs/CROSSING_LEDGER.md, with no trailing newline",
+  "before_identity": {
+    "head": "30973a4005cbcbbd1267fcdba63e21528cbf5f89",
+    "head_scope": "git rev-parse HEAD before the commit",
+    "dirty_paths": 207,
+    "dirty_paths_scope": "git status --short line count before staging, including campaign files and excluding the branch header"
+  },
+  "bindings": [
+    {
+      "path": "packages/core/src/dema-face-turn-preview.js",
+      "sha256": "b7e4148adf5b692bbc9e4ec7c85fc005af131cf6a28d218b6e624e1a860169b3",
+      "sha256_scope": "working-tree bytes that matched the C-001 receipt and were committed",
+      "state": "COMMITTED",
+      "matches_c001": true
+    },
+    {
+      "path": "tests/dema-face-turn-preview.test.js",
+      "sha256": "6acf58df198cc6707f26033f54e09b8461e735632338645cef27b3b4c714dc10",
+      "sha256_scope": "working-tree bytes that matched the C-001 receipt and were committed",
+      "state": "COMMITTED",
+      "matches_c001": true
+    },
+    {
+      "path": "scripts/review/dema-face-turn-preview-check.mjs",
+      "sha256": "6dfa6d86a32de475f9a922e3e0cb6ca969ecd1cab656c2304d5199f60a772bb1",
+      "sha256_scope": "working-tree bytes that matched the C-001 receipt and were committed",
+      "state": "COMMITTED",
+      "matches_c001": true
+    },
+    {
+      "path": "docs/02-architecture/DEMA_FACE_TURN_PREVIEW_v0_1.md",
+      "sha256": "6ee599c61902ab71648475d387009d4faeec6818b10eb77588f7f224b6ec74e2",
+      "sha256_scope": "working-tree bytes that matched the C-001 receipt and were committed",
+      "state": "COMMITTED",
+      "matches_c001": true
+    },
+    {
+      "path": "docs/receipts/DEMA_FACE_TURN_PREVIEW_1A.md",
+      "sha256": "39320a236ef88720ba07633e36841d4a1709a1329b4e5cae7cc50dd5fa8b4693",
+      "sha256_scope": "working-tree bytes that matched the C-001 receipt and were committed",
+      "state": "COMMITTED",
+      "matches_c001": true
+    },
+    {
+      "path": "/home/bizra-operating-system/Documents/Codex/2026-10-02/DEMA_MUMU_PRODUCT_EXECUTION_CONTRACT_1A.md",
+      "sha256": "d0fc99155e61a2328d408963d6a519a3a7ec724529614ad98f7bbd7730250a63",
+      "sha256_scope": "bytes of the external contract file; unchanged from C-001; not edited",
+      "state": "EXTERNAL",
+      "matches_c001": true
+    }
+  ],
+  "actions": [
+    "Re-read the ledger. C-002 was the top PENDING crossing and the spoken phrase matched its gate.",
+    "Re-hashed the five-file allowlist and the external contract. All six hashes matched the C-001 receipt.",
+    "Ran node --test tests/dema-face-turn-preview.test.js. 25 pass, 0 fail.",
+    "Ran node scripts/review/dema-face-turn-preview-check.mjs. Exit 0.",
+    "Staged exactly those five paths. git diff --cached --name-only matched the allowlist.",
+    "Created commit 282b2b2903df341a0f5f5bdc626c787e6f764d70 with parent 30973a4005cbcbbd1267fcdba63e21528cbf5f89.",
+    "Wrote this receipt. The ledger close is the following append, not a fact this file claims as already done."
+  ],
+  "results": {
+    "commit": "282b2b2903df341a0f5f5bdc626c787e6f764d70",
+    "commit_scope": "one local commit of the five allowlist paths; not pushed",
+    "parent": "30973a4005cbcbbd1267fcdba63e21528cbf5f89",
+    "staged_paths": 5,
+    "dirty_paths_after": 202,
+    "dirty_paths_after_scope": "git status --short line count after the commit and before this receipt",
+    "cat_file": "HEAD:packages/core/src/dema-face-turn-preview.js exists",
+    "focused": "25 pass, 0 fail",
+    "review_gate": "exit 0",
+    "npm_test": "not run",
+    "npm_run_check": "not run",
+    "probes": "none added"
+  },
+  "failure_attribution": {
+    "this_slice": [],
+    "pre_existing": [
+      "registry, scripts/check.mjs, docs/TESTING.md, docs/CURRENT_LIMITS.md, and scripts/review/canonical-json-v1-check.mjs remain dirty and unstaged",
+      "the slice wiring is uncommitted",
+      "the CURRENT_LIMITS row remains unpromoted",
+      "npm test and npm run check were not run"
+    ]
+  },
+  "verdict": "GREEN",
+  "non_proofs": [
+    "This receipt does not establish that the face-turn preview is MEASURED in docs/CURRENT_LIMITS.md.",
+    "The review gate prints the module constant DEMA_FACE_TURN_PREVIEW_MEASURED_REPO. That string is not a limits-row promotion.",
+    "This receipt does not establish npm test or npm run check.",
+    "This receipt does not establish Stage 1, a CANDIDATE checkpoint, or source-to-delivery.",
+    "The campaign ledger, the instruction copy, and the C-001 receipt stayed untracked."
+  ],
+  "did_not": [
+    "push",
+    "merge",
+    "make a second commit",
+    "promote a truth-label row",
+    "stage the mixed dirty files",
+    "stage the campaign files",
+    "run npm test",
+    "run npm run check",
+    "edit the C-001 receipt",
+    "edit the contract",
+    "bind the launcher",
+    "dispose the nested checkout",
+    "restore any witness"
+  ],
+  "authority_delta": 0,
+  "effects_started": 0,
+  "next_crossing": "C-003",
+  "next_gate": "GO: run stage 1 return continuity"
+}
