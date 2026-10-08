@@ -76,10 +76,11 @@ function text(value) {
 }
 
 /// Deep-clone plain JSON-like values so preview freeze cannot seal caller drafts.
+/// Uses a null-prototype object so own keys like `__proto__` survive as data.
 function clonePlain(value) {
   if (value == null || typeof value !== 'object') return value;
   if (Array.isArray(value)) return value.map((item) => clonePlain(item));
-  const out = {};
+  const out = Object.create(null);
   for (const [key, child] of Object.entries(value)) {
     out[key] = clonePlain(child);
   }
@@ -229,8 +230,9 @@ function normalizeEvidence(evidence = []) {
   if (!Array.isArray(evidence)) return [];
   const seenIds = new Set();
   return evidence.map((e, i) => {
-    let id = text(e?.id) || `evidence.${i}`;
-    if (seenIds.has(id)) id = `${id}#${i}`;
+    const baseId = text(e?.id) || `evidence.${i}`;
+    let id = baseId;
+    for (let n = i; seenIds.has(id); n += 1) id = `${baseId}#${n}`;
     seenIds.add(id);
     return {
       id,

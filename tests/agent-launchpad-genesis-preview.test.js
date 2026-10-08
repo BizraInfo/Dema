@@ -254,13 +254,51 @@ test('duplicate evidence ids keep distinct excluded hash-table entries', () => {
       id: 'dup', kind: 'test', ref: 'tests/x.test.js', digest: 'bad',
       epistemic: 'MEASURED', freshness: 'CURRENT', independent: false, scope_match: false,
     },
+    {
+      id: 'dup#1', kind: 'test', ref: '', digest: 'also-bad',
+      epistemic: 'MEASURED', freshness: 'CURRENT', independent: false, scope_match: false,
+    },
   ];
   const r = buildAgentLaunchpadGenesisPreview(i);
-  assert.equal(r.excluded_evidence.length, 2);
+  assert.equal(r.excluded_evidence.length, 3);
   assert.ok(r.evidence_hash_table.table['excluded:dup']);
   assert.ok(r.evidence_hash_table.table['excluded:dup#1']);
+  assert.ok(r.evidence_hash_table.table['excluded:dup#1#2']);
   assert.ok(r.evidence_hash_table.table['excluded:dup'].gaps.includes('ref_missing'));
   assert.ok(r.evidence_hash_table.table['excluded:dup#1'].gaps.includes('digest_missing_or_malformed'));
+});
+
+test('clonePlain preserves own __proto__ data keys for mission nesting', () => {
+  const mission = sealedMission();
+  const mission_contract = {
+    ...MISSION_FIELDS,
+    acceptance_criteria: [...MISSION_FIELDS.acceptance_criteria],
+    prohibited_outcomes: [...MISSION_FIELDS.prohibited_outcomes],
+    completion_conditions: [...MISSION_FIELDS.completion_conditions],
+    acceptance_contract: {
+      ...MISSION_FIELDS.acceptance_contract,
+      expected: JSON.parse('{"__proto__":"ok"}'),
+    },
+  };
+  // Re-seal with the __proto__ data key so claimed hash matches owner output.
+  const sealed = createMissionContract({
+    fields: mission_contract,
+    consent: MISSION_CONTRACT_GO_PHRASE,
+  });
+  const i = {
+    ...base(),
+    mission_contract,
+    mission_contract_hash: sealed.contract_hash,
+  };
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION');
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(r.input.mission_contract.acceptance_contract.expected, '__proto__')
+      || Object.getOwnPropertyDescriptor(r.input.mission_contract.acceptance_contract.expected, '__proto__') != null
+      || r.input.mission_contract.acceptance_contract.expected['__proto__'] === 'ok',
+    true,
+  );
+  assert.equal(r.mission_owner_binding.ok, true);
 });
 
 test('unknown thirteenth agent cannot become creator', () => {
