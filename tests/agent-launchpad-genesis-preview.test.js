@@ -584,3 +584,210 @@ test('1C: Launchpad inspect path uses inspection envelope, not created-contract 
   assert.equal(r.qualification_ready, false);
   assert.equal(r.input.authority_delta, 0);
 });
+
+// ── DEMA-PR490-F4-UNKNOWN-BOUNDARY-REJECTION-1A ───────────────────────────────
+test('F4: unknown authority keys true are BLOCKED and retained for rederivation', () => {
+  for (const key of ['network', 'runtime_execution', 'push', 'deployment']) {
+    const i = base();
+    i.requested_boundaries = { [key]: true };
+    const r = buildAgentLaunchpadGenesisPreview(i);
+    assert.equal(r.state, 'BLOCKED');
+    assert.ok(r.structural_blockers.includes(`unknown_requested_boundary:${key}`));
+    assert.equal(r.input.requested_boundaries[key], true);
+    assert.equal(r.launched, false);
+    assert.equal(r.qualification_ready, false);
+    assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+  }
+});
+
+test('F4: unknown authority keys false are still BLOCKED (no silent drop)', () => {
+  const i = base();
+  i.requested_boundaries = { network: false };
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.ok(r.structural_blockers.includes('unknown_requested_boundary:network'));
+  assert.equal(r.input.requested_boundaries.network, false);
+  assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+});
+
+test('F4: known keys false are allowed; known true remains forbidden', () => {
+  const allowed = buildAgentLaunchpadGenesisPreview({
+    ...base(),
+    requested_boundaries: {
+      mint: false,
+      reward_settlement: false,
+      federation: false,
+      public_launch: false,
+      signer_or_key: false,
+      dema_home_mutation: false,
+    },
+  });
+  assert.equal(allowed.state, 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION');
+  assert.equal(allowed.self_compliance.no_protected_act, true);
+  assert.equal(verifyAgentLaunchpadGenesisPreview(allowed).ok, true);
+
+  const blocked = buildAgentLaunchpadGenesisPreview({
+    ...base(),
+    requested_boundaries: { mint: true },
+  });
+  assert.equal(blocked.state, 'BLOCKED');
+  assert.ok(blocked.structural_blockers.includes('forbidden_boundary_requested:mint'));
+});
+
+test('F4: non-boolean boundary values refuse without coercion', () => {
+  for (const value of ['true', 1, null, undefined, {}, []]) {
+    const i = base();
+    i.requested_boundaries = { mint: value };
+    const r = buildAgentLaunchpadGenesisPreview(i);
+    assert.equal(r.state, 'BLOCKED', `value=${JSON.stringify(value)}`);
+    assert.ok(r.structural_blockers.includes('requested_boundary_value_invalid:mint'));
+    assert.equal(r.input.requested_boundaries.mint, value);
+  }
+});
+
+test('F4: malformed requested_boundaries object fails closed', () => {
+  for (const bad of ['mint', 1, true, ['mint']]) {
+    const i = base();
+    i.requested_boundaries = bad;
+    const r = buildAgentLaunchpadGenesisPreview(i);
+    assert.equal(r.state, 'BLOCKED');
+    assert.ok(r.structural_blockers.includes('requested_boundaries_malformed'));
+    assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+  }
+});
+
+test('F4: own __proto__ unknown key is refused and retained', () => {
+  const raw = Object.create(null);
+  Object.defineProperty(raw, '__proto__', {
+    value: true,
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  const i = base();
+  i.requested_boundaries = raw;
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.ok(r.structural_blockers.includes('unknown_requested_boundary:__proto__'));
+  assert.equal(Object.getOwnPropertyDescriptor(r.input.requested_boundaries, '__proto__')?.value, true);
+  assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+});
+
+test('F4: boundary refusal survives rederivation; tamper is rejected', () => {
+  const i = base();
+  i.requested_boundaries = { push: true };
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+
+  const laundered = {
+    ...r,
+    state: 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION',
+    qualification_candidate: true,
+    structural_blockers: [],
+  };
+  assert.equal(verifyAgentLaunchpadGenesisPreview(laundered).ok, false);
+});
+
+test('F4: empty and omitted requested_boundaries keep valid preview; no authority elevation', () => {
+  const empty = buildAgentLaunchpadGenesisPreview(base());
+  assert.equal(empty.state, 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION');
+  assert.equal(empty.launched, false);
+  assert.equal(empty.qualification_ready, false);
+  assert.equal(empty.mission_owner_binding.human_consent_established, false);
+  assert.equal(empty.mission_owner_binding.creation_authorized, false);
+  assert.equal(empty.self_compliance.may_grant_authority, false);
+  assert.equal(verifyAgentLaunchpadGenesisPreview(empty).ok, true);
+
+  const omitted = base();
+  delete omitted.requested_boundaries;
+  const r = buildAgentLaunchpadGenesisPreview(omitted);
+  assert.equal(r.state, 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION');
+  assert.equal(r.launched, false);
+  assert.equal(r.qualification_ready, false);
+});
+
+// ── DEMA-PR490-F4-EDGE-CLOSURE-1C ─────────────────────────────────────────────
+test('F4-1C: undefined omission and empty {} remain admissible', () => {
+  const omitted = base();
+  delete omitted.requested_boundaries;
+  const o = buildAgentLaunchpadGenesisPreview(omitted);
+  assert.equal(o.state, 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION');
+  assert.equal(verifyAgentLaunchpadGenesisPreview(o).ok, true);
+
+  const empty = buildAgentLaunchpadGenesisPreview({ ...base(), requested_boundaries: {} });
+  assert.equal(empty.state, 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION');
+  assert.equal(verifyAgentLaunchpadGenesisPreview(empty).ok, true);
+});
+
+test('F4-1C: explicit null is malformed, retained, and verifiable', () => {
+  const i = base();
+  i.requested_boundaries = null;
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED');
+  assert.ok(r.structural_blockers.includes('requested_boundaries_malformed'));
+  assert.equal(r.input.requested_boundaries.__dema_requested_boundaries_malformed_v1, true);
+  assert.equal(r.launched, false);
+  assert.equal(r.qualification_ready, false);
+  assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+});
+
+test('F4-1C: own Symbol keys refuse with verifiable malformed marker', () => {
+  for (const value of [true, false]) {
+    const raw = Object.create(null);
+    raw[Symbol('network')] = value;
+    const i = base();
+    i.requested_boundaries = raw;
+    const r = buildAgentLaunchpadGenesisPreview(i);
+    assert.equal(r.state, 'BLOCKED', `symbol value=${value}`);
+    assert.ok(r.structural_blockers.includes('requested_boundaries_malformed'));
+    assert.equal(r.input.requested_boundaries.__dema_requested_boundaries_malformed_v1, true);
+    assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+  }
+});
+
+test('F4-1C: non-enumerable unknown and caller marker never grant permission', () => {
+  const nonEnum = Object.create(null);
+  Object.defineProperty(nonEnum, 'network', {
+    value: false, enumerable: false, configurable: true, writable: true,
+  });
+  const r1 = buildAgentLaunchpadGenesisPreview({ ...base(), requested_boundaries: nonEnum });
+  assert.equal(r1.state, 'BLOCKED');
+  assert.ok(r1.structural_blockers.includes('unknown_requested_boundary:network'));
+  assert.equal(verifyAgentLaunchpadGenesisPreview(r1).ok, true);
+
+  const markerOnly = Object.create(null);
+  markerOnly.__dema_requested_boundaries_malformed_v1 = false;
+  const r2 = buildAgentLaunchpadGenesisPreview({ ...base(), requested_boundaries: markerOnly });
+  assert.equal(r2.state, 'BLOCKED');
+  assert.ok(r2.structural_blockers.includes('requested_boundaries_malformed'));
+  assert.equal(verifyAgentLaunchpadGenesisPreview(r2).ok, true);
+});
+
+test('F4-1C: throwing getter never yields READY; tamper of BLOCKED fails verify', () => {
+  const raw = Object.create(null);
+  Object.defineProperty(raw, 'mint', {
+    enumerable: true, configurable: true,
+    get() { throw new Error('getter_trap'); },
+  });
+  let threw = false;
+  try {
+    buildAgentLaunchpadGenesisPreview({ ...base(), requested_boundaries: raw });
+  } catch (e) {
+    threw = e?.message === 'getter_trap';
+  }
+  assert.equal(threw, true);
+
+  const blocked = buildAgentLaunchpadGenesisPreview({
+    ...base(),
+    requested_boundaries: { push: true },
+  });
+  assert.equal(blocked.state, 'BLOCKED');
+  assert.equal(verifyAgentLaunchpadGenesisPreview(blocked).ok, true);
+  assert.equal(verifyAgentLaunchpadGenesisPreview({
+    ...blocked,
+    state: 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION',
+    qualification_candidate: true,
+    structural_blockers: [],
+  }).ok, false);
+});

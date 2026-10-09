@@ -46,6 +46,16 @@ const ALLOWED_EFFECT_CLASSES = Object.freeze([
 const EPISTEMIC = new Set(['OBSERVED', 'MEASURED', 'VERIFIED']);
 const FRESHNESS = new Set(['CURRENT', 'STALE', 'UNKNOWN']);
 const SHA256 = /^(?:sha256:)?[0-9a-f]{64}$/;
+/** Exact Launchpad requested_boundaries vocabulary — unknown keys fail closed. */
+const ALLOWED_REQUESTED_BOUNDARIES = Object.freeze([
+  'mint',
+  'reward_settlement',
+  'federation',
+  'public_launch',
+  'signer_or_key',
+  'dema_home_mutation',
+]);
+const ALLOWED_REQUESTED_BOUNDARY_SET = new Set(ALLOWED_REQUESTED_BOUNDARIES);
 
 function stableStringify(value) {
   if (Array.isArray(value)) {
@@ -301,6 +311,95 @@ function boundary() {
   });
 }
 
+/// Serializable admit-time marker for malformed requested_boundaries.
+/// Retained on report.input so verify can rederive the same refusal.
+/// Own presence of this key (caller-supplied or admit-written) is never
+/// permission — it always contributes requested_boundaries_malformed.
+const REQUESTED_BOUNDARIES_MALFORMED_MARKER =
+  '__dema_requested_boundaries_malformed_v1';
+
+function malformedBoundaryRetention(extra = null) {
+  const retained = Object.create(null);
+  if (extra && typeof extra === 'object') {
+    for (const key of Object.getOwnPropertyNames(extra).sort()) {
+      retained[key] = extra[key];
+    }
+  }
+  retained[REQUESTED_BOUNDARIES_MALFORMED_MARKER] = true;
+  return Object.freeze(retained);
+}
+
+/// Admit requested_boundaries fail-closed.
+/// Retains a frozen own-key copy of the caller request so verify/rederivation
+/// sees the same keys/values that produced blockers (no silent drop).
+/// undefined = omitted request; {} = empty request; null = malformed.
+function admitRequestedBoundaries(raw) {
+  const blockers = [];
+
+  if (raw === undefined) {
+    return Object.freeze({
+      requested_boundaries: Object.freeze(Object.create(null)),
+      blockers: Object.freeze(blockers),
+    });
+  }
+
+  if (raw === null) {
+    blockers.push('requested_boundaries_malformed');
+    return Object.freeze({
+      requested_boundaries: malformedBoundaryRetention(),
+      blockers: Object.freeze(blockers),
+    });
+  }
+
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    blockers.push('requested_boundaries_malformed');
+    return Object.freeze({
+      requested_boundaries: malformedBoundaryRetention(),
+      blockers: Object.freeze(blockers),
+    });
+  }
+
+  const hasOwnSymbolKey = Reflect.ownKeys(raw).some((key) => typeof key === 'symbol');
+  const retained = Object.create(null);
+  const keys = Object.getOwnPropertyNames(raw).sort();
+  for (const key of keys) {
+    retained[key] = raw[key];
+  }
+
+  // Symbol keys are not JSON/report-serializable; stamp a deterministic marker
+  // so rebuild refuses identically instead of silently becoming an empty admit.
+  if (hasOwnSymbolKey) {
+    retained[REQUESTED_BOUNDARIES_MALFORMED_MARKER] = true;
+    blockers.push('requested_boundaries_malformed');
+  }
+
+  // Marker presence (admit-written or caller-supplied) is never permission.
+  if (Object.prototype.hasOwnProperty.call(retained, REQUESTED_BOUNDARIES_MALFORMED_MARKER)) {
+    blockers.push('requested_boundaries_malformed');
+  }
+
+  for (const key of Object.getOwnPropertyNames(retained).sort()) {
+    if (key === REQUESTED_BOUNDARIES_MALFORMED_MARKER) continue;
+    if (!ALLOWED_REQUESTED_BOUNDARY_SET.has(key)) {
+      blockers.push(`unknown_requested_boundary:${key}`);
+      continue;
+    }
+    const value = retained[key];
+    if (value !== true && value !== false) {
+      blockers.push(`requested_boundary_value_invalid:${key}`);
+      continue;
+    }
+    if (value === true) {
+      blockers.push(`forbidden_boundary_requested:${key}`);
+    }
+  }
+
+  return Object.freeze({
+    requested_boundaries: Object.freeze(retained),
+    blockers: Object.freeze([...new Set(blockers)].sort()),
+  });
+}
+
 function buildHypergraph({ creator, verifier, missionHash, profileHash, verificationHash, evidence }) {
   const nodes = [
     { id: creator, type: 'PAT_AGENT' },
@@ -497,15 +596,11 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
     evidence: normalizeEvidence(input.evidence),
     receipt_refs: Array.isArray(input.receipt_refs) ? [...input.receipt_refs] : [],
     chat_refs: Array.isArray(input.chat_refs) ? [...input.chat_refs] : [],
-    requested_boundaries: {
-      mint: input?.requested_boundaries?.mint === true,
-      reward_settlement: input?.requested_boundaries?.reward_settlement === true,
-      federation: input?.requested_boundaries?.federation === true,
-      public_launch: input?.requested_boundaries?.public_launch === true,
-      signer_or_key: input?.requested_boundaries?.signer_or_key === true,
-      dema_home_mutation: input?.requested_boundaries?.dema_home_mutation === true,
-    },
+    requested_boundaries: null, // filled after fail-closed admission
   };
+
+  const boundaryAdmit = admitRequestedBoundaries(input.requested_boundaries);
+  normalized.requested_boundaries = boundaryAdmit.requested_boundaries;
 
   const blocked = [];
   if (!normalized.capsule_id) blocked.push('capsule_id_missing');
@@ -520,10 +615,7 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
   if (!validDigest(normalized.verification_contract_hash)) blocked.push('verification_contract_hash_invalid');
   if (!ALLOWED_EFFECT_CLASSES.includes(normalized.effect_class)) blocked.push('effect_class_not_preview_eligible');
   if (normalized.authority_delta !== 0) blocked.push('authority_delta_must_equal_zero');
-
-  for (const [name, enabled] of Object.entries(normalized.requested_boundaries)) {
-    if (enabled) blocked.push(`forbidden_boundary_requested:${name}`);
-  }
+  blocked.push(...boundaryAdmit.blockers);
 
   const { admitted, excluded } = evaluateEvidence(normalized.evidence);
   const independentEvidenceCount = admitted.filter((e) => e.independent).length;
@@ -606,7 +698,9 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
       canonical_mission_owner_used: missionBind.binding.ok === true,
       canonical_profile_owner_used: profileBind.binding.ok === true,
       caller_hash_cannot_self_attest: true,
-      no_protected_act: Object.values(normalized.requested_boundaries).every((v) => v === false),
+      no_protected_act: Object.getOwnPropertyNames(normalized.requested_boundaries).every(
+        (k) => ALLOWED_REQUESTED_BOUNDARY_SET.has(k) && normalized.requested_boundaries[k] === false,
+      ),
       may_refuse: true,
       may_grant_authority: false,
     },
