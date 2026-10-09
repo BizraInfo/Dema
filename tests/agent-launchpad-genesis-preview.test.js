@@ -8,13 +8,20 @@ import {
 } from '../packages/core/src/agent-launchpad-genesis-preview.js';
 import {
   createMissionContract,
+  inspectMissionContractFields,
+  isCreatedMissionContract,
+  isMissionContractInspection,
   MISSION_CONTRACT_GO_PHRASE,
+  MISSION_CONTRACT_INSPECTION_SCHEMA,
 } from '../packages/core/src/mission-contract-state.js';
 import {
   AGENT_PROFILE_SCHEMA,
   computeStableProfileHash,
 } from '../packages/agents/src/agent-profile-registry.js';
 import { sha256CanonicalJsonV1 } from '../packages/canon/src/sha256-canonical-json-v1.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 const H = (ch) => `sha256:${ch.repeat(64)}`;
 
@@ -506,4 +513,74 @@ test('diffusion changes attention only, never truth or consent', () => {
 test('reasoning graph is inspectable audit structure, not authority', () => {
   const r = buildAgentLaunchpadGenesisPreview(base());
   assert.equal(r.inspectable_reasoning_graph.authority, 'NONE');
+});
+
+// ── AGENT-LAUNCHPAD-NO-SYNTHETIC-CONSENT-1A ───────────────────────────────────
+test('1A: Launchpad source path does not synthesize MISSION_CONTRACT_GO_PHRASE', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const src = readFileSync(
+    join(here, '../packages/core/src/agent-launchpad-genesis-preview.js'),
+    'utf8',
+  );
+  assert.equal(src.includes('MISSION_CONTRACT_GO_PHRASE'), false);
+  assert.equal(/createMissionContract\s*\(/.test(src), false);
+  assert.match(src, /inspectMissionContractFields/);
+});
+
+test('1A: unconsented draft with matching inspect hash can owner-bind structurally', () => {
+  const fields = {
+    ...MISSION_FIELDS,
+    acceptance_criteria: [...MISSION_FIELDS.acceptance_criteria],
+    prohibited_outcomes: [...MISSION_FIELDS.prohibited_outcomes],
+    completion_conditions: [...MISSION_FIELDS.completion_conditions],
+  };
+  const inspected = inspectMissionContractFields({ fields });
+  const i = base();
+  i.mission_contract = fields;
+  i.mission_contract_hash = inspected.contract_hash;
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.mission_owner_binding.ok, true);
+  assert.equal(r.mission_owner_binding.validation_only, true);
+  assert.equal(r.mission_owner_binding.human_consent_established, false);
+  assert.equal(r.mission_owner_binding.creation_authorized, false);
+  assert.equal(r.mission_owner_binding.owner, AGENT_LAUNCHPAD_MISSION_OWNER);
+  assert.match(AGENT_LAUNCHPAD_MISSION_OWNER, /#inspectMissionContractFields$/);
+  assert.equal(r.launched, false);
+  assert.equal(r.qualification_ready, false);
+  assert.equal(r.boundary.human_consent_manufactured, false);
+  assert.equal(r.self_compliance.may_grant_authority, false);
+});
+
+test('1A: structural owner bind does not launch or authorize creation', () => {
+  const r = buildAgentLaunchpadGenesisPreview(base());
+  assert.equal(r.mission_owner_binding.ok, true);
+  assert.equal(r.mission_owner_binding.validation_only, true);
+  assert.equal(r.mission_owner_binding.human_consent_established, false);
+  assert.equal(r.mission_owner_binding.creation_authorized, false);
+  assert.equal(r.launched, false);
+  assert.equal(r.qualification_ready, false);
+  assert.equal(r.input.authority_delta, 0);
+  assert.equal(r.consent.status, 'NOT_CONSUMED_IN_PREVIEW');
+});
+
+test('1C: Launchpad inspect path uses inspection envelope, not created-contract schema', () => {
+  const fields = {
+    ...MISSION_FIELDS,
+    acceptance_criteria: [...MISSION_FIELDS.acceptance_criteria],
+    prohibited_outcomes: [...MISSION_FIELDS.prohibited_outcomes],
+    completion_conditions: [...MISSION_FIELDS.completion_conditions],
+  };
+  const inspected = inspectMissionContractFields({ fields });
+  assert.equal(isMissionContractInspection(inspected), true);
+  assert.equal(isCreatedMissionContract(inspected), false);
+  assert.equal(inspected.schema, MISSION_CONTRACT_INSPECTION_SCHEMA);
+  const i = base();
+  i.mission_contract = fields;
+  i.mission_contract_hash = inspected.contract_hash;
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.mission_owner_binding.ok, true);
+  assert.equal(r.mission_owner_binding.creation_authorized, false);
+  assert.equal(r.launched, false);
+  assert.equal(r.qualification_ready, false);
+  assert.equal(r.input.authority_delta, 0);
 });

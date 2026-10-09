@@ -7,17 +7,16 @@ import {
 } from '../../agents/src/agent-profile-registry.js';
 import {
   CONTRACT_FIELDS,
-  MISSION_CONTRACT_GO_PHRASE,
-  createMissionContract,
+  inspectMissionContractFields,
 } from './mission-contract-state.js';
 
 export const AGENT_LAUNCHPAD_GENESIS_PREVIEW_SCHEMA =
   'bizra.dema.agent_launchpad_genesis_preview.v0.1';
 export const AGENT_LAUNCHPAD_GENESIS_PREVIEW_TRUTH_LABEL =
   'AGENT_LAUNCHPAD_GENESIS_PREVIEW_ONLY';
-/** AGENT-LAUNCHPAD-MISSION-OWNER-BINDING-1C — mission digests bind to this owner. */
+/** AGENT-LAUNCHPAD-NO-SYNTHETIC-CONSENT-1A — mission digests bind via pure inspection. */
 export const AGENT_LAUNCHPAD_MISSION_OWNER =
-  'packages/core/src/mission-contract-state.js#createMissionContract';
+  'packages/core/src/mission-contract-state.js#inspectMissionContractFields';
 /** AGENT-LAUNCHPAD-PROFILE-OWNER-BINDING-1D — profile digests bind to this owner. */
 export const AGENT_LAUNCHPAD_PROFILE_OWNER =
   'packages/agents/src/agent-profile-registry.js#computeStableProfileHash';
@@ -106,10 +105,10 @@ function exactContractFieldKeys(body) {
 }
 
 /// Bind caller mission body to the canonical mission-contract owner.
-/// Hash-only self-attestation is refused. Re-seals through createMissionContract
-/// so vacuous/invalid semantics that a keys-only hash check would accept are
-/// blocked. The GO phrase here is the owner's validation API gate — not a
-/// manufactured human consent event (boundary.human_consent_manufactured stays false).
+/// Hash-only self-attestation is refused. Semantics recompute through
+/// inspectMissionContractFields (pure validation/hash) — never through the
+/// consent-gated createMissionContract path. Binding ok means owner validation
+/// succeeded; it does not establish human consent or authorize creation.
 function bindMissionContractOwner({ mission_contract, mission_contract_hash } = {}) {
   const claimed = normalizeDigest(mission_contract_hash);
   const blockers = [];
@@ -131,17 +130,16 @@ function bindMissionContractOwner({ mission_contract, mission_contract_hash } = 
       blockers.push('mission_contract_shape_invalid');
     } else {
       try {
-        const sealed = createMissionContract({
+        const inspected = inspectMissionContractFields({
           fields: {
             ...mission_contract,
             acceptance_criteria: [...mission_contract.acceptance_criteria],
             prohibited_outcomes: [...mission_contract.prohibited_outcomes],
             completion_conditions: [...mission_contract.completion_conditions],
           },
-          consent: MISSION_CONTRACT_GO_PHRASE,
         });
-        recomputed = sealed.contract_hash;
-        if (sealed.contract_hash !== claimed) blockers.push('mission_contract_hash_mismatch');
+        recomputed = inspected.contract_hash;
+        if (inspected.contract_hash !== claimed) blockers.push('mission_contract_hash_mismatch');
       } catch (err) {
         blockers.push(typeof err?.code === 'string' ? err.code : 'mission_contract_semantics_invalid');
       }
@@ -158,6 +156,9 @@ function bindMissionContractOwner({ mission_contract, mission_contract_hash } = 
       claimed_hash: claimed || null,
       recomputed_hash: recomputed,
       ok: blockers.length === 0,
+      validation_only: true,
+      human_consent_established: false,
+      creation_authorized: false,
     }),
   });
 }
