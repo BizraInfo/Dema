@@ -75,9 +75,12 @@ function sha256Canonical(value) {
 }
 
 function deepFreeze(value) {
-  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  if (!value || typeof value !== 'object') return value;
+  // Recurse into children even when the container is already frozen so
+  // shallow Object.freeze(nodes/edges) cannot leave nested report fields mutable.
   for (const child of Object.values(value)) deepFreeze(child);
-  return Object.freeze(value);
+  if (!Object.isFrozen(value)) Object.freeze(value);
+  return value;
 }
 
 function text(value) {
@@ -594,8 +597,8 @@ export function buildAgentLaunchpadGenesisPreview(input = {}) {
     effect_class: text(input.effect_class),
     authority_delta: Number.isFinite(input.authority_delta) ? input.authority_delta : null,
     evidence: normalizeEvidence(input.evidence),
-    receipt_refs: Array.isArray(input.receipt_refs) ? [...input.receipt_refs] : [],
-    chat_refs: Array.isArray(input.chat_refs) ? [...input.chat_refs] : [],
+    receipt_refs: Array.isArray(input.receipt_refs) ? clonePlain(input.receipt_refs) : [],
+    chat_refs: Array.isArray(input.chat_refs) ? clonePlain(input.chat_refs) : [],
     requested_boundaries: null, // filled after fail-closed admission
   };
 

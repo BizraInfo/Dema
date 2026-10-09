@@ -198,6 +198,34 @@ test('1C string list fields are not coerced into a different bindable body', () 
   assert.ok(r.structural_blockers.includes('mission_contract_shape_invalid'));
 });
 
+test('F1: deepFreeze seals nested hypergraph/reasoning nodes inside pre-frozen arrays', () => {
+  const r = buildAgentLaunchpadGenesisPreview(base());
+  assert.equal(r.state, 'STRUCTURALLY_READY_FOR_EXTERNAL_QUALIFICATION');
+  assert.throws(() => { r.hypergraph.nodes[0].id = 'mutated'; }, TypeError);
+  assert.throws(() => { r.hypergraph.hyperedges[0].members.push('x'); }, TypeError);
+  assert.throws(() => { r.inspectable_reasoning_graph.nodes[0].id = 'mutated'; }, TypeError);
+  assert.throws(() => { r.inspectable_reasoning_graph.edges[0].relation = 'mutated'; }, TypeError);
+  assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+});
+
+test('F2: receipt_refs/chat_refs object entries stay caller-mutable after preview', () => {
+  const receiptObj = { metadata: { note: 'draft' } };
+  const chatObj = { thread: { id: 't1' } };
+  const i = base();
+  i.receipt_refs = [H('f'), receiptObj];
+  i.chat_refs = [chatObj];
+  const r = buildAgentLaunchpadGenesisPreview(i);
+  assert.equal(r.state, 'BLOCKED'); // chat_refs still block process-mining path
+  assert.notEqual(r.input.receipt_refs[1], receiptObj);
+  assert.notEqual(r.input.chat_refs[0], chatObj);
+  receiptObj.metadata.note = 'post-preview';
+  chatObj.thread.id = 't2';
+  assert.equal(receiptObj.metadata.note, 'post-preview');
+  assert.equal(chatObj.thread.id, 't2');
+  assert.equal(r.input.receipt_refs[1].metadata.note, 'draft');
+  assert.equal(r.input.chat_refs[0].thread.id, 't1');
+});
+
 test('preview clones mission/profile drafts so caller objects stay mutable', () => {
   const mission = sealedMission();
   const profile = sealedProfile();
