@@ -36,6 +36,10 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_LLAMACPP_URL",
   "DEMA_LM_STUDIO_URL",
   "DEMA_LOCAL_ASSET_ROOT",
+  // Local session HMAC secret read by packages/dema-ui session boundary.
+  // Missing or unusable yields 503; a present secret with no cookie yields 401.
+  // Declared so a leaked shell value is a visible polluter, not an undeclared one.
+  "DEMA_LOCAL_AUTH_SECRET",
   "DEMA_LOCAL_PROOF_LANE",
   // Egress consent flag read by packages/dema-ui/src/app/api/melae/route.ts.
   // Unset or != "1" the route refuses with consent_required and sends nothing;

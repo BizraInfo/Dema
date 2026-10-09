@@ -7,7 +7,7 @@
 // capability scan are SIMULATION_ONLY — nothing is written outside localStorage,
 // nothing is scanned, no model is contacted. Consent is exact-string, fail-closed.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   ONBOARDING_PHASES,
@@ -73,6 +73,37 @@ export function FirstRun({
   const [discovery, setDiscovery] = useState<
     "consented_simulated" | "skipped" | null
   >(null);
+  const [bondPhrase, setBondPhrase] = useState("");
+  const [requiredBondPhrase, setRequiredBondPhrase] = useState<string | null>(null);
+  const [bondNote, setBondNote] = useState<string | null>(null);
+  const [bondError, setBondError] = useState<string | null>(null);
+  const [savingBond, setSavingBond] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/companion/bond", { cache: "no-store", credentials: "same-origin" })
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (!active || !body) return;
+        if (typeof body.required_phrase === "string") setRequiredBondPhrase(body.required_phrase);
+        if (typeof body.season_binding_reason === "string") setBondNote(body.season_binding_reason);
+      })
+      .catch(() => {
+        if (active) setBondNote("Bond phrase UNKNOWN. Profile will not be written.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const languageCode = (label: string | null) => {
+    if (label === "العربية") return "ar";
+    if (label === "English") return "en";
+    if (label === "Français") return "fr";
+    if (label === "اردو") return "ur";
+    if (label === "Türkçe") return "other";
+    return null;
+  };
 
   const isAr = lang === "ar";
   const t = (b: { en: string; ar: string }) => (isAr ? b.ar : b.en);
@@ -91,7 +122,7 @@ export function FirstRun({
     [isAr]
   );
 
-  const finish = () => {
+  const rememberLocally = () => {
     writeFirstRun({
       completed: true,
       name: saveName ? name.trim() : undefined,
@@ -102,7 +133,46 @@ export function FirstRun({
       discovery: discovery ?? "skipped",
       completedAt: Date.now(),
     });
+  };
+
+  const finishWithoutProfile = () => {
+    rememberLocally();
     onComplete();
+  };
+
+  const finishWithProfile = async () => {
+    if (!requiredBondPhrase || bondPhrase !== requiredBondPhrase) {
+      setBondError("Not an exact match. Profile was not written.");
+      return;
+    }
+    const working = languageCode(workingLang);
+    const mother = languageCode(motherLang);
+    setSavingBond(true);
+    setBondError(null);
+    try {
+      const response = await fetch("/api/companion/bond", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          consent: bondPhrase,
+          preferred_name: saveName ? name.trim() : null,
+          language_code: working ?? mother,
+          secondary_language_code: working && mother && working !== mother ? mother : null,
+        }),
+      });
+      const body = await response.json();
+      if (!response.ok || !body?.ok) {
+        setBondError(body?.reason ?? "profile_not_written");
+        return;
+      }
+      rememberLocally();
+      onComplete();
+    } catch (error) {
+      setBondError(String(error));
+    } finally {
+      setSavingBond(false);
+    }
   };
 
   const tryConsent = () => {
@@ -514,13 +584,41 @@ export function FirstRun({
             </p>
             <div className="mt-4 rounded-xl border border-border/60 bg-card/40 p-3 font-mono text-[11px] text-muted-foreground" dir="ltr">
               mode: M{mode} · discovery: {discovery ?? "skipped"} · name:{" "}
-              {saveName ? "saved locally" : "session only"}
+              {saveName ? "offered for profile.json" : "not offered"}
             </div>
+            <p className={cn("mt-3 text-xs text-muted-foreground", isAr && "font-arabic")}>
+              {bondNote ?? (isAr
+                ? "حفظ الاسم واللغة يكتب profile.json فقط بعد العبارة الحرفية."
+                : "Saving the name and language writes profile.json only after the exact phrase.")}
+            </p>
+            {requiredBondPhrase && (
+              <p className="mt-2 select-all rounded bg-background/60 px-2 py-1.5 font-mono text-[11px] text-consent" dir="ltr">
+                {requiredBondPhrase}
+              </p>
+            )}
+            <input
+              value={bondPhrase}
+              onChange={(event) => {
+                setBondPhrase(event.target.value);
+                setBondError(null);
+              }}
+              placeholder={isAr ? "اكتب عبارة الحفظ…" : "Type the save phrase…"}
+              dir="ltr"
+              className="mt-2 w-full rounded-md border border-border/70 bg-background/60 px-3 py-2 font-mono text-xs text-foreground outline-none"
+            />
+            {bondError && <p className="mt-1.5 text-[11px] text-fail">{bondError}</p>}
             <button
-              onClick={finish}
-              className="mt-6 w-full rounded-xl border border-gold/60 bg-gold/15 px-4 py-3 text-sm font-semibold text-gold-light transition-colors hover:bg-gold/25"
+              onClick={finishWithProfile}
+              disabled={savingBond || !requiredBondPhrase}
+              className="mt-4 w-full rounded-xl border border-gold/60 bg-gold/15 px-4 py-3 text-sm font-semibold text-gold-light transition-colors hover:bg-gold/25 disabled:opacity-50"
             >
-              {isAr ? "ادخل الممر ⬅" : "Enter the Corridor →"}
+              {savingBond ? (isAr ? "يحفظ…" : "Saving…") : (isAr ? "احفظ الرابطة وادخل" : "Save the bond and enter")}
+            </button>
+            <button
+              onClick={finishWithoutProfile}
+              className="mt-2 w-full rounded-xl border border-border/70 bg-card/40 px-4 py-2 text-sm text-muted-foreground"
+            >
+              {isAr ? "ادخل بلا كتابة الملف" : "Enter without writing the profile"}
             </button>
           </div>
         )}

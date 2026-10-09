@@ -16,6 +16,8 @@ import { NodeStatus } from "./NodeStatus";
 import { DiagnosticDoxology } from "./DiagnosticDoxology";
 import { MelaeForge } from "./MelaeForge";
 import { MissionCorridor } from "@/components/dema/MissionCorridor";
+import { EcosystemView } from "./EcosystemView";
+import { MemoryMapScene } from "./MemoryMapScene";
 
 export function StageRouter() {
   const scene = useGame((s) => s.currentScene);
@@ -51,6 +53,10 @@ export function StageRouter() {
       return <Codex />;
     case "nodeStatus":
       return <NodeStatus />;
+    case "ecosystem":
+      return <EcosystemView />;
+    case "memoryMap":
+      return <MemoryMapScene />;
     default:
       return <MissionCorridor />;
   }

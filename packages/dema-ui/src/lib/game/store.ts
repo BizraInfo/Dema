@@ -24,6 +24,7 @@ import type {
 } from "./diagnostic";
 import { computeSnr } from "./melae";
 import type { MelaeResult, SnrBreakdown } from "./melae";
+import { applyPracticeAward } from "@/lib/companion/receipt-standing.ts";
 import type {
   AgentColor,
   AgentId,
@@ -38,9 +39,17 @@ import type {
 } from "./types";
 
 export interface AgentState {
-  level: number; // 1..5
+  level: number; // 1..5 — earned level stays untouched by practice
   xp: number;
+  practiceXp: number;
   deployed: boolean;
+}
+
+export interface ReceiptStandingCache {
+  status: "unread" | "verified" | "verified_empty" | "unknown";
+  xp: number | null;
+  receiptIds: string[];
+  reason: string | null;
 }
 
 const XP_PER_LEVEL = 150;
@@ -52,7 +61,7 @@ export function levelFromXp(xp: number) {
 
 function initialAgents(): Record<AgentId, AgentState> {
   const out = {} as Record<AgentId, AgentState>;
-  for (const a of AGENTS) out[a.id] = { level: 1, xp: 0, deployed: false };
+  for (const a of AGENTS) out[a.id] = { level: 1, xp: 0, practiceXp: 0, deployed: false };
   return out;
 }
 
@@ -271,6 +280,7 @@ export interface GameStore {
   currentScene: SceneId;
   selectedZoneId: ZoneId;
   selectedAgentId: AgentId | null;
+  receiptStanding: ReceiptStandingCache;
 
   // navigation
   setScene: (s: SceneId) => void;
@@ -283,6 +293,12 @@ export interface GameStore {
   addResource: (key: ResourceKey, amount: number) => void;
   spendResources: (cost: Partial<Record<ResourceKey, number>>) => boolean;
   awardXp: (agent: AgentId, amount: number) => void;
+  hydrateReceiptStanding: (projection: {
+    truth_label?: string;
+    xp?: number | null;
+    reason?: string | null;
+    receipts?: Array<{ receipt_id?: string }>;
+  }) => void;
 
   // proof / rails
   setRail: (key: keyof ProofRails, value: boolean) => void;
@@ -355,6 +371,12 @@ const INITIAL = {
   currentScene: "corridor" as SceneId,
   selectedZoneId: "citadel" as ZoneId,
   selectedAgentId: null as AgentId | null,
+  receiptStanding: {
+    status: "unread" as const,
+    xp: null,
+    receiptIds: [] as string[],
+    reason: null,
+  },
   office: initialOffice(),
   diagnostic: initialDiagnostic(),
   melae: initialMelae(),
@@ -411,32 +433,38 @@ export const useGame = create<GameStore>((set, get) => ({
 
   awardXp: (agent, amount) =>
     set((st) => {
-      const prev = st.agents[agent];
-      const newXp = prev.xp + amount;
-      const newLevel = levelFromXp(newXp);
-      const leveledUp = newLevel > prev.level;
-      const agents = {
-        ...st.agents,
-        [agent]: { ...prev, xp: newXp, level: newLevel },
-      };
-      const resources = {
-        ...st.resources,
-        xp: st.resources.xp + amount,
-        // leveling up grants a small trust + node health bonus
-        trustScore: leveledUp
-          ? Math.min(100, st.resources.trustScore + 4)
-          : st.resources.trustScore,
-        nodeHealth: leveledUp
-          ? Math.min(100, st.resources.nodeHealth + 3)
-          : st.resources.nodeHealth,
-      };
-      if (leveledUp) {
+      const agents = applyPracticeAward(st.agents, agent, amount);
+      const practiceXp = agents[agent]?.practiceXp ?? 0;
+      const prevPractice = st.agents[agent]?.practiceXp ?? 0;
+      const crossed = levelFromXp(practiceXp) > levelFromXp(prevPractice) && practiceXp > 0;
+      if (crossed) {
         const def = AGENTS.find((a) => a.id === agent);
-        toast.success(`${def?.name} reached Lvl ${newLevel}`, {
-          description: def?.skillTree[newLevel - 1]?.name,
+        toast(`${def?.name ?? agent} practice mark`, {
+          description: "Practice only. Standing is the verified ledger count.",
         });
       }
-      return { agents, resources };
+      return { agents };
+    }),
+
+  hydrateReceiptStanding: (projection) =>
+    set((st) => {
+      const label = projection?.truth_label;
+      const verified = label === "VERIFIED" || label === "VERIFIED_EMPTY";
+      const xp = verified && typeof projection.xp === "number" ? projection.xp : null;
+      return {
+        receiptStanding: {
+          status: verified ? (label === "VERIFIED_EMPTY" ? "verified_empty" : "verified") : "unknown",
+          xp,
+          receiptIds: Array.isArray(projection?.receipts)
+            ? projection.receipts.map((item) => item.receipt_id).filter((id): id is string => typeof id === "string")
+            : [],
+          reason: projection?.reason ?? null,
+        },
+        resources: {
+          ...st.resources,
+          xp: xp ?? st.resources.xp,
+        },
+      };
     }),
 
   setRail: (key, value) =>
