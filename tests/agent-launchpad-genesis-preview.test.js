@@ -669,7 +669,24 @@ test('F4: non-boolean boundary values refuse without coercion', () => {
     const r = buildAgentLaunchpadGenesisPreview(i);
     assert.equal(r.state, 'BLOCKED', `value=${JSON.stringify(value)}`);
     assert.ok(r.structural_blockers.includes('requested_boundary_value_invalid:mint'));
-    assert.equal(r.input.requested_boundaries.mint, value);
+    if (value === undefined) {
+      assert.equal(
+        r.input.requested_boundaries.mint.__dema_requested_boundary_value_invalid_v1,
+        'undefined',
+      );
+    } else if (value !== null && typeof value === 'object') {
+      assert.notEqual(r.input.requested_boundaries.mint, value);
+      assert.deepEqual(
+        Object.getOwnPropertyNames(r.input.requested_boundaries.mint).sort(),
+        Object.getOwnPropertyNames(value).sort(),
+      );
+      for (const k of Object.getOwnPropertyNames(value)) {
+        assert.equal(r.input.requested_boundaries.mint[k], value[k]);
+      }
+    } else {
+      assert.equal(r.input.requested_boundaries.mint, value);
+    }
+    assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
   }
 });
 
@@ -685,20 +702,38 @@ test('F4: malformed requested_boundaries object fails closed', () => {
 });
 
 test('F4: own __proto__ unknown key is refused and retained', () => {
+  // Null-prototype own data key (avoid Object.defineProperty(__proto__, boolean),
+  // which CodeQL flags as an invalid prototype value).
   const raw = Object.create(null);
-  Object.defineProperty(raw, '__proto__', {
-    value: true,
-    enumerable: true,
-    configurable: true,
-    writable: true,
-  });
+  raw['__proto__'] = false;
   const i = base();
   i.requested_boundaries = raw;
   const r = buildAgentLaunchpadGenesisPreview(i);
   assert.equal(r.state, 'BLOCKED');
   assert.ok(r.structural_blockers.includes('unknown_requested_boundary:__proto__'));
-  assert.equal(Object.getOwnPropertyDescriptor(r.input.requested_boundaries, '__proto__')?.value, true);
+  assert.equal(Object.getOwnPropertyDescriptor(r.input.requested_boundaries, '__proto__')?.value, false);
   assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
+});
+
+test('F4: object boundary values are cloned; undefined survives JSON round-trip verify', () => {
+  const draft = { note: 'draft' };
+  const withObj = buildAgentLaunchpadGenesisPreview({
+    ...base(),
+    requested_boundaries: { mint: draft },
+  });
+  assert.equal(withObj.state, 'BLOCKED');
+  assert.notEqual(withObj.input.requested_boundaries.mint, draft);
+  draft.note = 'post-preview';
+  assert.equal(withObj.input.requested_boundaries.mint.note, 'draft');
+  assert.equal(verifyAgentLaunchpadGenesisPreview(withObj).ok, true);
+
+  const withUndef = buildAgentLaunchpadGenesisPreview({
+    ...base(),
+    requested_boundaries: { mint: undefined },
+  });
+  assert.equal(withUndef.state, 'BLOCKED');
+  const roundTrip = JSON.parse(JSON.stringify(withUndef));
+  assert.equal(verifyAgentLaunchpadGenesisPreview(roundTrip).ok, true);
 });
 
 test('F4: boundary refusal survives rederivation; tamper is rejected', () => {

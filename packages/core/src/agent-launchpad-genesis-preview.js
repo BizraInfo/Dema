@@ -320,16 +320,32 @@ function boundary() {
 /// permission — it always contributes requested_boundaries_malformed.
 const REQUESTED_BOUNDARIES_MALFORMED_MARKER =
   '__dema_requested_boundaries_malformed_v1';
+const REQUESTED_BOUNDARY_VALUE_INVALID_MARKER =
+  '__dema_requested_boundary_value_invalid_v1';
 
 function malformedBoundaryRetention(extra = null) {
   const retained = Object.create(null);
   if (extra && typeof extra === 'object') {
     for (const key of Object.getOwnPropertyNames(extra).sort()) {
-      retained[key] = extra[key];
+      retained[key] = retainBoundaryValue(extra[key]);
     }
   }
   retained[REQUESTED_BOUNDARIES_MALFORMED_MARKER] = true;
   return Object.freeze(retained);
+}
+
+/// Own a JSON-safe copy of each retained value so report freeze cannot seal
+/// caller drafts, and so undefined survives JSON round-trip for verify.
+function retainBoundaryValue(value) {
+  if (value === undefined) {
+    return Object.freeze(Object.assign(Object.create(null), {
+      [REQUESTED_BOUNDARY_VALUE_INVALID_MARKER]: 'undefined',
+    }));
+  }
+  if (value !== null && typeof value === 'object') {
+    return clonePlain(value);
+  }
+  return value;
 }
 
 /// Admit requested_boundaries fail-closed.
@@ -366,7 +382,7 @@ function admitRequestedBoundaries(raw) {
   const retained = Object.create(null);
   const keys = Object.getOwnPropertyNames(raw).sort();
   for (const key of keys) {
-    retained[key] = raw[key];
+    retained[key] = retainBoundaryValue(raw[key]);
   }
 
   // Symbol keys are not JSON/report-serializable; stamp a deterministic marker
