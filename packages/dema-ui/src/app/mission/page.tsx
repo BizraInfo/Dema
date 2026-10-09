@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FirstRun, readFirstRun } from "@/components/dema/FirstRun";
+import { PresenceAvatar } from "@/components/companion/PresenceAvatar";
+import { WelcomeBackCard } from "@/components/companion/WelcomeBackCard";
+import { useLang } from "@/hooks/use-lang";
 
 type Result = {
   ok: boolean;
@@ -22,9 +26,26 @@ export default function MissionPage() {
   const [execution, setExecution] = useState<any>(null);
   const [recentMissions, setRecentMissions] = useState<any[]>([]);
   const [busy, setBusy] = useState(false);
+  const [showFirstRun, setShowFirstRun] = useState(false);
+  const [lang, setLang] = useLang();
 
   useEffect(() => {
     void loadRecentMissions();
+    let active = true;
+    fetch("/api/companion/welcome", { cache: "no-store", credentials: "same-origin" })
+      .then(async (response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (!active || !body) return;
+        const named = typeof body.preferred_name === "string" && body.preferred_name.length > 0;
+        const local = readFirstRun();
+        setShowFirstRun(!named && local?.completed !== true);
+      })
+      .catch(() => {
+        if (active) setShowFirstRun(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function loadRecentMissions() {
@@ -140,12 +161,21 @@ export default function MissionPage() {
     <main style={{ minHeight: "100vh", background: "linear-gradient(180deg, #050B14 0%, #0A1628 100%)", color: "#E8EDF4", padding: "clamp(1.5rem, 5vw, 4rem)", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
         <header style={{ borderBottom: "1px solid #C9A96233", paddingBottom: "1.5rem" }}>
-          <div style={{ letterSpacing: "0.3em", fontSize: 11, color: GOLD, textTransform: "uppercase" }}>DEMA · local proposal</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <PresenceAvatar />
+            <div style={{ letterSpacing: "0.3em", fontSize: 11, color: GOLD, textTransform: "uppercase" }}>DEMA · local proposal</div>
+          </div>
           <h1 style={{ fontFamily: "Georgia, serif", fontWeight: 400, fontSize: "clamp(2rem, 6vw, 3.6rem)", margin: "0.6rem 0" }}>What matters now?</h1>
           <p style={{ color: MUTED, lineHeight: 1.7, maxWidth: 680, margin: 0 }}>
             Speak naturally. DEMA will show what it understood before any planning, consent, or effect.
           </p>
         </header>
+
+        <WelcomeBackCard />
+
+        {showFirstRun && (
+          <FirstRun lang={lang} setLang={setLang} onComplete={() => setShowFirstRun(false)} />
+        )}
 
         <section style={{ paddingTop: "2rem" }}>
           <label htmlFor="mission-intent" style={{ display: "block", color: GOLD, fontSize: 13, marginBottom: 8 }}>Your intention</label>

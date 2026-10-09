@@ -33,8 +33,9 @@ export function AgentDetailDialog({
   if (!agent) return null;
   const c = COLOR_CLASS[agent.color];
   const zone = ZONES.find((z) => z.id === agent.zone);
-  const xpInLevel = st ? st.xp % XP_PER_LEVEL : 0;
-  const lvlPct = st && st.level >= 5 ? 100 : (xpInLevel / XP_PER_LEVEL) * 100;
+  const practice = st?.practiceXp ?? 0;
+  const xpInLevel = practice % XP_PER_LEVEL;
+  const lvlPct = (xpInLevel / XP_PER_LEVEL) * 100;
 
   return (
     <Dialog open={!!agentId} onOpenChange={(o) => !o && onClose()}>
@@ -47,7 +48,7 @@ export function AgentDetailDialog({
               <DialogTitle className="font-mono text-lg flex items-center gap-2">
                 {agent.name}
                 <span className={cn("rounded-md border px-1.5 py-0.5 text-[11px]", c.border, c.text, c.bg)}>
-                  Lvl {st?.level ?? 1}
+                  Earned level UNKNOWN
                 </span>
               </DialogTitle>
               <DialogDescription className="mt-1">{agent.role}</DialogDescription>
@@ -69,8 +70,8 @@ export function AgentDetailDialog({
           {/* xp bar */}
           <div>
             <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground">
-              <span>XP {st?.xp ?? 0}</span>
-              <span>{st && st.level >= 5 ? "MAX" : `${xpInLevel}/${XP_PER_LEVEL} to Lvl ${(st?.level ?? 1) + 1}`}</span>
+              <span>Practice XP {st?.practiceXp ?? 0}</span>
+              <span>{xpInLevel}/{XP_PER_LEVEL} practice</span>
             </div>
             <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
               <div className={cn("h-full rounded-full", c.dot)} style={{ width: `${lvlPct}%` }} />

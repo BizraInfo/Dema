@@ -1,6 +1,6 @@
 "use client";
 
-import { useGame } from "@/lib/game/store";
+import { useGame, levelFromXp } from "@/lib/game/store";
 import { AGENTS, COLOR_CLASS, ZONES } from "@/lib/game/data";
 import { cn } from "@/lib/utils";
 import { Panel, TruthLabelBadge } from "./primitives";
@@ -12,9 +12,12 @@ const XP_PER_LEVEL = 150;
 
 export function AgentPanel({ asSheet = false }: { asSheet?: boolean }) {
   const agents = useGame((s) => s.agents);
+  const standing = useGame((s) => s.receiptStanding);
   const [open, setOpen] = useState<AgentId | null>(null);
 
   const deployedCount = Object.values(agents).filter((a) => a.deployed).length;
+  const earnedLevel = standing.xp === null ? null : levelFromXp(standing.xp);
+  const earnedTruth = standing.xp === null ? "UNKNOWN" : "VERIFIED";
 
   return (
     <Panel
@@ -29,11 +32,27 @@ export function AgentPanel({ asSheet = false }: { asSheet?: boolean }) {
       className={cn(asSheet && "h-full border-0")}
       bodyClassName="scroll-thin overflow-y-auto p-2 space-y-1.5 max-h-full"
     >
+      <div className="rounded-lg border border-border/70 bg-card/50 p-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Receipt standing</span>
+          <TruthLabelBadge label={earnedTruth} size="xs" />
+        </div>
+        <p className="mt-1 font-mono text-sm text-foreground">
+          {standing.status === "unread" && "Reading ledger…"}
+          {standing.status !== "unread" && standing.xp === null && "XP UNKNOWN"}
+          {standing.xp !== null && `${standing.xp} verified ledger entries · display L${earnedLevel}`}
+        </p>
+        <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+          Count of the canonical ledger. Not an XP grant. Per-agent levels stay UNKNOWN.
+          {standing.receiptIds[0] ? ` First receipt ${standing.receiptIds[0].slice(0, 12)}…` : ""}
+        </p>
+      </div>
       {AGENTS.map((a) => {
         const st = agents[a.id];
         const c = COLOR_CLASS[a.color];
         const zone = ZONES.find((z) => z.id === a.zone);
-        const lvlPct = ((st.xp % XP_PER_LEVEL) / XP_PER_LEVEL) * 100;
+        const practice = st.practiceXp ?? 0;
+        const lvlPct = ((practice % XP_PER_LEVEL) / XP_PER_LEVEL) * 100;
         return (
           <button
             key={a.id}
@@ -60,7 +79,7 @@ export function AgentPanel({ asSheet = false }: { asSheet?: boolean }) {
                 <span className="truncate text-xs font-medium text-foreground">
                   {a.name}
                 </span>
-                <span className={cn("font-mono text-[10px]", c.text)}>L{st.level}</span>
+                <span className={cn("font-mono text-[10px]", c.text)}>earned UNKNOWN</span>
               </div>
               <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-foreground/10">
                 <div
@@ -69,7 +88,7 @@ export function AgentPanel({ asSheet = false }: { asSheet?: boolean }) {
                 />
               </div>
               <div className="mt-0.5 truncate text-[9px] uppercase tracking-wider text-muted-foreground">
-                {zone?.short} · {a.role.split(",")[0]}
+                {zone?.short} · practice {practice} · {a.role.split(",")[0]}
               </div>
               {/* Every AGENTS entry carries truthLabel from fleet-canon.ts. It was held in
                   data but never rendered — a label the user cannot see is a comment, not a

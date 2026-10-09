@@ -16,6 +16,7 @@ import {
 import { TruthLabelBadge } from "./primitives";
 import { useLang } from "@/hooks/use-lang";
 import type { SceneId } from "@/lib/game/types";
+import { PresenceAvatar } from "@/components/companion/PresenceAvatar";
 
 const MODE_TABS: { id: SceneId; label: string; icon: React.ElementType }[] = [
   { id: "corridor", label: "Corridor", icon: Compass },
@@ -32,6 +33,7 @@ export function GameHeader({
   onToggleMissions: () => void;
 }) {
   const resources = useGame((s) => s.resources);
+  const receiptStanding = useGame((s) => s.receiptStanding);
   const readiness = useGame((s) => s.readiness());
   const currentScene = useGame((s) => s.currentScene);
   const setScene = useGame((s) => s.setScene);
@@ -47,9 +49,7 @@ export function GameHeader({
           onClick={() => setScene("corridor")}
           className="flex items-center gap-2.5 shrink-0 group"
         >
-          <span className="relative grid size-9 place-items-center rounded-lg border border-consent/40 bg-consent/10 text-consent anim-pulse">
-            <span className="font-mono text-lg leading-none">⬡</span>
-          </span>
+          <PresenceAvatar />
           <span className="hidden sm:flex flex-col leading-tight text-left">
             <span className="font-serif text-base font-bold tracking-[0.3em] text-gold-light">
               DEMA
@@ -68,7 +68,13 @@ export function GameHeader({
         {/* resource strip */}
         <div className="scroll-thin -mx-1 flex flex-1 items-center gap-1.5 overflow-x-auto px-1 py-0.5">
           {RESOURCE_META.map((r) => {
+            const ledgerXp = r.key === "xp";
             const val = resources[r.key as keyof typeof resources];
+            const xpText = receiptStanding.status === "unread"
+              ? "…"
+              : receiptStanding.xp === null
+                ? "UNKNOWN"
+                : String(receiptStanding.xp);
             const c = COLOR_CLASS[r.color];
             return (
               <div
@@ -77,11 +83,13 @@ export function GameHeader({
                   "flex shrink-0 items-center gap-1.5 rounded-md border border-border/60 bg-card/40 px-2 py-1",
                   r.preview && "ring-1 ring-consent/20"
                 )}
-                title={r.label + (r.preview ? " (PREVIEW_ONLY)" : "")}
+                title={ledgerXp
+                  ? `Verified canonical ledger count. ${receiptStanding.reason ?? receiptStanding.status}. Not an XP grant.`
+                  : r.label + (r.preview ? " (PREVIEW_ONLY)" : "")}
               >
                 <span className={cn("text-xs leading-none", c.text)}>{r.glyph}</span>
                 <span className="font-mono text-xs tabular-nums text-foreground">
-                  {Math.round(val)}
+                  {ledgerXp ? xpText : Math.round(val)}
                 </span>
                 <span className="hidden xl:inline text-[10px] uppercase tracking-wider text-muted-foreground">
                   {r.label}
