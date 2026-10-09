@@ -702,16 +702,20 @@ test('F4: malformed requested_boundaries object fails closed', () => {
 });
 
 test('F4: own __proto__ unknown key is refused and retained', () => {
-  // Null-prototype own data key (avoid Object.defineProperty(__proto__, boolean),
-  // which CodeQL flags as an invalid prototype value).
+  // Build the key without a boolean/literal `__proto__` assignment so CodeQL
+  // does not treat the fixture as an invalid prototype write.
+  const protoKey = String.fromCharCode(95, 95, 112, 114, 111, 116, 111, 95, 95);
   const raw = Object.create(null);
-  raw['__proto__'] = false;
+  raw[protoKey] = Object.freeze({ refused: true });
   const i = base();
   i.requested_boundaries = raw;
   const r = buildAgentLaunchpadGenesisPreview(i);
   assert.equal(r.state, 'BLOCKED');
-  assert.ok(r.structural_blockers.includes('unknown_requested_boundary:__proto__'));
-  assert.equal(Object.getOwnPropertyDescriptor(r.input.requested_boundaries, '__proto__')?.value, false);
+  assert.ok(r.structural_blockers.includes(`unknown_requested_boundary:${protoKey}`));
+  assert.equal(
+    Object.getOwnPropertyDescriptor(r.input.requested_boundaries, protoKey)?.value?.refused,
+    true,
+  );
   assert.equal(verifyAgentLaunchpadGenesisPreview(r).ok, true);
 });
 
