@@ -27,16 +27,20 @@ export async function cmd_models(ctx) {
     const { collectLocalLlmFleetReadiness } = await import(
       "./fleet-readiness-gatherer.js"
     );
-    const report = await collectLocalLlmFleetReadiness();
+    const probeCompletion = argv.includes("--probe-completion");
+    const report = await collectLocalLlmFleetReadiness({ probeCompletion });
     if (wantsJson(argv)) {
       console.log(JSON.stringify(report, null, 2));
       process.exit(process.exitCode ?? 0);
     }
     const canon = report.preferred_canon_qa?.route;
     const fast = report.preferred_fast_reply?.route;
+    const boundaryLine = probeCompletion
+      ? "  Boundary: --probe-completion sent one localhost llama.cpp chat completion; other lanes stay catalog or ps; no config write"
+      : "  Boundary: no model call; pass --probe-completion to prove llama.cpp with one localhost chat completion; other lanes stay catalog or ps; no config write";
     console.log(
       [
-        "Dema models readiness (READ ONLY · localhost probe · no model invocation)",
+        "Dema models readiness (localhost probe · no model call unless --probe-completion · no config write)",
         `  Truth label: ${report.truth_label}`,
         ...report.providers.map(
           (p) =>
@@ -49,7 +53,7 @@ export async function cmd_models(ctx) {
         report.blocking_for_live_talk.length
           ? `  Blocking live talk: ${report.blocking_for_live_talk.join(" · ")}`
           : "  Blocking live talk: (none detected for preferred routes)",
-        "  Boundary: read-only probe; no model load; no config write; no talk behavior change",
+        boundaryLine,
         humanHintLine("models readiness"),
       ]
         .filter(Boolean)

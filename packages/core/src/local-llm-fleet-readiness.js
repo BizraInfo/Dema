@@ -3,8 +3,9 @@
 // Composes provider probe snapshots into a deterministic readiness report:
 // which localhost providers answer, which models are installed vs loaded,
 // preferred routes for canon QA vs fast reply, exact consent phrases, and
-// blocking reasons. Makes NO model invocation, starts no daemon, writes no
-// config, and performs no silent fallback.
+// blocking reasons. llama.cpp is ready only when the probe sets
+// completion_proven for that model. This kernel makes NO model invocation,
+// starts no daemon, writes no config, and performs no silent fallback.
 
 import { buildPreviewBoundary } from "./preview-boundary.js";
 import {
@@ -29,6 +30,7 @@ const WHAT_THIS_DOES_NOT_PROVE = Object.freeze([
   "LM Studio loaded-model state is not observable without inference; a catalog match may still block live talk until the operator loads the model in LM Studio.",
   "This does not change dema talk defaults, auto-dispatch traffic, or write operator config.",
   "Reachability was probed at report time only; a provider may stop or start after this report.",
+  "A llama.cpp models-list id is not readiness. ready requires probe.completion_proven for that model.",
 ]);
 
 function deepFreeze(value) {
@@ -135,11 +137,11 @@ function assessTalkRoute({ provider, model, probe }) {
         blocking_reason: "model_not_served_by_llamacpp_server",
       });
     }
-    if (loaded.size > 0 && !loaded.has(model)) {
+    if (probe?.completion_proven !== true || !loaded.has(model)) {
       return deepFreeze({
         ...base,
         live_talk_status: "blocked",
-        blocking_reason: "model_not_loaded",
+        blocking_reason: "llamacpp_completion_not_proven",
       });
     }
     return deepFreeze({ ...base, live_talk_status: "ready", blocking_reason: null });

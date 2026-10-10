@@ -23,6 +23,7 @@ test("dema models readiness --json returns schema and blocked providers when dow
   assert.equal(d.schema, "bizra.dema.local_llm_fleet_readiness.v0.1");
   assert.equal(d.truth_label, "DEMA_LOCAL_LLM_FLEET_READINESS_READ_ONLY");
   assert.equal(d.boundary.model_invocation_performed, false);
+  assert.equal(d.probe_boundary.inference_invoked, false);
   assert.ok(Array.isArray(d.providers));
   assert.equal(d.providers.length, 3);
   assert.equal(d.preferred_canon_qa.route.live_talk_status, "blocked");
@@ -32,7 +33,8 @@ test("dema models readiness --json returns schema and blocked providers when dow
 test("human render discloses read-only probe and consent phrase", () => {
   const out = readiness([]);
   assert.match(out, /readiness/i);
-  assert.match(out, /no model invocation/i);
+  assert.match(out, /no model call/i);
+  assert.match(out, /--probe-completion/);
   assert.match(out, /consent:/i);
   assert.match(out, /Canon QA:/i);
   assert.match(out, /Fast reply:/i);

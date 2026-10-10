@@ -190,7 +190,7 @@ test("canon_qa prefers first ready route over blocked lmstudio default", () => {
   assert.equal(r.preferred_canon_qa.route.live_talk_status, "ready");
 });
 
-test("llamacpp reachable with served model can be ready", () => {
+test("llamacpp completion_proven model can be ready", () => {
   const r = buildLocalLlmFleetReadiness({
     provider_probes: frozenProbes({
       llamacpp: {
@@ -198,6 +198,7 @@ test("llamacpp reachable with served model can be ready", () => {
         error: null,
         installed_model_ids: ["qwen2.5"],
         loaded_model_ids: ["qwen2.5"],
+        completion_proven: true,
       },
     }),
     env: {

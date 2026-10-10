@@ -636,8 +636,8 @@ Local evidence:
                     Read-only · no model load · no prompt execution · no public network · canonical 16-key boundary
   dema models discover [--json]
                     MODEL-EVAL-BASELINE-1A · read-only local model-pool discovery (Ollama · LM Studio · llama.cpp); no inference, local providers only
-  dema models readiness [--json]
-                    LOCAL-LLM-FLEET-READINESS-1A · read-only fleet readiness (provider reachability · installed/loaded models · preferred routes · consent phrases); no model invocation
+  dema models readiness [--json] [--probe-completion]
+                    LOCAL-LLM-FLEET-READINESS-1A · fleet readiness (provider reachability · installed/loaded models · preferred routes · consent phrases); default does not call a model; --probe-completion sends one localhost llama.cpp chat completion before that lane can be ready
   dema monitors run [--json] [--ci-unavailable]
                     MONITOR-GATHERER-1A + RECEIPT-MONITOR-PREVIEW-1A · operator-invoked proof-health scan (stale proof · registry/docs drift · missing gates · evidence gaps); read-only, fail-closed on criticals, no daemon, no autofix
   dema report safety [--json]

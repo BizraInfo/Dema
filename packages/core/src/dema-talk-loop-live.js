@@ -23,6 +23,20 @@ import { buildRuntimeEmissionBoundary } from "./preview-boundary.js";
 import { evaluateArtifactSafety } from "./artifact-safety-eval.js";
 import { LLM_ADAPTER_MAX_PROMPT_LENGTH } from "./llm-adapter.js";
 
+// LLAMACPP_KEY is copied onto the llama.cpp request header only. Callers must
+// not write this value into a result, an error string, or a log line.
+export function llamacppAuthorizationHeader(env) {
+  if (!env || typeof env.LLAMACPP_KEY !== "string") return null;
+  const key = env.LLAMACPP_KEY;
+  if (key.trim().length === 0 || /[\r\n]/.test(key)) return null;
+  return `Bearer ${key}`;
+}
+
+function authorizationHeaders(authorization) {
+  if (!authorization) return {};
+  return { Authorization: authorization };
+}
+
 export const DEMA_TALK_LOOP_LIVE_RESULT_SCHEMA =
   "bizra.dema.talk_loop_live_result.v0.1";
 
@@ -113,6 +127,7 @@ export async function invokeDemaTalkLive({
   consentPhrase = "",
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fetchImpl = undefined,
+  env = process.env,
 } = {}) {
   const modelSafe = typeof model === "string" ? model : "";
   const promptSafe = typeof prompt === "string" ? prompt : "";
@@ -229,7 +244,12 @@ export async function invokeDemaTalkLive({
       // Fail closed on any 3xx: a compromised localhost LLM server must not be
       // able to bounce this call off-localhost via a redirect.
       redirect: "error",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(route.selected_provider === "llamacpp"
+          ? authorizationHeaders(llamacppAuthorizationHeader(env))
+          : {}),
+      },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
