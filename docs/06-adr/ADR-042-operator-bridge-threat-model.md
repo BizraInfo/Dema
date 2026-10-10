@@ -59,6 +59,20 @@ External process or localhost HTTP (operator-owned)
 | `DEMA_LM_STUDIO_URL` | localhost LLM probe | same | Default talk-loop provider route; localhost GET probes. |
 | `DEMA_LLAMACPP_URL` | localhost LLM probe | same | Fallback provider route; localhost GET probes. |
 
+Live talk reads only the selected provider's endpoint bridge. An absent or
+intentionally empty bridge keeps its documented default. A nonempty malformed
+or non-loopback HTTP override returns `invalid_endpoint_override` before bearer
+credential access or fetch, with no rejected URL in the result. The existing
+router exposes `endpoint_override_invalid`; read-only discovery keeps the shared
+resolver's fallback behavior. Live talk has no explicit endpoint argument.
+
+Live talk honors optional provider-specific bearer keys: `LLAMACPP_KEY` for
+llama.cpp and `LMSTUDIO_KEY` for LM Studio; Ollama inherits neither. Empty or
+CR/LF-containing keys are not sent. Valid keys travel only in the selected
+request's Authorization header. Exact-key echoes in provider response text,
+HTTP status text, and parse/network exceptions are suppressed before diagnostic
+truncation and receipt projection. No credential is persisted in configuration.
+
 ### Medium trust — local memory query wrapper
 
 | Env var | Bridge class | Primary code path | Trust note |

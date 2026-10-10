@@ -70,7 +70,7 @@ import { cmd_ambient } from "./commands/ambient.js";
 import { cmd_ambient_json } from "./commands/ambient-json.js";
 import { cmd_diagnostics } from "./commands/diagnostics.js";
 import { cmd_consent } from "./commands/consent.js";
-import { cmd_receipts } from "./commands/receipts.js";
+import { cmd_receipt, cmd_receipts } from "./commands/receipts.js";
 import { cmd_models } from "./commands/models.js";
 import { cmd_monitors } from "./commands/monitors.js";
 import { cmd_report } from "./commands/report.js";
@@ -625,6 +625,8 @@ Preview planning:
                     No network. No mutation.
 
 Local evidence:
+  dema receipt verify <path>
+                    Verify talk-runtime receipt fields and content digest (read-only)
   dema receipts     List local receipts
   dema receipts ID  Show by ID, artifact ID, exact path, or unique filename
   dema memory       List local memory entries (profile + ~/.dema/memory/*)
@@ -898,6 +900,7 @@ const REGISTERED_COMMANDS_LIST = [
   },
   { command: "voice", description: "preview voice-turn receipt (text transcript only)" },
   { command: "receipts", description: "list or show local receipts" },
+  { command: "receipt", description: "verify a talk-runtime receipt's content digest" },
   {
     command: "authorship",
     description: "verify or demo Ed25519 authorship receipts",
@@ -1356,6 +1359,7 @@ const COMMAND_TABLE = {
   founder: cmd_founder,
   voice: cmd_voice,
   receipts: cmd_receipts,
+  receipt: cmd_receipt,
   memory: cmd_memory,
   think: cmd_think,
   models: cmd_models,

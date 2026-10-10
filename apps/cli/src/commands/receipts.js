@@ -4,6 +4,53 @@ import {
   formatReceiptList,
 } from "../../../../packages/receipts/src/receipt-store.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
+import { readFile } from "node:fs/promises";
+import { verifyTalkRuntimeReceipt } from "../../../../packages/core/src/talk-runtime-receipt.js";
+
+const VERIFY_HELP = `Usage: dema receipt verify <path>
+Read-only verification of a v0.1 talk-runtime receipt's fields and receipt_id.
+Exit 0: valid content digest; 1: invalid receipt, read error or usage; 2: missing file.
+Content integrity only: no signature, producer authentication or runtime attestation.
+--help, -h: show this help without reading a receipt.`;
+
+export async function cmd_receipt({ argv }) {
+  if (argv.includes("--help") || argv.includes("-h")) {
+    console.log(VERIFY_HELP);
+    process.exitCode = 0;
+    return;
+  }
+  const path = argv[2];
+  if (argv[1] !== "verify" || typeof path !== "string" || path.startsWith("-") || argv.length !== 3) {
+    console.error(`receipt: path: invalid_usage\n${VERIFY_HELP}`);
+    process.exitCode = 1;
+    return;
+  }
+  let raw;
+  try {
+    raw = await readFile(path, "utf8");
+  } catch (err) {
+    const missing = err?.code === "ENOENT";
+    console.error(`${path}: file: ${missing ? "missing_file" : "read_failed"}`);
+    process.exitCode = missing ? 2 : 1;
+    return;
+  }
+  let receipt;
+  try {
+    receipt = JSON.parse(raw);
+  } catch {
+    console.error(`${path}: json: invalid_json`);
+    process.exitCode = 1;
+    return;
+  }
+  const result = verifyTalkRuntimeReceipt(receipt);
+  if (!result.verified) {
+    console.error(`${path}: ${result.field}: ${result.reason}`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`${path}: receipt_id: valid; invocation_status=${result.invocation_status} (content integrity only)`);
+  process.exitCode = 0;
+}
 
 function argValue(argv, name) {
   const i = argv.indexOf(name);
