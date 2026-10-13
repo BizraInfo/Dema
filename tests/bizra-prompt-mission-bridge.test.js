@@ -187,3 +187,138 @@ test("BPMB-04: no compiler call can mint authority or an effect", () => {
   assert.equal(proposal.authority.requested_effects.length, 0);
   assert.equal(proposal.effects_started, 0);
 });
+
+const REQUIREMENT_NOW = "2026-10-13T20:30:00.000Z";
+function trustedRequirement() {
+  return {
+    schema: "bizra.dema.trusted_task_requirement.v1",
+    task_id: "BIZRA-GENESIS-LOCAL-MISSION-0",
+    owner: { identity: "/fixed/registered-mission", hash: ROOT_DNA_HASH, revision: ROOT_DNA_HASH },
+    required_operation: "METADATA_INVENTORY_READ_ONLY",
+    capability: {
+      mission_id: "BIZRA-GENESIS-LOCAL-MISSION-0",
+      version: "bizra.genesis.mission_contract.v0.1",
+      operation: "METADATA_INVENTORY_READ_ONLY",
+      owner_hash: COMPILER_CODE_HASH,
+      registration_hash: ROOT_DNA_HASH,
+    },
+    policy: {
+      id: "NODE0-MOMO-TRUSTED-REQUIREMENT-ROUTE-INTEGRATION-1T-R1",
+      hash: COMPILER_CODE_HASH,
+      scope: "ISOLATED_NONEXECUTING_TEST_ONLY",
+      task_id: "BIZRA-GENESIS-LOCAL-MISSION-0",
+      required_operation: "METADATA_INVENTORY_READ_ONLY",
+      valid_from: "2026-10-13T20:26:59.532196Z",
+      expires_at: "2026-10-13T21:56:59.532196Z",
+      revoked: false,
+      authority_ref: "GO NODE0-MOMO-TRUSTED-REQUIREMENT-ROUTE-INTEGRATION-1T-R1",
+    },
+    execution_allowed: false,
+    authority_delta: 0,
+  };
+}
+function compileRequirement(requirement = trustedRequirement()) {
+  return compileMissionProposal({
+    text: "Inventory BIZRA metadata.", context: CONTEXT,
+    now_iso: REQUIREMENT_NOW, compiler_code_hash: COMPILER_CODE_HASH,
+    task_requirement: requirement,
+  });
+}
+function verifyRequirement(proposal, requirement = trustedRequirement(), time = REQUIREMENT_NOW) {
+  return verifyMissionProposal(proposal, {
+    expected_compiler_code_hash: COMPILER_CODE_HASH,
+    expected_context: CONTEXT,
+    expected_task_requirement: requirement,
+    verification_now_iso: time,
+  });
+}
+
+test("BPMB-R1: requirement identity changes same-text mission identity", () => {
+  const first = trustedRequirement();
+  const second = trustedRequirement();
+  second.task_id = second.policy.task_id = "ANOTHER-INDEPENDENT-TASK";
+  second.owner.identity = "/fixed/other-task";
+  const a = compileRequirement(first);
+  const b = compileRequirement(second);
+  assert.notEqual(a.mission_id, b.mission_id);
+  assert.notEqual(a.requirement_binding_hash, b.requirement_binding_hash);
+  assert.equal(verifyRequirement(a, first).ok, true);
+  assert.equal(verifyRequirement(a, second).ok, false);
+});
+
+test("BPMB-R2: approved fixture is preview-only and requires independent expectation and time", () => {
+  const proposal = compileRequirement();
+  const verification = verifyRequirement(proposal);
+  assert.equal(verification.ok, true);
+  assert.equal(verification.requirement_verdict, "OPERATION_MATCH_PREVIEW_ONLY");
+  assert.equal(proposal.boundary.execution_allowed, false);
+  assert.equal(proposal.authority.authority_delta, 0);
+  assert.equal(verifyMissionProposal(proposal).ok, false);
+  assert.equal(verifyMissionProposal(proposal, {
+    expected_task_requirement: trustedRequirement(),
+  }).ok, false);
+  assert.equal(verifyMissionProposal(proposal, {
+    expected_task_requirement: trustedRequirement(), verification_now_iso: REQUIREMENT_NOW,
+  }).ok, false);
+});
+
+test("BPMB-R3: source-cited brief cannot be substituted with metadata inventory", () => {
+  const requirement = trustedRequirement();
+  requirement.task_id = "TASK-075.26";
+  requirement.required_operation = "SOURCE_CONTENT_EVIDENCE_AND_SOURCE_CITED_STATUS_REPORT";
+  requirement.policy = null;
+  const result = verifyRequirement(compileRequirement(requirement), requirement);
+  assert.equal(result.ok, false);
+  assert.equal(result.requirement_verdict, "BLOCKED_UNSUPPORTED_OPERATION");
+});
+
+test("BPMB-R4: current owner, capability and approval cannot be spliced or self-verified", () => {
+  const proposal = compileRequirement();
+  const mutations = [
+    r => { r.owner.hash = `sha256:${"c".repeat(64)}`; },
+    r => { r.owner.identity = "/forged/task"; },
+    r => { r.owner.revision = `sha256:${"d".repeat(64)}`; },
+    r => { r.capability.owner_hash = `sha256:${"e".repeat(64)}`; },
+    r => { r.capability.registration_hash = `sha256:${"f".repeat(64)}`; },
+    r => { r.capability.mission_id = "OTHER-MISSION"; },
+    r => { r.policy.hash = `sha256:${"c".repeat(64)}`; },
+    r => { r.policy.task_id = "OTHER-TASK"; },
+    r => { r.policy.required_operation = "WRITE_REPORT"; },
+    r => { r.policy.scope = "PRODUCTION"; },
+    r => { r.policy.authority_ref = ""; },
+    r => { r.execution_allowed = true; },
+    r => { r.authority_delta = 1; },
+  ];
+  for (const mutate of mutations) {
+    const current = trustedRequirement();
+    mutate(current);
+    assert.equal(verifyRequirement(proposal, current).ok, false);
+  }
+});
+
+test("BPMB-R5: expired, revoked, not-yet-valid and unbound policies refuse", () => {
+  const proposal = compileRequirement();
+  for (const mutate of [
+    r => { r.policy.expires_at = REQUIREMENT_NOW; },
+    r => { r.policy.valid_from = "2026-10-14T00:00:00Z"; },
+    r => { r.policy.revoked = true; },
+    r => { r.policy = null; },
+    r => { r.policy.expires_at = "not-time"; },
+  ]) {
+    const requirement = trustedRequirement();
+    mutate(requirement);
+    assert.equal(verifyRequirement(proposal, requirement).ok, false);
+  }
+  assert.equal(verifyRequirement(proposal, trustedRequirement(), "untrusted-time").ok, false);
+});
+
+test("BPMB-R6: removing task identity or all requirement fields cannot fall back to legacy", () => {
+  const legacy = compileMissionProposal({
+    text: "Inventory BIZRA metadata.", context: CONTEXT,
+    now_iso: REQUIREMENT_NOW, compiler_code_hash: COMPILER_CODE_HASH,
+  });
+  assert.equal(verifyRequirement(legacy).ok, false);
+  assert.equal(verifyMissionProposal(compileRequirement(), {
+    expected_task_requirement: null, verification_now_iso: REQUIREMENT_NOW,
+  }).ok, false);
+});
