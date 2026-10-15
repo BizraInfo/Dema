@@ -181,7 +181,7 @@ The remaining steps to close SEED and produce the first bounded-diagnostic recei
 **Requirements**
 
 - Step A4 complete (gateway HTTP adapter live)
-- `dema doctor` exits 0 against the live gateway: `ready=true && consoleReady=true && activationGate="EXPLICIT_GO_REQUIRED" && daemonStatus!="running"`
+- `dema doctor --json` reports `status.preactivationReady=true` against the live gateway: reachable gateway, verified principal, `consoleReady=true`, `activationGate="EXPLICIT_GO_REQUIRED"`, and `daemonStatus!="running"`. `ready` stays false until verified ARTIFACT-011 issuance; doctor may correctly exit 1 before that transition.
 - A real local model is loaded in LM Studio (or equivalent) and the gateway reports `lm_studio.connected=true && loaded_model_ids.length>0 && token_present=true`
 - The governed bounded-diagnostic runtime path exists outside the Dema repo and is invokable
 
@@ -199,7 +199,7 @@ The remaining steps to close SEED and produce the first bounded-diagnostic recei
 - `dema receipts ARTIFACT-011` exit code = 0 and returns the receipt
 - Receipt's `truth_label` field = `MEASURED` (not `FIXTURE`, not `PREVIEW`)
 - Receipt's hash chain verifies (re-derives an internal Merkle root that matches the recorded root)
-- `dema status` after issuance reflects `missionExecuted=true`, `runtimePulse.fired=true`
+- `dema status` after issuance reflects `ready=true` and `missionExecuted=true` only from the current typed ARTIFACT-011 observation and its receipt references. Generic chain history is insufficient; this observation does not establish `runtimePulse.fired`.
 
 **Definition of Done**
 

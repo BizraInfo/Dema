@@ -13,6 +13,7 @@ import {
   fetchGatewayState,
 } from "../packages/node-adapter/src/gateway-http-adapter.js";
 import { createNode0Adapter } from "../packages/node-adapter/src/node0-adapter.js";
+import { previewBoundedDiagnostic } from "../packages/core/src/mission.js";
 
 const HEALTHY_GATEWAY_DOMAIN = "bizra-cognition-gateway-v1";
 const PRINCIPAL_STATUS_SCHEMA = "bizra.node0.principal_identity_status.v0.3";
@@ -158,7 +159,151 @@ const HEALTHY_ROUTES = {
   "/principal/status": () => jsonResponse(principalStatus()),
 };
 
-test("gateway-http adapter composes v0.2 status from five read-only endpoints", async () => {
+function activationState(artifact011) {
+  return {
+    baseUrl: "http://127.0.0.1:7421",
+    health: { ok: true, json: HEALTHY_ROUTES["/health"]().body },
+    chain: { ok: true, json: { head: "ab".repeat(32), length: 9 } },
+    poi: { ok: true, json: {} },
+    resources: { ok: true, json: { resources: [] } },
+    principal: { ok: true, json: principalStatus({
+      verdict: "VERIFIED", identityVerified: true, bridgeEligible: true,
+      verifiedIdentity: VERIFIED_PRINCIPAL_IDENTITY,
+      evidenceState: Object.fromEntries(Object.keys(principalStatus().evidenceState).map(key => [key, true])),
+    }) },
+    artifact011: { ok: true, json: artifact011 },
+  };
+}
+
+const VERIFIED_ARTIFACT = {
+  schema: "bizra.node0.artifact_observation.v0.1",
+  artifactId: "ARTIFACT-011", domainState: "VERIFIED_ISSUED",
+  epistemicStrength: "VERIFIED", freshness: "CURRENT",
+  missionId: "fixture-mission", missionReceiptId: "fixture-mission-receipt",
+  artifactReceiptId: "fixture-artifact-receipt", manifestRef: "fixture-manifest",
+  action: "bounded_diagnostic_activation", evidenceRefs: ["fixture-receipt"], reasonCodes: [],
+};
+
+test("preactivation eligibility breaks the readiness deadlock without claiming execution", () => {
+  const state = activationState({
+    ...VERIFIED_ARTIFACT, domainState: "UNKNOWN", epistemicStrength: "UNKNOWN",
+    freshness: "UNKNOWN", missionId: null, missionReceiptId: null,
+    artifactReceiptId: null, manifestRef: null, action: null,
+    reasonCodes: ["TYPED_ARTIFACT_RECEIPT_NOT_FOUND"],
+  });
+  const status = composeNode0StatusFromGateway(state);
+  assert.equal(status.preactivationReady, true);
+  assert.equal(status.ready, false);
+  assert.equal(status.artifact011Issued, "UNKNOWN");
+  assert.equal(status.missionExecuted, null);
+  for (const phrase of ["", "GO", "GO: Node0 bounded diagnostic activation only"]) {
+    const preview = previewBoundedDiagnostic(status, phrase);
+    assert.equal(preview.proposal.allowed, true);
+    assert.equal(preview.executes, false);
+    assert.equal(preview.consent.accepted, phrase === "GO: Node0 bounded diagnostic activation only");
+  }
+});
+
+test("only current typed artifact evidence supports postactivation readiness", () => {
+  const status = composeNode0StatusFromGateway(activationState(VERIFIED_ARTIFACT));
+  assert.equal(status.artifact011Issued, true);
+  assert.equal(status.ready, true);
+  assert.equal(status.missionExecuted, true);
+  assert.equal(status.preactivationReady, false);
+  assert.equal(previewBoundedDiagnostic(status).proposal.allowed, false);
+});
+
+test("artifact negatives never become postactivation readiness", async t => {
+  for (const [name, override] of Object.entries({
+    wrong_artifact: { artifactId: "ARTIFACT-012" },
+    stale: { freshness: "STALE" },
+    unverified: { epistemicStrength: "UNKNOWN" },
+    wrong_action: { action: "unrelated_action" },
+    missing_receipt: { artifactReceiptId: null },
+    empty_evidence: { evidenceRefs: [] },
+    contradictory_reason: { reasonCodes: ["TYPED_ARTIFACT_RECEIPT_NOT_FOUND"] },
+    untyped_flags: { schema: undefined, issued: true, verified: true },
+    missing_reason_codes: { reasonCodes: undefined },
+    malformed_evidence: { evidenceRefs: "fixture-receipt" },
+    blank_receipt: { artifactReceiptId: " " },
+    blank_evidence: { evidenceRefs: [" "] },
+  })) await t.test(name, () => {
+    const status = composeNode0StatusFromGateway(activationState({ ...VERIFIED_ARTIFACT, ...override }));
+    assert.equal(status.ready, false);
+    assert.notEqual(status.artifact011Issued, true);
+    assert.notEqual(status.missionExecuted, true);
+    assert.equal(status.preactivationReady, false);
+  });
+});
+
+test("missing artifact is unknown; missing prerequisites cannot authorize a preview", () => {
+  const state = activationState(null);
+  state.artifact011 = { ok: false, error: "HTTP 404" };
+  const absent = composeNode0StatusFromGateway(state);
+  assert.equal(absent.artifact011Issued, "UNKNOWN");
+  assert.equal(absent.missionExecuted, null);
+  for (const changed of [
+    { ...state, health: { ok: false, error: "unreachable" } },
+    { ...state, principal: { ok: true, json: principalStatus() } },
+    { ...state, principal: { ok: true, json: principalStatus({ authorityPolicy: { activationRequires: "NONE" } }) } },
+  ]) assert.equal(composeNode0StatusFromGateway(changed).preactivationReady, false);
+});
+
+test("malformed principal evidence cannot earn diagnostic eligibility", async t => {
+  const valid = activationState(null).principal.json;
+  for (const [name, change] of Object.entries({
+    not_object: null, wrong_schema: { ...valid, schema: "other" },
+    wrong_domain: { ...valid, runtimeDomain: "other" }, wrong_verdict: { ...valid, verdict: "OTHER" },
+    string_flag: { ...valid, identityVerified: "true" },
+    missing_bridge_flag: { ...valid, bridgeEligible: undefined },
+    missing_evidence: { ...valid, evidenceState: null },
+    empty_chain_head: { ...valid, chainHead: "" }, negative_chain: { ...valid, chainLength: -1 },
+    fractional_chain: { ...valid, chainLength: 1.5 },
+    missing_policy: { ...valid, authorityPolicy: null }, missing_effects: { ...valid, operationEffects: null },
+    invalid_reasons: { ...valid, reasonCodes: [null] },
+    verified_flags_conflict: { ...valid, identityVerified: false },
+    missing_identity: { ...valid, verifiedIdentity: null },
+    blank_identity: { ...valid, verifiedIdentity: { ...valid.verifiedIdentity, principalId: " " } },
+    evidence_conflict: { ...valid, evidenceState: { ...valid.evidenceState, profilePresent: false } },
+    unverified_flags_conflict: { ...valid, verdict: "ABSENT" },
+  })) await t.test(name, () => {
+    const state = activationState(null);
+    state.principal = { ok: true, json: change };
+    const status = composeNode0StatusFromGateway(state);
+    assert.equal(status.principal.observation, "INVALID");
+    assert.equal(status.preactivationReady, false);
+    assert.equal(status.ready, false);
+    assert.equal(previewBoundedDiagnostic(status).proposal.allowed, false);
+  });
+});
+
+test("malformed HTTP artifact responses refuse eligibility while 404 stays unknown", async t => {
+  for (const [name, response, expected] of [
+    ["invalid JSON", jsonResponse("{not-json"), false],
+    ["non-JSON content type", { body: "not json", headers: { "content-type": "text/plain" } }, false],
+    ["missing endpoint", jsonResponse({ error: "not found" }, 404), true],
+  ]) await t.test(name, async () => {
+    const state = activationState(null);
+    const gw = await startFakeGateway({ ...HEALTHY_ROUTES,
+      "/principal/status": () => jsonResponse(state.principal.json),
+      "/artifacts/ARTIFACT-011": () => response,
+    });
+    try {
+      const adapter = createGatewayHttpAdapter({ baseUrl: gw.url });
+      const status = await adapter.status();
+      assert.equal(status.preactivationReady, expected);
+      assert.equal(status.artifact011.observation, expected ? "UNAVAILABLE" : "INVALID");
+      assert.equal(status.ready, false);
+      assert.deepEqual(await adapter.listReceipts(), []);
+      const proposal = await adapter.proposeBoundedDiagnostic();
+      assert.equal(proposal.status.ready, false);
+      assert.ok(proposal.requiredConsentPhrase);
+      assert.ok(gw.calls.every(call => call.method === "GET"));
+    } finally { await gw.stop(); }
+  });
+});
+
+test("gateway-http adapter composes v0.2 status from six read-only endpoints", async () => {
   const gw = await startFakeGateway(HEALTHY_ROUTES);
   try {
     const adapter = createGatewayHttpAdapter({ baseUrl: gw.url });
@@ -184,13 +329,14 @@ test("gateway-http adapter composes v0.2 status from five read-only endpoints", 
     );
     assert.equal(status.activationGate, "EXPLICIT_GO_REQUIRED");
     assert.equal(status.consoleReady, true);
-    assert.ok(status.findings.some((f) => f.includes("first mission")));
+    assert.ok(status.findings.some((f) => f.includes("chain is empty")));
 
     // Adapter must be read-only — only GET requests, only the declared endpoints.
     const methods = new Set(gw.calls.map((c) => c.method));
     assert.deepEqual([...methods], ["GET"]);
     const paths = new Set(gw.calls.map((c) => c.url));
     assert.deepEqual([...paths].sort(), [
+      "/artifacts/ARTIFACT-011",
       "/chain",
       "/health",
       "/poi/summary",
@@ -326,7 +472,7 @@ test("gateway-http adapter never claims ready=true even with a populated chain",
     // first issuance flips Node0 into SPROUT readiness, and that lives
     // upstream of this adapter.
     assert.equal(status.ready, false);
-    assert.equal(status.missionExecuted, true);
+    assert.equal(status.missionExecuted, null);
     assert.equal(status.chain.length, 5);
     assert.equal(status.resources.count, 2);
     assert.equal(status.poi.totalEntries, 5);
@@ -479,7 +625,7 @@ test("createNode0Adapter prefers a configured gateway URL over legacy status com
         assert.equal(status.gateway.base_url, gw.url);
         assert.deepEqual(
           gw.calls.map((call) => call.method),
-          ["GET", "GET", "GET", "GET", "GET"],
+          ["GET", "GET", "GET", "GET", "GET", "GET"],
         );
       },
     );

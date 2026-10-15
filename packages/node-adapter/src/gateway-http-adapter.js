@@ -1,7 +1,8 @@
 // HTTP adapter for the bizra-cognition-gateway (per ADR-003).
 //
-// Reads-only: the adapter calls five gateway endpoints in parallel
-// (/health, /chain, /poi/summary, /resources/list, /principal/status) and composes a
+// Reads-only: the adapter calls six gateway endpoints in parallel
+// (/health, /chain, /poi/summary, /resources/list, /principal/status,
+// /artifacts/ARTIFACT-011) and composes a
 // schema-tagged status envelope. NEVER calls POST. NEVER fabricates
 // fields that the gateway does not expose — those land in `unknown[]`
 // or carry a `_truth: "NOT_EXPOSED_BY_GATEWAY"` marker.
@@ -60,6 +61,7 @@ const GATEWAY_ENDPOINTS = Object.freeze([
   ["poi", "/poi/summary"],
   ["resources", "/resources/list"],
   ["principal", "/principal/status"],
+  ["artifact011", "/artifacts/ARTIFACT-011"],
 ]);
 
 function isRecord(value) {
@@ -76,7 +78,7 @@ function hasNonEmptyStringFields(value, fields) {
   return (
     isRecord(value) &&
     fields.every(
-      (field) => typeof value[field] === "string" && value[field].length > 0,
+      (field) => typeof value[field] === "string" && value[field].trim().length > 0,
     )
   );
 }
@@ -221,6 +223,37 @@ function inspectPrincipalStatus(principal) {
   };
 }
 
+function inspectArtifact011(endpoint) {
+  if (!endpoint?.ok) return {
+    issued: "UNKNOWN", observation: endpoint?.invalidResponse === true ? "INVALID" : "UNAVAILABLE", contractValid: false,
+    contractIssues: [endpoint?.error ?? "artifact011_not_requested"],
+  };
+  const value = endpoint.json;
+  const issues = [];
+  if (!isRecord(value) || value.schema !== "bizra.node0.artifact_observation.v0.1" ||
+      value.artifactId !== "ARTIFACT-011") issues.push("artifact_contract_invalid");
+  if (!Array.isArray(value?.reasonCodes) || !value.reasonCodes.every(v => typeof v === "string") ||
+      !Array.isArray(value?.evidenceRefs) || !value.evidenceRefs.every(v => typeof v === "string" && v.trim().length > 0)) {
+    issues.push("artifact_evidence_invalid");
+  }
+  const unknown = value?.domainState === "UNKNOWN" && value?.epistemicStrength === "UNKNOWN" &&
+    value?.freshness === "UNKNOWN";
+  const verified = value?.domainState === "VERIFIED_ISSUED" && value?.epistemicStrength === "VERIFIED" &&
+    value?.freshness === "CURRENT";
+  if (!unknown && !verified) issues.push("artifact_verdict_invalid");
+  if (verified && (
+    !hasNonEmptyStringFields(value, ["missionId", "missionReceiptId", "artifactReceiptId", "manifestRef"]) ||
+    value.action !== "bounded_diagnostic_activation" ||
+    value.evidenceRefs?.length === 0 || value.reasonCodes?.length !== 0
+  )) issues.push("artifact_receipt_binding_incomplete");
+  return {
+    issued: issues.length === 0 && verified ? true : "UNKNOWN",
+    observation: issues.length > 0 ? "INVALID" : verified ? "MEASURED" : "UNKNOWN",
+    contractValid: issues.length === 0,
+    contractIssues: issues,
+  };
+}
+
 function isLocalGatewayUrl(baseUrl) {
   try {
     const url = new URL(baseUrl);
@@ -256,11 +289,13 @@ async function fetchEndpoint(url, label, signal) {
         label,
         url,
         error: `non-JSON response (content-type: ${ct})`,
+        invalidResponse: true,
       };
     }
     return { ok: true, label, url, json: await response.json() };
   } catch (err) {
-    return { ok: false, label, url, error: err?.message ?? String(err) };
+    return { ok: false, label, url, error: err?.message ?? String(err),
+      ...(err instanceof SyntaxError ? { invalidResponse: true } : {}) };
   }
 }
 
@@ -283,7 +318,7 @@ export async function fetchGatewayState(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const [health, chain, poi, resources, principal] = await Promise.all([
+    const [health, chain, poi, resources, principal, artifact011] = await Promise.all([
       fetchEndpoint(`${baseUrl}/health`, "health", controller.signal),
       fetchEndpoint(`${baseUrl}/chain`, "chain", controller.signal),
       fetchEndpoint(`${baseUrl}/poi/summary`, "poi", controller.signal),
@@ -293,8 +328,9 @@ export async function fetchGatewayState(
         "principal",
         controller.signal,
       ),
+      fetchEndpoint(`${baseUrl}/artifacts/ARTIFACT-011`, "artifact011", controller.signal),
     ]);
-    return { baseUrl, health, chain, poi, resources, principal };
+    return { baseUrl, health, chain, poi, resources, principal, artifact011 };
   } finally {
     clearTimeout(timer);
   }
@@ -356,17 +392,22 @@ export function composeNode0StatusFromGateway(state) {
   }
 
   if (gatewayReachable && chainLength === 0) {
-    findings.push("Gateway live, first mission/receipt has not been issued.");
+    findings.push("Gateway chain is empty; diagnostic execution requires an ARTIFACT-011 observation.");
   }
 
   const truthLabel =
     gatewayReachable && principalStatus.observation !== "INVALID"
       ? "MEASURED_PARTIAL"
       : "DEGRADED";
-  // `ready` remains false until ARTIFACT-011 is issued by the governed
-  // bounded-diagnostic runtime path — the gateway being live is necessary
-  // but not sufficient.
-  const ready = false;
+  const artifact011 = inspectArtifact011(state.artifact011);
+  const principalReady = principalStatus.contractValid && principalStatus.identityVerified === true &&
+    principalStatus.bridgeEligible === true;
+  const preactivationReady = gatewayReachable && principalReady && artifact011.issued !== true &&
+    artifact011.observation !== "INVALID";
+  const ready = gatewayReachable && principalReady && artifact011.issued === true;
+  if (gatewayReachable && artifact011.observation !== "MEASURED") findings.push(
+    `ARTIFACT-011 observation: ${artifact011.observation}; mission execution is unobserved.`,
+  );
 
   return {
     schema: "bizra.dema.node0_status.v0.2",
@@ -375,10 +416,13 @@ export function composeNode0StatusFromGateway(state) {
     node: "Node0",
     human: null,
     ready,
+    preactivationReady,
+    artifact011Issued: artifact011.issued,
+    artifact011,
     consoleReady: gatewayReachable,
     activationGate: "EXPLICIT_GO_REQUIRED",
     daemonStatus: "n/a-via-gateway",
-    missionExecuted: chainLength > 0,
+    missionExecuted: artifact011.issued === true ? true : null,
     runtimePulse: { fired: false },
     findings,
     model: {
@@ -392,7 +436,7 @@ export function composeNode0StatusFromGateway(state) {
       latestChainHash: chainHead,
       nextArtifact: "ARTIFACT-011",
     },
-    nextAdmissibleAction: "bounded_diagnostic_activation",
+    nextAdmissibleAction: ready ? "inspect_receipts" : preactivationReady ? "bounded_diagnostic_activation" : "complete_setup",
     gateway: {
       reachable: gatewayReachable,
       base_url: baseUrl,
@@ -418,6 +462,7 @@ export function composeNode0StatusFromGateway(state) {
       "pyO3_bridge_status_not_exposed_by_gateway",
       "preferred_name_not_exposed_by_gateway",
       "rust_bus_health_inferred_from_gateway_uptime",
+      ...(artifact011.issued !== true ? ["artifact011_not_verified", "mission_execution_not_observed"] : []),
       ...(principalStatus.observation === "UNAVAILABLE"
         ? ["principal_identity_not_exposed_by_gateway"]
         : []),

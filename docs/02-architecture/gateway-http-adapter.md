@@ -22,10 +22,11 @@ The shellout backend is unchanged. Existing tests that exercise it pass without 
 | Endpoint              | Purpose                        | Composed into                                                                       |
 | --------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
 | `GET /health`         | Domain identity + reachability | `gateway.{reachable, domain, health}`                                               |
-| `GET /chain`          | Receipt chain head + length    | `chain.{head, length, latestTimestamp}`, `proof.latestChainHash`, `missionExecuted` |
+| `GET /chain`          | Receipt chain head + length    | `chain.{head, length, latestTimestamp}`, `proof.latestChainHash` |
 | `GET /poi/summary`    | POI ledger summary             | `poi.{totalEntries, totalImpact, avgImpact}`                                        |
 | `GET /resources/list` | Registered resources           | `resources.count`                                                                   |
 | `GET /principal/status` | Chain-sealed principal observation | validated `principal` projection only                                              |
+| `GET /artifacts/ARTIFACT-011` | Typed diagnostic observation | `artifact011`, `artifact011Issued`, `missionExecuted`, activation readiness |
 
 The adapter NEVER calls `POST` and NEVER calls any of `/missions/*`, `/principal/activate`, `/resources/register`, `/missions/organize`. It is a pure read surface.
 
@@ -43,14 +44,17 @@ Example output against a healthy, empty-chain gateway:
   "node": "Node0",
   "human": null,
   "ready": false,
+  "preactivationReady": false,
+  "artifact011Issued": "UNKNOWN",
   "consoleReady": true,
   "activationGate": "EXPLICIT_GO_REQUIRED",
   "daemonStatus": "n/a-via-gateway",
-  "missionExecuted": false,
+  "missionExecuted": null,
   "runtimePulse": { "fired": false },
   "findings": [
     "Gateway principal identity is not verified (ABSENT).",
-    "Gateway live, first mission/receipt has not been issued."
+    "Gateway chain is empty; diagnostic execution requires an ARTIFACT-011 observation.",
+    "ARTIFACT-011 observation: UNAVAILABLE; mission execution is unobserved."
   ],
   "model": {
     "connected": false,
@@ -63,7 +67,7 @@ Example output against a healthy, empty-chain gateway:
     "latestChainHash": "0000000000000000000000000000000000000000000000000000000000000000",
     "nextArtifact": "ARTIFACT-011"
   },
-  "nextAdmissibleAction": "bounded_diagnostic_activation",
+  "nextAdmissibleAction": "complete_setup",
   "gateway": {
     "reachable": true,
     "base_url": "http://127.0.0.1:7421",
@@ -97,7 +101,7 @@ Example output against a healthy, empty-chain gateway:
 
 ## Honesty rules (all enforced by tests)
 
-1. **`ready` is always `false`.** The gateway being live is necessary but not sufficient. Only the first ARTIFACT-011 issuance — driven by the governed bounded-diagnostic runtime path that lives upstream of Dema (per repo invariant #1) — flips Node0 into SPROUT readiness. The adapter cannot fabricate this flip.
+1. **Eligibility and activation are separate.** `preactivationReady=true` requires a reachable gateway, a verified/eligible principal, and no invalid or already-issued ARTIFACT-011 observation. A diagnostic proposal uses this eligibility while `ready=false`; even exact consent remains preview-only. `ready=true` requires the reachable gateway, verified principal, and `/artifacts/ARTIFACT-011` returning schema `bizra.node0.artifact_observation.v0.1`, `domainState=VERIFIED_ISSUED`, `epistemicStrength=VERIFIED`, `freshness=CURRENT`, the diagnostic action, nonempty mission/receipt/manifest references, evidence references, and no contradictory reason codes. Missing or unknown observations keep `artifact011Issued=UNKNOWN` and `missionExecuted=null`. Malformed, stale, or unverified observations also refuse preactivation eligibility. Chain length never establishes execution. Dema consumes the upstream observation; it does not mint or independently authenticate a runtime receipt.
 2. **`principal` is a discriminator, not a self-certification.** Dema accepts a principal observation only when the exact v0.3 schema and runtime domain match, the policy states `EXPLICIT_GO` with `authorityDelta: 0`, every GET effect is false, and the verdict, evidence, and sealed identity fields agree. A malformed or effectful response is `INVALID_GATEWAY_CONTRACT` and degrades the whole status.
 3. **`truth_label`** is `MEASURED_PARTIAL` when the gateway is reachable and the principal contract is valid or unavailable; it remains partial even for `VERIFIED`, because identity observation is not Node0 closure. An unreachable gateway or invalid principal contract is `DEGRADED`.
 4. **`unknown[]`** lists every conceptually load-bearing field the gateway does NOT expose. A missing `/principal/status` endpoint leaves identity unavailable rather than invented (no fake `lm_studio.connected`, no guessed `human`).

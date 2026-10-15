@@ -18,11 +18,16 @@ export function defaultStatus() {
 }
 
 export function isReadyForBoundedDiagnostic(status) {
+  // Legacy adapters expose only ready; an explicit preactivation result wins.
+  const eligible = Object.hasOwn(status ?? {}, "preactivationReady")
+    ? status.preactivationReady === true
+    : status?.ready === true;
   return Boolean(
-    status?.ready &&
+    eligible &&
     status?.consoleReady &&
     status?.activationGate === "EXPLICIT_GO_REQUIRED" &&
     status?.daemonStatus !== "running" &&
+    status?.artifact011Issued !== true &&
     status?.missionExecuted !== true &&
     status?.runtimePulse?.fired !== true,
   );
@@ -62,10 +67,14 @@ export function formatStatus(status, opts = {}) {
   lines.push("");
   lines.push(colorize("Readiness", ANSI.boldYellow, useColor));
   lines.push(`  Ready: ${Boolean(status.ready)}`);
+  if (Object.hasOwn(status, "preactivationReady")) {
+    lines.push(`  Preactivation ready: ${status.preactivationReady === true}`);
+    lines.push(`  ARTIFACT-011 issued: ${status.artifact011Issued ?? "UNKNOWN"}`);
+  }
   lines.push(`  Console ready: ${Boolean(status.consoleReady)}`);
   lines.push(`  Activation gate: ${status.activationGate ?? "unknown"}`);
   lines.push(`  Daemon: ${status.daemonStatus ?? "unknown"}`);
-  lines.push(`  Mission executed: ${Boolean(status.missionExecuted)}`);
+  lines.push(`  Mission executed: ${status.missionExecuted == null ? "UNKNOWN" : Boolean(status.missionExecuted)}`);
   lines.push(`  Runtime pulse fired: ${runtimePulseFired}`);
   lines.push(`  Model connected: ${Boolean(status.model?.connected)}`);
   lines.push(
