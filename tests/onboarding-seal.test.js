@@ -155,6 +155,17 @@ test("Invariant 7: missionExecuted=true → blames mission_not_executed", () => 
   assert.deepEqual(r.failed_invariants, ["mission_not_executed"]);
 });
 
+for (const value of [null, undefined]) {
+  test(`Invariant 7: missionExecuted=${value} is UNKNOWN, not proof of no mission`, () => {
+    const snap = passingSnapshot();
+    snap.status.missionExecuted = value;
+    const result = evaluateOnboardingSeal(snap);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.failed_invariants, ["mission_not_executed"]);
+    assert.equal(result.invariants.find(item => item.key === "mission_not_executed").value, "UNKNOWN");
+  });
+}
+
 test("Invariant 8: runtimePulse.fired=true → blames runtime_pulse_not_fired", () => {
   const snap = passingSnapshot();
   snap.status.runtimePulse = { fired: true };
