@@ -67,7 +67,7 @@ Complete **before** Step A5 runtime invocation:
 - [ ] Repo gates green on operator machine: `npm test`, `npm run check`, `npm run llm:guidance`
 - [ ] Step A4 complete per [NODE0_ACTIVATION_ROADMAP.md](../NODE0_ACTIVATION_ROADMAP.md) (gateway HTTP adapter live if required by your Node0 build)
 - [ ] `dema setup` run against target `DEMA_HOME`
-- [ ] `dema doctor` exits 0 with: `ready=true`, `consoleReady=true`, `activationGate="EXPLICIT_GO_REQUIRED"`, `daemonStatus!="running"`
+- [ ] `dema doctor --json` reports `status.preactivationReady=true`, `consoleReady=true`, `activationGate="EXPLICIT_GO_REQUIRED"`, `daemonStatus!="running"`. Before verified issuance, `ready=false` and doctor may exit 1: this is eligibility for a consent preview, not operational readiness.
 - [ ] Live local model available if your gateway requires it (`lm_studio.connected=true`, loaded model, token present — per roadmap A5)
 - [ ] Governed bounded-diagnostic runtime path exists **outside this repo** and is invokable by operator
 - [ ] Operator has the exact consent phrase ready (character-for-character, no translation)
@@ -128,7 +128,7 @@ dema status:json
 dema doctor --json
 ```
 
-**Expected:** doctor exit 0; activation gate `EXPLICIT_GO_REQUIRED`; no hidden daemon.
+**Expected:** `status.preactivationReady=true`; activation gate `EXPLICIT_GO_REQUIRED`; no hidden daemon. Doctor's operational exit code stays nonzero while `ready=false`. Check the structured eligibility field rather than requiring post-activation readiness before issuance.
 
 **Operator notes:**
 

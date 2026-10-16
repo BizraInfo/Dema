@@ -13,7 +13,7 @@ import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
-import { defaultStatus, formatStatus } from "../packages/core/src/status.js";
+import { defaultStatus, formatStatus, isReadyForBoundedDiagnostic } from "../packages/core/src/status.js";
 import {
   BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
   previewBoundedDiagnostic,
@@ -61,6 +61,35 @@ test("bounded diagnostic requires ready node and explicit gate", () => {
   });
   assert.equal(proposal.allowed, true);
   assert.equal(proposal.expectedArtifact, "ARTIFACT-011");
+});
+
+test("explicit preactivation eligibility takes precedence over postactivation readiness", () => {
+  const status = { ready: false, preactivationReady: true, consoleReady: true,
+    activationGate: "EXPLICIT_GO_REQUIRED", daemonStatus: "stopped",
+    missionExecuted: false, runtimePulse: { fired: false } };
+  assert.equal(isReadyForBoundedDiagnostic(status), true);
+  assert.equal(proposeBoundedDiagnostic(status).allowed, true);
+  for (const change of [
+    { ready: true, preactivationReady: false },
+    { preactivationReady: "true" }, { activationGate: "AUTOMATIC" },
+    { consoleReady: false }, { daemonStatus: "running" },
+    { artifact011Issued: true }, { missionExecuted: true },
+  ]) assert.equal(isReadyForBoundedDiagnostic({ ...status, ...change }), false);
+  for (const [change, expected] of [
+    [{ consoleReady: false }, "run_dema_status"],
+    [{ activationGate: "AUTOMATIC" }, "inspect_gate"],
+    [{ daemonStatus: "running" }, "stop_daemon_or_use_one_shot_service"],
+    [{ missionExecuted: true }, "inspect_receipts"],
+  ]) {
+    const proposal = proposeBoundedDiagnostic({ ...status, ...change });
+    assert.equal(proposal.allowed, false);
+    assert.equal(proposal.nextAction, expected);
+  }
+  const display = formatStatus({ ...defaultStatus(), ...status,
+    artifact011Issued: "UNKNOWN", missionExecuted: null }, { color: false });
+  assert.match(display, /Preactivation ready: true/);
+  assert.match(display, /ARTIFACT-011 issued: UNKNOWN/);
+  assert.match(display, /Mission executed: UNKNOWN/);
 });
 
 test("bounded diagnostic blocks hidden daemon and previous runtime pulse", () => {

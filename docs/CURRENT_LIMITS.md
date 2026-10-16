@@ -1,5 +1,12 @@
 # Dema · Current Limits v0.1
 
+ARTIFACT011-PREACTIVATION-1A is an isolated source candidate. It separates eligibility
+for a diagnostic preview from postactivation readiness and consumes a typed gateway
+artifact observation. Its tests and read-only probes do not install this source,
+execute a diagnostic, authenticate runtime receipts independently, prove PAT/SAT
+availability, establish human usefulness, or close Node0. Missing artifact evidence
+remains UNKNOWN; doctor may correctly exit nonzero before activation.
+
 The honest map of what Dema does today, what is designed but not live,
 and what is planned. Read this before reading the README, before quoting
 us in a slide, before recommending Dema to a friend.

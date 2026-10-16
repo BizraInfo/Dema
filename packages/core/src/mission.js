@@ -16,7 +16,8 @@ export const BOUNDED_DIAGNOSTIC_FORBIDDEN = Object.freeze([
 ]);
 
 export function proposeBoundedDiagnostic(status) {
-  if (!status.ready) {
+  if (!(Object.hasOwn(status ?? {}, "preactivationReady")
+    ? status.preactivationReady === true : status?.ready === true)) {
     return {
       allowed: false,
       reason: "Node is not ready.",

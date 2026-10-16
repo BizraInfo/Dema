@@ -181,7 +181,7 @@ The remaining steps to close SEED and produce the first bounded-diagnostic recei
 **Requirements**
 
 - Step A4 complete (gateway HTTP adapter live)
-- `dema doctor` exits 0 against the live gateway: `ready=true && consoleReady=true && activationGate="EXPLICIT_GO_REQUIRED" && daemonStatus!="running"`
+- `dema doctor --json` reports `status.preactivationReady=true` against the live gateway: reachable gateway, verified principal, `consoleReady=true`, `activationGate="EXPLICIT_GO_REQUIRED"`, and `daemonStatus!="running"`. `ready` stays false until verified ARTIFACT-011 issuance; doctor may correctly exit 1 before that transition.
 - A real local model is loaded in LM Studio (or equivalent) and the gateway reports `lm_studio.connected=true && loaded_model_ids.length>0 && token_present=true`
 - The governed bounded-diagnostic runtime path exists outside the Dema repo and is invokable
 
@@ -199,7 +199,7 @@ The remaining steps to close SEED and produce the first bounded-diagnostic recei
 - `dema receipts ARTIFACT-011` exit code = 0 and returns the receipt
 - Receipt's `truth_label` field = `MEASURED` (not `FIXTURE`, not `PREVIEW`)
 - Receipt's hash chain verifies (re-derives an internal Merkle root that matches the recorded root)
-- `dema status` after issuance reflects `missionExecuted=true`, `runtimePulse.fired=true`
+- `dema status` after issuance reflects `ready=true` and `missionExecuted=true` only from the current typed ARTIFACT-011 observation and its receipt references. Generic chain history is insufficient; this observation does not establish `runtimePulse.fired`.
 
 **Definition of Done**
 
@@ -329,7 +329,7 @@ Reachable only after Stage B is fully MEASURED. Each step here is sketch-level; 
 **Requirements:** Stage B complete.
 **Definition of Done:** A second physical machine (or VM) runs Dema + a fresh Node0, completes Steps A1–A5, and produces its own ARTIFACT-011.
 
-### Step C2 — First Node0 ↔ Node1 federation handshake (PRIVATE_PILOT_URP)
+### Step C2 — PLANNED private handshake between Node0 and Node1
 
 **Requirements:** C1 complete; a documented handshake protocol; mutual consent on both sides.
 **KPI:** Both nodes' bizra-omega instances accept each other's receipt schemas; one cross-node receipt round-trips without modification.

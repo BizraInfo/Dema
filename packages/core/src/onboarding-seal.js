@@ -212,15 +212,15 @@ export function evaluateOnboardingSeal({
   );
 
   // 7. mission_not_executed
-  const missionOk = s.missionExecuted !== true;
+  const missionOk = s.missionExecuted === false;
   invariants.push(
     inv(
       "mission_not_executed",
       "missionExecuted=false (no mission has been run yet)",
       missionOk,
-      Boolean(s.missionExecuted),
+      s.missionExecuted ?? "UNKNOWN",
       {
-        fix: "Seal must be evaluated BEFORE first mission; this snapshot shows post-mission state",
+        fix: "Seal requires an explicit unexecuted mission observation; unknown or post-mission state cannot establish it",
       },
     ),
   );

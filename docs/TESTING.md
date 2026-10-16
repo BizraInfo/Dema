@@ -73,6 +73,11 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 
 ## Test surfaces
 
+ARTIFACT011-PREACTIVATION-1A uses the existing gateway-adapter and status suites
+for readiness-deadlock, unrelated-chain, typed-artifact, malformed/stale evidence,
+prerequisite-loss and preview-only consent controls. Doctor retains its operational
+exit contract; preactivation eligibility does not establish runtime activation.
+
 ### Node0 Genesis final-sprint candidate checks (2026-09-10)
 
 These rows cover the locally merged governed runtime and its DEMA bridge. They
