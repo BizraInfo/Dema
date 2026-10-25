@@ -328,6 +328,7 @@ export const CLI_CONSENT_MATRIX_ENTRIES = Object.freeze([
   ),
   preview("recovery", "tests/dema-recovery-mission-gatherer.test.js"),
   readOnly("receipts", "tests/receipt-store-format.test.js"),
+  readOnly("receipt", "tests/talk-runtime-receipt-verify.test.js", "Read-only talk-runtime receipt content verification; does not attest producer identity or runtime effects"),
   row(
     "memory",
     ["read_only", "local_write"],
