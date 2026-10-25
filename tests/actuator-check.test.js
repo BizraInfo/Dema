@@ -27,12 +27,12 @@ test("actuator check passes on current source tree", () => {
   assert.equal(report.boundary.runtime_execution, false);
   assert.ok(report.scanned_files.includes("apps/cli/src/index.js"));
   assert.ok(
-    !report.scanned_files.includes(
+    report.scanned_files.includes(
       "packages/dema-ui/tests/operation-correspondence-routes.test.mjs",
     ),
   );
   assert.ok(
-    !report.scanned_files.includes(
+    report.scanned_files.includes(
       "packages/dema-ui/tests/trusted-requirement.test.mjs",
     ),
   );
@@ -52,6 +52,52 @@ test("actuator check still scans unrelated directories named tests", () => {
     });
 
     assert.deepEqual(report.scanned_files, [sourcePath]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("test-path Function helpers do not fail actuator; exec in tests still fails", () => {
+  const root = mkdtempSync(join(tmpdir(), "dema-actuator-check-"));
+  try {
+    mkdirSync(join(root, "packages/demo/tests"), { recursive: true });
+    mkdirSync(join(root, "packages/demo/src"), { recursive: true });
+    writeFileSync(
+      join(root, "packages/demo/tests/helper.mjs"),
+      'const handler = new Function("x", "return x");\n',
+    );
+    writeFileSync(
+      join(root, "packages/demo/src/prod.js"),
+      'const handler = new Function("x", "return x");\n',
+    );
+
+    const cleanTests = buildActuatorCheckReport({
+      root,
+      scanRoots: ["packages/demo/tests"],
+    });
+    assert.equal(cleanTests.ok, true);
+
+    const dirtyProd = buildActuatorCheckReport({
+      root,
+      scanRoots: ["packages/demo/src"],
+    });
+    assert.equal(dirtyProd.ok, false);
+    assert.ok(
+      dirtyProd.findings.some((f) => f.label === "policy.executable_rule_code"),
+    );
+
+    writeFileSync(
+      join(root, "packages/demo/tests/shell.mjs"),
+      'import { exec } from "node:child_process";\nexec("echo hi");\n',
+    );
+    const dirtyTests = buildActuatorCheckReport({
+      root,
+      scanRoots: ["packages/demo/tests"],
+    });
+    assert.equal(dirtyTests.ok, false);
+    assert.ok(
+      dirtyTests.findings.some((f) => f.label === "child_process.exec_raw_shell"),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

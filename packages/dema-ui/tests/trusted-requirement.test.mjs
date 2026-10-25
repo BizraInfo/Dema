@@ -3,9 +3,8 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { stripTypeScriptTypes } from "node:module";
 import { createHash } from "node:crypto";
-import { resolveTrustedRequirement } from "../src/app/api/mission/trusted-requirement.ts";
+import { readOwner, resolveTrustedRequirement } from "../src/app/api/mission/trusted-requirement.ts";
 import { readTrustedOwnerFixture } from "./trusted-requirement-fixtures.mjs";
 import { evaluateTaskRequirement } from "../../core/src/bizra-prompt-mission-bridge.js";
 
@@ -64,27 +63,19 @@ test("exact fixed task title improves refusal classification without admitting m
   }), null);
 });
 
-function reader(readSync = fs.readSync) {
-  const raw = fs.readFileSync(new URL("../src/app/api/mission/trusted-requirement.ts", import.meta.url), "utf8");
-  const code = stripTypeScriptTypes(raw.replace(/^import .*;\n/gm, "").replace(/^export /gm, ""));
-  return new Function("constants", "openSync", "closeSync", "fstatSync", "readSync", "createHash", code + ";return readOwner;")(
-    fs.constants, fs.openSync, fs.closeSync, fs.fstatSync, readSync, createHash,
-  );
-}
-
 test("actual directory-descriptor reader rejects symlinks, nonregular files and oversize", () => {
   const root = fs.mkdtempSync(join(tmpdir(), "trusted-owner-"));
   try {
     const file = join(root, "owner");
     fs.writeFileSync(file, "owned bytes", { mode: 0o600 });
-    assert.equal(reader()(file).toString(), "owned bytes");
+    assert.equal(readOwner(file).toString(), "owned bytes");
     fs.symlinkSync(file, join(root, "link"));
     fs.symlinkSync(root, join(root, "parent-link"));
-    assert.throws(() => reader()(join(root, "link")));
-    assert.throws(() => reader()(join(root, "parent-link", "owner")));
-    assert.throws(() => reader()(root));
+    assert.throws(() => readOwner(join(root, "link")));
+    assert.throws(() => readOwner(join(root, "parent-link", "owner")));
+    assert.throws(() => readOwner(root));
     fs.writeFileSync(file, Buffer.alloc(262145));
-    assert.throws(() => reader()(file), /TRUSTED_OWNER_SIZE_INVALID/);
+    assert.throws(() => readOwner(file), /TRUSTED_OWNER_SIZE_INVALID/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -93,11 +84,15 @@ test("actual reader detects bytes changing during its bounded read", () => {
   try {
     const file = join(root, "owner");
     fs.writeFileSync(file, "owned bytes", { mode: 0o600 });
-    const driftReader = reader((...args) => {
-      const count = fs.readSync(...args);
-      fs.appendFileSync(file, "changed");
-      return count;
-    });
-    assert.throws(() => driftReader(file), /TRUSTED_OWNER_SOURCE_DRIFT/);
+    assert.throws(
+      () => readOwner(file, {
+        readSync: (...args) => {
+          const count = fs.readSync(...args);
+          fs.appendFileSync(file, "changed");
+          return count;
+        },
+      }),
+      /TRUSTED_OWNER_SOURCE_DRIFT/,
+    );
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
