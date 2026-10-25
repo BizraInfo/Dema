@@ -7,6 +7,10 @@ const DEFAULT_SCAN_ROOTS = ["apps", "packages", "scripts"];
 const SOURCE_EXTENSIONS = new Set([".js", ".mjs"]);
 const EXCLUDED_PATHS = new Set(["scripts/review/actuator-check.mjs"]);
 
+function isTestPath(file) {
+  return /(^|\/)tests\//.test(file);
+}
+
 function extension(path) {
   const dot = path.lastIndexOf(".");
   return dot >= 0 ? path.slice(dot) : "";
@@ -122,9 +126,14 @@ export function buildActuatorCheckReport({
   const findings = [];
   for (const file of files) {
     const body = readFileSync(join(root, file), "utf8");
+    findings.push(...analyzeActuatorSource(body, file));
+    const effectFindings = analyzeEffectCapInvariantSource(body, file);
+    // Test helpers may use Function() to extract route/source under test; still
+    // scan those files for exec/spawn/shell:true and EffectCap closures.
     findings.push(
-      ...analyzeActuatorSource(body, file),
-      ...analyzeEffectCapInvariantSource(body, file),
+      ...(isTestPath(file)
+        ? effectFindings.filter((f) => f.label !== "policy.executable_rule_code")
+        : effectFindings),
     );
   }
   return {

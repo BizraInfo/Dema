@@ -18,7 +18,11 @@ const OWNERS = Object.freeze({
 });
 const hash = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 
-function readOwner(path: string) {
+export function readOwner(
+  path: string,
+  io: { readSync?: typeof readSync } = {},
+) {
+  const readBytes = io.readSync ?? readSync;
   let directory = openSync("/", constants.O_RDONLY | constants.O_DIRECTORY);
   let fd: number | undefined;
   try {
@@ -37,7 +41,7 @@ function readOwner(path: string) {
     const bytes = Buffer.alloc(Number(before.size));
     let offset = 0;
     while (offset < bytes.length) {
-      const count = readSync(fd, bytes, offset, bytes.length - offset, offset);
+      const count = readBytes(fd, bytes, offset, bytes.length - offset, offset);
       if (!count) throw Error("TRUSTED_OWNER_SHORT_READ");
       offset += count;
     }

@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { stripTypeScriptTypes } from "node:module";
 import { createHash } from "node:crypto";
-import { resolveTrustedRequirement } from "../src/app/api/mission/trusted-requirement.ts";
+import { readOwner, resolveTrustedRequirement } from "../src/app/api/mission/trusted-requirement.ts";
+import { readTrustedOwnerFixture } from "./trusted-requirement-fixtures.mjs";
 import { evaluateTaskRequirement } from "../../core/src/bizra-prompt-mission-bridge.js";
 
 const NOW = "2026-10-13T20:30:00.000Z";
@@ -18,25 +18,26 @@ const policy = () => process.env.BIZRA_1TR1_TEST_POLICY_FILE
   valid_from: "2026-10-13T20:26:59.532196Z", expires_at: "2026-10-13T21:56:59.532196Z", revoked: false,
 }));
 
-test("fixed actual owner reads preserve brief mismatch and production-policy refusal", () => {
-  const negative = resolveTrustedRequirement("TASK-075.26");
+test("pinned owner snapshots preserve brief mismatch and production-policy refusal", () => {
+  const read_owner = readTrustedOwnerFixture;
+  const negative = resolveTrustedRequirement("TASK-075.26", { read_owner });
   assert.equal(evaluateTaskRequirement(negative, NOW).verdict, "BLOCKED_UNSUPPORTED_OPERATION");
-  const positive = resolveTrustedRequirement(MISSION);
+  const positive = resolveTrustedRequirement(MISSION, { read_owner });
   assert.equal(positive.policy, null);
   assert.equal(evaluateTaskRequirement(positive, NOW).verdict, "PRODUCTION_REQUIREMENT_POLICY_UNBOUND");
-  assert.equal(resolveTrustedRequirement("/arbitrary/caller/path"), null);
-  assert.equal(resolveTrustedRequirement(undefined), null);
+  assert.equal(resolveTrustedRequirement("/arbitrary/caller/path", { read_owner }), null);
+  assert.equal(resolveTrustedRequirement(undefined, { read_owner }), null);
 });
 
 test("explicit test dependency binds raw policy bytes and produces only a preview", () => {
   const bytes = policy();
-  const requirement = resolveTrustedRequirement(MISSION, { test_policy_bytes: bytes });
+  const requirement = resolveTrustedRequirement(MISSION, { read_owner: readTrustedOwnerFixture, test_policy_bytes: bytes });
   assert.equal(requirement.policy.hash, "sha256:" + createHash("sha256").update(bytes).digest("hex"));
   assert.equal(evaluateTaskRequirement(requirement, NOW).verdict, "OPERATION_MATCH_PREVIEW_ONLY");
   assert.equal(requirement.execution_allowed, false);
   assert.equal(requirement.authority_delta, 0);
-  assert.throws(() => resolveTrustedRequirement(MISSION, { test_policy_bytes: Buffer.from("{}") }), /TEST_POLICY_INVALID/);
-  assert.throws(() => resolveTrustedRequirement(MISSION, { test_policy_bytes: Buffer.from("{") }));
+  assert.throws(() => resolveTrustedRequirement(MISSION, { read_owner: readTrustedOwnerFixture, test_policy_bytes: Buffer.from("{}") }), /TEST_POLICY_INVALID/);
+  assert.throws(() => resolveTrustedRequirement(MISSION, { read_owner: readTrustedOwnerFixture, test_policy_bytes: Buffer.from("{") }));
 });
 
 test("drifted, oversized, malformed and unavailable owners cannot bind", () => {
@@ -46,33 +47,35 @@ test("drifted, oversized, malformed and unavailable owners cannot bind", () => {
   ]) assert.throws(() => resolveTrustedRequirement(MISSION, { read_owner }));
 });
 
-test("exact fixed task title improves refusal classification without admitting missing task identity", () => {
-  const negative = resolveTrustedRequirement(undefined, { source_text: "Source-cited Node0 status brief through one governed mission" });
-  assert.equal(evaluateTaskRequirement(negative, NOW).verdict, "BLOCKED_UNSUPPORTED_OPERATION");
-  assert.equal(resolveTrustedRequirement(undefined, { source_text: "Inventory BIZRA metadata." }), null);
+test("owner fixtures refuse paths outside the pinned set", () => {
+  assert.throws(() => readTrustedOwnerFixture("/unexpected/owner"), /TEST_OWNER_FIXTURE_UNAVAILABLE/);
 });
 
-function reader(readSync = fs.readSync) {
-  const raw = fs.readFileSync(new URL("../src/app/api/mission/trusted-requirement.ts", import.meta.url), "utf8");
-  const code = stripTypeScriptTypes(raw.replace(/^import .*;\n/gm, "").replace(/^export /gm, ""));
-  return new Function("constants", "openSync", "closeSync", "fstatSync", "readSync", "createHash", code + ";return readOwner;")(
-    fs.constants, fs.openSync, fs.closeSync, fs.fstatSync, readSync, createHash,
-  );
-}
+test("exact fixed task title improves refusal classification without admitting missing task identity", () => {
+  const negative = resolveTrustedRequirement(undefined, {
+    read_owner: readTrustedOwnerFixture,
+    source_text: "Source-cited Node0 status brief through one governed mission",
+  });
+  assert.equal(evaluateTaskRequirement(negative, NOW).verdict, "BLOCKED_UNSUPPORTED_OPERATION");
+  assert.equal(resolveTrustedRequirement(undefined, {
+    read_owner: readTrustedOwnerFixture,
+    source_text: "Inventory BIZRA metadata.",
+  }), null);
+});
 
 test("actual directory-descriptor reader rejects symlinks, nonregular files and oversize", () => {
   const root = fs.mkdtempSync(join(tmpdir(), "trusted-owner-"));
   try {
     const file = join(root, "owner");
     fs.writeFileSync(file, "owned bytes", { mode: 0o600 });
-    assert.equal(reader()(file).toString(), "owned bytes");
+    assert.equal(readOwner(file).toString(), "owned bytes");
     fs.symlinkSync(file, join(root, "link"));
     fs.symlinkSync(root, join(root, "parent-link"));
-    assert.throws(() => reader()(join(root, "link")));
-    assert.throws(() => reader()(join(root, "parent-link", "owner")));
-    assert.throws(() => reader()(root));
+    assert.throws(() => readOwner(join(root, "link")));
+    assert.throws(() => readOwner(join(root, "parent-link", "owner")));
+    assert.throws(() => readOwner(root));
     fs.writeFileSync(file, Buffer.alloc(262145));
-    assert.throws(() => reader()(file), /TRUSTED_OWNER_SIZE_INVALID/);
+    assert.throws(() => readOwner(file), /TRUSTED_OWNER_SIZE_INVALID/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -81,11 +84,15 @@ test("actual reader detects bytes changing during its bounded read", () => {
   try {
     const file = join(root, "owner");
     fs.writeFileSync(file, "owned bytes", { mode: 0o600 });
-    const driftReader = reader((...args) => {
-      const count = fs.readSync(...args);
-      fs.appendFileSync(file, "changed");
-      return count;
-    });
-    assert.throws(() => driftReader(file), /TRUSTED_OWNER_SOURCE_DRIFT/);
+    assert.throws(
+      () => readOwner(file, {
+        readSync: (...args) => {
+          const count = fs.readSync(...args);
+          fs.appendFileSync(file, "changed");
+          return count;
+        },
+      }),
+      /TRUSTED_OWNER_SOURCE_DRIFT/,
+    );
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

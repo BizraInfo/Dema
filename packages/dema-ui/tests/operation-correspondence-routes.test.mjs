@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { stripTypeScriptTypes } from "node:module";
 import { BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL, compileMissionProposal, verifyMissionProposal } from "../../core/src/bizra-prompt-mission-bridge.js";
 import { resolveTrustedRequirement } from "../src/app/api/mission/trusted-requirement.ts";
+import { readTrustedOwnerFixture } from "./trusted-requirement-fixtures.mjs";
 
 const NOW = "2026-10-13T20:30:00.000Z";
 const MISSION = "BIZRA-GENESIS-LOCAL-MISSION-0";
@@ -45,8 +46,12 @@ export async function evaluateRoute(route, {
   mutateProposal, mutateRequest, resolver, nowIso = NOW, optionalPat = false,
   context = {},
 } = {}) {
-  const resolve = resolver ?? ((id, options = {}) => resolveTrustedRequirement(id, { ...options, test_policy_bytes: policyBytes }));
-  const requirement = resolveTrustedRequirement(task, { test_policy_bytes: policy() });
+  const resolve = resolver ?? ((id, options = {}) => resolveTrustedRequirement(id, {
+    ...options, read_owner: readTrustedOwnerFixture, test_policy_bytes: policyBytes,
+  }));
+  const requirement = resolveTrustedRequirement(task, {
+    read_owner: readTrustedOwnerFixture, test_policy_bytes: policy(),
+  });
   const proposal = structuredClone(compileMissionProposal({
     text: task === "TASK-075.26" ? TITLE : "Inventory BIZRA metadata.",
     context, now_iso: NOW, compiler_code_hash: HASH,
@@ -155,7 +160,9 @@ test("execute: stale consent binding or cross-mission collage cannot become a pr
 
 test("prepare to execute: freshly re-read owner drift invalidates a prepared proposal", async () => {
   const resolver = (id, options) => {
-    const current = resolveTrustedRequirement(id, { ...options, test_policy_bytes: policy() });
+    const current = resolveTrustedRequirement(id, {
+      ...options, read_owner: readTrustedOwnerFixture, test_policy_bytes: policy(),
+    });
     if (current) current.owner.hash = `sha256:${"c".repeat(64)}`;
     return current;
   };
