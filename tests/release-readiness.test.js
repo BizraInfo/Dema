@@ -372,12 +372,18 @@ test("buildReleaseReadinessReport reports missing primary workflow accurately", 
   }
 });
 
-test("buildReleaseReadinessReport reports unavailable worktree status without a git checkout", async () => {
+test("buildReleaseReadinessReport fails closed when workflow worktree status is unavailable", async () => {
   const root = await mkdtemp(
     join(tmpdir(), "bizra-release-readiness-no-git-"),
   );
   try {
     await writeFile(join(root, "package.json"), JSON.stringify({ scripts: {} }));
+
+    const knownStatusReport = await buildReleaseReadinessReport({
+      root,
+      now: fixedNow,
+      workflowStatusText: "",
+    });
 
     const report = await buildReleaseReadinessReport({
       root,
@@ -386,6 +392,20 @@ test("buildReleaseReadinessReport reports unavailable worktree status without a 
 
     assert.equal(report.ci.workflow.worktree_status_available, false);
     assert.deepEqual(report.ci.workflow.worktree_changes, []);
+    assert.equal(
+      hasRisk(report, "ci.workflow_worktree_status_unavailable"),
+      true,
+    );
+    assert.equal(
+      report.risks.find(
+        (risk) => risk.code === "ci.workflow_worktree_status_unavailable",
+      )?.severity,
+      "launch_blocker",
+    );
+    assert.equal(
+      report.readiness_score,
+      knownStatusReport.readiness_score - 12,
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }

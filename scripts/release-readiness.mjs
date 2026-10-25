@@ -141,6 +141,16 @@ function classifyRisks({
   workflowWorktreeStatus,
 }) {
   const risks = [];
+
+  if (workflowWorktreeStatus?.available === false) {
+    risks.push({
+      code: "ci.workflow_worktree_status_unavailable",
+      severity: "launch_blocker",
+      note:
+        "Workflow worktree status is unavailable; release readiness cannot prove workflow files are clean.",
+    });
+  }
+
   if (!workflowExists) {
     risks.push({
       code: "ci.primary_workflow_missing",
