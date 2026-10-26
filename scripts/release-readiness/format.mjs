@@ -1,4 +1,10 @@
+function workflowWorktreeLabel(workflow) {
+  if (workflow.worktree_status_available === false) return "unknown";
+  return workflow.worktree_changes.length > 0 ? "dirty" : "clean";
+}
+
 function workflowAuthorizationLabel(workflow) {
+  if (workflow.worktree_status_available === false) return "blocked";
   if (workflow.worktree_changes_authorized) return "explicit";
   if (workflow.worktree_changes.length > 0) return "required";
   return "not_required";
@@ -20,7 +26,7 @@ export function formatReleaseReadinessReport(report) {
     `  node matrix: ${report.ci.matrix.join(", ")}`,
     `  cd status: ${report.pipeline.cd_status}`,
     `  maturity: ${report.ci_cd_maturity.current_level.id} (${report.ci_cd_maturity.current_level.label})`,
-    `  workflow worktree: ${report.ci.workflow.worktree_changes.length > 0 ? "dirty" : "clean"}`,
+    `  workflow worktree: ${workflowWorktreeLabel(report.ci.workflow)}`,
     `  workflow authorization: ${workflowAuthorizationLabel(report.ci.workflow)}`,
   ];
 

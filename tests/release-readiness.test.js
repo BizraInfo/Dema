@@ -406,6 +406,11 @@ test("buildReleaseReadinessReport fails closed when workflow worktree status is 
       report.readiness_score,
       knownStatusReport.readiness_score - 12,
     );
+
+    const output = formatReleaseReadinessReport(report);
+    assert.match(output, /workflow worktree: unknown/);
+    assert.match(output, /workflow authorization: blocked/);
+    assert.doesNotMatch(output, /workflow worktree: clean/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
