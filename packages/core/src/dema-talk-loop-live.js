@@ -262,7 +262,6 @@ export async function invokeDemaTalkLive({
       body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
-    clearTimeout(timeoutHandle);
 
     if (!response.ok) {
       return buildResult({
@@ -281,6 +280,7 @@ export async function invokeDemaTalkLive({
     try {
       body = await response.json();
     } catch (parseErr) {
+      if (parseErr?.name === "AbortError") throw parseErr;
       return buildResult({
         ...base,
         status: "failed",
@@ -354,7 +354,6 @@ export async function invokeDemaTalkLive({
       responseTextPreviewOverride: override,
     });
   } catch (err) {
-    clearTimeout(timeoutHandle);
     const unreachable =
       err?.code === "ECONNREFUSED" || /ECONNREFUSED|refused/i.test(String(err));
     const errorClass =
@@ -373,5 +372,7 @@ export async function invokeDemaTalkLive({
       durationMs: Date.now() - startedAt,
       errorReason: errorClass,
     });
+  } finally {
+    clearTimeout(timeoutHandle);
   }
 }

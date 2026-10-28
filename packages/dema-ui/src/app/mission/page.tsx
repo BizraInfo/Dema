@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { projectMissionOutcome } from "./mission-outcome-projection";
 
 type Result = {
   ok: boolean;
@@ -113,6 +114,7 @@ export default function MissionPage() {
     if (!result?.proposal || !cardResult?.governed?.consent_context) return;
     setBusy(true);
     setExecution(null);
+    let responseStatus: number | null = null;
     try {
       const payload: Record<string, unknown> = {
         proposal: result.proposal,
@@ -128,13 +130,33 @@ export default function MissionPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
-      setExecution(await response.json());
+      responseStatus = response.status;
+      setExecution({
+        missionOutcomeResponse: await response.json(),
+        missionOutcomeHttpStatus: responseStatus,
+      });
     } catch (error) {
-      setExecution({ ok: false, blocked_by: [String(error)] });
+      setExecution({
+        missionOutcomeResponse: { ok: false, blocked_by: [String(error)] },
+        missionOutcomeHttpStatus: responseStatus,
+      });
     } finally {
       setBusy(false);
     }
   }
+
+  const missionOutcomeResponse = execution?.missionOutcomeResponse;
+  const missionOutcome = missionOutcomeResponse
+    ? projectMissionOutcome(missionOutcomeResponse, execution.missionOutcomeHttpStatus)
+    : null;
+  const executionSucceeded = missionOutcome
+    ? missionOutcome.kind === "receipted"
+    : execution?.ok === true;
+  const executionTitle = missionOutcome?.title ?? (
+    execution?.report
+      ? (execution.ok ? "Estate mission recorded" : "Outcome not verified")
+      : (execution?.ok ? "Local result returned" : "Outcome not verified")
+  );
 
   return (
     <main style={{ minHeight: "100vh", background: "linear-gradient(180deg, #050B14 0%, #0A1628 100%)", color: "#E8EDF4", padding: "clamp(1.5rem, 5vw, 4rem)", fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif" }}>
@@ -285,10 +307,10 @@ export default function MissionPage() {
         )}
 
         {execution && (
-          <section style={{ marginTop: "1rem", border: `1px solid ${execution.ok ? TEAL : "#D99191"}55`, padding: "1.3rem", lineHeight: 1.65 }}>
-            <h2 style={{ color: execution.ok ? TEAL : "#D99191", fontWeight: 500, marginTop: 0 }}>{execution.ok ? "Estate mission recorded" : "Mission held"}</h2>
-            {execution.report ? <EstateReport report={execution.report} /> : <p style={{ color: MUTED }}>{execution.ok ? "The governed runtime returned its receipt and verification result." : "No effect was admitted by the governed runtime."}</p>}
-            {!execution.report && <pre style={{ whiteSpace: "pre-wrap", overflowX: "auto", color: "#B8CADB", fontSize: 12 }}>{JSON.stringify(execution.governed ?? execution, null, 2)}</pre>}
+          <section style={{ marginTop: "1rem", border: `1px solid ${executionSucceeded ? TEAL : "#D99191"}55`, padding: "1.3rem", lineHeight: 1.65 }}>
+            <h2 style={{ color: executionSucceeded ? TEAL : "#D99191", fontWeight: 500, marginTop: 0 }}>{executionTitle}</h2>
+            {execution.report ? <EstateReport report={execution.report} /> : <p style={{ color: MUTED }}>{missionOutcome?.message ?? (execution.ok ? "The local result was returned; see details below." : "Outcome not verified. Inspect the relevant authoritative record before retrying.")}</p>}
+            {!execution.report && <pre style={{ whiteSpace: "pre-wrap", overflowX: "auto", color: "#B8CADB", fontSize: 12 }}>{JSON.stringify(missionOutcomeResponse?.governed ?? missionOutcomeResponse ?? execution.governed ?? execution, null, 2)}</pre>}
           </section>
         )}
       </div>

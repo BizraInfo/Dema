@@ -460,3 +460,35 @@ test("dema talk refuses an invalid selected bridge without fetch or raw configur
   for (const value of [override, "test-user", "test-password", "test-token", TEST_KEYS.LLAMACPP_KEY])
     assert.ok(!output.join("\n").includes(value));
 });
+
+test("response body read stays within the invocation timeout", async () => {
+  const fetchImpl = async (_url, { signal }) => ({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    json: () => new Promise((resolve, reject) => {
+      const abort = () => {
+        const error = new Error("The operation was aborted");
+        error.name = "AbortError";
+        reject(error);
+      };
+      if (signal.aborted) return abort();
+      signal.addEventListener("abort", abort, { once: true });
+      setTimeout(() => resolve(OPENAI_BODY), 50);
+    }),
+  });
+  const result = await invokeDemaTalkLive({
+    provider: "lmstudio",
+    model: "qwen2.5",
+    prompt: "hello",
+    consentPhrase: consentFor("lmstudio"),
+    timeoutMs: 10,
+    env: {},
+    fetchImpl,
+  });
+  assert.equal(result.invocation_status, "failed");
+  assert.equal(result.error_reason, "timeout_after_10ms");
+  assert.equal(result.boundary.network_used, true);
+  assert.equal(result.boundary.model_invocation_performed, false);
+  assert.equal(buildTalkRuntimeReceipt({ result }).invocation_status, "failed");
+});
