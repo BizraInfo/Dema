@@ -367,6 +367,29 @@ test("Invoke with timeout aborts cleanly · emits timeout_after error", async ()
   assert.match(r.error_reason, /timeout_after_100ms/);
 });
 
+test("Invoke response body read remains inside the timeout", async () => {
+  const slowBodyFetch = async (_url, { signal }) => ({
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    json: () => new Promise((resolve, reject) => {
+      const abort = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+      if (signal.aborted) return abort();
+      signal.addEventListener("abort", abort, { once: true });
+      setTimeout(() => resolve({ response: "late" }), 50);
+    }),
+  });
+  const r = await invokeLocalLLM({
+    model: "llama3.1:8b",
+    prompt: "hi",
+    consentPhrase: "GO: invoke local LLM at llama3.1:8b",
+    timeoutMs: 10,
+    fetchImpl: slowBodyFetch,
+  });
+  assert.equal(r.invocation_status, "failed");
+  assert.match(r.error_reason, /timeout_after_10ms/);
+});
+
 test("Invoke result text preview is capped at 500 chars + truncation marker", async () => {
   const longResponse = "B".repeat(2000);
   const mock = mockFetch({

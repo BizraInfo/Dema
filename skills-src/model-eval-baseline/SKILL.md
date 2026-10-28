@@ -10,13 +10,16 @@ description: Run Dema local model eval baseline (discover, baseline, compare) wi
 ## Preconditions
 
 - Localhost model endpoint reachable (default Ollama `http://localhost:11434`) OR injected fetch in tests.
-- No external provider unless operator passes `--include-external` (discouraged without GO).
+- Discovery and consent planning do not run inference.
+- Every warm-up and suite request requires its own exact consent phrase before any inference starts.
 
 ## Procedure
 
 ```bash
 dema models discover
-dema eval baseline --suite bizra-local-small
+# Select a discovered model to print the exact per-request consent plan (no inference):
+dema eval baseline --suite bizra-local-small --model ollama:<model-id> --json
+# Re-run with the same --model and one --consent "<exact printed phrase>" per plan item.
 # after a candidate change:
 dema eval compare --baseline <baseline.json> --candidate <candidate.json>
 ```
@@ -25,9 +28,15 @@ JSON:
 
 ```bash
 dema models discover --json
-dema eval baseline --suite bizra-local-small --json
+dema eval baseline --suite bizra-local-small --model ollama:<model-id> --json
 dema eval compare --baseline <path> --candidate <path> --json
 ```
+
+The model-selection/consent-plan invocation exits with status 2 and performs no inference. The
+`bizra-local-small` plan contains seven exact phrases per selected model (one warm-up plus six
+suite tasks). Copy every phrase exactly into a repeated `--consent` flag to authorize the run;
+missing, extra, or mismatched phrases refuse before any generation request. Keep providers on
+loopback; `--include-external` does not relax the gatherer's loopback-only generation guard.
 
 ## Kernel (read before changing behavior)
 

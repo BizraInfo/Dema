@@ -8,6 +8,7 @@
 // recorded here, not in the kernel boundary — the kernel itself does no I/O.
 
 import { BIZRA_LOCAL_SMALL_SUITE } from "../../../../packages/core/src/model-eval-baseline.js";
+import { evaluateConsent } from "../../../../packages/fate/src/fate.js";
 
 export function isLocalUrl(url) {
   try {
@@ -103,8 +104,9 @@ function providers(env) {
       list: (b) => `${b}/api/tags`,
       ids: (j) => descriptors(j?.models, "name"),
       gen: (b) => `${b}/api/generate`,
-      body: (model, prompt) => ({ model, prompt, stream: false, options: { num_predict: 64 } }),
-      warm: (model) => ({ model, prompt: "ready", stream: false, options: { num_predict: 1 } }),
+      // think:false — thinking models otherwise spend num_predict inside `thinking` and return an empty response.
+      body: (model, prompt) => ({ model, prompt, stream: false, think: false, options: { num_predict: 64 } }),
+      warm: (model) => ({ model, prompt: "ready", stream: false, think: false, options: { num_predict: 1 } }),
       out: (j) => (typeof j?.response === "string" ? j.response : ""),
     },
     lm_studio: {
@@ -216,23 +218,135 @@ function interleaveByProvider(models) {
   return out;
 }
 
+export function buildModelEvalConsentPlan(modelKeys, suiteId = "bizra-local-small") {
+  const plan = [];
+  for (const modelKey of modelKeys) {
+    const tasks = [
+      { id: "warmup" },
+      ...BIZRA_LOCAL_SMALL_SUITE.map(({ id }) => ({ id })),
+    ];
+    tasks.forEach(({ id }, index) => {
+      const attempt = index + 1;
+      plan.push({
+        model_key: modelKey,
+        task_id: id,
+        attempt,
+        phrase: `GO: invoke model ${modelKey} for Dema eval ${suiteId} task ${id} attempt ${attempt}`,
+      });
+    });
+  }
+  return plan;
+}
+
+function consentError(code, message, details = {}) {
+  const error = new Error(message);
+  error.code = code;
+  Object.assign(error, details);
+  return error;
+}
+
+export async function planModelEvalBaseline({
+  fetchImpl,
+  env = process.env,
+  suiteId = "bizra-local-small",
+  modelKeys = [],
+  includeExternalProviders = false,
+  timeoutMs = 4000,
+} = {}) {
+  const discovery = await discoverLocalModels({
+    fetchImpl,
+    env,
+    includeExternalProviders,
+    timeoutMs,
+  });
+  const requested = [...new Set(modelKeys)];
+  const candidates = discovery.models.filter((model) =>
+    isChatCandidate(model.model),
+  );
+  const availableKeys = candidates.map((model) => model.key);
+
+  if (requested.length === 0) {
+    return {
+      provider_discovery: discovery.provider_discovery,
+      available_model_keys: availableKeys,
+      models: [],
+      artifact_identity: null,
+      consent_plan: [],
+    };
+  }
+
+  const missing = requested.filter((key) => !availableKeys.includes(key));
+  if (missing.length > 0) {
+    throw consentError(
+      "MODEL_EVAL_MODEL_NOT_FOUND",
+      `Requested model(s) are not available as chat models: ${missing.join(", ")}`,
+      { missing_model_keys: missing, available_model_keys: availableKeys },
+    );
+  }
+
+  const selected = candidates.filter((model) => requested.includes(model.key));
+  const { unique, artifact_identity } = dedupeByArtifact(selected);
+  const models = interleaveByProvider(unique);
+  return {
+    provider_discovery: discovery.provider_discovery,
+    available_model_keys: availableKeys,
+    models,
+    artifact_identity,
+    consent_plan: buildModelEvalConsentPlan(
+      models.map((model) => model.key),
+      suiteId,
+    ),
+  };
+}
+
 export async function gatherModelEvalBaseline({
   fetchImpl,
   env = process.env,
   time = () => new Date(),
   suiteId = "bizra-local-small",
+  modelKeys = [],
+  consentPhrases = [],
   includeExternalProviders = false, // DEFAULT FALSE — local only
   timeoutMs = 60000, // cold-load-aware: a big model offloaded to CPU can be slow per token
   warmupTimeoutMs = 180000, // generous one-shot load: a 26B model into a 16GB GPU takes time
-  maxModels = 6, // bounded by default — each reachable model runs the full suite via real inference
 } = {}) {
   const fetcher = fetchImpl || globalThis.fetch;
+  const plan = await planModelEvalBaseline({
+    fetchImpl,
+    env,
+    suiteId,
+    modelKeys,
+    includeExternalProviders,
+    timeoutMs,
+  });
+  if (modelKeys.length === 0) {
+    throw consentError(
+      "MODEL_EVAL_MODEL_SELECTION_REQUIRED",
+      "Select one or more discovered chat models before running the baseline.",
+      { available_model_keys: plan.available_model_keys },
+    );
+  }
+
+  const expectedPhrases = plan.consent_plan.map((item) => item.phrase);
+  const consentValid =
+    consentPhrases.length === expectedPhrases.length &&
+    consentPhrases.every(
+      (phrase, index) =>
+        evaluateConsent({
+          phrase,
+          requiredPhrase: expectedPhrases[index],
+        }).accepted,
+    );
+  if (!consentValid) {
+    throw consentError(
+      "MODEL_EVAL_CONSENT_REQUIRED",
+      "Exact consent is required for every model request; no inference was performed.",
+      { consent_plan: plan.consent_plan },
+    );
+  }
+
   const provs = providers(env);
-  const { provider_discovery, models } = await discoverLocalModels({ fetchImpl, env, includeExternalProviders, timeoutMs });
-  // Identity BEFORE the bound: aliases must not consume maxModels slots, and one
-  // artifact must not race itself on latency.
-  const { unique, artifact_identity } = dedupeByArtifact(models.filter((m) => isChatCandidate(m.model)));
-  const chosen = interleaveByProvider(unique).slice(0, maxModels);
+  const { provider_discovery, artifact_identity, models: chosen } = plan;
   const results_by_model = {};
   for (const { key, provider, model } of chosen) {
     const p = provs[provider];

@@ -29,6 +29,7 @@ import {
   nonceDigest,
   CONSENT_NONCE_CLAIM_SCHEMA,
   CONSENT_NONCE_DOMAIN,
+  CONSENT_NONCE_RELDIR,
   LEGACY_NAMESPACES,
 } from "../packages/receipts/src/consent-nonce-claim.js";
 
@@ -246,5 +247,32 @@ describe("NRC · one canonical atomic consent claim", () => {
     assert.equal(inspected.used, true);
     assert.equal(inspected.corrupt, true);
     assert.equal(inspected.reason, "consent_nonce_legacy_lookup_failed_closed:ENOTDIR");
+  });
+
+  test("NRC-15: an unreadable legacy weld store blocks a fresh claim", async () => {
+    const cleanHome = await home();
+    assert.equal((await claimConsentNonce({ ...CLAIM(), demaHome: cleanHome })).claimed, true,
+      "a readable legacy surface leaves a fresh nonce claimable");
+
+    const demaHome = await home();
+    await writeFile(join(demaHome, "consent"), "not a directory");
+
+    const claimed = await claimConsentNonce({ ...CLAIM(), demaHome });
+    assert.equal(claimed.claimed, false);
+    assert.equal(claimed.reason, "consent_nonce_legacy_lookup_failed_closed:ENOTDIR");
+    assert.equal(claimed.legacy_errors[0].namespace, LEGACY_NAMESPACES.weldRegistry);
+    assert.equal(existsSync(join(demaHome, CONSENT_NONCE_RELDIR)), false,
+      "an unreadable legacy namespace must block before a canonical claim is created");
+  });
+
+  test("NRC-16: inspection refuses malformed nonce shapes without reading storage", async () => {
+    const demaHome = await home();
+    for (const nonce of [undefined, "", "\0"]) {
+      const inspected = await inspectConsentNonce({ nonce, demaHome });
+      assert.equal(inspected.used, true);
+      assert.equal(inspected.reason, "consent_nonce_malformed");
+    }
+    assert.equal(existsSync(join(demaHome, "consent")), false,
+      "malformed input must be refused before touching local consent state");
   });
 });

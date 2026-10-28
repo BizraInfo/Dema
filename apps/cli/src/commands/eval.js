@@ -8,6 +8,17 @@ import {
   formatVerdictReport,
 } from "../../../../packages/core/src/eval-layer2-verdict-validator.js";
 
+function valuesForFlag(argv, flag) {
+  const values = [];
+  for (let index = 0; index < argv.length - 1; index += 1) {
+    if (argv[index] === flag && argv[index + 1] && !argv[index + 1].startsWith("--")) {
+      values.push(argv[index + 1]);
+      index += 1;
+    }
+  }
+  return values;
+}
+
 export async function cmd_eval(ctx) {
   const { argv } = ctx;
   const evalCommand = argv[1];
@@ -23,9 +34,62 @@ export async function cmd_eval(ctx) {
     const suiteIdx = argv.indexOf("--suite");
     const suiteId = suiteIdx !== -1 && argv[suiteIdx + 1] ? argv[suiteIdx + 1] : "bizra-local-small";
     const includeExternalProviders = argv.includes("--include-external");
-    const maxIdx = argv.indexOf("--max-models");
-    const maxModels = maxIdx !== -1 && Number.isInteger(Number(argv[maxIdx + 1])) && Number(argv[maxIdx + 1]) > 0 ? Number(argv[maxIdx + 1]) : undefined;
-    const input = await gatherModelEvalBaseline({ suiteId, includeExternalProviders, ...(maxModels ? { maxModels } : {}) });
+    const modelKeys = valuesForFlag(argv, "--model");
+    const consentPhrases = valuesForFlag(argv, "--consent");
+    let input;
+    try {
+      input = await gatherModelEvalBaseline({
+        suiteId,
+        modelKeys,
+        consentPhrases,
+        includeExternalProviders,
+      });
+    } catch (error) {
+      if (
+        error?.code !== "MODEL_EVAL_MODEL_SELECTION_REQUIRED" &&
+        error?.code !== "MODEL_EVAL_CONSENT_REQUIRED"
+      ) {
+        throw error;
+      }
+
+      const report = {
+        schema: "bizra.dema.model_eval_consent_plan.v0.1",
+        truth_label: "MODEL_EVAL_CONSENT_REQUIRED",
+        suite_id: suiteId,
+        available_model_keys: error.available_model_keys ?? [],
+        models: error.consent_plan
+          ? [...new Set(error.consent_plan.map((item) => item.model_key))]
+          : [],
+        consent_plan: error.consent_plan ?? [],
+        inference_performed: false,
+        boundary: {
+          model_invocation_performed: false,
+          prompt_executed: false,
+          external_provider_called: false,
+          mutation_performed: false,
+        },
+      };
+      if (asJson) {
+        console.log(JSON.stringify(report, null, 2));
+      } else if (report.consent_plan.length > 0) {
+        console.log(
+          `Model eval consent required — ${report.consent_plan.length} exact per-request phrases; no inference performed.`,
+        );
+        for (const item of report.consent_plan) {
+          console.log(`  ${item.phrase}`);
+        }
+      } else {
+        console.log(
+          "Model eval requires explicit model selection. Available chat models:",
+        );
+        for (const modelKey of report.available_model_keys) {
+          console.log(`  ${modelKey}`);
+        }
+      }
+      process.exitCode = 2;
+      return;
+    }
+
     const report = buildModelEvalBaseline(input);
     if (asJson) {
       console.log(JSON.stringify(report, null, 2));
@@ -139,7 +203,7 @@ export async function cmd_eval(ctx) {
 
   if (evalCommand !== "layer2") {
     throw new Error(
-      "Unknown eval command. Use `dema eval baseline [--suite bizra-local-small] [--json]`, `dema eval compare --baseline <abs.json> --candidate <abs.json> [--json]`, `dema eval route --baseline <abs.json> [--json]`, or `dema eval layer2 prompts|verify ...`.",
+      "Unknown eval command. Use `dema eval baseline [--suite bizra-local-small] [--model <provider:model>]... [--consent <phrase>]... [--json]`, `dema eval compare --baseline <abs.json> --candidate <abs.json> [--json]`, `dema eval route --baseline <abs.json> [--json]`, or `dema eval layer2 prompts|verify ...`.",
     );
   }
 

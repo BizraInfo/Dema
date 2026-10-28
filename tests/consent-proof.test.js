@@ -229,6 +229,36 @@ describe("consent-proof · buildConsentProof (DOD 1-3, 9 + envelope shape)", () 
 });
 
 describe("consent-proof · verifyConsentProof (DOD 4-8 + structural)", () => {
+  it("rejects malformed action scope before hash or signature verification", async () => {
+    const { home, result } = await buildOk();
+    try {
+      const v = verifyConsentProof({
+        consentProof: { ...result.consent_proof, action_scope: [] },
+        pubkeyPem: result.signer_public_key_pem,
+        now: FIXED_NOW_INSIDE_WINDOW,
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "structural_action_scope_invalid");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed when the external public key cannot be parsed", async () => {
+    const { home, result } = await buildOk();
+    try {
+      const v = verifyConsentProof({
+        consentProof: result.consent_proof,
+        pubkeyPem: "-----BEGIN PUBLIC KEY-----\ninvalid\n-----END PUBLIC KEY-----",
+        now: FIXED_NOW_INSIDE_WINDOW,
+      });
+      assert.equal(v.verified, false);
+      assert.equal(v.reason, "consent_signature_invalid");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("happy: verify with matching external pubkey + within window → verified:true", async () => {
     const { home, result } = await buildOk();
     try {

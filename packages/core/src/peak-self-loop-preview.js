@@ -32,6 +32,7 @@ import {
   computeTraceDiagnosticReplaySubjectHashV2,
 } from "./dema-trace-diagnostic-contract.js";
 import { verifyTraceCorroborationOrigin } from "./trace-corroboration-origin.js";
+import { isGatheredEvidenceSignal } from "./peak-evidence-gatherer.js";
 
 export const PEAK_SELF_LOOP_PREVIEW_SCHEMA =
   "bizra.dema.peak_self_loop_preview.v0.1";
@@ -129,20 +130,17 @@ const DEFAULT_NOISE_EVENTS = Object.freeze([
 // ponytail: no freshness/observed_at check — that needs a clock, and
 // .claude/rules/paths/core-kernels.md forbids one without documented injection.
 //
-// CEILING — this validates evidence SHAPE, never evidence BINDING. A pure kernel
-// cannot read source_ref, so it cannot re-derive source_sha256 from real content:
-// a structurally valid envelope pointing at a nonexistent file scores as verified
-// (see PEB-08, which transports that attack). This raises laundering from a kernel
-// DEFAULT to a caller ACT; it does not prevent forgery.
-// Upgrade path: whichever gatherer/CLI layer constructs signal_events must hash
-// source_ref itself and reject mismatches BEFORE calling this kernel. No such
-// caller exists yet — the CLI passes no events and therefore HOLDs.
+// Trust boundary: only same-process objects issued by the existing gatherer can
+// score; the marker is neither durable provenance nor proof that a gate ran.
 const EVIDENCE_TRUTH_LABELS = Object.freeze(["VERIFIED", "MEASURED"]);
 const SOURCE_SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 function evidenceBindingGap(event) {
   if (!event || typeof event !== "object" || Array.isArray(event)) {
     return "not_an_object";
+  }
+  if (!isGatheredEvidenceSignal(event)) {
+    return "evidence_not_gatherer_issued";
   }
   if (!EVIDENCE_TRUTH_LABELS.includes(event.truth_label)) {
     return "truth_label_not_verified_or_measured";
@@ -823,7 +821,7 @@ export function buildPeakSelfLoopPreview({
   });
 
   const processEvents = [
-    ...signalEvents.map((e) => ({ type: e.type, weight: e.weight })),
+    ...verifiedSignalEvents.map((e) => ({ type: e.type, weight: e.weight })),
     ...noiseEvents.map((e) => ({ type: e.type, weight: e.weight })),
   ];
   const rsi = computeProcessRsi({ events: processEvents, window: 14 });
@@ -851,7 +849,7 @@ export function buildPeakSelfLoopPreview({
     ],
   });
 
-  const event_hash_table = buildEventHashTable(signalEvents, noiseEvents);
+  const event_hash_table = buildEventHashTable(verifiedSignalEvents, noiseEvents);
   const diffusion = diffuseHhmmBelief(snr.score);
   const peakPhase = diffusion.reduce((best, row) =>
     row.belief > best.belief ? row : best,
@@ -928,7 +926,7 @@ export function buildPeakSelfLoopPreview({
   const micro_process_mining = buildMicroProcessMiningRef();
   const self_loop_ooda = buildPeakOodaReviewCycle();
   const rsi_integration_gate = buildIntegrationRsiGate({
-    signalEvents: signalEvents.map((e) => ({ type: e.type, weight: e.weight })),
+    signalEvents: verifiedSignalEvents.map((e) => ({ type: e.type, weight: e.weight })),
     noiseEvents: noiseEvents.map((e) => ({ type: e.type, weight: e.weight })),
     processEvents,
   });

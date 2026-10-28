@@ -209,6 +209,26 @@ test("ISSUE-1: gather() warns + sets partial when receipts path exists but is no
   }
 });
 
+test("gather() marks receipts as partial when the home path is not a directory", async () => {
+  const home = join(
+    tmpdir(),
+    `dema-homebase-gather-not-dir-${process.pid}-${Date.now()}`,
+  );
+  await writeFile(home, "not a directory");
+  try {
+    const result = await gather({ home });
+    assert.equal(result.partial, true);
+    assert.ok(
+      result.warnings.some((warning) =>
+        warning.includes("receipts directory inaccessible"),
+      ),
+      `expected an inaccessible receipts warning · got: ${JSON.stringify(result.warnings)}`,
+    );
+  } finally {
+    await tearDown(home);
+  }
+});
+
 test("ISSUE-5: gather() pushes informational warning when ~/.dema/memory directory is missing", async () => {
   const home = await mkdtemp(join(tmpdir(), "dema-homebase-gather-no-mem-"));
   await writeFile(join(home, "profile.json"), JSON.stringify({ name: "Mumu" }));

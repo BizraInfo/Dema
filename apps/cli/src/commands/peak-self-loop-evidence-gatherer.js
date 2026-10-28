@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gatherEvidenceSignals } from "../../../../packages/core/src/peak-evidence-gatherer.js";
 
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const SIGNAL_EVENTS_FLAG = "--signal-events-json";
@@ -177,6 +178,7 @@ export function bindPeakSelfLoopSignalEvents(
       rejected.push(frozenRejection(event, "duplicate_source_target"));
       continue;
     }
+    seenTargets.add(targetReal);
 
     let bytes;
     try {
@@ -192,8 +194,23 @@ export function bindPeakSelfLoopSignalEvents(
       continue;
     }
 
-    seenTargets.add(targetReal);
-    admitted.push(Object.freeze({ ...event }));
+    const semantic = gatherEvidenceSignals({
+      candidates: [event],
+      readSource: (sourceRef) =>
+        sourceRef === event.source_ref ? bytes : null,
+    });
+    const admittedEvent = semantic.events[0];
+    if (!admittedEvent) {
+      rejected.push(
+        frozenRejection(
+          event,
+          semantic.excluded[0]?.gap ?? "semantic_evidence_unavailable",
+        ),
+      );
+      continue;
+    }
+
+    admitted.push(admittedEvent);
   }
 
   // Atomic batch admission: one rejection collapses the whole supplied set so a

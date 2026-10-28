@@ -131,3 +131,18 @@ test("gatherer: key checked by existsSync only — there is no readFileSync to r
   assert.ok(fsCalls.some((p) => p.includes("node0-ed25519.pub.pem")), "key presence is checked");
   assert.equal(typeof fsImpl.readFileSync, "undefined", "no key-content read path exists");
 });
+
+test("gatherer: DEMA_GATEWAY_URL adds a gateway observation without faking sovereign readiness", async () => {
+  const routes = { "http://127.0.0.1:7421/health": { status: "ok", domain: "bizra-cognition-gateway-v1" } };
+  const obs = await gatherNode0ActivationObservations({
+    fetchImpl: fakeFetch(routes),
+    fsImpl: { existsSync: () => true },
+    env: { ...env, DEMA_GATEWAY_URL: "http://127.0.0.1:7421/" },
+    homedir: "/tmp/observe-x",
+  });
+  assert.equal(obs.gateway.live, true);
+  assert.equal(obs.gateway.domain, "bizra-cognition-gateway-v1");
+  assert.notEqual(obs.sovereign.ready, true);
+  const none = await gatherNode0ActivationObservations({ fetchImpl: fakeFetch({}), fsImpl: { existsSync: () => true }, env, homedir: "/tmp/observe-x" });
+  assert.equal("gateway" in none, false);
+});

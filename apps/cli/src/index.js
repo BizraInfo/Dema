@@ -667,8 +667,8 @@ Local evidence:
                       Emit Layer 2 rubric pack (truthfulness · actionability · boundary_compliance); data-only, no LLM invocation
   dema eval layer2 verify <abs-path> [--json]
                       Validate an operator-pasted Layer 2 judge verdict file; structural + semantic checks; read-only; exit 1 on validation failure
-  dema eval baseline [--suite bizra-local-small] [--max-models <n>] [--json]
-                      MODEL-EVAL-BASELINE-1A · warm-up then run the frozen local suite against the model pool; content-addressed; LOCAL ONLY; not a leaderboard
+  dema eval baseline [--suite bizra-local-small] [--model <provider:model>]... [--consent "<exact phrase>"]... [--json]
+                      MODEL-EVAL-BASELINE-1A · discovery is read-only; inference requires one exact, model/task-bound consent phrase per warm-up and suite request; LOCAL ONLY; not a leaderboard
   dema eval compare <--baseline a.json --candidate b.json> [--json]
                       Deterministic before/after delta of two baseline reports; refuses a tampered input
   dema eval route <--baseline a.json> [--json]

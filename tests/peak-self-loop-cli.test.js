@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,6 +38,47 @@ test("dema peak-self-loop --json emits schema-tagged frozen preview", () => {
   for (const [k, v] of Object.entries(env.boundary)) {
     assert.equal(v, false, `boundary.${k} must be false`);
   }
+});
+
+test("CLI refuses hash-matched source code as a passed-gate signal", () => {
+  const source_ref = "tests/peak-self-loop-cli.test.js";
+  const bytes = readFileSync(join(REPO_ROOT, source_ref));
+  const event = {
+    id: "fake-gate",
+    type: "gate_passed",
+    weight: 99,
+    label: "caller claimed a passed gate",
+    truth_label: "MEASURED",
+    source_ref,
+    source_sha256: createHash("sha256").update(bytes).digest("hex"),
+  };
+  const home = freshHome();
+  let failure;
+  try {
+    runCLI(
+      [
+        "peak-self-loop",
+        "--json",
+        `--signal-events-json=${JSON.stringify([event])}`,
+      ],
+      home,
+    );
+  } catch (error) {
+    failure = error;
+  }
+
+  assert.ok(failure);
+  assert.equal(failure.status, 1);
+  const env = JSON.parse(failure.stdout.toString());
+  assert.equal(env.caller_evidence_binding.complete, false);
+  assert.equal(env.caller_evidence_binding.admitted_count, 0);
+  assert.equal(
+    env.caller_evidence_binding.rejected[0].reason,
+    "gate_receipt_json_required",
+  );
+  assert.equal(env.snr_framework.verified_signal_count, 0);
+  assert.equal(env.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
+  assert.deepEqual(readdirSync(home), []);
 });
 
 test("dema realm proof-studio --json routes to peak self-loop preview", () => {

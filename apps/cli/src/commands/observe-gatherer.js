@@ -101,6 +101,22 @@ export async function gatherNode0ActivationObservations({
     error_class: live.ok ? null : live.error_class,
   };
 
+  // Optional gateway observation — opt-in via DEMA_GATEWAY_URL. Reported
+  // separately; it never feeds sovereign.live/ready, so readiness is not faked.
+  let gateway = null;
+  if (env.DEMA_GATEWAY_URL) {
+    const gwBase = env.DEMA_GATEWAY_URL.replace(/\/+$/, "");
+    const gw = await getJson(fetcher, `${gwBase}/health`, timeoutMs);
+    gateway = {
+      probed: true,
+      base_url: gwBase,
+      live: gw.ok && gw.json?.status === "ok" ? true : liveFromProbe(gw),
+      domain: gw.ok && typeof gw.json?.domain === "string" ? gw.json.domain : null,
+      http_status: gw.status,
+      error_class: gw.ok ? null : gw.error_class,
+    };
+  }
+
   // Local model providers — model id lists only (no file paths, no content).
   const lmBase = env.LMSTUDIO_URL || "http://127.0.0.1:1234";
   const lm = await getJson(fetcher, `${lmBase}/v1/models`, timeoutMs);
@@ -162,6 +178,7 @@ export async function gatherNode0ActivationObservations({
   return {
     dema_repo: { git_present: exists(join(process.cwd(), ".git")), package_name: "dema", command_surface_count: null },
     sovereign,
+    ...(gateway ? { gateway } : {}),
     local_models: { lm_studio, ollama },
     cognition,
     canonical_roots,
