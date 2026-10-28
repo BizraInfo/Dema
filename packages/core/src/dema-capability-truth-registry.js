@@ -87,6 +87,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A",
   "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
   "NODE0_AGENT_FLEET_ROLES_1A",
+  "NODE0_CHAT_WISDOM_LEDGER_PREVIEW_1A",
   "NODE0_REALM_STATE_KERNEL_1A",
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
@@ -1822,6 +1823,36 @@ function defaultCapabilityRows() {
         "The Dema-native answer to 'compact the memory': compact VERIFIED RECEIPT STATE, not raw prose. A pure kernel takes a local URP shelf (#347), RE-VERIFIES it (launder chain compaction→shelf→receipt hashes; a forged shelf or compacted count is rejected because verify re-derives every count from the embedded shelf), and compacts it into a hash-bound mission state that RETAINS only verified signals (mission ids, file/pulse hashes, review status, counts, boundary) and EXPLICITLY declares what was DROPPED (raw file content, unverified semantic claims, model-generated meaning, natural-language summaries), what can no longer be claimed, and exactly ONE next safe action derived from state (live_leak>0 → quarantine, not act; empty → run a mission; else → the compacted preview memory is ready, no live commit). The Ihsān micro-compliance gate — keep / drop / no-longer-claim / next-action — is answered in full and verify rejects a compaction that dropped its own dropped-list. The `dema mission compact` CLI reads $DEMA_HOME/mission/receipts read-only (reusing the shelf reader). 18 kernel tests + 3 CLI/adapter tests + review gate green; boundary all-false, authority_delta 0, committed_live false.",
       what_this_does_not_prove:
         "It runs no RL, invokes no model, reads no file in the kernel (the CLI adapter does, read-only), and commits nothing live. It compacts PROOF, not meaning — it can never recover the dropped raw content or semantics (by design). Its launder-resistance is content-addressing only: it re-verifies the shelf's internal consistency but cannot re-derive the original genesis signature chain from hash summaries. It publishes nothing to any shared/federated URP; live URP remains DESIGNED_NOT_LIVE; it does not prove operator execution, daemon runtime, network use, wallet access, mint, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_CHAT_WISDOM_LEDGER_PREVIEW_1A",
+      truth_label: "NODE0_CHAT_WISDOM_LEDGER_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only kernels that derive content-addressed chat cards and byte-offset-anchored wisdom atoms from an operator-local chat export supplied by injected rows; atoms are tagged DERIVED or UNKNOWN, never promoted to built.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/chat-cards.js",
+          "packages/core/src/wisdom-ledger.js",
+        ],
+        test_paths: [
+          "tests/chat-cards.test.js",
+          "tests/wisdom-ledger.test.js",
+        ],
+        review_gate_paths: ["scripts/review/kernel-purity-check.mjs"],
+        receipt_paths: [],
+        documentation_paths: ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Kernels deterministically build and verify cards and atoms from injected rows; tampered hashes, secrets and forged anchors are rejected by tests.",
+      what_this_does_not_prove:
+        "That any named slice is built, that any extracted rule is correct, or Node0 closure. The kernels read no files; the gather scripts do, read-only.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
