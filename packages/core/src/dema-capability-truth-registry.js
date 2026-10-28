@@ -88,6 +88,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
   "NODE0_AGENT_FLEET_ROLES_1A",
   "NODE0_CHAT_WISDOM_LEDGER_PREVIEW_1A",
+  "NODE0_CAMPAIGN_LEDGER_PREVIEW_1A",
   "NODE0_REALM_STATE_KERNEL_1A",
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
@@ -1853,6 +1854,30 @@ function defaultCapabilityRows() {
         "Kernels deterministically build and verify cards and atoms from injected rows; tampered hashes, secrets and forged anchors are rejected by tests.",
       what_this_does_not_prove:
         "That any named slice is built, that any extracted rule is correct, or Node0 closure. The kernels read no files; the gather scripts do, read-only.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_CAMPAIGN_LEDGER_PREVIEW_1A",
+      truth_label: "NODE0_CAMPAIGN_LEDGER_PREVIEW_ONLY",
+      summary:
+        "Pure preview-only hash-chained campaign ledger kernel that pins a campaign contract by hash, hash-chains events, and DERIVES counters and status from the event stream so a reset counter, widened lease, rewritten or truncated history, or resurrected terminal status is rejected by verify; zero I/O, no clock, no model, no network.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/campaign-ledger.js"],
+        test_paths: ["tests/campaign-ledger.test.js"],
+        review_gate_paths: ["scripts/review/kernel-purity-check.mjs"],
+        receipt_paths: [],
+        documentation_paths: ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The kernel deterministically builds and verifies a hash-chained campaign ledger from injected events: the contract is pinned by contract_sha256, each event is sha256-sealed and prev_hash-linked, and counters/status are RE-DERIVED from the events on verify. Tampering is caught by re-derivation — a rewritten event (event_hash_mismatch), a widened authority lease (contract_hash_mismatch), a truncated chain (head_hash_mismatch), a reset stored counter (state_mismatch), a model/service call over budget (budget_exceeded), a non-zero authority_delta, and a terminal status resurrected to RUNNING without an amendment (terminal_resurrected) are each rejected. append is pure: the input ledger is never mutated. 7 kernel tests + kernel-purity gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It runs no model, invokes no runtime, reads no file, and performs no network or clock access. It provides NO external seal: a writer who consistently rewrites the WHOLE chain is not detected — that requires an external signature/anchor this kernel does not provide. It does not prove operator execution, daemon runtime, wallet access, mint, or live federation.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
