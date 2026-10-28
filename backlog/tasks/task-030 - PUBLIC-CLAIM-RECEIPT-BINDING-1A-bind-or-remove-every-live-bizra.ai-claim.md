@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@BizraInfo'
 created_date: '2026-07-22 07:56'
-updated_date: '2026-08-09 06:04'
+updated_date: '2026-10-26 06:47'
 labels:
   - gtm
   - no-overclaim
@@ -55,4 +55,6 @@ RECEIPT CORRECTED (three stale measurements that no longer reproduce): 8/8 -> 17
 KNOWN FRAGILITY (pre-existing, not this slice): scripts/review/performance-budget-gate.mjs measures cli_boot_latency_ms 113ms against a 150ms budget in both arms; under load it reached 166ms and failed npm run check at gate 121. Standalone it passes in control and treatment.
 
 SCOPE NOTE: corpus gate scope is README + top-level docs/*.md + docs/gtm/*.md, so its green does NOT cover docs/receipts/ or docs/audits/.
+
+2026-10-26 autopilot rebind: TASK-030 remains In Progress and AC #1 remains unchecked. The latest evidence in this task record is from 2026-08-04/09 and describes five public claims without governed receipt hashes/links; it is historical. This pass did not collect a current live public-surface observation or new receipt evidence, and performed no signer, publication, website-edit, or deployment action. Keep AC #1 open until current public claims are independently observed and a separately authorized closure path (governed receipt/publication or site removal/deploy) is completed.
 <!-- SECTION:NOTES:END -->

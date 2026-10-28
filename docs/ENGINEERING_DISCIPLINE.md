@@ -20,7 +20,7 @@ Five rules for any code change in this repo. Originally condensed from user-scop
 
 Ratified 2026-06-01 after five PRs (#119–#123) merged to `main` with **zero CodeRabbit review signal** — self-review carried every merge ad hoc. This formalizes that practice.
 
-- **The required review is the CI gates, not CodeRabbit.** The four workflows (`test`, `check`, `BIZRA Review Gate`/`proof-quality`, `gitleaks`) plus the review scripts (`pr-class`, `proof-scope`, `no-overclaim`, `receipt-integrity`) always run and always gate. See [docs/CI_CD_PIPELINE.md](CI_CD_PIPELINE.md).
+- **The required review is the repo-owned validation evidence, not CodeRabbit.** The current workflow source defines five separate validation workflows: `check`, `Dema UI`, `BIZRA Review Gate`/`proof-quality`, `CodeQL`, and `gitleaks`. The `node0-ci-rail-aggregation` workflow attests only `check`, `CodeQL`, and `gitleaks`; it does not cover Review Gate or Dema UI. GitHub branch-protection requirements and run conclusions must be checked for the exact PR head; workflow presence alone does not prove that every check is required or passed. See [docs/CI_CD_PIPELINE.md](CI_CD_PIPELINE.md).
 - **CodeRabbit is a third-party _advisory_ layer, not a required gate.** It is frequently silent (credits exhausted, "review skipped", rate-limit). Its silence does **not** block merge — and it does **not** satisfy the review obligation either.
 - **A documented self-review is REQUIRED before merge when _either_:**
   1. the advisory layer produced no signal, **or**

@@ -72,6 +72,9 @@ CR/LF-containing keys are not sent. Valid keys travel only in the selected
 request's Authorization header. Exact-key echoes in provider response text,
 HTTP status text, and parse/network exceptions are suppressed before diagnostic
 truncation and receipt projection. No credential is persisted in configuration.
+The invocation timeout remains active through the complete response-body read;
+an abort while reading the body is reported as a timeout and the invocation
+remains failed.
 
 ### Medium trust — local memory query wrapper
 

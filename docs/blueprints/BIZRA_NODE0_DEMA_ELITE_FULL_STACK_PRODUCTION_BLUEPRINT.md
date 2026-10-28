@@ -149,7 +149,7 @@ Release-blocking criteria: any A+ breach, claim violation, missing LCC-6 marker 
 - No-side-effect module checks (dry-run mocks must not import fs, http, https, net, child_process, or perform writes).
 - Known B-bucket classifier policy: only pre-classified environmental noise allowed; unknown failures fail the gate.
 - Benchmark boundaries: perf-bench.mjs for operator-visible paths; no unbounded background workloads.
-- Release-readiness rollup: delivery:check must report OVERALL A+: PASS (after any required transient rerun).
+- Release-readiness rollup: delivery:check must report OVERALL LOCAL DELIVERY CHECK: PASS (after any required transient rerun). This is local composite evidence only; full tests, coverage, exact-head remote CI, and production behavior remain separate gates.
 
 All metrics require name, command, context, p50/p95 where applicable, threshold, artifact, and interpretation.
 
@@ -227,7 +227,7 @@ No stage is skipped. Each requires its own LCC-6 closure and remote four-rail pr
 - [ ] Security (threat model, secret hygiene, no unsafe writes/network/child_process without boundary)
 - [ ] Testing (unit + doc-conformance + mock behavior + integration + CI exact-head)
 - [ ] Coverage (above A+ thresholds under classifier)
-- [ ] delivery-check (OVERALL A+: PASS on clean tree)
+- [ ] delivery-check (OVERALL LOCAL DELIVERY CHECK: PASS on clean tree; full tests, coverage, and exact-head CI separately verified)
 - [ ] CI/CD (four rails green on exact HEAD + landing guard + receipts)
 - [ ] Observability (receipts, trace IDs, delivery-check reports, pre-push logs)
 - [ ] Persistence (boundary + mock + dry-run writer expectations; no live writer yet)

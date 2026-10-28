@@ -259,7 +259,7 @@ dema orchestrator verify <env-path>               # SAT-1..5 over the envelope
 | No daemon               | grep `setInterval` / `setTimeout` (except one-shot abort timer) in adapter + bridge returns expected lines only |
 | No federation           | every fixture has `boundary.federation_invoked === false`                                                       |
 | No token claim          | grep `token_economy` / `mint` / `chain_advance` in adapter source — all assignments `false`                     |
-| Timeout-handled         | mock `fetch` that never resolves → `error_reason` startsWith `timeout_after_`                                   |
+| Timeout-handled         | mock `fetch` or response-body read that never resolves → `error_reason` startsWith `timeout_after_`             |
 | Injection-bounded       | inbound scan blocks · outbound scan redacts                                                                     |
 | Layer 1 self-validation | `eval:layer1 --artifact <invocation-result.valid.json>` exits 0; `<missing-verdict-role.invalid.json>` exits 1  |
 

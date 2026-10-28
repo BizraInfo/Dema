@@ -92,16 +92,18 @@ A typical green run reports **104 PASS / 0 FAIL · ~18s**. The pre-push hook gat
 
 ### Layer C · Remote CI (GitHub Actions)
 
-Four workflows fire on every push to `main` and every pull request. All are SHA-pinned to Node-24-native action versions (per PR #108, 2026-05-24):
+The observed checkout defines five validation workflows plus one evidence-aggregation workflow. Their triggers differ; not all run on every event. Actions are pinned in the workflow source, while each job's application runtime is shown below. Current GitHub conclusions and branch-protection requirements must be checked at the exact PR head and are not inferred from this document:
 
-| Workflow              | File                                          | Purpose                                                              | Typical duration |
-| --------------------- | --------------------------------------------- | -------------------------------------------------------------------- | ---------------- |
-| **gitleaks**          | `.github/workflows/gitleaks.yml` (48 LOC)     | secret scan via `gitleaks v8.30.1` with `commits + paths` allowlist  | ~10s             |
-| **CodeQL**            | `.github/workflows/codeql.yml` (42 LOC)       | static-analysis security scan                                        | ~1m37s           |
-| **check**             | `.github/workflows/check.yml` (30 LOC)        | runs `npm run check` (aggregator)                                    | ~2m23s           |
-| **BIZRA Review Gate** | `.github/workflows/bizra-review.yml` (78 LOC) | repo-specific review gates (env-hygiene, canon, boundary invariants) | ~2m15s           |
+| Workflow              | File                                               | Trigger / scope                                               | Purpose |
+| --------------------- | -------------------------------------------------- | ------------------------------------------------------------- | ------- |
+| **check**             | `.github/workflows/check.yml`                      | PR, push to `main`, manual; Node 20.x + 22.x matrix           | Root tests; Node 22.x runs canonical check, perf, delivery check, and CI attestation. |
+| **Dema UI**           | `.github/workflows/dema-ui.yml`                    | PR, push to `main`, manual; Node 22.x                         | Isolated UI tests, typecheck, lint, build, and dependency audit. |
+| **BIZRA Review Gate** | `.github/workflows/bizra-review.yml`               | PR, push to `main`, manual; Node 22.x                         | Repo-specific proof-quality and review gates. |
+| **CodeQL**            | `.github/workflows/codeql.yml`                     | PR to `main`, push to `main`, weekly schedule                 | JavaScript security analysis. |
+| **gitleaks**          | `.github/workflows/gitleaks.yml`                   | PR, push to `main`, manual                                    | Full-history secret scan. |
+| **CI rail aggregation** | `.github/workflows/node0-ci-rail-aggregation.yml` | Eligible main `check` completion or manual dispatch           | Attests `check`, CodeQL, and gitleaks only; excludes Review Gate and Dema UI. |
 
-All four must report `success` before the slice is considered shipped. A `success` on three of four with one `failure` is **not** shipped — diagnose the failing gate before continuing.
+This source inventory does not prove that GitHub branch protection requires any particular set of checks. A release decision must inspect the exact PR-head conclusions and required-check configuration. The aggregation artifact is not a substitute for the two validation workflows it does not include.
 
 **Note on Copilot review:** GitHub Copilot reviews PRs on a separate cadence. Treat real findings as valuable signal (cf. the canon-violation + silent-exit + process.exit bugs caught on PR #109). Distinguish from stale-view false positives by reading the cited code at the cited line.
 

@@ -2,25 +2,26 @@
 
 > **Purpose:** Detailed reference for every GitHub Actions workflow in this repository — what triggers each one, what it executes, what it gates, what it pins, and how the operator updates it safely. The companion to [`docs/RELEASE_PROCESS.md`](RELEASE_PROCESS.md), which covers the broader release lifecycle; this document goes deep on the workflow internals themselves.
 >
-> **Scope:** `.github/workflows/*.yml` in this repo. The Dema repository runs **5 workflows totaling 293 LOC**. There is no separate CD surface — there is no auto-deploy and no auto-publish; "deployment" in this repo means a merged commit on `main` plus optionally a git tag. The fifth workflow aggregates CI rail evidence; it is proof telemetry, not deployment.
+> **Scope:** `.github/workflows/*.yml` in this repo. The observed checkout contains **5 validation workflows and 1 evidence-aggregation workflow**. This inventory describes workflow source only; GitHub branch-protection requirements and current remote run results must be rebound at the exact PR head. No auto-deploy or auto-publish workflow is present in this inventory.
 >
-> **Last refreshed:** 2026-07-03 GST against current checkout `e8dae96`.
+> **Last source inventory:** 2026-10-11 against checkout `e56f7175120dda2fc276f82a07519852deb325bb`. Remote run status and required-check configuration were not inspected.
 
 ---
 
 ## 1. Workflow inventory
 
-| Workflow                    | File                                             | LOC | Triggers                                                           | Jobs                             | Typical green duration  |
-| --------------------------- | ------------------------------------------------ | --: | ------------------------------------------------------------------ | -------------------------------- | ----------------------- |
-| `check`                     | `.github/workflows/check.yml`                    |  49 | `pull_request` · `push: main` · `workflow_dispatch`                | `test` (Node 20.x + 22.x matrix) | ~2m23s + evidence export |
-| `BIZRA Review Gate`         | `.github/workflows/bizra-review.yml`             |  83 | `pull_request` · `push: main` · `workflow_dispatch`                | `proof-quality` (Node 22.x)      | ~2m15s                  |
-| `CodeQL`                    | `.github/workflows/codeql.yml`                   |  42 | `push: main` · `pull_request: main` · `schedule: cron '0 6 * * 1'` | `analyze` (JavaScript)           | ~1m37s                  |
-| `gitleaks`                  | `.github/workflows/gitleaks.yml`                 |  48 | `pull_request` · `push: main` · `workflow_dispatch`                | `scan` (full history)            | ~10s                    |
-| `node0-ci-rail-aggregation` | `.github/workflows/node0-ci-rail-aggregation.yml` |  71 | `workflow_run: check completed` · `workflow_dispatch`              | `aggregate` (Node 22.x)          | workflow-dependent      |
+| Workflow                    | File                                              | Triggers                                                                 | Scope / evidence produced |
+| --------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------- |
+| `check`                     | `.github/workflows/check.yml`                     | `pull_request` · `push: main` · `workflow_dispatch`                      | Root tests on Node 20.x and 22.x; Node 22.x also runs check, perf, delivery check, and CI attestation. |
+| `Dema UI`                   | `.github/workflows/dema-ui.yml`                   | `pull_request` · `push: main` · `workflow_dispatch`                      | Isolated `packages/dema-ui` tests, typecheck, lint, build, and dependency audit on Node 22.x. |
+| `BIZRA Review Gate`         | `.github/workflows/bizra-review.yml`              | `pull_request` · `push: main` · `workflow_dispatch`                      | Node 22.x quality and repo-specific review scripts. |
+| `CodeQL`                    | `.github/workflows/codeql.yml`                    | `push: main` · `pull_request: main` · weekly schedule                    | JavaScript security analysis. |
+| `gitleaks`                  | `.github/workflows/gitleaks.yml`                   | `pull_request` · `push: main` · `workflow_dispatch`                      | Full-history secret scan. |
+| `node0-ci-rail-aggregation` | `.github/workflows/node0-ci-rail-aggregation.yml` | main same-repository `check` completion · `workflow_dispatch`            | Same-commit attestation for `check`, `CodeQL`, and `gitleaks`. |
 
-The four primary rails (`check`, `BIZRA Review Gate`, `CodeQL`, `gitleaks`) must report `success` before a slice on `main` is considered shipped. A `success` on three of four with one `failure` is **not** shipped — diagnose the failing gate before continuing.
+The five validation workflows are separate signals. Whether GitHub branch protection requires all or a subset is external configuration and is **UNKNOWN** from this checkout. For a release decision, inspect the exact PR head and its required-check configuration; do not infer either from these workflow files.
 
-`node0-ci-rail-aggregation` is a fifth evidence workflow. It does not replace any primary rail and does not make a failing or missing primary rail green. It packages peer rail conclusions for proof-of-truth audit consumption; if it is absent or red, release receipts must treat aggregated CI evidence as unavailable until repaired.
+`node0-ci-rail-aggregation` is evidence telemetry, not a sixth validation gate. It attests only `check`, `CodeQL`, and `gitleaks`; it does **not** include `BIZRA Review Gate` or `Dema UI`. It cannot make a failing or missing validation workflow green.
 
 > **CodeRabbit is advisory, not a gate.** The CodeRabbit check that appears on PRs is a third-party app, not one of these repository-owned workflows. It is frequently silent (credits / "review skipped" / rate-limit); its absence does not block merge and does not satisfy the review obligation. When the advisory layer gives no signal — or the diff is novel logic — a documented self-review is **required** before merge per the Review gate in [docs/ENGINEERING_DISCIPLINE.md](ENGINEERING_DISCIPLINE.md).
 
@@ -60,7 +61,7 @@ The four primary rails (`check`, `BIZRA Review Gate`, `CodeQL`, `gitleaks`) must
 
 **File:** `.github/workflows/node0-ci-rail-aggregation.yml`
 
-**What it does:** After `check` completes, it resolves peer workflow conclusions for the same head SHA, exports an aggregated CI evidence attestation, smoke-loads that attestation through the proof-of-truth audit, and uploads the JSON artifact.
+**What it does:** After an eligible main-branch `check` completes, it resolves `check`, `CodeQL`, and `gitleaks` conclusions for the same head SHA, exports an aggregated CI evidence attestation, smoke-loads that attestation through the proof-of-truth audit, and uploads the JSON artifact.
 
 **Job: `aggregate`** · Node 22.x
 
@@ -76,9 +77,9 @@ The four primary rails (`check`, `BIZRA Review Gate`, `CodeQL`, `gitleaks`) must
 
 **Permissions:** `contents: read` · `actions: read`. It reads workflow metadata and uploads an artifact through the workflow runtime; it does not write to the repository, deploy, publish, mint, or change the primary rail verdicts.
 
-**Failure interpretation:** an aggregation failure is a proof-evidence failure first, not automatic evidence that application code is wrong. Use the primary rail outputs (`check`, `CodeQL`, `gitleaks`, and `BIZRA Review Gate`) to classify the underlying cause, then rerun or repair aggregation only after peer rail state is known.
+**Failure interpretation:** an aggregation failure is a proof-evidence failure first, not automatic evidence that application code is wrong. Inspect the applicable validation workflows (`check`, `Dema UI`, `BIZRA Review Gate`, `CodeQL`, and `gitleaks`) at the same source identity, then classify the underlying cause. Do not let the three-rail aggregate stand in for Review Gate or Dema UI.
 
-**Review-gate evidence boundary (CI-ATTEST-NO-SYNTHETIC-REVIEW-1A):** the three-rail attestation (`ci_matrix`, `codeql`, `gitleaks`) carries **no evidence** about BIZRA Review Gate execution and has **zero authority** over the `bizra_review_gate` field. Merging an attestation preserves the prior review-gate state byte-for-byte — `PASS`, `FAIL`, `UNKNOWN`, or absent — for every combination of rail states. Three green rails never imply a passed review gate; a failed or unknown review gate plus three green rails cannot produce `READY_LOCAL` on its own. Review-gate evidence comes only from the review gate itself (or from a local `check: true` run that executed it).
+**Evidence boundary (CI-ATTEST-NO-SYNTHETIC-REVIEW-1A):** the three-rail attestation (`ci_matrix`, `codeql`, `gitleaks`) carries **no evidence** about BIZRA Review Gate or Dema UI execution and has **zero authority** over either result. Three green rails never imply that the two omitted workflows passed; a failed or unknown review/UI state remains unresolved in any release decision.
 
 ---
 
@@ -88,7 +89,7 @@ The four primary rails (`check`, `BIZRA Review Gate`, `CodeQL`, `gitleaks`) must
 
 **What it does:** Re-runs the full quality stack (`test + coverage + check`) on Node 22.x, then routes the change to a branch-specific review class and runs 4 review scripts against it.
 
-**Job: `proof-quality`** · timeout 15 min · Node 22.x
+**Job: `proof-quality`** · timeout 30 min · Node 22.x
 
 **Pre-review quality gates** (must all pass before the review scripts fire):
 
@@ -176,7 +177,17 @@ The four primary rails (`check`, `BIZRA Review Gate`, `CodeQL`, `gitleaks`) must
 
 ---
 
-## 7. SHA pinning policy
+## 7. `Dema UI` — isolated product-surface validation
+
+**File:** `.github/workflows/dema-ui.yml`
+
+**What it does:** Installs the locked dependencies under `packages/dema-ui`, then runs the package tests, typecheck, lint, production build, and dependency audit on Node 22.x. The root `check` workflow does not run these package-specific commands, so root green alone is not UI qualification.
+
+**Evidence boundary:** the workflow definition is present in this checkout. Its current remote conclusion, branch-protection requirement, accessibility coverage, and production user experience are not established by the YAML alone.
+
+---
+
+## 8. SHA pinning policy
 
 Every `uses:` reference in every workflow is **SHA-pinned**, not tag-pinned. Tags are mutable; SHAs are not. SHA pinning is the supply-chain hardening baseline for this repo.
 
@@ -201,7 +212,7 @@ Every `uses:` reference in every workflow is **SHA-pinned**, not tag-pinned. Tag
 
 ---
 
-## 8. Node version policy
+## 9. Node version policy
 
 | Surface                             | Version                   | Source                               |
 | ----------------------------------- | ------------------------- | ------------------------------------ |
@@ -223,7 +234,7 @@ Every `uses:` reference in every workflow is **SHA-pinned**, not tag-pinned. Tag
 
 ---
 
-## 9. Workflow-changes-authorized gate
+## 10. Workflow-changes-authorized gate
 
 Per CLAUDE.md user-scope operator discipline, **modifying CI workflows requires explicit operator authorization** — this is a halt-gate identical to `git push` to a shared branch.
 
@@ -240,7 +251,7 @@ Specifically:
 
 ---
 
-## 10. Operator runbook — CI debugging
+## 11. Operator runbook — CI debugging
 
 **When a workflow fails:**
 
