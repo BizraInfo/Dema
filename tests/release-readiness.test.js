@@ -775,13 +775,66 @@ test("evaluateReleaseReadiness FAILS when a launch_blocker risk is present", () 
 
 test("evaluateReleaseReadiness PASSES a clean report with no blocker and score >= threshold", () => {
   const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
     readiness_score: 97,
     risks: [{ code: "x.minor", severity: "improvement" }],
-    ci: { workflow: { worktree_changes_authorized: true } },
+    ci: {
+      workflow: {
+        worktree_status_available: true,
+        worktree_changes_authorized: true,
+      },
+    },
   };
   const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
   assert.equal(verdict.hasLaunchBlocker, false);
   assert.equal(verdict.ok, true);
+});
+
+test("evaluateReleaseReadiness FAILS closed on a missing or unexpected report schema", () => {
+  const report = {
+    schema: "bizra.dema.other_report.v0.1",
+    readiness_score: 100,
+    risks: [],
+    ci: { workflow: { worktree_status_available: true } },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /schema/);
+});
+
+test("evaluateReleaseReadiness FAILS closed when workflow status was not inspected", () => {
+  const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
+    readiness_score: 100,
+    risks: [],
+    ci: { workflow: { worktree_status_available: false, worktree_changes: [] } },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /worktree.*unavailable/);
+});
+
+test("evaluateReleaseReadiness FAILS closed when workflow status evidence is missing", () => {
+  const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
+    readiness_score: 100,
+    risks: [],
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /worktree.*unavailable/);
+});
+
+test("evaluateReleaseReadiness FAILS closed on malformed risk entries", () => {
+  const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
+    readiness_score: 100,
+    risks: [null],
+    ci: { workflow: { worktree_status_available: true } },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /malformed_report_risks_entry/);
 });
 
 test("evaluateReleaseReadiness FAILS closed on a malformed report (no risks array)", () => {

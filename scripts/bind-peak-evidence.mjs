@@ -6,8 +6,8 @@
 // gate passed or a commit is clean. The semantic gatherer must therefore exclude
 // this entire set and leave the peak self-loop in HOLD.
 //
-// A future positive demonstration must point at event-class-specific proof
-// artefacts (for gate_passed today: JSON { gate:<id>, exit:0 }), not source code.
+// A future positive demonstration needs an independent execution-provenance
+// verifier; matching caller-authored JSON { gate:<id>, exit:0 } is insufficient.
 
 import { readFileSync } from "node:fs";
 import { gatherEvidenceSignals, verifyEvidenceSignals } from "../packages/core/src/peak-evidence-gatherer.js";

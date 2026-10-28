@@ -116,3 +116,9 @@ copilot-debug-logs-*.tgz
 fraiday log
 grok log cli
 BIZRA_Node0_FounderZero_DigitalTwin_v0.1/
+
+# Agent bookkeeping scratch and a locally-authored skill with no skills-src
+# origin. .agents/skills/run-dema/ has a canonical skills-src/run-dema/SKILL.md
+# origin and stays tracked; dema-autopilot does not, so it is machine-local.
+.agents/tasks/
+.agents/skills/dema-autopilot/

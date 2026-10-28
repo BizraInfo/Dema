@@ -27,6 +27,7 @@ import { sha256 } from "../packages/consent/src/consent-common.js";
 
 const DEFAULT_REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const DEFAULT_NODE_ROOT = resolve(DEFAULT_REPO_ROOT, "../..");
+const GIT_STATUS_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
 const PROJECTION_TARGETS = Object.freeze([
   ["codex", "AGENTS.md"],
   ["claude", "CLAUDE.md"],
@@ -37,11 +38,12 @@ function pathInside(child, parent) {
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
-function git(repoRoot, args, { trim = true } = {}) {
+function git(repoRoot, args, { trim = true, maxBuffer } = {}) {
   try {
     const output = execFileSync("git", ["-C", repoRoot, ...args], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
+      ...(maxBuffer === undefined ? {} : { maxBuffer }),
     });
     return trim ? output.trim() : output;
   } catch (error) {
@@ -57,6 +59,7 @@ export function buildPhysicalState({ cwd, repoRoot } = {}) {
   }
   const status = git(resolvedRepoRoot, ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
     trim: false,
+    maxBuffer: GIT_STATUS_MAX_BUFFER_BYTES,
   });
   // rev-parse works in detached HEAD (CI checkouts); symbolic-ref does not.
   const branchRef = git(resolvedRepoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);

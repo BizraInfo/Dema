@@ -87,6 +87,25 @@ test("bounded diagnostic blocks hidden daemon and previous runtime pulse", () =>
   assert.match(pulse.reason, /Runtime pulse/);
 });
 
+test("bounded diagnostic fails closed when execution state is unknown", () => {
+  const status = {
+    ready: true,
+    consoleReady: true,
+    activationGate: "EXPLICIT_GO_REQUIRED",
+    daemonStatus: "stopped",
+  };
+
+  for (const unknownStatus of [
+    status,
+    { ...status, missionExecuted: false },
+    { ...status, missionExecuted: false, runtimePulse: { fired: null } },
+  ]) {
+    const proposal = proposeBoundedDiagnostic(unknownStatus);
+    assert.equal(proposal.allowed, false);
+    assert.match(proposal.reason, /state is unknown/i);
+  }
+});
+
 test("mission preview does not execute runtime and requires exact consent", () => {
   const status = {
     ready: true,
@@ -106,6 +125,25 @@ test("mission preview does not execute runtime and requires exact consent", () =
   );
   assert.equal(accepted.executes, false);
   assert.equal(accepted.consent.accepted, true);
+});
+
+test("blocked mission preview does not ask for consent that was already accepted", () => {
+  const result = previewBoundedDiagnostic(
+    {
+      ready: false,
+      consoleReady: true,
+      activationGate: "EXPLICIT_GO_REQUIRED",
+      daemonStatus: "stopped",
+      missionExecuted: false,
+      runtimePulse: { fired: false },
+    },
+    BOUNDED_DIAGNOSTIC_CONSENT_PHRASE,
+  );
+
+  assert.equal(result.executes, false);
+  assert.equal(result.consent.accepted, true);
+  assert.match(result.next, /Node is not ready/);
+  assert.doesNotMatch(result.next, /provide the exact consent phrase/i);
 });
 
 test("fate consent requires exact phrase", () => {

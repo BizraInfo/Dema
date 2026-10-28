@@ -7,7 +7,9 @@ import {
   recallNode0DiagnosticHypergraph,
   verifyNode0UltraMicroDiagnosticPacket,
   NODE0_ULTRA_MICRO_DIAGNOSTIC_COMPILER_TRUTH_LABEL,
+  OBSERVATION_ALPHABET,
 } from "../packages/core/src/node0-ultra-micro-diagnostic-compiler.js";
+import { sha256, stableStringify } from "../packages/consent/src/consent-common.js";
 import {
   buildNode0ProofOfTruthControlPlane,
   HERMETIC_CONTROL_PLANE_FIXTURE,
@@ -324,4 +326,69 @@ test("UMDC-16 verifier re-derives semantics and catches forged packet", () => {
     },
   };
   assert.equal(verifyNode0UltraMicroDiagnosticPacket(input, forged).ok, false);
+});
+
+test("UMDC-17 every advertised observation yields a finite bounded weight", () => {
+  for (const observation of OBSERVATION_ALPHABET) {
+    const decoded = decodeNode0DiagnosticHHMM([observation]);
+    assert.ok(Number.isFinite(decoded.normalized_map_weight), observation);
+    assert.ok(decoded.normalized_map_weight >= 0 && decoded.normalized_map_weight <= 1, observation);
+  }
+});
+
+test("UMDC-18 unmodeled observations abstain without hiding malformed input", () => {
+  const memo = new Map();
+  const clean = decodeNode0DiagnosticHHMM(["clean"], memo);
+  const size = memo.size;
+  for (const observation of ["stale_evidence", "infra_failure", "code_failure"]) {
+    for (const observations of [
+      [observation],
+      [{ observation, stage: "VERIFICATION" }],
+      ["clean", observation, "launder_risk"],
+      [observation, "clean"],
+    ]) {
+      const decoded = decodeNode0DiagnosticHHMM(observations, memo);
+      assert.equal(decoded.state, "UNKNOWN");
+      assert.equal(decoded.normalized_map_weight, 0);
+      assert.deepEqual(decoded.path, []);
+      assert.equal(decoded.memo_hits, 0);
+      assert.ok(Object.isFrozen(decoded));
+    }
+    assert.throws(() => decodeNode0DiagnosticHHMM([observation, "unsupported"]), RangeError);
+    assert.throws(() => decodeNode0DiagnosticHHMM([observation, null]), RangeError);
+  }
+  assert.equal(memo.size, size);
+  assert.equal(decodeNode0DiagnosticHHMM(["clean"], memo).state, clean.state);
+});
+
+test("UMDC-19 failure packets retain classification and reject rehashed false health", () => {
+  for (const [kind, observation] of [
+    ["STALE", "stale_evidence"], ["INFRA", "infra_failure"], ["CODE", "code_failure"],
+  ]) {
+    const input = { subject_id: "unmodeled-" + kind, episodes: [cleanEpisode({
+      outcome: "HALTED", effects_started: false, artifact_hashes: [], failure: { kind },
+    })] };
+    const packet = compileNode0UltraMicroDiagnostic(input);
+    assert.ok(packet.reasoning_hierarchy.level_1_findings.some((f) => f.observation === observation));
+    assert.equal(packet.latent_health.state, "UNKNOWN");
+    assert.equal(packet.latent_health.normalized_map_weight, 0);
+    assert.ok(packet.critique.unknowns.includes("latent_health_unknown"));
+    assert.equal(packet.compliance.authority_delta, 0);
+    assert.equal(packet.compliance.runtime_execution, false);
+    const roundtrip = JSON.parse(JSON.stringify(packet));
+    assert.deepEqual(verifyNode0UltraMicroDiagnosticPacket(input, roundtrip), { ok: true });
+    for (const alteration of [{ state: "HEALTHY" }, { normalized_map_weight: null }]) {
+      const { packet_hash, ...body } = roundtrip;
+      const forged = { ...body, latent_health: { ...body.latent_health, ...alteration } };
+      forged.packet_hash = "sha256:" + sha256(stableStringify(forged));
+      assert.equal(verifyNode0UltraMicroDiagnosticPacket(input, forged).ok, false);
+    }
+  }
+});
+
+test("UMDC-20 inherited stage names use neutral salience", () => {
+  const expected = decodeNode0DiagnosticHHMM([{ observation: "clean", stage: "UNKNOWN" }]);
+  for (const stage of ["__proto__", "constructor", "toString", "valueOf", "hasOwnProperty"]) {
+    assert.deepEqual(decodeNode0DiagnosticHHMM([{ observation: "clean", stage }]), expected);
+  }
 });

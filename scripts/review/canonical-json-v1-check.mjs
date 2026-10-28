@@ -410,6 +410,7 @@ function scanForForbiddenImporters() {
       // Build output is not a production source surface; scanning generated
       // Next chunks would report transitive imports as unreviewed consumers.
       if (rel.includes("/.next/")) continue;
+      if (rel.split("/").includes("tests")) continue;
       if (rel.startsWith("packages/canon/")) continue;
       if (allowed.has(rel)) continue;
       const src = readFileSync(abs, "utf8");

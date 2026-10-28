@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 /**
- * DELIVERY-CHECK-1A · Elite Full-Stack Gate Stack with A+ Performance-Quality Assurance.
+ * DELIVERY-CHECK-1A · Local delivery composite with A+ regression thresholds.
  *
- * Embodies the DELIVERY_BLUEPRINT Level 5 (Optimizing): performance budgets, rollback rehearsals (via gates), post-release learning (via report), world-class standards.
- * Integrates PMBOK (via release:readiness), DevOps (pre-push seal as forcing function, CI automation), pipeline (CI/CD gates), rigorous perf-QA (A+ ceilings enforced).
+ * Reports selected local checks and performance ceilings. It does not establish
+ * a CI/CD maturity level, production SLO, deployment rollback, or post-release loop.
+ * Integrates release-readiness reporting, CI wiring, and the repository's
+ * performance regression thresholds. The pre-push seal remains an explicit
+ * operator command because its secret scanner may fetch a pinned binary.
  *
- * This is the automation script for the elite blueprint. Runs locally only. No runtime, no secrets, no deploy.
- * Fails closed on any A+ breach.
+ * This is delivery automation for the Dema blueprint. No runtime, secrets, or deploy.
+ * The A+ performance gate fails closed; coverage configuration is reported, while
+ * full tests and coverage are run by their separate gates.
  *
  * Aligned with living-tree: this check is a "trunk strength" ring ensuring sustainable A+ growth.
  * Root canon preserved: no changes to immutable DNA.
@@ -33,7 +37,6 @@ const A_PLUS_THRESHOLDS = {
   coverage_lines: 95,
   coverage_branches: 84,
   coverage_functions: 95,
-  mu_pass_rate: 100, // 104/104
   release_min_score: 80, // structural release-readiness floor (PROOF-GATE-TEETH-HARDENING-1A)
 };
 
@@ -58,22 +61,25 @@ function checkPerf() {
   const verify = verifyMatch ? parseFloat(verifyMatch[1]) : Infinity;
   const bootCeiling = ceilings.dema_boot_latency_ms;
   const verifyCeiling = ceilings.verification_latency_ms;
+  const bootOk = boot <= bootCeiling;
+  const verifyOk = verify <= verifyCeiling;
   const ok =
+    result.success &&
     hasOK &&
-    boot < bootCeiling &&
-    verify < verifyCeiling;
+    bootOk &&
+    verifyOk;
   console.log(
-    `  boot: ${boot.toFixed(2)}ms (target <${bootCeiling}) ${boot < bootCeiling ? 'OK' : 'BREACH'}`,
+    `  boot: ${boot.toFixed(2)}ms (target <=${bootCeiling}) ${bootOk ? 'OK' : 'BREACH'}`,
   );
   console.log(
-    `  verify: ${verify.toFixed(3)}ms (target <${verifyCeiling}) ${verify < verifyCeiling ? 'OK' : 'BREACH'}`,
+    `  verify: ${verify.toFixed(3)}ms (target <=${verifyCeiling}) ${verifyOk ? 'OK' : 'BREACH'}`,
   );
-  console.log(`  gate: ${hasOK ? 'PASS (A+)' : 'FAIL'}`);
+  console.log(`  gate: ${ok ? 'PASS (A+)' : 'FAIL'}`);
   return ok;
 }
 
 function checkCoverage() {
-  console.log('\n[COVERAGE Advisory Gate]');
+  console.log('\n[COVERAGE CONFIGURATION]');
   const pkg = JSON.parse(readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
   const covCmd = pkg.scripts?.coverage || '';
   const hasCoverageReport = covCmd.includes('--experimental-test-coverage');
@@ -84,15 +90,17 @@ function checkCoverage() {
   console.log(
     `  threshold mode: ${hasThresholds ? 'HARD_GATE' : 'ADVISORY'} (target ${A_PLUS_THRESHOLDS.coverage_lines}/${A_PLUS_THRESHOLDS.coverage_branches}/${A_PLUS_THRESHOLDS.coverage_functions})`,
   );
-  if (!hasThresholds) {
-    console.log('  gate: PASS (advisory report; hard threshold gate remains planned)');
-  }
+  console.log('  note: this subcheck verifies configuration; coverage results come from the full check.');
   return hasCoverageReport;
 }
 
 function checkReleaseReadiness() {
   console.log('\n[RELEASE-READINESS Gate]');
   const result = runCommand(NPM, ['run', 'release:readiness', '--', '--json'], { silent: true });
+  if (!result.success) {
+    console.log(`  verdict: FAIL (release-readiness command exited ${result.code ?? 'unknown'})`);
+    return false;
+  }
   const output = result.output || '';
   // Parse the report structurally instead of substring-matching the text.
   // The old check (output.includes('launch_blocker') / 'authorized') was
@@ -113,25 +121,12 @@ function checkReleaseReadiness() {
   return verdict.ok;
 }
 
-function isCiEnvironment(env = process.env) {
-  return env.CI === 'true' || env.GITHUB_ACTIONS === 'true';
-}
-
 function checkMuPrePush() {
-  console.log('\n[MU PRE-PUSH A+ Gate]');
-  // pre-push:seal (mu-test-all) is a local operator forcing function (104/104).
-  // CI already runs npm test + coverage + check; skip MU from the overall verdict.
-  if (isCiEnvironment()) {
-    console.log(
-      '  verdict: SKIPPED in CI (local operator seal via pre-push:seal; 104/104 target)',
-    );
-    return { ok: true, skipped: true };
-  }
-  const result = runCommand(NPM, ['run', 'pre-push:seal'], { silent: true });
-  const output = result.output || '';
-  const passed = /PUSH_READY|104\/104/i.test(output);
-  console.log(`  verdict: ${passed ? 'PUSH_READY' : 'GAP'} (A+ gate; 104/104 target)`);
-  return { ok: passed, skipped: false };
+  console.log('\n[PRE-PUSH SEAL]');
+  console.log(
+    '  verdict: NOT RUN (separate operator command; secret scanner may fetch its pinned binary)',
+  );
+  return { skipped: true };
 }
 
 function checkGates() {
@@ -147,8 +142,7 @@ function checkGates() {
     console.log(`  ${g.name}: ${ok ? 'PASS' : 'FAIL'}`);
     if (!ok) allOk = false;
   }
-  // Note: full 'npm test' and coverage are part of the blueprint but long-running; pre-push seal covers quality regression.
-  console.log('  (full test/coverage: prerequisite for release; run separately for A+ verification)');
+  console.log('  (full tests, coverage, and pre-push seal are separate operator gates)');
   return allOk;
 }
 
@@ -177,15 +171,14 @@ async function checkCovenantGate() {
 }
 
 async function main() {
-  console.log('DELIVERY-CHECK-1A · Elite Full-Stack A+ Gate Stack');
-  console.log('Blueprint: PMBOK + DevOps + CI/CD + Perf-QA Level 5 (A+)');
+  console.log('DELIVERY-CHECK-1A · local delivery checks');
+  console.log('Scope: configured local checks and regression thresholds; no production maturity claim');
   console.log('Aligned with Dema Delivery Spine, Living Tree, Root Canon, Ihsān.');
 
   const perfOk = checkPerf();
   const covOk = checkCoverage();
   const releaseOk = checkReleaseReadiness();
   const muResult = checkMuPrePush();
-  const muOk = muResult.ok;
   const gatesOk = checkGates();
   const covenantOk = await checkCovenantGate();
 
@@ -1114,22 +1107,19 @@ async function main() {
     );
   }
 
-  const overallOk = perfOk && covOk && releaseOk && muOk && gatesOk && covenantOk;
+  const overallOk = perfOk && covOk && releaseOk && gatesOk && covenantOk;
 
   console.log('\n=== SUMMARY ===');
   console.log(`PERF A+: ${perfOk ? 'PASS' : 'FAIL'}`);
-  console.log(`COVERAGE ADVISORY: ${covOk ? 'PASS' : 'FAIL'}`);
-  console.log(`RELEASE + PERF QA: ${releaseOk ? 'PASS' : 'FAIL'}`);
-  console.log(
-    `MU PRE-PUSH A+: ${muResult.skipped ? 'SKIPPED (CI — local seal only)' : muOk ? 'PASS' : 'FAIL'}`,
-  );
+  console.log(`COVERAGE CONFIG (configuration only): ${covOk ? 'PRESENT' : 'MISSING'}`);
+  console.log(`RELEASE READINESS: ${releaseOk ? 'PASS' : 'FAIL'}`);
+  console.log(`PRE-PUSH SEAL: ${muResult.skipped ? 'NOT RUN (separate operator gate)' : muOk ? 'PASS' : 'FAIL'}`);
   console.log(`LOCAL GATES: ${gatesOk ? 'PASS' : 'FAIL'}`);
   console.log(`COVENANT GATE QA: ${covenantOk ? 'PASS' : 'FAIL'}`);
-  console.log(`OVERALL A+: ${overallOk ? 'PASS — Blueprint delivered locally' : 'FAIL — resolve before push'}`);
+  console.log(`OVERALL LOCAL DELIVERY CHECK: ${overallOk ? 'PASS' : 'FAIL — inspect failed checks'}`);
 
   if (overallOk) {
-    console.log('\nNext per blueprint: gh auth with workflow scope (if pushing CI changes), then git push, then layer-a5:prep on real ~/.dema.');
-    console.log('This check completes the local A+ delivery loop. Remote CI will prove the full stack once pushed.');
+    console.log('\nSelected local checks passed; full tests, coverage, pre-push seal, remote CI, and production behavior remain separate evidence.');
   }
 
   process.exit(overallOk ? 0 : 1);

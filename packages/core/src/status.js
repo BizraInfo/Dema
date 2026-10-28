@@ -23,8 +23,8 @@ export function isReadyForBoundedDiagnostic(status) {
     status?.consoleReady &&
     status?.activationGate === "EXPLICIT_GO_REQUIRED" &&
     status?.daemonStatus !== "running" &&
-    status?.missionExecuted !== true &&
-    status?.runtimePulse?.fired !== true,
+    status?.missionExecuted === false &&
+    status?.runtimePulse?.fired === false,
   );
 }
 

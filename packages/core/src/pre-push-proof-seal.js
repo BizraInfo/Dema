@@ -125,9 +125,11 @@ export async function inspectGitPublishPosture({
   }
 
   let porcelain = "";
+  let working_tree_status = "UNMEASURED";
   try {
     const { stdout } = await runGit("git", ["status", "--porcelain"]);
     porcelain = stdout.trim();
+    working_tree_status = porcelain.length === 0 ? "CLEAN" : "DIRTY";
   } catch (err) {
     blockers.push({
       code: "git_status_failed",
@@ -175,9 +177,9 @@ export async function inspectGitPublishPosture({
     });
   }
 
-  const working_tree_clean = porcelain.length === 0;
+  const working_tree_clean = working_tree_status === "CLEAN";
 
-  if (!working_tree_clean) {
+  if (working_tree_status === "DIRTY") {
     blockers.push({
       code: "working_tree_dirty",
       message: "Working tree has uncommitted changes.",
@@ -186,6 +188,7 @@ export async function inspectGitPublishPosture({
 
   return deepFreeze({
     working_tree_clean,
+    working_tree_status,
     head,
     upstream,
     upstream_counts: upstreamCounts,

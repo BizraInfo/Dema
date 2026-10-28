@@ -1,4 +1,4 @@
-import { readdirSync, existsSync, rmSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, rmSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -489,6 +489,43 @@ test("T14 child extraEnv cannot reintroduce the private evidence fd selector", (
 function nestedTestEnv() {
   const { NODE_TEST_CONTEXT: _drop, ...env } = process.env;
   return env;
+}
+
+for (const [name, body, exit, belowFloor] of [
+  ["below branch floor", 'if (false) throw new Error("unreached");', 1, true],
+  ["fully covered", "", 0, false],
+  ["failed test", 'throw new Error("fixture failure");', 1, false],
+]) {
+  test(`COVERAGE-COUNTS: ${name} retains native counts and exit`, () => {
+    const dir = mkdtempSync(join(tmpdir(), "coverage-counts-"));
+    try {
+      const fixture = join(dir, "fixture.test.mjs");
+      writeFileSync(fixture, `import test from 'node:test'; test('fixture', () => { ${body} });\n`);
+      const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+      const command = pkg.scripts.coverage.replace("tests/*.test.js", '"$COVERAGE_FIXTURE"');
+      const result = spawnSync("bash", ["-c", command], {
+        encoding: "utf8",
+        env: { ...nestedTestEnv(), TMPDIR: dir, COVERAGE_FIXTURE: fixture },
+      });
+      assert.equal(result.status, exit, `${result.stdout}\n${result.stderr}`);
+      const files = readdirSync(dir);
+      const log = files.find((name) => /^bizra-coverage-output\.\d+\.log$/.test(name));
+      assert.ok(log, "the canonical TAP log must be retained");
+      const counts = log.replace("-output.", "-counts.").replace(/\.log$/, ".lcov");
+      assert.ok(files.includes(counts), "native counters must share the TAP run identifier");
+      const lcov = readFileSync(join(dir, counts), "utf8");
+      const sum = (key) => [...lcov.matchAll(new RegExp(`^${key}:(\\d+)$`, "gm"))]
+        .reduce((total, match) => total + Number(match[1]), 0);
+      assert.ok(sum("BRF") > 0, "native branch denominator must be present");
+      assert.equal(sum("BRH") / sum("BRF") < 0.84, belowFloor);
+      const tap = readFileSync(join(dir, log), "utf8");
+      assert.match(tap, /# tests 1/);
+      if (belowFloor) assert.match(tap, /branch coverage does not meet threshold of 84%/);
+      if (name === "failed test") assert.match(tap, /not ok 1 - fixture/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 }
 
 // ── G8 LOG PRESERVATION ─────────────────────────────────────────────────────

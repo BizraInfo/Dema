@@ -2,9 +2,9 @@
 // PERF-MEASURE-1A · runnable performance benchmark + regression-sanity gate.
 //
 // Produces a `bizra.dema.perf_measurement.v0.1` artifact on stdout (JSON) and
-// exits non-zero only if a hot path breaches a GENEROUS regression-sanity
-// ceiling. These ceilings are NOT SLOs — they catch gross regressions (orders
-// of magnitude), not micro-fluctuations, so the gate does not flake under CI
+// exits non-zero if a probe fails or a hot path breaches a GENEROUS
+// regression-sanity ceiling. These ceilings are NOT SLOs — they catch gross
+// regressions (orders of magnitude), not micro-fluctuations, so the gate does not flake under CI
 // load or JIT warmup. Tight SLOs would require a signed baseline (PERF-1A) and
 // a deterministic comparison rule (PERF-1B) — out of scope for this gate.
 //
@@ -16,7 +16,7 @@
 
 import { execFileSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { resolveAPlusCeilings } from "../packages/perf/src/perf-ceilings.js";
 import {
@@ -53,21 +53,16 @@ const SANITY_CEILINGS = Object.freeze({
   dema_boot_latency_ms: 5000,
 });
 
-function measureBootLatency({ runs = 5 } = {}) {
+export function measureBootLatency({ runs = 5, execute = execFileSync, clock = performance } = {}) {
   const samples = [];
   for (let i = 0; i < runs; i++) {
-    const t0 = performance.now();
-    try {
-      execFileSync("node", [CLI, "status", "--json"], {
-        stdio: "ignore",
-        env: buildBootProbeEnv(),
-        timeout: BOOT_PROBE_TIMEOUT_MS,
-      });
-    } catch {
-      // status may exit non-zero on a not-ready node; the spawn+run still
-      // measured the boot path, which is what we want.
-    }
-    samples.push(performance.now() - t0);
+    const t0 = clock.now();
+    execute("node", [CLI, "status", "--json"], {
+      stdio: "ignore",
+      env: buildBootProbeEnv(),
+      timeout: BOOT_PROBE_TIMEOUT_MS,
+    });
+    samples.push(clock.now() - t0);
   }
   samples.sort((a, b) => a - b);
   return samples[Math.floor(samples.length / 2)]; // p50
@@ -154,7 +149,9 @@ async function main() {
   if (!report.gate.ok) process.exitCode = 1;
 }
 
-main().catch((err) => {
-  console.error("perf-bench error:", err?.message ?? err);
-  process.exit(1);
-});
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  main().catch((err) => {
+    console.error("perf-bench error:", err?.message ?? err);
+    process.exit(1);
+  });
+}

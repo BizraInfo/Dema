@@ -1,5 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 import {
   PRE_PUSH_VERDICT,
@@ -33,9 +38,128 @@ test("inspectGitPublishPosture fails closed on dirty tree and behind upstream", 
   });
 
   assert.equal(git.working_tree_clean, false);
+  assert.equal(git.working_tree_status, "DIRTY");
   assert.equal(git.ok, false);
   assert.ok(git.blockers.some((b) => b.code === "working_tree_dirty"));
   assert.ok(git.blockers.some((b) => b.code === "behind_upstream"));
+});
+
+test("inspectGitPublishPosture preserves UNMEASURED when git status fails", async () => {
+  const git = await inspectGitPublishPosture({
+    fetch: false,
+    execGit: async (cmd, args) => {
+      if (cmd === "git" && args[0] === "status") {
+        throw new Error("status unavailable");
+      }
+      if (cmd === "git" && args[0] === "rev-parse") {
+        return { stdout: "abc123\n", stderr: "" };
+      }
+      if (cmd === "git" && args[0] === "rev-list") {
+        return { stdout: "0\t0\n", stderr: "" };
+      }
+      throw new Error(`unexpected git: ${cmd} ${args.join(" ")}`);
+    },
+  });
+
+  assert.equal(git.working_tree_status, "UNMEASURED");
+  assert.equal(git.working_tree_clean, false);
+  assert.equal(git.ok, false);
+  assert.ok(git.blockers.some((blocker) => blocker.code === "git_status_failed"));
+});
+
+test("inspectGitPublishPosture keeps a failed fetch blocking when cached refs compare cleanly", async () => {
+  const git = await inspectGitPublishPosture({
+    fetch: true,
+    execGit: async (cmd, args) => {
+      if (cmd === "git" && args[0] === "fetch") {
+        throw new Error("network unavailable");
+      }
+      if (cmd === "git" && args[0] === "status" && args[1] === "--porcelain") {
+        return { stdout: "", stderr: "" };
+      }
+      if (cmd === "git" && args[0] === "rev-parse") {
+        return { stdout: "abc123\n", stderr: "" };
+      }
+      if (cmd === "git" && args[0] === "rev-list") {
+        return { stdout: "0\t3\n", stderr: "" };
+      }
+      throw new Error(`unexpected git: ${cmd} ${args.join(" ")}`);
+    },
+  });
+
+  assert.equal(git.fetch_attempted, true);
+  assert.equal(git.working_tree_clean, true);
+  assert.equal(git.working_tree_status, "CLEAN");
+  assert.deepEqual(git.upstream_counts, { behind: 0, ahead: 3 });
+  assert.equal(git.ok, false);
+  assert.ok(git.blockers.some((blocker) => blocker.code === "git_fetch_failed"));
+});
+
+test("inspectGitPublishPosture keeps malformed and failed upstream comparisons blocking", async () => {
+  for (const scenario of [
+    { stdout: "not a rev-list count", code: "upstream_unresolved" },
+    { error: new Error("rev-list unavailable"), code: "upstream_compare_failed" },
+  ]) {
+    const git = await inspectGitPublishPosture({
+      fetch: false,
+      execGit: async (cmd, args) => {
+        if (cmd === "git" && args[0] === "status") {
+          return { stdout: "", stderr: "" };
+        }
+        if (cmd === "git" && args[0] === "rev-parse") {
+          return { stdout: "abc123\n", stderr: "" };
+        }
+        if (cmd === "git" && args[0] === "rev-list") {
+          if (scenario.error) throw scenario.error;
+          return { stdout: scenario.stdout, stderr: "" };
+        }
+        throw new Error(`unexpected git: ${cmd} ${args.join(" ")}`);
+      },
+    });
+
+    assert.equal(git.ok, false);
+    assert.equal(git.upstream_counts, null);
+    assert.ok(git.blockers.some((blocker) => blocker.code === scenario.code));
+  }
+});
+
+test("pre-push CLI prints UNMEASURED instead of clean when git status fails", () => {
+  const tempRoot = mkdtempSync(join(tmpdir(), "dema-pre-push-cli-test-"));
+  const fakeGitDir = join(tempRoot, "bin");
+  const fakeGit = join(fakeGitDir, "git");
+  const repoRoot = fileURLToPath(new URL("..", import.meta.url));
+  const scriptPath = join(repoRoot, "scripts", "pre-push-proof-seal.mjs");
+
+  try {
+    mkdirSync(fakeGitDir);
+    writeFileSync(
+      fakeGit,
+      `#!/bin/sh
+case "$1 $2 $3" in
+  "status --porcelain ") exit 1 ;;
+  "rev-parse HEAD") printf '%s\\n' 'abc123' ;;
+  "rev-list --left-right --count") printf '%s\\n' '0 0' ;;
+  *) printf 'unexpected fake git command: %s\\n' "$*" >&2; exit 2 ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    chmodSync(fakeGit, 0o700);
+
+    const result = spawnSync(process.execPath, [scriptPath, "--skip-gates"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env: { ...process.env, PATH: `${fakeGitDir}:${process.env.PATH}` },
+      timeout: 10_000,
+    });
+
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /git:\s+UNMEASURED/);
+    assert.doesNotMatch(result.stdout, /git:\s+clean/);
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test("buildPrePushProofSealReport emits PUSH_READY when git and gates pass", async () => {

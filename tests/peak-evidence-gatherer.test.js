@@ -25,17 +25,14 @@ const CANDIDATES = [
   { id: "kernel-purity", type: "gate_passed", source_ref: "receipts/gate-c.json" },
 ];
 
-test("PEG-01: an existing gate receipt yields a semantically verified event bound to its real content hash", () => {
+test("PEG-01: matching caller-authored gate JSON is not execution evidence", () => {
   const out = gatherEvidenceSignals({
     candidates: [CANDIDATES[0]],
     readSource: readerFor(WORLD),
   });
-  assert.equal(out.events.length, 1);
-  const e = out.events[0];
-  assert.equal(e.truth_label, "MEASURED");
-  assert.equal(e.source_sha256, sha(WORLD["receipts/gate-a.json"]));
-  assert.equal(e.semantic_verifier, "gate_receipt_exit_0_v1");
-  assert.equal(e.weight, 1);
+  assert.equal(out.events.length, 0);
+  assert.equal(out.excluded_count, 1);
+  assert.equal(out.excluded[0].gap, "gate_execution_provenance_unverified");
 });
 
 test("PEG-02: a missing source is excluded, never emitted — fail closed", () => {
@@ -48,22 +45,32 @@ test("PEG-02: a missing source is excluded, never emitted — fail closed", () =
   assert.equal(out.excluded[0].gap, "source_unreadable");
 });
 
-test("PEG-03: verify re-derives content and semantic gate proof on an untampered world", () => {
-  const { events } = gatherEvidenceSignals({
-    candidates: CANDIDATES,
+test("PEG-03: rehashing a matching gate declaration does not prove command execution", () => {
+  const content = WORLD["receipts/gate-a.json"];
+  const v = verifyEvidenceSignals({
+    events: [{
+      ...CANDIDATES[0],
+      weight: 1,
+      truth_label: "MEASURED",
+      source_sha256: sha(content),
+      semantic_verifier: "gate_receipt_exit_0_v1",
+    }],
     readSource: readerFor(WORLD),
   });
-  const v = verifyEvidenceSignals({ events, readSource: readerFor(WORLD) });
-  assert.equal(v.ok, true);
-  assert.equal(v.verified_count, 3);
-  assert.equal(v.mismatches.length, 0);
+  assert.equal(v.ok, false);
+  assert.equal(v.verified_count, 0);
+  assert.equal(v.mismatches[0].gap, "gate_execution_provenance_unverified");
 });
 
 test("PEG-04: verify catches content that changed after gathering", () => {
-  const { events } = gatherEvidenceSignals({
-    candidates: CANDIDATES,
-    readSource: readerFor(WORLD),
-  });
+  const content = WORLD["receipts/gate-b.json"];
+  const events = [{
+    ...CANDIDATES[1],
+    weight: 1,
+    truth_label: "MEASURED",
+    source_sha256: sha(content),
+    semantic_verifier: "gate_receipt_exit_0_v1",
+  }];
   const tampered = { ...WORLD, "receipts/gate-b.json": '{"gate":"integration-check","exit":1}' };
   const v = verifyEvidenceSignals({ events, readSource: readerFor(tampered) });
   assert.equal(v.ok, false);
@@ -88,18 +95,22 @@ test("PEG-05: a hand-forged sha256 fails verify against real content", () => {
   assert.equal(v.mismatches[0].gap, "sha256_mismatch");
 });
 
-test("PEG-06: semantically proven gathered evidence flips peak-self-loop from HOLD to CONTINUE", () => {
+test("PEG-06: caller-authored gate JSON cannot flip peak-self-loop from HOLD to CONTINUE", () => {
   const held = buildPeakSelfLoopPreview();
   assert.equal(held.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
   assert.equal(held.snr_framework.verified_signal_count, 0);
 
-  const { events } = gatherEvidenceSignals({
+  const gathered = gatherEvidenceSignals({
     candidates: CANDIDATES,
     readSource: readerFor(WORLD),
   });
-  const live = buildPeakSelfLoopPreview({ signal_events: events, noise_events: [] });
-  assert.equal(live.snr_framework.verified_signal_count, 3);
-  assert.equal(live.autonomous_rsi.merged_verdict, "CONTINUE_MICRO_SLICE");
+  assert.equal(gathered.events.length, 0);
+  assert.equal(gathered.excluded_count, 3);
+  assert.ok(gathered.excluded.every((event) =>
+    event.gap === "gate_execution_provenance_unverified"));
+  const guardedPreview = buildPeakSelfLoopPreview({ signal_events: gathered.events, noise_events: [] });
+  assert.equal(guardedPreview.snr_framework.verified_signal_count, 0);
+  assert.equal(guardedPreview.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
 });
 
 test("PEG-07: the gatherer imports no I/O module", async () => {
