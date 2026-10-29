@@ -162,7 +162,9 @@ function snapshotJsonData(value, seen = new WeakSet()) {
 
   const proto = Object.getPrototypeOf(value);
   if (proto !== Object.prototype && proto !== null) return { ok: false };
-  const out = proto === null ? Object.create(null) : {};
+  // Always null-prototype: assigning `__proto__` onto `{}` invokes the inherited
+  // setter and drops an ordinary JSON own-key instead of preserving it.
+  const out = Object.create(null);
   for (const key of Object.keys(value)) {
     const desc = Object.getOwnPropertyDescriptor(value, key);
     if (!desc || desc.get || desc.set) return { ok: false };

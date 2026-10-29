@@ -81,6 +81,30 @@ function reseal(receipt) {
 }
 
 describe("RECEIPT-CHAIN-1A · build + verify canonical chain", () => {
+  it("preserves JSON own-key __proto__ in canonical body (no setter drop)", async () => {
+    const home = await freshKeyedHome();
+    try {
+      const body = JSON.parse('{"kind":"proto-own","__proto__":"keep-me","value":1}');
+      assert.equal(
+        Object.prototype.hasOwnProperty.call(body, "__proto__"),
+        true,
+      );
+      const g = await buildCanonicalReceipt(
+        commonArgs(home, { canonicalBody: body }),
+      );
+      assert.equal(g.built, true, `build: ${g.error}`);
+      const protoOwn = Object.getOwnPropertyDescriptor(
+        g.receipt.canonical_body,
+        "__proto__",
+      );
+      assert.ok(protoOwn, "own __proto__ key must survive snapshot");
+      assert.equal(protoOwn.value, "keep-me");
+      assert.equal(g.receipt.canonical_body.kind, "proto-own");
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   it("happy: genesis + child → 2-entry chain verifies under external pubkey", async () => {
     const home = await freshKeyedHome();
     try {

@@ -37,7 +37,8 @@ try {
   for (const t of targets) {
     const buf = Buffer.alloc(t.source_ref.length);
     readSync(fd, buf, 0, buf.length, t.source_ref.offset);
-    const line = buf.toString("utf8").replace(/\n$/, "");
+    // Strip CR?LF line ending only — content hash is over payload bytes.
+    const line = buf.toString("utf8").replace(/\r?\n$/, "");
     if (createHash("sha256").update(line).digest("hex") !== t.content_sha256) { mismatched += 1; continue; }
     const got = extractWisdomAtoms(JSON.parse(line), inventory);
     atoms.push(...got);
