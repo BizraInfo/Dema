@@ -11,26 +11,27 @@ export const FIRST_RUN_STEPS = Object.freeze([
   Object.freeze({
     id: "welcome",
     label: "Welcome",
-    command: "dema welcome",
+    // Zero-install outsider path (TASK-046): never assume a global `dema` on PATH.
+    command: "node bin/dema welcome",
     description: "Read the product promise. No side effects.",
   }),
   Object.freeze({
     id: "setup",
     label: "Setup",
-    command: "dema setup",
+    command: "node bin/dema setup",
     description:
       "Create ~/.dema/ (idempotent, non-destructive). Writes only inside DEMA_HOME.",
   }),
   Object.freeze({
     id: "status",
     label: "Status",
-    command: "dema status",
+    command: "node bin/dema status",
     description: "Show what is ready and what is blocked. Read-only.",
   }),
   Object.freeze({
     id: "doctor",
     label: "Doctor",
-    command: "dema doctor",
+    command: "node bin/dema doctor",
     description: "Row-by-row readiness check with fix hints. Read-only.",
   }),
   Object.freeze({

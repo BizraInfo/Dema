@@ -53,13 +53,14 @@ Agent continues the board below. No wall required.
 | Priority | Slice | Status |
 | --- | --- | --- |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
-| P1 | Commit or park PEAK-ZERO-SPIN | OPEN (dirty) |
-| P2 | Outsider first-run truth loop (docs + one demo path) | OPEN |
-| P3 | Cartographer JSON intake when artifacts land | BLOCKED (files absent) |
-| P4 | Estate/Absorption Atlas (map only) | OPEN |
+| P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
+| P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE (this sprint) |
+| P3 | Absorption Atlas map-only stub | DONE preview doc |
+| P4 | Cartographer JSON intake when artifacts land | BLOCKED (files absent) |
+| P5 | Outsider full 5-command reduced-PATH suite + doctor truth | OPEN |
 | — | Public metrics 59↔68 regen | OUT OF TREE (other repos) |
 | — | COVERAGE-COUNTS hermetic | OUTWARD harness lease |
 
 ## Default next slice when user says SPRINT
 
-**P1** — qualify and commit PEAK-ZERO-SPIN alone (focused peak tests → commit → leave release-readiness alone).
+**P5** — extend reduced-PATH proof across welcome→setup→status→doctor (temp DEMA_HOME), or land Cartographer JSON if dropped in Downloads.

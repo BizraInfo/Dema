@@ -3,7 +3,7 @@ id: TASK-046
 title: >-
   FIRST-RUN-INSTALL-GAP-1A: README's first-run commands do not exist on a fresh
   clone
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-07-28 10:56'
 labels:
@@ -57,8 +57,10 @@ Related landing-surface findings from the same walkthrough, filed here for conte
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 README states how to obtain the dema command BEFORE the first-run command list
-- [ ] #2 The zero-install path (node bin/dema ...) is documented at first contact, since it works with no dependencies
-- [ ] #3 The five first-run commands succeed verbatim on a fresh clone with dema NOT globally installed, verified with a reduced PATH
-- [ ] #4 Developer install stays clearly separated from user first-run
+- [x] #1 README states how to obtain the dema command BEFORE the first-run command list
+- [x] #2 The zero-install path (node bin/dema ...) is documented at first contact, since it works with no dependencies
+- [x] #3 The five first-run commands succeed verbatim on a fresh clone with dema NOT globally installed, verified with a reduced PATH
+- [x] #4 Developer install stays clearly separated from user first-run
+
+Closed 2026-10-29: README already had obtain-first section; `FIRST_RUN_STEPS` now advertise `node bin/dema …`; `tests/first-run.test.js` pins PATH-reduced `welcome`.
 <!-- AC:END -->
