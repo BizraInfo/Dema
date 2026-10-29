@@ -244,8 +244,8 @@ test("formatDoctorDashboard: output contains header and footer hints", () => {
   const preds = evaluatePredicates(defaultFailStatus());
   const output = formatDoctorDashboard(preds, { color: false });
   assert.match(output, /Dema Doctor — Node0 readiness check/);
-  assert.match(output, /dema status/);
-  assert.match(output, /dema explain doctor/);
+  assert.match(output, /node bin\/dema status/);
+  assert.match(output, /node bin\/dema explain doctor/);
 });
 
 test("formatDoctorDashboard: all-fail → summary line shows fail count", () => {

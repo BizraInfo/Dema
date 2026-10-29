@@ -72,7 +72,7 @@ export function buildFirstRunPlan({ dry_run = false } = {}) {
     mode: dry_run ? "DRY_RUN" : "EXECUTE",
     steps: FIRST_RUN_STEPS,
     next_safe_action:
-      "Run `dema first-run` to step through · `--dry-run` to preview only · `--json` for machine output",
+      "Run `node bin/dema first-run` to step through · `--dry-run` to preview only · `--json` for machine output",
     boundary: dry_run ? DRY_RUN_BOUNDARY : BOUNDARY,
   });
 }
@@ -120,8 +120,8 @@ export function summarizeFirstRunOutcome({
     ok,
     failed_predicates: Object.freeze(failed.map((p) => p.key)),
     suggested_next: ok
-      ? 'Try `dema journey "Fix auth.py and run pytest"` to preview a bounded mission'
-      : `Resolve doctor predicates: ${failed.map((p) => p.key).join(", ")} (run \`dema doctor\` for fix hints)`,
+      ? 'Try `node bin/dema journey "Fix auth.py and run pytest"` to preview a bounded mission'
+      : `Resolve doctor predicates: ${failed.map((p) => p.key).join(", ")} (run \`node bin/dema doctor\` for fix hints)`,
     status_snapshot_present: status !== null && status !== undefined,
   });
 }

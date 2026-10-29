@@ -96,7 +96,7 @@ test("summarizeFirstRunOutcome — all predicates ok → ok=true, suggests journ
     ],
   });
   assert.equal(outcome.ok, true);
-  assert.match(outcome.suggested_next, /dema journey/);
+  assert.match(outcome.suggested_next, /node bin\/dema journey/);
 });
 
 test("summarizeFirstRunOutcome — failing predicate → ok=false, points at doctor", () => {
@@ -109,7 +109,7 @@ test("summarizeFirstRunOutcome — failing predicate → ok=false, points at doc
   });
   assert.equal(outcome.ok, false);
   assert.deepEqual(outcome.failed_predicates, ["ready"]);
-  assert.match(outcome.suggested_next, /dema doctor/);
+  assert.match(outcome.suggested_next, /node bin\/dema doctor/);
 });
 
 test("`dema --version` prints the package.json version", async () => {

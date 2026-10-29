@@ -71,10 +71,12 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | P4 | Cartographer JSON intake when artifacts land | BLOCKED (files absent) |
 | P5 | Outsider reduced-PATH suite | DONE @ `7cc9e804` |
 | P6 | `npm run proof:outsider` one-command loop | DONE (this slice) |
+| P6b | Doctor/first-run outsider hints → `node bin/dema` | DONE (this slice) |
 | P7 | Push branch + optional PR | OPEN — needs typed **GO: push** |
+| P8 | G8 coverage floors (95/84) — measured 93.04/78.07 | OPEN — multi-slice |
 | — | Cartographer JSON intake | BLOCKED (artifacts absent) |
-| — | COVERAGE-COUNTS hermetic | OUTWARD harness |
+| — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
 
 ## Default next slice when user says SPRINT
 
-Without push GO: harden doctor outsider fix-hints to say `node bin/dema …`, or intake Cartographer JSON if present.
+Without push GO: start G8 coverage lift (~4k line / ~2.5k branch hits to clear 95/84), or intake Cartographer JSON if present.
