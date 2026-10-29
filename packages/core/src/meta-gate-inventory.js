@@ -192,4 +192,14 @@ export const CANONICAL_META_GATE_INVENTORY = Object.freeze([
     negativeControlFault: "rail_failure_or_tampered_promotion_detected",
     verifyFunctionName: "verifyTraceDiagnosticContract",
   }),
+  Object.freeze({
+    invariantId: "ZERO_SPIN_EXECUTION_GATE_1A",
+    covenantClause: "No step is spent without verifiable progress toward the goal.",
+    proseRule:
+      "A step sequence must converge (OK:VERIFIED) or be classified as the first falsifiable spin (F-I ctx_spin, F-II ctx_cycle, F-III action_stall) or F-IV budget_exhausted, with a tamper-evident linear receipt chain; telemetry noise is scrubbed and the context/action gates are orthogonal.",
+    executableGatePath: "scripts/review/zero-spin-gate-check.mjs",
+    negativeControlTestPath: "tests/zero-spin-gate.test.js",
+    negativeControlFault: "spin_misclassified_or_tampered_receipt_chain_accepted",
+    verifyFunctionName: "verifyZeroSpinReceiptChain",
+  }),
 ]);

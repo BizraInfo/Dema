@@ -240,6 +240,16 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // no runtime authority.
   "packages/core/src/meta-gate-inventory.js",
   "packages/core/src/frozen-acceptance-contract.js",
+  // ZERO-SPIN-GATE-1A — the pure spin detector content-addresses every step
+  // record and the final verdict with the mandated canonical JSON v1 hash
+  // instead of a bespoke serializer, and chains the per-step receipts linearly
+  // so the verify path can re-derive each step_hash and fail closed on a
+  // tampered link. The whole point of the gate is that two machines re-derive
+  // the identical classification and receipt chain from the identical steps, so
+  // key-order stability is load-bearing. Registration is adoption review only;
+  // the kernel is PREVIEW_ONLY, pure (no fs/net/clock/random), promotes nothing,
+  // and grants no runtime authority.
+  "packages/core/src/zero-spin-gate.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 

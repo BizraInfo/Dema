@@ -90,6 +90,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_CHAT_WISDOM_LEDGER_PREVIEW_1A",
   "NODE0_CAMPAIGN_LEDGER_PREVIEW_1A",
   "NODE0_META_GATE_AND_FROZEN_CONTRACT_PREVIEW_1A",
+  "NODE0_ZERO_SPIN_GATE_PREVIEW_1A",
   "NODE0_REALM_STATE_KERNEL_1A",
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
@@ -3057,6 +3058,30 @@ function defaultCapabilityRows() {
         "The governing law — no rule without an executable gate and negative control, and no claim without an independent re-derivation path — is itself executable. auditMetaGateInventory classifies each declared invariant VERIFIED_FALSIFIABLE_CONTROL only when it names a real executable gate, a negative-control test plus a fault, and a verify function; validateProvenancePromotion refuses promoting an attested label to VERIFIED_BY_ORCHESTRATOR unless re-derivation ran on disk; scripts/review/meta-gate-check.mjs existsSync-checks every declared gate and negative-control test (anti-phantom-path guard) and exits non-zero if any is missing. freezeAcceptanceContract hash-binds a full plan via packages/canon to one exact consent phrase; verifyFrozenContractConsent fails closed on a one-byte plan mutation (REFUSED_CONTRACT_HASH_MISMATCH) or a wrong/missing phrase (REFUSED_EXACT_CONSENT_MISMATCH); evaluateUnknownBudget freezes at FREEZE_STOP_AT_UNKNOWN when unresolved unknowns exceed the cap. 11 tests + review gate green; boundary all-false, authority_delta 0.",
       what_this_does_not_prove:
         "It runs no gate itself (the review gate reads the filesystem; the kernels are pure and read nothing), invokes no model, opens no network, starts no daemon, mints nothing, and binds no live identity. A VERIFIED_FALSIFIABLE_CONTROL row means the inventory DECLARES a backed rule, not that the gate passed; a verified contract consent means the phrase matches the exact hashed plan, not that the plan was executed or its claims are true.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_ZERO_SPIN_GATE_PREVIEW_1A",
+      truth_label: "ZERO_SPIN_GATE_PREVIEW_ONLY",
+      summary:
+        "Pure preview-only spin detector: walks a caller-supplied step sequence and classifies the first falsifiable spin (F-I ctx_spin, F-II ctx_cycle, F-III action_stall, F-IV budget_exhausted) or OK:VERIFIED. NOT runtime, NOT ML, no model, no network. No byte-parity claim against the lost Python prototype.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/zero-spin-gate.js"],
+        test_paths: ["tests/zero-spin-gate.test.js"],
+        review_gate_paths: ["scripts/review/zero-spin-gate-check.mjs"],
+        receipt_paths: [],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation. A spin classification is a preview verdict over supplied steps, never a runtime or activation claim.",
+      what_this_proves:
+        "runZeroSpinGate classifies the first falsifiable spin in detection order F-I, F-II, F-III, else F-IV budget_exhausted, else OK:VERIFIED. F-II confirms a sustained period-k cycle on the third recurrence. enableCtxGate and enableActionGate are orthogonal. verifyZeroSpinReceiptChain re-derives the linear receipt chain and fails closed on a broken link. scripts/review/zero-spin-gate-check.mjs re-executes the enumerated controls. 13 tests. The kernel follows the written invariant spec; proof_harness.py is absent, so there is no byte-parity claim. Boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It does not run an agent, start a daemon, open a network, invoke a model, or prove Node0 closure. A classification is a preview over caller-supplied steps, not evidence that a live run spun or converged.",
       forbidden_claims: [
         "live execution",
         "operator mutation",
