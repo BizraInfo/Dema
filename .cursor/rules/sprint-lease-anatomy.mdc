@@ -1,0 +1,65 @@
+---
+description: Lean sprint lease — replaces paste walls. Always-on for Dema-clean sessions.
+alwaysApply: true
+---
+
+# Sprint Lease Anatomy (no babysitting)
+
+## Standing grant (this rule IS the lease)
+
+On every Dema-clean session, without waiting for SPARC paste walls:
+
+1. **Rebind** — `git status -sb`, HEAD, dirty paths. Disk beats transcript.
+2. **One SNR slice** — highest-value, lowest-noise, reversible, testable. Reject the rest in one line.
+3. **Do it** — implement + focused tests. Do not ask for GO on ordinary in-scope edits.
+4. **Prove** — run the narrowest test command; report exit codes.
+5. **Close** — what shipped · what’s blocked · one next slice. Stop.
+
+## Auto-GO (inside lease)
+
+- Edit / add tests / run focused tests / update matching docs for the slice
+- Commit when the user said commit, or when they said “sprint” / “keep going” / “carry me” for that slice’s green proof
+- Leave unrelated dirty trees untouched
+
+## Still halt (fresh typed GO only)
+
+Push · merge · force · delete branches · keys/DID · mint · deploy · secrets · foreign-repo edits · Drive bulk move · live model/daemon start
+
+## Forbidden noise
+
+- Re-paste SPARC / Peak / Singularity / HHMM / full PDF dumps as the work itself
+- Multi-agent theater without a bounded slice
+- Claiming Node0-closed / RSI-live / federation
+- Full `npm test` when focused suite answers; note OUTWARD blockers honestly (e.g. COVERAGE-COUNTS)
+
+## Definition of healthy (DoD for “I can rest”)
+
+A day is healthy when all are true:
+
+- [ ] No false-GREEN on release-readiness (score teeth + CLI exit) — **shipped**
+- [ ] Dirty PEAK-ZERO-SPIN either committed or explicitly parked
+- [ ] Focused gates green for the active slice
+- [ ] One outsider-usable loop documented (first-run truth) — **open**
+- [ ] Map-before-merge for Downloads/absorption — **open**, no silent ingest
+- [ ] `authority_delta = 0` unless operator widened it
+
+## Wake phrase (user)
+
+Say only: `SPRINT` or `carry the lease`  
+Agent continues the board below. No wall required.
+
+## Live board (update when a slice closes)
+
+| Priority | Slice | Status |
+| --- | --- | --- |
+| P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
+| P1 | Commit or park PEAK-ZERO-SPIN | OPEN (dirty) |
+| P2 | Outsider first-run truth loop (docs + one demo path) | OPEN |
+| P3 | Cartographer JSON intake when artifacts land | BLOCKED (files absent) |
+| P4 | Estate/Absorption Atlas (map only) | OPEN |
+| — | Public metrics 59↔68 regen | OUT OF TREE (other repos) |
+| — | COVERAGE-COUNTS hermetic | OUTWARD harness lease |
+
+## Default next slice when user says SPRINT
+
+**P1** — qualify and commit PEAK-ZERO-SPIN alone (focused peak tests → commit → leave release-readiness alone).
