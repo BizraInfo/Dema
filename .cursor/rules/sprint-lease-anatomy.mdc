@@ -57,10 +57,12 @@ Agent continues the board below. No wall required.
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE (this sprint) |
 | P3 | Absorption Atlas map-only stub | DONE preview doc |
 | P4 | Cartographer JSON intake when artifacts land | BLOCKED (files absent) |
-| P5 | Outsider full 5-command reduced-PATH suite + doctor truth | OPEN |
-| — | Public metrics 59↔68 regen | OUT OF TREE (other repos) |
-| — | COVERAGE-COUNTS hermetic | OUTWARD harness lease |
+| P5 | Outsider reduced-PATH welcome→setup→status→doctor | DONE @ `7cc9e804` |
+| P6 | Push branch + optional PR (needs typed GO) | OPEN |
+| — | Cartographer JSON intake | BLOCKED (artifacts absent) |
+| — | Public metrics 59↔68 regen | OUT OF TREE |
+| — | COVERAGE-COUNTS hermetic | OUTWARD harness |
 
 ## Default next slice when user says SPRINT
 
-**P5** — extend reduced-PATH proof across welcome→setup→status→doctor (temp DEMA_HOME), or land Cartographer JSON if dropped in Downloads.
+**P6** needs your GO to push. Without push GO: improve doctor “Ready false” messaging for outsiders, or drop Cartographer JSON into Downloads for intake.
