@@ -38,21 +38,32 @@ function deepFreeze(value) {
 }
 
 function canonicalPlanBody(plan) {
-  // Detach before deepFreeze so caller-owned nested objects (step fields,
-  // budget maps, nested arrays) stay mutable for edit-and-retry flows.
-  const body = {
+  // Probe the live graph first so non-enumerable / symbol keys still fail
+  // closed via sha256CanonicalJsonV1 (structuredClone would drop them).
+  const live = {
     sliceId: plan?.sliceId ?? null,
     parentClosureGoalId: plan?.parentClosureGoalId ?? null,
     acceptanceCommands: Array.isArray(plan?.acceptanceCommands)
-      ? structuredClone(plan.acceptanceCommands)
+      ? plan.acceptanceCommands
       : [],
     refusalConditions: Array.isArray(plan?.refusalConditions)
-      ? structuredClone(plan.refusalConditions)
+      ? plan.refusalConditions
       : [],
-    steps: Array.isArray(plan?.steps) ? structuredClone(plan.steps) : [],
-    budgetLimits: structuredClone(plan?.budgetLimits ?? {}),
+    steps: Array.isArray(plan?.steps) ? plan.steps : [],
+    budgetLimits: plan?.budgetLimits ?? {},
   };
-  return deepFreeze(body);
+  sha256CanonicalJsonV1(live);
+
+  // Detach before deepFreeze so caller-owned nested objects stay mutable for
+  // edit-and-retry flows (probe above did not freeze anything).
+  return deepFreeze({
+    sliceId: live.sliceId,
+    parentClosureGoalId: live.parentClosureGoalId,
+    acceptanceCommands: structuredClone(live.acceptanceCommands),
+    refusalConditions: structuredClone(live.refusalConditions),
+    steps: structuredClone(live.steps),
+    budgetLimits: structuredClone(live.budgetLimits),
+  });
 }
 
 function contractHashFor(plan) {

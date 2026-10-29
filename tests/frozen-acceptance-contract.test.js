@@ -117,6 +117,36 @@ test("negative control 2: wrong or missing consent phrase fails closed REFUSED_E
   assert.equal(padded.reason, "REFUSED_EXACT_CONSENT_MISMATCH");
 });
 
+test("non-enumerable nested plan fields still fail closed (not dropped by clone)", () => {
+  const plan = samplePlan();
+  plan.steps[0].inputs = {};
+  Object.defineProperty(plan.steps[0].inputs, "target", {
+    value: "hidden-a",
+    enumerable: false,
+  });
+  assert.throws(
+    () => freezeAcceptanceContract(plan),
+    /object_non_enumerable_property/,
+  );
+
+  const clean = freezeAcceptanceContract(samplePlan());
+  const other = samplePlan();
+  other.steps[0].inputs = {};
+  Object.defineProperty(other.steps[0].inputs, "target", {
+    value: "hidden-b",
+    enumerable: false,
+  });
+  assert.throws(
+    () =>
+      verifyFrozenContractConsent({
+        contract: clean,
+        consentPhrase: clean.consentPhrase,
+        rawPlanToVerify: other,
+      }),
+    /object_non_enumerable_property/,
+  );
+});
+
 test("freeze and verify detach nested caller data (edit-and-retry safe)", () => {
   const plan = samplePlan();
   plan.steps[0].inputs = { nested: ["keep-me-mutable"] };
