@@ -155,8 +155,17 @@ function classifyRisks({
       note: "Workflow actions use version tags instead of immutable commit SHAs.",
     });
   }
-  if (
-    workflowWorktreeStatus?.changes?.length > 0 &&
+  // Unavailable git/worktree evidence must not silently keep a high score.
+  // evaluateReleaseReadiness already fails closed on this; classifyRisks must
+  // also emit a launch_blocker so readiness_score itself cannot look GREEN.
+  if (workflowWorktreeStatus?.available !== true) {
+    risks.push({
+      code: "ci.workflow_worktree_status_unavailable",
+      severity: "launch_blocker",
+      note: "Workflow worktree status could not be inspected (no git / subprocess failure); release readiness fails closed until status is available.",
+    });
+  } else if (
+    workflowWorktreeStatus.changes?.length > 0 &&
     !workflowWorktreeStatus.authorized
   ) {
     risks.push({
@@ -914,6 +923,17 @@ export function extractReportJson(output) {
   }
 }
 
+/**
+ * CLI-EXIT-TEETH-1A — map evaluateReleaseReadiness() to a process exit code.
+ * Fail closed: only a strict `ok === true` yields 0; anything else yields 1.
+ */
+export function exitCodeFromEvaluation(evaluation) {
+  if (!evaluation || typeof evaluation !== "object" || Array.isArray(evaluation)) {
+    return 1;
+  }
+  return evaluation.ok === true ? 0 : 1;
+}
+
 if (
   process.argv[1] &&
   pathToFileURL(process.argv[1]).href === import.meta.url
@@ -922,10 +942,12 @@ if (
   const report = await buildReleaseReadinessReport({
     workflowChangesAuthorized: options.workflowChangesAuthorized,
   });
+  const evaluation = evaluateReleaseReadiness(report);
   const json = options.json;
   console.log(
     json
       ? JSON.stringify(report, null, 2)
       : formatReleaseReadinessReport(report),
   );
+  process.exitCode = exitCodeFromEvaluation(evaluation);
 }
