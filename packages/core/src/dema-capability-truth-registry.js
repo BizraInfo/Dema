@@ -89,6 +89,7 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "NODE0_AGENT_FLEET_ROLES_1A",
   "NODE0_CHAT_WISDOM_LEDGER_PREVIEW_1A",
   "NODE0_CAMPAIGN_LEDGER_PREVIEW_1A",
+  "NODE0_META_GATE_AND_FROZEN_CONTRACT_PREVIEW_1A",
   "NODE0_REALM_STATE_KERNEL_1A",
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
@@ -3029,6 +3030,36 @@ function defaultCapabilityRows() {
         "live execution",
         "autonomous promotion",
         "production diagnosis",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_META_GATE_AND_FROZEN_CONTRACT_PREVIEW_1A",
+      truth_label: "NODE0_META_GATE_AND_FROZEN_CONTRACT_PREVIEW_ONLY",
+      summary:
+        "Two pure preview-only governing-law kernels: a meta-gate inventory that classifies each declared invariant as a falsifiable control only when it carries a real on-disk executable gate, a negative-control test with a named fault, and a verify re-derivation function (anything missing is UNENFORCED_WISH / UNPROVEN_HAPPY_PATH_ONLY / MISSING_REDERIVATION_PATH), plus a frozen acceptance contract that hash-binds a full slice plan to one exact consent phrase and freezes work at the first unresolved unknown. NOT runtime, NOT ML, no model, no network.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/meta-gate-inventory.js",
+          "packages/core/src/frozen-acceptance-contract.js",
+        ],
+        test_paths: [
+          "tests/meta-gate-inventory.test.js",
+          "tests/frozen-acceptance-contract.test.js",
+        ],
+        review_gate_paths: ["scripts/review/meta-gate-check.mjs"],
+        receipt_paths: [],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered preview. A VERIFIED_FALSIFIABLE_CONTROL classification or a verified contract consent is a preview classification, never a runtime or activation claim.",
+      what_this_proves:
+        "The governing law — no rule without an executable gate and negative control, and no claim without an independent re-derivation path — is itself executable. auditMetaGateInventory classifies each declared invariant VERIFIED_FALSIFIABLE_CONTROL only when it names a real executable gate, a negative-control test plus a fault, and a verify function; validateProvenancePromotion refuses promoting an attested label to VERIFIED_BY_ORCHESTRATOR unless re-derivation ran on disk; scripts/review/meta-gate-check.mjs existsSync-checks every declared gate and negative-control test (anti-phantom-path guard) and exits non-zero if any is missing. freezeAcceptanceContract hash-binds a full plan via packages/canon to one exact consent phrase; verifyFrozenContractConsent fails closed on a one-byte plan mutation (REFUSED_CONTRACT_HASH_MISMATCH) or a wrong/missing phrase (REFUSED_EXACT_CONSENT_MISMATCH); evaluateUnknownBudget freezes at FREEZE_STOP_AT_UNKNOWN when unresolved unknowns exceed the cap. 11 tests + review gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It runs no gate itself (the review gate reads the filesystem; the kernels are pure and read nothing), invokes no model, opens no network, starts no daemon, mints nothing, and binds no live identity. A VERIFIED_FALSIFIABLE_CONTROL row means the inventory DECLARES a backed rule, not that the gate passed; a verified contract consent means the phrase matches the exact hashed plan, not that the plan was executed or its claims are true.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
         "unattended runtime",
       ],
     }),
