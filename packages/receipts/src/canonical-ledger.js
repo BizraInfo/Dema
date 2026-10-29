@@ -28,6 +28,11 @@ import {
   verifyCanonicalAuthorityChain,
   CANONICAL_RECEIPT_CONSENT_PHRASE,
 } from "./canonical-receipt.js";
+import {
+  classifySuccessionBody,
+  validateSuccessionCommitBody,
+  successionBindingDrift,
+} from "./authority-succession.js";
 
 export const CANONICAL_LEDGER_RELPATH = "receipts/canonical-ledger.ndjson";
 
@@ -39,6 +44,51 @@ function resolveHome(override) {
 }
 function ledgerPath(demaHome) {
   return join(resolveHome(demaHome), CANONICAL_LEDGER_RELPATH);
+}
+
+function freezeTree(value) {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value)) freezeTree(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+// While succession is pending, the named successor may append only the commit
+// that matches the open intent. An ordinary receipt signed by that key verifies
+// against nobody: the reader still trusts the predecessor until the commit.
+function refusePendingSuccessorUnlessMatchingCommit(canonicalBody, walk, entries) {
+  if (classifySuccessionBody(canonicalBody) !== "COMMIT") {
+    return Object.freeze({
+      appended: false,
+      error: "ledger_chain_broken",
+      reason: "pending_successor_may_only_commit",
+    });
+  }
+  const shape = validateSuccessionCommitBody(canonicalBody);
+  if (!shape.ok) {
+    return Object.freeze({
+      appended: false,
+      error: "ledger_chain_broken",
+      reason: `succession_${shape.reason}`,
+    });
+  }
+  const intentBody = entries[walk.pending_successor.intent_index]?.canonical_body;
+  if (successionBindingDrift(intentBody, canonicalBody).length > 0) {
+    return Object.freeze({
+      appended: false,
+      error: "ledger_chain_broken",
+      reason: "succession_binding_drift",
+    });
+  }
+  if (canonicalBody.intent_receipt_id !== walk.pending_successor.intent_receipt_id) {
+    return Object.freeze({
+      appended: false,
+      error: "ledger_chain_broken",
+      reason: "succession_intent_receipt_mismatch",
+    });
+  }
+  return null;
 }
 
 /** Read the canonical ledger back as an array of receipts (missing file → []). */
@@ -131,6 +181,7 @@ export async function appendCanonicalReceipt({
       });
     }
   }
+  let rootPem = null;
   if (entries.length > 0) {
     const pubkey = await loadPublicKey(demaHome);
     if (!pubkey) {
@@ -154,7 +205,7 @@ export async function appendCanonicalReceipt({
     // external genesis key to verifyCanonicalAuthorityChain can do that, which
     // is why the two jobs stay separate functions.
     const rootFp = entries[0]?.operator_public_key_fingerprint;
-    const rootPem = (await loadGenerationPublicKey(demaHome, rootFp)) ?? pubkey;
+    rootPem = (await loadGenerationPublicKey(demaHome, rootFp)) ?? pubkey;
     const v = verifyCanonicalAuthorityChain({ entries, genesisPubkeyPem: rootPem });
     if (!v.verified) {
       return Object.freeze({
@@ -166,7 +217,10 @@ export async function appendCanonicalReceipt({
 
     // The signer about to append must be the authority the chain established —
     // or, when the chain ends on an authorized-but-uncommitted succession, the
-    // exact successor that predecessor named. Any other key is unannounced.
+    // exact successor that predecessor named. The successor in that window may
+    // append only the matching commit. Any other key is unannounced, and an
+    // ordinary receipt from the successor would publish a history the reader
+    // rejects.
     const signerFp = fingerprintOfPem(pubkey);
     const isEstablished = signerFp === v.final_authority_fingerprint;
     const isNamedSuccessor = v.pending_successor?.successor_fingerprint === signerFp;
@@ -176,6 +230,14 @@ export async function appendCanonicalReceipt({
         error: "ledger_chain_broken",
         reason: "signer_is_not_the_established_authority",
       });
+    }
+    if (isNamedSuccessor && !isEstablished) {
+      const refused = refusePendingSuccessorUnlessMatchingCommit(
+        canonicalBody,
+        v,
+        entries,
+      );
+      if (refused) return refused;
     }
   }
 
@@ -197,17 +259,39 @@ export async function appendCanonicalReceipt({
     return Object.freeze({ appended: false, error: built.error });
   }
 
+  // Fix the published bytes before the first publication await. The reader
+  // then judges that exact candidate. A refusal here writes nothing.
+  const line = JSON.stringify(built.receipt);
+  let candidate;
+  try {
+    candidate = JSON.parse(line);
+  } catch {
+    return Object.freeze({ appended: false, error: "publication_candidate_invalid" });
+  }
+  const preview = verifyCanonicalAuthorityChain({
+    entries: [...entries, candidate],
+    genesisPubkeyPem: rootPem ?? built.signer_public_key_pem,
+  });
+  if (!preview.verified) {
+    return Object.freeze({
+      appended: false,
+      error: "publication_candidate_rejected",
+      reason: preview.reason,
+    });
+  }
+  const content = `${entries.map((entry) => JSON.stringify(entry)).join("\n")}${
+    entries.length > 0 ? "\n" : ""
+  }${line}\n`;
+
   // Durable atomic append: private no-clobber temp → file fsync → rename →
   // parent-directory fsync. A publication failure throws as before, so callers
   // cannot persist a later phase from a false appended:true acknowledgement.
   const path = ledgerPath(demaHome);
   const parent = dirname(path);
   await publicationOps.mkdir(parent, { recursive: true, mode: 0o700 });
-  const content =
-    [...entries, built.receipt].map((r) => JSON.stringify(r)).join("\n") + "\n";
   // Unique tmp per append (content-addressed) so concurrent appends can't
   // collide on a shared temp file. Deterministic — no random/clock.
-  const tmp = `${path}.${built.receipt.receipt_id.slice(0, 12)}.tmp`;
+  const tmp = `${path}.${candidate.receipt_id.slice(0, 12)}.tmp`;
   let tmpHandle = null;
   let parentHandle = null;
   let tmpCreated = false;
@@ -252,10 +336,11 @@ export async function appendCanonicalReceipt({
     throw err;
   }
 
+  const returnedReceipt = freezeTree(candidate);
   return Object.freeze({
     appended: true,
-    receipt: built.receipt,
-    head: built.receipt.receipt_id,
+    receipt: returnedReceipt,
+    head: returnedReceipt.receipt_id,
     length: entries.length + 1,
   });
 }

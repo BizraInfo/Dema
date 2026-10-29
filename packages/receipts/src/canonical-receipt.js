@@ -109,19 +109,68 @@ function isSha256Hex(s) {
 function isPlainObject(v) {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
-// True only if the value round-trips through JSON: rejects function / undefined
-// / bigint / symbol / NaN / Infinity and circular references. A canonical body
-// that is not JSON-safe cannot be content-addressed or replayed.
-function isJsonSafe(value, seen = new WeakSet()) {
-  if (value === null) return true;
+
+// JSON.stringify calls toJSON when it finds one, including a non-enumerable
+// own property or a prototype hook such as Date.prototype.toJSON.
+// stableStringify does not. Reading the value would invoke an accessor, so
+// the descriptor is what gets inspected.
+function jsonHookPresent(value) {
+  let current = value;
+  while (current) {
+    const desc = Object.getOwnPropertyDescriptor(current, "toJSON");
+    if (desc) return true;
+    current = Object.getPrototypeOf(current);
+  }
+  return false;
+}
+
+function freezeSnapshot(value) {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const child of Object.values(value)) freezeSnapshot(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+// One detached copy of the JSON data domain: null, finite numbers, strings,
+// booleans, arrays, and plain objects. Dates, accessors, toJSON, functions,
+// and the other values the two serializers encode differently are refused.
+// Property values are taken from descriptors, so an accessor is not invoked.
+function snapshotJsonData(value, seen = new WeakSet()) {
+  if (value === null) return { ok: true, value: null };
   const t = typeof value;
-  if (t === "string" || t === "boolean") return true;
-  if (t === "number") return Number.isFinite(value);
-  if (t !== "object") return false; // function / undefined / bigint / symbol
-  if (seen.has(value)) return false; // circular
+  if (t === "string" || t === "boolean") return { ok: true, value };
+  if (t === "number") {
+    return Number.isFinite(value) ? { ok: true, value } : { ok: false };
+  }
+  if (t !== "object") return { ok: false };
+  if (seen.has(value)) return { ok: false };
   seen.add(value);
-  const members = Array.isArray(value) ? value : Object.values(value);
-  return members.every((m) => isJsonSafe(m, seen));
+  if (jsonHookPresent(value)) return { ok: false };
+
+  if (Array.isArray(value)) {
+    const out = [];
+    for (let i = 0; i < value.length; i += 1) {
+      const desc = Object.getOwnPropertyDescriptor(value, String(i));
+      if (!desc || desc.get || desc.set) return { ok: false };
+      const member = snapshotJsonData(desc.value, seen);
+      if (!member.ok) return { ok: false };
+      out.push(member.value);
+    }
+    return { ok: true, value: out };
+  }
+
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return { ok: false };
+  const out = proto === null ? Object.create(null) : {};
+  for (const key of Object.keys(value)) {
+    const desc = Object.getOwnPropertyDescriptor(value, key);
+    if (!desc || desc.get || desc.set) return { ok: false };
+    const member = snapshotJsonData(desc.value, seen);
+    if (!member.ok) return { ok: false };
+    out[key] = member.value;
+  }
+  return { ok: true, value: out };
 }
 function isNonEmptyString(v) {
   return typeof v === "string" && v.trim().length > 0;
@@ -179,9 +228,12 @@ async function buildReceiptAtSchema({
   if (!isNonEmptyString(now) || Number.isNaN(Date.parse(now))) {
     return fail("created_at_iso_required");
   }
-  if (!isPlainObject(canonicalBody) || !isJsonSafe(canonicalBody)) {
-    return fail("canonical_body_invalid");
-  }
+  // Snapshot before any await. The hash, the signature, the published line,
+  // and the returned receipt all use this copy, never the caller's object.
+  if (!isPlainObject(canonicalBody)) return fail("canonical_body_invalid");
+  const snap = snapshotJsonData(canonicalBody);
+  if (!snap.ok) return fail("canonical_body_invalid");
+  const detachedBody = freezeSnapshot(snap.value);
   if (!VALID_TRUTH_LABELS.includes(truthLabel)) {
     return fail("truth_label_invalid");
   }
@@ -199,7 +251,7 @@ async function buildReceiptAtSchema({
   // genesis (fresh-state root of trust) has non-empty body. Ed25519 path is
   // enforced by key load + signPayload below (#103).
   if (prevHash === null) {
-    if (!canonicalBody || Object.keys(canonicalBody).length === 0) {
+    if (Object.keys(detachedBody).length === 0) {
       return fail("genesis_receipt_body_must_not_be_empty");
     }
   }
@@ -207,10 +259,9 @@ async function buildReceiptAtSchema({
   // PROOF-SPINE-GUARD-1A #102: refuse builds that would settle/mint on
   // QUARANTINED or bad pulse state (Dema face guard; substrate must match).
   if (
-    canonicalBody &&
-    (canonicalBody.pulse_state === "QUARANTINED" ||
-      canonicalBody.quarantined === true ||
-      canonicalBody.state === "QUARANTINED")
+    detachedBody.pulse_state === "QUARANTINED" ||
+    detachedBody.quarantined === true ||
+    detachedBody.state === "QUARANTINED"
   ) {
     return fail("refuse_on_quarantined_pulse");
   }
@@ -234,8 +285,8 @@ async function buildReceiptAtSchema({
         ? { sig_alg: RECEIPT_SIGNATURE_ALG }
         : {}),
       prev_hash: prevHash,
-      body_hash: sha256(stableStringify(canonicalBody)),
-      canonical_body: canonicalBody,
+      body_hash: sha256(stableStringify(detachedBody)),
+      canonical_body: detachedBody,
       truth_label: truthLabel,
       what_this_proves: whatProves,
       what_this_does_not_prove: whatDoesNotProve,
