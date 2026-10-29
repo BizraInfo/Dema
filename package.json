@@ -39,6 +39,7 @@
     "proof:export": "node scripts/proof/export-node0-proof-artifact-bundle.mjs --json",
     "proof:export:check": "node scripts/review/node0-proof-artifact-export-check.mjs",
     "proof:outsider": "node scripts/proof/outsider-first-run-loop.mjs",
+    "proof:watchdog": "node scripts/proof/sprint-quality-watchdog.mjs",
     "pat-sat:blackboard:check": "node scripts/review/pat-sat-blackboard-dry-run-check.mjs",
     "eval:layer1": "node scripts/artifact-safety-check.mjs",
     "smoke-boundary": "node scripts/smoke-boundary.mjs",

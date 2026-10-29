@@ -48,6 +48,18 @@ A day is healthy when all are true:
 Say only: `SPRINT` or `carry the lease`  
 Agent continues the board below. No wall required.
 
+## Unattended quality (ihsan — system does not sleep when you rest)
+
+| Layer | What | Survives chat close? |
+| --- | --- | --- |
+| **Watchdog timer** | `dema-sprint-watchdog.timer` → `npm run proof:watchdog` every 30m | **YES** (systemd user) |
+| **Receipts** | `/data/bizra/logs/dema-sprint-watchdog/LATEST.json` + daily `.jsonl` | YES |
+| **Agent SPRINT loop** | Cursor monitored wake (when armed in a live session) | Only while that session can wake |
+
+Check pulse: `cat /data/bizra/logs/dema-sprint-watchdog/LATEST.json` · `systemctl --user status dema-sprint-watchdog.timer`  
+Manual pulse: `npm run proof:watchdog`  
+Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
+
 ## Live board (update when a slice closes)
 
 | Priority | Slice | Status |
