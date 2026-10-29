@@ -8,16 +8,17 @@
 // make its rule falsifiable, and refuses to promote an attested label into a
 // re-derived one unless the re-derivation was actually performed on disk.
 //
-// The classification is a PREVIEW only: a VERIFIED_FALSIFIABLE_CONTROL row
-// means the inventory DECLARES a gate, a negative-control test, a fault, and a
-// verify function — the companion review gate (scripts/review/meta-gate-check.mjs)
-// is what checks those declared paths against the real filesystem. A green
-// classification here is never a runtime or activation claim.
+// Truth ceiling CONTROL_MAPPING_COMPLETE: a VERIFIED_FALSIFIABLE_CONTROL row
+// means the inventory DECLARES rails (gate path, negative-control test, fault,
+// verify name). The companion review gate only existsSync-checks those paths.
+// Neither layer executes the mapped gates or proves independent enforcement.
 
 import { sha256CanonicalJsonV1 } from "../../canon/src/sha256-canonical-json-v1.js";
 
 export const META_GATE_INVENTORY_SCHEMA = "bizra.dema.meta_gate_inventory.v0.1";
-export const META_GATE_INVENTORY_TRUTH_LABEL = "META_GATE_INVENTORY_PREVIEW_ONLY";
+/** Inventory/traceability only — does not execute mapped gates or prove enforcement. */
+export const META_GATE_INVENTORY_TRUTH_LABEL = "CONTROL_MAPPING_COMPLETE";
+export const META_GATE_CLAIM_CEILING = "CONTROL_MAPPING_COMPLETE";
 
 // Classification taxonomy. Order matters: the first failing rail wins so the
 // reported classification names the strongest missing guard.
@@ -87,32 +88,63 @@ export function auditMetaGateInventory(invariants) {
   });
 }
 
-// Refuse to promote an attested provenance to the re-derived orchestrator label
-// unless the caller confirms the re-derivation ran on disk. A tool being
-// available, or an attestation existing, does not grant the promotion.
+function isStructuredRederivationEvidence(evidence) {
+  if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) {
+    return false;
+  }
+  // Pure inventory cannot verify disk. Structured shape is recorded for
+  // companions; it still cannot mint VERIFIED_BY_ORCHESTRATOR here.
+  return (
+    typeof evidence.kind === "string" &&
+    evidence.kind.length > 0 &&
+    typeof evidence.path === "string" &&
+    evidence.path.length > 0 &&
+    typeof evidence.content_sha256 === "string" &&
+    /^[0-9a-f]{64}$/.test(evidence.content_sha256)
+  );
+}
+
+/**
+ * Refuse attestation→VERIFIED promotion in this pure inventory kernel.
+ * A caller-supplied `rederivedOnDisk` Boolean is never evidence (META-GATE-CLAIM-HONESTY-1A).
+ * Ceiling remains CONTROL_MAPPING_COMPLETE — path/rail inventory, not enforcement proof.
+ */
 export function validateProvenancePromotion({
   sourceProvenance,
   claimedLabel,
   rederivedOnDisk = false,
+  rederivationEvidence = null,
 } = {}) {
-  const base = { source_provenance: sourceProvenance ?? null, claimed_label: claimedLabel ?? null };
+  const base = {
+    source_provenance: sourceProvenance ?? null,
+    claimed_label: claimedLabel ?? null,
+    claim_ceiling: META_GATE_CLAIM_CEILING,
+  };
   const promotingToRederived = claimedLabel === REDERIVED_LABEL;
   const fromAttested = ATTESTED_PROVENANCE.includes(sourceProvenance);
 
-  if (promotingToRederived && fromAttested && rederivedOnDisk !== true) {
+  if (promotingToRederived && fromAttested) {
+    if (rederivedOnDisk === true && !isStructuredRederivationEvidence(rederivationEvidence)) {
+      return Object.freeze({
+        ...base,
+        ok: false,
+        reason: "REFUSED_CALLER_BOOLEAN_NOT_EVIDENCE",
+        boundary: boundary(),
+      });
+    }
+    if (!isStructuredRederivationEvidence(rederivationEvidence)) {
+      return Object.freeze({
+        ...base,
+        ok: false,
+        reason: "REFUSED_PROMOTION_WITHOUT_REDERIVATION",
+        boundary: boundary(),
+      });
+    }
+    // Even with structured evidence, this pure module cannot re-hash disk.
     return Object.freeze({
       ...base,
       ok: false,
-      reason: "REFUSED_PROMOTION_WITHOUT_REDERIVATION",
-      boundary: boundary(),
-    });
-  }
-
-  if (promotingToRederived && fromAttested && rederivedOnDisk === true) {
-    return Object.freeze({
-      ...base,
-      ok: true,
-      reason: "PROMOTION_BACKED_BY_REDERIVATION",
+      reason: "REFUSED_PURE_KERNEL_CANNOT_VERIFY_DISK",
       boundary: boundary(),
     });
   }

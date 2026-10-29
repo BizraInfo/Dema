@@ -85,14 +85,30 @@ test("negative control 4: provenance promotion refuses attestation without on-di
   });
   assert.equal(operator.ok, false);
   assert.equal(operator.reason, "REFUSED_PROMOTION_WITHOUT_REDERIVATION");
+});
 
-  const rederived = validateProvenancePromotion({
+// META-GATE-CLAIM-HONESTY-1A — a caller-supplied Boolean is not re-derivation.
+test("negative control 5: rederivedOnDisk Boolean alone cannot promote to VERIFIED", () => {
+  const laundered = validateProvenancePromotion({
     sourceProvenance: "ATTESTED_BY_SUBAGENT",
     claimedLabel: "VERIFIED_BY_ORCHESTRATOR",
     rederivedOnDisk: true,
   });
-  assert.equal(rederived.ok, true);
-  assert.equal(rederived.reason, "PROMOTION_BACKED_BY_REDERIVATION");
+  assert.equal(laundered.ok, false);
+  assert.equal(laundered.reason, "REFUSED_CALLER_BOOLEAN_NOT_EVIDENCE");
+  assert.equal(laundered.claim_ceiling, "CONTROL_MAPPING_COMPLETE");
+});
+
+test("negative control 6: malformed rederivationEvidence cannot promote to VERIFIED", () => {
+  const bad = validateProvenancePromotion({
+    sourceProvenance: "ATTESTED_BY_OPERATOR",
+    claimedLabel: "VERIFIED_BY_ORCHESTRATOR",
+    rederivedOnDisk: true,
+    rederivationEvidence: { note: "trust me" },
+  });
+  assert.equal(bad.ok, false);
+  assert.match(String(bad.reason), /REFUSED_/);
+  assert.notEqual(bad.reason, "PROMOTION_BACKED_BY_REDERIVATION");
 });
 
 test("canonical meta-gate inventory is fully enforced and maps real on-disk paths", () => {

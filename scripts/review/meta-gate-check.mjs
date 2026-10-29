@@ -1,17 +1,14 @@
 #!/usr/bin/env node
-// META-GATE-CHECK-1A — executable rule-to-gate review check (read-only).
+// META-GATE-CHECK-1A — inventory / control-mapping traceability (read-only).
 //
-// Enforces the governing law on the repository's own invariant inventory:
-// "No rule without an executable gate and negative control." It imports the
-// declared CANONICAL_META_GATE_INVENTORY and the pure auditor, then:
-//   1. audits the declared inventory (every row must be a
-//      VERIFIED_FALSIFIABLE_CONTROL), and
-//   2. verifies on disk (existsSync) that every declared executableGatePath
-//      and negativeControlTestPath actually exists — the anti-phantom-path
-//      guard: a rule that points at a gate or a negative-control test that is
-//      not on disk is a wish, not a control, and fails closed here.
-// Exit 0 with a deterministic summary when every invariant is backed by a real
-// on-disk gate and negative-control test; exit 1 fail-closed otherwise.
+// Truth ceiling: CONTROL_MAPPING_COMPLETE. This check does NOT execute the
+// mapped gates, does NOT re-derive their verdicts, and is NOT an independent
+// enforcement verifier. It:
+//   1. audits the declared inventory shape (rails present on each row), and
+//   2. verifies on disk (existsSync) that declared gate/test paths exist
+//      (anti-phantom-path). A wrong-but-existing mapping is OUT OF SCOPE
+//      without a separate expected-mapping oracle.
+// Exit 0 when every declared path exists and inventory rails are complete.
 
 import { existsSync } from "node:fs";
 import { dirname, join, isAbsolute } from "node:path";
