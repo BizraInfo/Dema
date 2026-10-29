@@ -9,6 +9,28 @@ import {
   parsePeakSelfLoopSignalEventsArg,
 } from "./peak-self-loop-evidence-gatherer.js";
 
+const SPIN_STEPS_FLAG = "--spin-steps-json";
+const SPIN_STEPS_PREFIX = `${SPIN_STEPS_FLAG}=`;
+
+/** Parse optional `--spin-steps-json` / `--spin-steps-json=<JSON>` for zero-spin rail. */
+export function parsePeakSelfLoopSpinStepsArg(argv = []) {
+  const eq = argv.find((a) => typeof a === "string" && a.startsWith(SPIN_STEPS_PREFIX));
+  const idx = argv.indexOf(SPIN_STEPS_FLAG);
+  let raw = null;
+  if (eq) raw = eq.slice(SPIN_STEPS_PREFIX.length);
+  else if (idx >= 0) raw = argv[idx + 1];
+  if (raw == null) return { provided: false, steps: null, error: null };
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return { provided: true, steps: null, error: "spin_steps_not_array" };
+    }
+    return { provided: true, steps: parsed, error: null };
+  } catch {
+    return { provided: true, steps: null, error: "spin_steps_json_malformed" };
+  }
+}
+
 export async function cmd_peak_self_loop(ctx) {
   const { argv } = ctx;
   const ciBlocked =
@@ -44,10 +66,18 @@ export async function cmd_peak_self_loop(ctx) {
     }
   }
 
+  const parsedSpin = parsePeakSelfLoopSpinStepsArg(argv);
+  if (parsedSpin.provided && parsedSpin.error) {
+    process.exitCode = 1;
+  }
+
   const preview = buildPeakSelfLoopPreview({
     ci_advisory_blocked: ciBlocked,
     companion_device_connected: argv.includes("--companion-connected"),
     ...(parsedSignals.provided ? { signal_events: signalEvents } : {}),
+    ...(parsedSpin.provided && !parsedSpin.error
+      ? { spin_steps: parsedSpin.steps }
+      : {}),
   });
 
   const output = evidenceBindingDiagnostic

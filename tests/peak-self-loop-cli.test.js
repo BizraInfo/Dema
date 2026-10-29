@@ -94,6 +94,38 @@ test("dema realm go 5 --json dispatches to proof studio", () => {
   assert.equal(env.schema, SCHEMA);
 });
 
+test("dema peak-self-loop --spin-steps-json classifies OK:VERIFIED on converging steps", () => {
+  const steps = [
+    { context: { done: 0 }, action: { do: "read" } },
+    { context: { done: 1 }, action: { do: "edit" }, verified: true },
+  ];
+  const env = JSON.parse(
+    runCLI(
+      [
+        "peak-self-loop",
+        "--json",
+        `--spin-steps-json=${JSON.stringify(steps)}`,
+      ],
+      freshHome(),
+    ),
+  );
+  assert.equal(env.zero_spin.status, "VERIFIED_PROGRESS");
+  assert.equal(env.zero_spin.classification, "OK:VERIFIED");
+  assert.equal(env.proactive_self.zero_spin.progress_verified, true);
+});
+
+test("dema peak-self-loop --spin-steps-json refuses malformed JSON", () => {
+  const home = freshHome();
+  let failure;
+  try {
+    runCLI(["peak-self-loop", "--json", "--spin-steps-json={not-json"], home);
+  } catch (error) {
+    failure = error;
+  }
+  assert.ok(failure);
+  assert.equal(failure.status, 1);
+});
+
 test("dema peak-self-loop writes nothing to DEMA_HOME", () => {
   const home = freshHome();
   const before = readdirSync(home).sort();
