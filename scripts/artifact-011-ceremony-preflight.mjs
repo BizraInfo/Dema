@@ -9,7 +9,7 @@
 
 import { execFile } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -41,14 +41,38 @@ async function resolveGitCommit() {
   }
 }
 
-function resolveHome(options = {}) {
-  const fromFlag = argValue("--home");
-  if (fromFlag) return { home: fromFlag, cleanup: false };
+// Portability invariant: isolated preflight must honor operator-provided
+// --home / DEMA_HOME seams first, then attempt an isolated temp dir under
+// homedir(). When HOME is read-only (EROFS/EACCES in sandboxed CI), fall back
+// to tmpdir() so the release gate still runs. Operator-provided homes keep
+// cleanup:false (never auto-deleted); isolated temp dirs keep cleanup:true.
+//
+// `deps` is an injectable seam for tests (simulate EROFS/EACCES, assert
+// fail-closed). Production callers use the real node:fs / node:os bindings.
+export function resolveHome(options = {}, deps = {}) {
+  const mkdtempFn = deps.mkdtempSync ?? mkdtempSync;
+  const homedirFn = deps.homedir ?? homedir;
+  const tmpdirFn = deps.tmpdir ?? tmpdir;
+  const env = deps.env ?? process.env;
+  const flagHome = deps.flagHome !== undefined ? deps.flagHome : argValue("--home");
+
+  if (flagHome) return { home: flagHome, cleanup: false };
   if (options.isolated === true || ISOLATED) {
-    const home = mkdtempSync(join(homedir(), ".dema-artifact-011-preflight-"));
-    return { home, cleanup: true };
+    const fromEnv = env.DEMA_HOME;
+    if (fromEnv) return { home: fromEnv, cleanup: false };
+    const prefix = ".dema-artifact-011-preflight-";
+    try {
+      const home = mkdtempFn(join(homedirFn(), prefix));
+      return { home, cleanup: true };
+    } catch (err) {
+      if (err?.code !== "EROFS" && err?.code !== "EACCES") throw err;
+      // HOME is read-only: fall back to tmpdir(). If that also fails the
+      // error propagates — the gate fails closed rather than writing nowhere.
+      const home = mkdtempFn(join(tmpdirFn(), prefix));
+      return { home, cleanup: true };
+    }
   }
-  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+  const home = env.DEMA_HOME || join(homedirFn(), ".dema");
   return { home, cleanup: false };
 }
 

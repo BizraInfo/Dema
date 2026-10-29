@@ -13,7 +13,10 @@ import {
   runArtifact011CeremonyPreflight,
 } from "../packages/mission/src/artifact-011-ceremony-preflight.js";
 import { BOUNDED_DIAGNOSTIC_CONSENT_PHRASE } from "../packages/core/src/diagnostic-consent.js";
-import { runArtifact011PreflightScript } from "../scripts/artifact-011-ceremony-preflight.mjs";
+import {
+  runArtifact011PreflightScript,
+  resolveHome,
+} from "../scripts/artifact-011-ceremony-preflight.mjs";
 
 const execFileAsync = promisify(execFile);
 const CLI = fileURLToPath(new URL("../apps/cli/src/index.js", import.meta.url));
@@ -115,4 +118,138 @@ test("runArtifact011PreflightScript accepts injected home", async () => {
   } finally {
     await rm(home, { recursive: true, force: true });
   }
+});
+
+// --- Portability invariant: isolated resolveHome seam + EROFS fallback ---
+// Regression gate for the previously-unenforced invariant that isolated
+// preflight must run even when homedir() is read-only (EROFS/EACCES), and
+// must honor operator-provided --home / DEMA_HOME seams first.
+
+test("resolveHome isolated mode writes under provided --home when set", () => {
+  const result = resolveHome(
+    { isolated: true },
+    {
+      flagHome: "/operator/provided/home",
+      // mkdtemp must NOT be called when a seam is provided.
+      mkdtempSync: () => {
+        throw new Error("mkdtempSync must not be called when --home is set");
+      },
+      homedir: () => "/should/not/be/used",
+      tmpdir: () => "/should/not/be/used",
+      env: {},
+    },
+  );
+  assert.equal(result.home, "/operator/provided/home");
+  // Operator-provided home must never be auto-deleted.
+  assert.equal(result.cleanup, false);
+});
+
+test("resolveHome isolated mode writes under DEMA_HOME when set (no flag)", () => {
+  const result = resolveHome(
+    { isolated: true },
+    {
+      flagHome: null,
+      mkdtempSync: () => {
+        throw new Error("mkdtempSync must not be called when DEMA_HOME is set");
+      },
+      homedir: () => "/should/not/be/used",
+      tmpdir: () => "/should/not/be/used",
+      env: { DEMA_HOME: "/env/provided/home" },
+    },
+  );
+  assert.equal(result.home, "/env/provided/home");
+  assert.equal(result.cleanup, false);
+});
+
+test("resolveHome isolated mode falls back to tmpdir when homedir() is read-only", () => {
+  const calls = [];
+  const result = resolveHome(
+    { isolated: true },
+    {
+      flagHome: null,
+      env: {},
+      homedir: () => "/readonly/home",
+      tmpdir: () => "/writable/tmp",
+      mkdtempSync: (prefixPath) => {
+        calls.push(prefixPath);
+        if (prefixPath.startsWith("/readonly/home")) {
+          const err = new Error("EROFS: read-only file system");
+          err.code = "EROFS";
+          throw err;
+        }
+        return `${prefixPath}abc123`;
+      },
+    },
+  );
+  // First attempt under homedir() (threw), then fallback under tmpdir().
+  assert.equal(calls.length, 2);
+  assert.ok(calls[0].startsWith("/readonly/home"));
+  assert.ok(calls[1].startsWith("/writable/tmp"));
+  assert.ok(result.home.startsWith("/writable/tmp"));
+  // Isolated temp dir is auto-cleaned.
+  assert.equal(result.cleanup, true);
+});
+
+test("resolveHome isolated mode falls back to tmpdir on EACCES", () => {
+  const result = resolveHome(
+    { isolated: true },
+    {
+      flagHome: null,
+      env: {},
+      homedir: () => "/noperm/home",
+      tmpdir: () => "/writable/tmp",
+      mkdtempSync: (prefixPath) => {
+        if (prefixPath.startsWith("/noperm/home")) {
+          const err = new Error("EACCES: permission denied");
+          err.code = "EACCES";
+          throw err;
+        }
+        return `${prefixPath}xyz789`;
+      },
+    },
+  );
+  assert.ok(result.home.startsWith("/writable/tmp"));
+  assert.equal(result.cleanup, true);
+});
+
+test("resolveHome isolated mode fails closed when no writable path exists", () => {
+  assert.throws(
+    () =>
+      resolveHome(
+        { isolated: true },
+        {
+          flagHome: null,
+          env: {},
+          homedir: () => "/readonly/home",
+          tmpdir: () => "/readonly/tmp",
+          mkdtempSync: () => {
+            const err = new Error("EROFS: read-only file system");
+            err.code = "EROFS";
+            throw err;
+          },
+        },
+      ),
+    /EROFS/,
+  );
+});
+
+test("resolveHome isolated mode rethrows non-portability errors unchanged", () => {
+  assert.throws(
+    () =>
+      resolveHome(
+        { isolated: true },
+        {
+          flagHome: null,
+          env: {},
+          homedir: () => "/home",
+          tmpdir: () => "/tmp",
+          mkdtempSync: () => {
+            const err = new Error("ENOSPC: no space left on device");
+            err.code = "ENOSPC";
+            throw err;
+          },
+        },
+      ),
+    /ENOSPC/,
+  );
 });
