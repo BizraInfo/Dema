@@ -509,10 +509,10 @@ export async function cmd_corpus(ctx) {
   process.stderr.write(
     [
       "Usage:",
-      '  dema corpus index --file <abs_path> --consent "GO: content_read <abs_path>" [--json]',
-      '  dema corpus spend --file <abs_csv_path> --consent "GO: content_read <abs_csv_path>" [--json]',
-      "  dema corpus review --receipt <abs_path_to_founder_work_index.json> [--json]",
-      "  dema corpus sanitize --file <abs_path> [--json]   (Layer -1 safety gate: secrets/injection/authority)",
+      '  node bin/dema corpus index --file <abs_path> --consent "GO: content_read <abs_path>" [--json]',
+      '  node bin/dema corpus spend --file <abs_csv_path> --consent "GO: content_read <abs_csv_path>" [--json]',
+      "  node bin/dema corpus review --receipt <abs_path_to_founder_work_index.json> [--json]",
+      "  node bin/dema corpus sanitize --file <abs_path> [--json]   (Layer -1 safety gate: secrets/injection/authority)",
       "",
     ].join("\n"),
   );

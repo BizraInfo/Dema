@@ -73,7 +73,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | P6 | `npm run proof:outsider` one-command loop | DONE (this slice) |
 | P6b | Doctor/first-run/i18n outsider hints → `node bin/dema` | DONE (review follow-up closed footers) |
 | P7 | Push branch + optional PR | OPEN — needs typed **GO: push** |
-| P8 | G8 coverage floors (95/84) — measured 93.04/78.07 | OPEN — multi-slice (hw/think CLI in-process started) |
+| P8 | G8 coverage floors (95/84) — measured 93.04/78.07 | OPEN — multi-slice (hw/think + corpus CLI in-process) |
 | — | Cartographer JSON intake | BLOCKED (artifacts absent) |
 | — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
 
