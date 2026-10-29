@@ -4,7 +4,7 @@ export async function cmd_hardware(ctx) {
   const wantJson = argv.includes("--json");
 
   if (sub !== "profile") {
-    console.error("usage: dema hardware profile [--json]");
+    console.error("usage: node bin/dema hardware profile [--json]");
     process.exit(1);
   }
 

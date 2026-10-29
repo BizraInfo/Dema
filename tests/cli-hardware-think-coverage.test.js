@@ -27,7 +27,7 @@ test("dema hardware without profile → usage exit 1", async (t) => {
   t.mock.method(console, "error", (line) => errLines.push(String(line)));
   const signal = withExitThrow(t, 1);
   await assert.rejects(cmd_hardware({ argv: ["hardware"] }), (e) => e === signal);
-  assert.match(errLines.join("\n"), /hardware profile/);
+  assert.match(errLines.join("\n"), /node bin\/dema hardware profile/);
 });
 
 test("dema hardware profile --json → valid profile envelope", async (t) => {

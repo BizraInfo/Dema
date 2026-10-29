@@ -34,7 +34,7 @@ const EN = Object.freeze({
     boundary_body:
       "This guide is preview-only. It does not mutate files, start runtime, start a daemon, execute missions, mint receipts, connect Node1/Node2, start a multi-node pilot, perform Step 7 minting, post externally, or federate.",
     next_heading: "Next:",
-    chat_hint: "For the interactive shell: dema chat",
+    chat_hint: "For the interactive shell: node bin/dema chat",
   }),
   onboard: Object.freeze({
     header: "Dema — guided setup path",
@@ -48,8 +48,8 @@ const EN = Object.freeze({
     boundary_2:
       "and nothing leaves this machine. Each stage acts only on your typed consent.",
     next_heading: "Next:",
-    next_welcome: "dema welcome    — read the first-run orientation",
-    next_status: "dema status     — see what is true, safe, and blocked",
+    next_welcome: "node bin/dema welcome    — read the first-run orientation",
+    next_status: "node bin/dema status     — see what is true, safe, and blocked",
   }),
   doctor: Object.freeze({
     activation_gate: "Activation gate",
@@ -71,9 +71,9 @@ const EN = Object.freeze({
     preview_footer_nothing_broken:
       "Nothing is broken. This is the expected state before a runtime is bridged.",
     preview_footer_exit_code:
-      "`dema doctor` still exits non-zero because this node is not operational.",
+      "`node bin/dema doctor` still exits non-zero because this node is not operational.",
     preview_footer_preview_flag:
-      "To validate the preview environment itself: `dema doctor --preview` (exits 0).",
+      "To validate the preview environment itself: `node bin/dema doctor --preview` (exits 0).",
     fix_label: "Fix",
     note_label: "Note",
     summary_awaiting: "awaiting a bridged runtime",
@@ -113,7 +113,7 @@ const AR = Object.freeze({
     boundary_body:
       "هذا الدليل للمعاينة فقط. لا يعدّل ملفات، ولا يبدأ وقت تشغيل، ولا يبدأ خادماً خلفياً، ولا ينفّذ مهاماً، ولا يسكّ إيصالات، ولا يصل Node1/Node2، ولا يبدأ تجريباً متعدد العقد، ولا يقوم بسكّ الخطوة 7، ولا ينشر خارجياً، ولا يوحّد الشبكة.",
     next_heading: "التالي:",
-    chat_hint: "للقشرة التفاعلية: dema chat",
+    chat_hint: "للقشرة التفاعلية: node bin/dema chat",
   }),
   onboard: Object.freeze({
     header: "ديما — مسار الإعداد الموجَّه",
@@ -127,8 +127,8 @@ const AR = Object.freeze({
     boundary_2:
       "ولا يغادر شيء هذا الجهاز. كل مرحلة تعمل فقط بموافقتك المكتوبة حرفياً.",
     next_heading: "التالي:",
-    next_welcome: "dema welcome    — اقرأ توجيه التشغيل الأول",
-    next_status: "dema status     — انظر ما هو حقيقي وآمن ومحظور",
+    next_welcome: "node bin/dema welcome    — اقرأ توجيه التشغيل الأول",
+    next_status: "node bin/dema status     — انظر ما هو حقيقي وآمن ومحظور",
   }),
   doctor: Object.freeze({
     activation_gate: "بوابة التفعيل",
@@ -147,9 +147,9 @@ const AR = Object.freeze({
     preview_footer_nothing_broken:
       "لا يوجد خلل. هذه هي الحالة المتوقّعة قبل ربط وقت التشغيل.",
     preview_footer_exit_code:
-      "الأمر `dema doctor` يخرج بقيمة غير صفرية لأن هذه العقدة ليست في وضع التشغيل.",
+      "الأمر `node bin/dema doctor` يخرج بقيمة غير صفرية لأن هذه العقدة ليست في وضع التشغيل.",
     preview_footer_preview_flag:
-      "للتحقق من بيئة المعاينة نفسها: `dema doctor --preview` (يخرج بصفر).",
+      "للتحقق من بيئة المعاينة نفسها: `node bin/dema doctor --preview` (يخرج بصفر).",
     fix_label: "إصلاح",
     note_label: "ملاحظة",
     summary_awaiting: "بانتظار ربط وقت التشغيل",

@@ -100,15 +100,31 @@ test("negative control 5: rederivedOnDisk Boolean alone cannot promote to VERIFI
 });
 
 test("negative control 6: malformed rederivationEvidence cannot promote to VERIFIED", () => {
+  // Isolate malformed evidence: omit rederivedOnDisk so the reason is not
+  // conflated with REFUSED_CALLER_BOOLEAN_NOT_EVIDENCE.
   const bad = validateProvenancePromotion({
     sourceProvenance: "ATTESTED_BY_OPERATOR",
     claimedLabel: "VERIFIED_BY_ORCHESTRATOR",
-    rederivedOnDisk: true,
     rederivationEvidence: { note: "trust me" },
   });
   assert.equal(bad.ok, false);
-  assert.match(String(bad.reason), /REFUSED_/);
-  assert.notEqual(bad.reason, "PROMOTION_BACKED_BY_REDERIVATION");
+  assert.equal(bad.reason, "REFUSED_PROMOTION_WITHOUT_REDERIVATION");
+  assert.equal(bad.claim_ceiling, "CONTROL_MAPPING_COMPLETE");
+});
+
+test("negative control 7: structured evidence still cannot promote in pure kernel", () => {
+  const structured = validateProvenancePromotion({
+    sourceProvenance: "ATTESTED_BY_SUBAGENT",
+    claimedLabel: "VERIFIED_BY_ORCHESTRATOR",
+    rederivationEvidence: {
+      kind: "content_sha256",
+      path: "packages/core/src/meta-gate-inventory.js",
+      content_sha256: "a".repeat(64),
+    },
+  });
+  assert.equal(structured.ok, false);
+  assert.equal(structured.reason, "REFUSED_PURE_KERNEL_CANNOT_VERIFY_DISK");
+  assert.equal(structured.claim_ceiling, "CONTROL_MAPPING_COMPLETE");
 });
 
 test("canonical meta-gate inventory is fully enforced and maps real on-disk paths", () => {
