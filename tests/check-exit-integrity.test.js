@@ -491,16 +491,66 @@ function nestedTestEnv() {
   return env;
 }
 
-for (const [name, body, exit, belowFloor] of [
-  ["below branch floor", 'if (false) throw new Error("unreached");', 1, true],
-  ["fully covered", "", 0, false],
-  ["failed test", 'throw new Error("fixture failure");', 1, false],
-]) {
+// Node 24+ excludes `*.test.mjs` bodies from V8 coverage and may emit empty
+// LCOV (TN: only) for branchless inline fixtures. Put measurable branches in a
+// sibling non-test module the fixture imports so BRF/BRH stay native-real.
+const COVERAGE_COUNTS_FIXTURES = Object.freeze([
+  Object.freeze({
+    name: "below branch floor",
+    moduleSource: `export function branchy(x) {
+  if (x === 1) return 'a';
+  if (x === 2) return 'b';
+  if (x === 3) return 'c';
+  if (x === 4) return 'd';
+  if (x === 5) return 'e';
+  return 'z';
+}
+`,
+    // Hit only one arm → BRH/BRF under the 84% floor.
+    testSource: `import test from 'node:test';
+import { branchy } from './branchy.mjs';
+test('fixture', () => { branchy(1); });
+`,
+    exit: 1,
+    belowFloor: true,
+  }),
+  Object.freeze({
+    name: "fully covered",
+    moduleSource: `export function branchy(x) { return x ? 1 : 0; }\n`,
+    testSource: `import test from 'node:test';
+import assert from 'node:assert/strict';
+import { branchy } from './branchy.mjs';
+test('fixture', () => {
+  assert.equal(branchy(true), 1);
+  assert.equal(branchy(false), 0);
+});
+`,
+    exit: 0,
+    belowFloor: false,
+  }),
+  Object.freeze({
+    name: "failed test",
+    moduleSource: `export function branchy(x) { return x ? 1 : 0; }\n`,
+    testSource: `import test from 'node:test';
+import { branchy } from './branchy.mjs';
+test('fixture', () => {
+  branchy(true);
+  branchy(false);
+  throw new Error('fixture failure');
+});
+`,
+    exit: 1,
+    belowFloor: false,
+  }),
+]);
+
+for (const { name, moduleSource, testSource, exit, belowFloor } of COVERAGE_COUNTS_FIXTURES) {
   test(`COVERAGE-COUNTS: ${name} retains native counts and exit`, () => {
     const dir = mkdtempSync(join(tmpdir(), "coverage-counts-"));
     try {
+      writeFileSync(join(dir, "branchy.mjs"), moduleSource);
       const fixture = join(dir, "fixture.test.mjs");
-      writeFileSync(fixture, `import test from 'node:test'; test('fixture', () => { ${body} });\n`);
+      writeFileSync(fixture, testSource);
       const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
       const command = pkg.scripts.coverage.replace("tests/*.test.js", '"$COVERAGE_FIXTURE"');
       const result = spawnSync("bash", ["-c", command], {
