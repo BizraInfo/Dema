@@ -230,6 +230,16 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/genesis/src/urp0-sat5.js",
   "scripts/genesis/urp0-runtime.mjs",
   "scripts/genesis/urp0-store.mjs",
+  // META-GATE-INVENTORY-1A / FROZEN-ACCEPTANCE-CONTRACT-1A — both pure kernels
+  // reuse the mandated canonical JSON v1 hash (sha256CanonicalJsonV1) instead of
+  // a bespoke serializer: the meta-gate inventory content-addresses its audited
+  // invariant set, and the frozen acceptance contract binds a full slice plan to
+  // one exact consent phrase by its canonical hash, so a one-byte plan mutation
+  // changes the hash and verification fails closed. Registration is adoption
+  // review only; both kernels are PREVIEW_ONLY, pure, promote nothing, and grant
+  // no runtime authority.
+  "packages/core/src/meta-gate-inventory.js",
+  "packages/core/src/frozen-acceptance-contract.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
