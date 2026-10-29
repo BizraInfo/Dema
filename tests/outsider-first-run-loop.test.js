@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import {
   OUTSIDER_LOOP_SCHEMA,
   OUTSIDER_LOOP_TRUTH_LABEL,
+  leanEnv,
   runOutsiderFirstRunLoop,
 } from "../scripts/proof/outsider-first-run-loop.mjs";
 
@@ -14,6 +15,20 @@ const execFileAsync = promisify(execFile);
 const scriptPath = fileURLToPath(
   new URL("../scripts/proof/outsider-first-run-loop.mjs", import.meta.url),
 );
+
+test("leanEnv strips ambient gateway/adapter bridge URLs", () => {
+  const prev = process.env.DEMA_GATEWAY_URL;
+  process.env.DEMA_GATEWAY_URL = "http://127.0.0.1:9";
+  try {
+    const env = leanEnv("/tmp/dema-outsider-lean-home");
+    assert.equal(env.DEMA_GATEWAY_URL, undefined);
+    assert.equal(env.DEMA_NODE0_ADAPTER, undefined);
+    assert.equal(env.DEMA_HOME, "/tmp/dema-outsider-lean-home");
+  } finally {
+    if (prev === undefined) delete process.env.DEMA_GATEWAY_URL;
+    else process.env.DEMA_GATEWAY_URL = prev;
+  }
+});
 
 test("runOutsiderFirstRunLoop completes under reduced PATH policy", () => {
   const report = runOutsiderFirstRunLoop();

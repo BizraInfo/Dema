@@ -125,3 +125,15 @@ test("does not claim singularity or live RSI in sealed fields", () => {
   assert.match(report.what_this_does_not_prove, /Not live RSI/);
   assert.equal(report.authority_delta, 0);
 });
+
+test("empty drafts refuse — never invent a CONVERGED placeholder", () => {
+  const report = buildFrameworkConstellationPreview({
+    observations: ["code_anchor_present"],
+    drafts: [],
+    evidence: ["packages/core/src/framework-constellation-preview.js"],
+    knowledge_entries: knowledgeEntries(),
+  });
+  assert.equal(report.diffusion.ok, false);
+  assert.notEqual(report.diffusion.convergence_status, "CONVERGED");
+  assert.equal(report.next_safe_action, "repair_diffusion_drafts_input");
+});

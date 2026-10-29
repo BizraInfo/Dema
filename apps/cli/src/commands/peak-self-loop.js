@@ -18,7 +18,15 @@ export function parsePeakSelfLoopSpinStepsArg(argv = []) {
   const idx = argv.indexOf(SPIN_STEPS_FLAG);
   let raw = null;
   if (eq) raw = eq.slice(SPIN_STEPS_PREFIX.length);
-  else if (idx >= 0) raw = argv[idx + 1];
+  else if (idx >= 0) {
+    const next = argv[idx + 1];
+    // Trailing `--spin-steps-json` without a value is an explicit (broken)
+    // request — do not treat as "flag absent" / NOT_SUPPLIED.
+    if (next == null || (typeof next === "string" && next.startsWith("--"))) {
+      return { provided: true, steps: null, error: "spin_steps_value_missing" };
+    }
+    raw = next;
+  }
   if (raw == null) return { provided: false, steps: null, error: null };
   try {
     const parsed = JSON.parse(raw);

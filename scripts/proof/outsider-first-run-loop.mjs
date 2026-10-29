@@ -23,8 +23,8 @@ const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEMA_BIN = join(REPO, "bin/dema");
 const NODE_DIR = dirname(process.execPath);
 
-function leanEnv(home) {
-  return {
+export function leanEnv(home) {
+  const env = {
     ...process.env,
     PATH: `/usr/bin:/bin:${NODE_DIR}`,
     DEMA_HOME: home,
@@ -32,6 +32,19 @@ function leanEnv(home) {
     NO_COLOR: "1",
     NODE_ENV: "test",
   };
+  // Proof claims network:false — strip operator bridge URLs so status/doctor
+  // cannot reach a live gateway from ambient process.env.
+  for (const key of [
+    "DEMA_GATEWAY_URL",
+    "DEMA_NODE0_ADAPTER",
+    "DEMA_NODE0_STATUS_COMMAND",
+    "DEMA_LLAMACPP_URL",
+    "DEMA_OLLAMA_URL",
+    "DEMA_LMSTUDIO_URL",
+  ]) {
+    delete env[key];
+  }
+  return env;
 }
 
 function runStep(home, argv, { allowFail = false } = {}) {

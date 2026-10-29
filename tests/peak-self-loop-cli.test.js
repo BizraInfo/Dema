@@ -126,6 +126,18 @@ test("dema peak-self-loop --spin-steps-json refuses malformed JSON", () => {
   assert.equal(failure.status, 1);
 });
 
+test("dema peak-self-loop trailing --spin-steps-json without value exits 1", () => {
+  const home = freshHome();
+  let failure;
+  try {
+    runCLI(["peak-self-loop", "--json", "--spin-steps-json"], home);
+  } catch (error) {
+    failure = error;
+  }
+  assert.ok(failure, "trailing flag must not silently become NOT_SUPPLIED");
+  assert.equal(failure.status, 1);
+});
+
 test("dema peak-self-loop writes nothing to DEMA_HOME", () => {
   const home = freshHome();
   const before = readdirSync(home).sort();

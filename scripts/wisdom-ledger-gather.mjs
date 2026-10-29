@@ -49,7 +49,11 @@ const ledger = buildWisdomLedger({ source: { file_sha256_of_cards: null, convers
 const v = verifyWisdomLedger(ledger);
 mkdirSync(join(home, "wisdom"), { recursive: true });
 const ledgerPath = join(home, "wisdom", "chatgpt-top10-wisdom-ledger.json");
-writeFileSync(ledgerPath, JSON.stringify({ ...ledger, per_conversation: perConv }, null, 1));
+// Do not append fields after seal — verifyWisdomLedger hashes every key except
+// ledger_sha256. Conversation rollup is a sidecar, not part of the sealed body.
+writeFileSync(ledgerPath, JSON.stringify(ledger, null, 1));
+const perConvPath = join(home, "wisdom", "chatgpt-top10-per-conversation.json");
+writeFileSync(perConvPath, JSON.stringify({ schema: "bizra.dema.wisdom_per_conversation.v0.1", conversations: perConv }, null, 1));
 
 // Specificity: recent, slice-bearing, prose-like (not JSON/table/log) lines rank first.
 const gemScore = (a) =>

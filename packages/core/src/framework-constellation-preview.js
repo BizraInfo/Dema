@@ -134,15 +134,21 @@ export function buildFrameworkConstellationPreview({
         : 0;
   }
 
-  const diffusionDrafts =
-    Array.isArray(drafts) && drafts.length > 0
-      ? drafts
-      : ["preview placeholder draft awaiting operator refinement"];
-  const diffusion = buildDiffusionRefinement({
-    drafts: diffusionDrafts,
-    evidence,
-    claim_id: `${constellation_id}:diffusion`,
-  });
+  // Never invent drafts: empty/missing inputs must surface as refuse, not CONVERGED.
+  const diffusion = Array.isArray(drafts) && drafts.length > 0
+    ? buildDiffusionRefinement({
+        drafts,
+        evidence,
+        claim_id: `${constellation_id}:diffusion`,
+      })
+    : Object.freeze({
+        valid: false,
+        rejected: true,
+        reason_code: Array.isArray(drafts) ? "drafts_empty" : "drafts_must_be_array",
+        convergence_status: null,
+        final_noise_score: null,
+        convergence_hash: null,
+      });
 
   let fde = null;
   let fde_verify = null;

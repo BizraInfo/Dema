@@ -31,8 +31,14 @@ const nonEmptyString = (v) => typeof v === "string" && v.length > 0;
 // contract is included, so the hash covers the whole plan. Arrays preserve
 // order (step order is part of the plan). Canonicalization is delegated to
 // packages/canon so the hash is stable and byte-faithful.
+function deepFreeze(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
 function canonicalPlanBody(plan) {
-  return {
+  return deepFreeze({
     sliceId: plan?.sliceId ?? null,
     parentClosureGoalId: plan?.parentClosureGoalId ?? null,
     acceptanceCommands: Array.isArray(plan?.acceptanceCommands)
@@ -43,7 +49,7 @@ function canonicalPlanBody(plan) {
       : [],
     steps: Array.isArray(plan?.steps) ? plan.steps.map((s) => ({ ...s })) : [],
     budgetLimits: { ...(plan?.budgetLimits ?? {}) },
-  };
+  });
 }
 
 function contractHashFor(plan) {
@@ -99,7 +105,13 @@ export function verifyFrozenContractConsent({
     });
   }
 
-  if (consentPhrase !== contract.consentPhrase) {
+  // Rebuild the hash-bound phrase — never trust a caller-mutated consentPhrase
+  // field on an otherwise hash-matching contract object.
+  const expectedPhrase = `${CONSENT_PREFIX} ${contract.sliceId} ${contract.contractHash}`;
+  if (contract.consentPhrase !== expectedPhrase) {
+    return Object.freeze({ ...base, ok: false, reason: "REFUSED_CONTRACT_PHRASE_TAMPER" });
+  }
+  if (consentPhrase !== expectedPhrase) {
     return Object.freeze({ ...base, ok: false, reason: "REFUSED_EXACT_CONSENT_MISMATCH" });
   }
 

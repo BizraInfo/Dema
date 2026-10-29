@@ -41,7 +41,11 @@ export function deriveCampaignState(ledger) {
 function finish(ledger) {
   const head = ledger.events.at(-1)?.event_hash ?? GENESIS;
   const state = { ...deriveCampaignState(ledger), head_hash: head };
-  return { ...ledger, state, ledger_sha256: sha256(stableStringify({ ...ledger, state })) };
+  // Exclude any prior ledger_sha256 from the digest body — otherwise finish()
+  // twice (or append after finish) seals a hash that cannot match the saved body.
+  const { ledger_sha256: _prior, ...rest } = ledger;
+  const body = { ...rest, state };
+  return { ...body, ledger_sha256: sha256(stableStringify(body)) };
 }
 
 export function appendCampaignEvent(ledger, event) {
@@ -108,5 +112,9 @@ export function verifyCampaignLedger(ledger) {
   if (st.head_hash !== prev) add("head_hash_mismatch");
   if (st.status !== derived.status || st.model_calls_used !== derived.model_calls_used
       || st.service_transitions_used !== derived.service_transitions_used) add("state_mismatch");
+  const { ledger_sha256, ...digestBody } = ledger;
+  if (!ledger_sha256 || ledger_sha256 !== sha256(stableStringify(digestBody))) {
+    add("ledger_hash_mismatch");
+  }
   return { ok: reasons.length === 0, reasons };
 }
