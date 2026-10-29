@@ -117,6 +117,35 @@ test("negative control 2: wrong or missing consent phrase fails closed REFUSED_E
   assert.equal(padded.reason, "REFUSED_EXACT_CONSENT_MISMATCH");
 });
 
+test("freeze and verify detach nested caller data (edit-and-retry safe)", () => {
+  const plan = samplePlan();
+  plan.steps[0].inputs = { nested: ["keep-me-mutable"] };
+  plan.budgetLimits.extra = { cap: 1 };
+
+  const contract = freezeAcceptanceContract(plan);
+  assert.ok(Object.isFrozen(contract.canonicalPlan));
+  assert.ok(Object.isFrozen(contract.canonicalPlan.steps[0]));
+
+  // Caller still owns mutable nested objects after freeze.
+  plan.steps[0].inputs.nested.push("after-freeze");
+  plan.budgetLimits.extra.cap = 2;
+  assert.equal(plan.steps[0].inputs.nested[1], "after-freeze");
+  assert.equal(plan.budgetLimits.extra.cap, 2);
+
+  // Failed verify must not freeze the caller's nested objects either.
+  const retryPlan = samplePlan();
+  retryPlan.steps[0].inputs = { nested: ["retry"] };
+  const mismatch = verifyFrozenContractConsent({
+    contract,
+    consentPhrase: contract.consentPhrase,
+    rawPlanToVerify: retryPlan,
+  });
+  assert.equal(mismatch.ok, false);
+  assert.equal(mismatch.reason, "REFUSED_CONTRACT_HASH_MISMATCH");
+  retryPlan.steps[0].inputs.nested.push("after-mismatch");
+  assert.equal(retryPlan.steps[0].inputs.nested[1], "after-mismatch");
+});
+
 test("negative control 3: unknown budget exhaustion freezes at FREEZE_STOP_AT_UNKNOWN", () => {
   const exhausted = evaluateUnknownBudget({
     unresolvedUnknowns: ["port_7421_vs_7770"],

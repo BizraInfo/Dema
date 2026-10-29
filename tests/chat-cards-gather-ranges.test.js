@@ -1,7 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { iterateJsonlByteRanges } from "../scripts/chat-cards-gather.mjs";
+import { Readable } from "node:stream";
+import {
+  iterateJsonlByteRanges,
+  iterateJsonlByteRangesFromStream,
+} from "../scripts/chat-cards-gather.mjs";
 
 test("LF records: length includes newline; hash excludes it", () => {
   const buf = Buffer.from('{"a":1}\n{"b":2}\n', "utf8");
@@ -34,4 +38,14 @@ test("final record without newline uses exact length (no phantom +1)", () => {
   assert.equal(recs.length, 2);
   assert.equal(recs[1].length, Buffer.byteLength('{"b":2}'));
   assert.equal(recs[1].offset + recs[1].length, buf.length);
+});
+
+test("stream iterator matches buffer ranges across chunk boundaries", async () => {
+  const buf = Buffer.from('{"a":1}\r\n{"b":2}\r\n{"c":3}', "utf8");
+  const expected = [...iterateJsonlByteRanges(buf)];
+  // Force a mid-record split so carry-buffer logic is exercised.
+  const stream = Readable.from([buf.subarray(0, 5), buf.subarray(5, 12), buf.subarray(12)]);
+  const streamed = [];
+  for await (const rec of iterateJsonlByteRangesFromStream(stream)) streamed.push(rec);
+  assert.deepEqual(streamed, expected);
 });

@@ -38,18 +38,21 @@ function deepFreeze(value) {
 }
 
 function canonicalPlanBody(plan) {
-  return deepFreeze({
+  // Detach before deepFreeze so caller-owned nested objects (step fields,
+  // budget maps, nested arrays) stay mutable for edit-and-retry flows.
+  const body = {
     sliceId: plan?.sliceId ?? null,
     parentClosureGoalId: plan?.parentClosureGoalId ?? null,
     acceptanceCommands: Array.isArray(plan?.acceptanceCommands)
-      ? [...plan.acceptanceCommands]
+      ? structuredClone(plan.acceptanceCommands)
       : [],
     refusalConditions: Array.isArray(plan?.refusalConditions)
-      ? [...plan.refusalConditions]
+      ? structuredClone(plan.refusalConditions)
       : [],
-    steps: Array.isArray(plan?.steps) ? plan.steps.map((s) => ({ ...s })) : [],
-    budgetLimits: { ...(plan?.budgetLimits ?? {}) },
-  });
+    steps: Array.isArray(plan?.steps) ? structuredClone(plan.steps) : [],
+    budgetLimits: structuredClone(plan?.budgetLimits ?? {}),
+  };
+  return deepFreeze(body);
 }
 
 function contractHashFor(plan) {
