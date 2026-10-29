@@ -1,0 +1,51 @@
+{
+  "skill_id": "campaign-ledger",
+  "version": "1.0.0",
+  "capability_family": "dema-campaign-lifecycle",
+  "capability": "NODE0_CAMPAIGN_LEDGER_PREVIEW_1A",
+  "allow_implicit_invocation": false,
+  "lifecycle_phase": "post-implementation",
+  "applicability": [
+    "building a hash-chained campaign ledger preview",
+    "appending STATUS/MODEL_CALL/SERVICE_TRANSITION/OBSERVATION/RECEIPT events",
+    "verifying campaign ledger integrity (derived counters and status)"
+  ],
+  "exclusions": [
+    "autonomous campaign execution or any self-running loop",
+    "model invocation, network use, or file writes",
+    "detecting a fully consistent whole-chain rewrite (needs external seal)",
+    "runtime mutation or authority expansion"
+  ],
+  "preconditions": [
+    "repository checkout exists",
+    "exact human consent naming this skill (allow_implicit_invocation is false)"
+  ],
+  "inputs": [
+    "campaign contract (campaign_id, goal, definition_of_done, authority_lease)",
+    "events to append (kind, status, authority_delta 0)"
+  ],
+  "outputs": [
+    "sealed campaign ledger with contract_sha256 and ledger_sha256",
+    "derived state (status, model_calls_used, service_transitions_used, head_hash)",
+    "verify result { ok, reasons }"
+  ],
+  "side_effects": [
+    "pure kernel — zero I/O, no clock, no mutation",
+    "authority_delta stays 0 and all boundary flags stay false"
+  ],
+  "permissions": [
+    "read repository"
+  ],
+  "resource_bindings": [
+    "packages/core/src/campaign-ledger.js"
+  ],
+  "truth_boundary": "preview-only",
+  "evidence_refs": [],
+  "projection_targets": [".claude", ".agents"],
+  "convergence": {
+    "formal": 2,
+    "cryptographic": 1,
+    "empirical": 2,
+    "economic": 0
+  }
+}

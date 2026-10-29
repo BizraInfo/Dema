@@ -1,0 +1,10 @@
+{
+  "schema": "bizra.skill-projection/v1",
+  "skill_id": "campaign-ledger",
+  "projection_target": ".claude",
+  "source_registry_hash": "d4abf249701119ca2edbd50270e250e4425531b50b418e1cac0aba0212374164",
+  "contract_hash": "78fc56523fe4e388e1279a32b1f2d65ed8efa389d4d43d9a7e79abd5ea92732f",
+  "generated_at": "2026-10-29T00:05:56.571Z",
+  "files_projected": 3,
+  "files_skipped": 0
+}
