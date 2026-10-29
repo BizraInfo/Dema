@@ -74,6 +74,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | P6b | Doctor/first-run/i18n outsider hints → `node bin/dema` | DONE (review follow-up closed footers) |
 | P7 | Push branch + optional PR | OPEN — needs typed **GO: push** |
 | P8 | G8 coverage floors (95/84) — measured 93.04/78.07 | OPEN — multi-slice (hw/think + corpus CLI in-process) |
+| P9 | Framework constellation preview (HHMM∩hash∩diffusion∩FDE) | DONE @ this slice — PREVIEW_ONLY composer |
 | — | Cartographer JSON intake | BLOCKED (artifacts absent) |
 | — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
 

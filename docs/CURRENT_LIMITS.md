@@ -275,7 +275,8 @@ who only sees the README.
 | SBOM emission at release                                             | Stdlib-only surface; SBOM script not yet present                                                          |
 | Dependabot for GitHub Actions SHA-pinned bumps                       | `.github/dependabot.yml` not yet present                                                                  |
 | Release workflow                                                     | Manual today; `release.yml` workflow not yet present                                                      |
-| Coverage headroom above the hard 95/84/95 floor                      | `npm run coverage` now enforces native Node thresholds; branch coverage remains the tightest margin and should be expanded before raising the floor |
+| Coverage headroom above the hard 95/84/95 floor                      | `npm run coverage` now enforces native Node thresholds; branch coverage remains the tightest margin and should be expanded before raising the floor. Measured hermetic check (2026-10-29, Node 24): **93.04% lines / 78.07% branches** — G8 RED; in-process CLI coverage slices (hardware/think/corpus) started, floors not cleared. |
+| Framework constellation composer (FRAMEWORK-CONSTELLATION-PREVIEW-1A) | `packages/core/src/framework-constellation-preview.js` composes existing HHMM + hash-table + diffusion (+ optional FDE) into one PREVIEW_ONLY report. [MEASURED_LOCAL] focused 5/5. Does **not** activate RSI, singularity, autopoietic runtime, or LOCAL_PILOT_ACTIVE. |
 | Expanded threat model in `SECURITY.md`                               | Current `SECURITY.md` is the non-negotiables list, not a STRIDE-style threat model                        |
 
 ## What is LOCAL_ONLY (works locally, not share-safe by default)
