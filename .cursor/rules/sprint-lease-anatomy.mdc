@@ -77,7 +77,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
-| **T0** | **Convergent: Node0-close + Dema-active** | **FACE+READY LIVE** — doctor ready and consent-gated; NODE0_CLOSED still false |
+| **T0** | **Convergent: Node0-close + Dema-active** | **INTEGRATED LOCAL** — doctor ready+consent-gated @ a0f7739a; PR #497 open; NODE0_CLOSED false |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
