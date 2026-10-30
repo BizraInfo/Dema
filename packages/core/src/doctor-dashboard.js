@@ -136,8 +136,12 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
   const chainLength = Number(s.chain?.length ?? 0);
   const chainHeadOk =
     typeof s.chain?.head === "string" && s.chain.head.length > 0;
+  // Infinity > 0 is true; do not gate on Number.isFinite or non-finite
+  // lengths (Infinity/NaN) without a head look like calm resting state.
   const chainEvidenceInvalid =
-    s.chain != null && Number.isFinite(chainLength) && chainLength > 0 && !chainHeadOk;
+    s.chain != null &&
+    !chainHeadOk &&
+    (chainLength > 0 || !Number.isFinite(chainLength));
   const awaitingActivationGo =
     !ready &&
     gateOk &&
