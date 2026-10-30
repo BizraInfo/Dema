@@ -167,7 +167,13 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
           ? { note: d.note_ready_awaiting_activation }
           : {
               // `ready` mirrors the adapter payload; setup does not set it either.
-              fix: "`ready` is reported by the Node0 runtime, not set locally. Bridge a runtime (see the activation gate fix) and re-check with `node bin/dema status`.",
+              // Chain probe/evidence faults are already bridged — do not send the
+              // operator back to "bridge a runtime".
+              fix: chainQueryFailed
+                ? "Gateway `/chain` probe failed. Inspect the gateway `/chain` endpoint and findings, then re-check with `node bin/dema status`."
+                : chainEvidenceInvalid
+                  ? "Gateway `/chain` returned length without a usable head. Inspect `/chain` head/length consistency, then re-check with `node bin/dema status`."
+                  : "`ready` is reported by the Node0 runtime, not set locally. Bridge a runtime (see the activation gate fix) and re-check with `node bin/dema status`.",
             }),
   });
 

@@ -124,7 +124,8 @@ test("evaluatePredicates: chain.available false does not earn calm awaiting-acti
   });
   const ready = preds.find((p) => p.key === "ready");
   assert.equal(ready.status, "fail");
-  assert.ok(ready.fix);
+  assert.match(ready.fix, /\/chain/);
+  assert.doesNotMatch(ready.fix, /Bridge a runtime/);
   assert.doesNotMatch(doctorVerdict(preds), /awaiting activation GO/);
 });
 
@@ -149,7 +150,8 @@ test("evaluatePredicates: length without head does not earn calm awaiting-activa
   });
   const ready = preds.find((p) => p.key === "ready");
   assert.equal(ready.status, "fail");
-  assert.ok(ready.fix);
+  assert.match(ready.fix, /\/chain/);
+  assert.doesNotMatch(ready.fix, /Bridge a runtime/);
   assert.doesNotMatch(doctorVerdict(preds), /awaiting activation GO/);
 });
 
