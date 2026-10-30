@@ -24,8 +24,8 @@ Optional column **branch_state** is git/PR hygiene only — never a substitute f
 | --- | --- | --- | --- | --- |
 | Third Fact PDF | `docs/root-canon/source/BIZRA_Third_Fact_v0_1_FINAL.pdf` (+ root `BIZRA_Third_Fact_v0_1_FINAL.pdf`) | `DESIGNED_NOT_LIVE` (manuscript); doctrine text ≠ runtime close | on `main` | Live Node0-closed |
 | Third Fact proof matrix | `docs/specs/NODE0_THIRD_FACT_LIVE_PROOF_MATRIX_0A.md` | `DESIGNED_NOT_LIVE` | on `main` | Live proof harness complete |
-| Dema face entry | `bin/dema` | `VERIFIED` (CLI face exists) | on `main` | Bridged operational Ready / `DEMA_ACTIVE_LOCAL` |
-| First-look estate opt-in | `packages/core/src/dema-first-look-home.js` · merge #501 `9ee508fa` | `VERIFIED` (opt-in paths coded) | on `main` | RSI / federation / ambient estate auto-bind |
+| Dema face entry | `bin/dema` @ `9ee508fa` | `VERIFIED` (CLI face exists) | on `main` | Bridged operational Ready / `DEMA_ACTIVE_LOCAL` |
+| First-look estate opt-in | `packages/core/src/dema-first-look-home.js` · validation `tests/dema-first-look-home.test.js` · merge #501 `9ee508fa` | `VERIFIED` (opt-in paths coded) | on `main` | RSI / federation / ambient estate auto-bind |
 | Fail-closed readiness + actuator | merges #500 + #499 @ `65ff98d3` (ancestry on `main`) | `VERIFIED` (fail-closed tests landed) | on `main` | Multi-node URP |
 | Public claim binding | `backlog/tasks/task-030 - PUBLIC-CLAIM-RECEIPT-BINDING-1A-bind-or-remove-every-live-bizra.ai-claim.md` | `UNKNOWN` until AC#1 re-observed | open backlog | Live bizra.ai honesty without re-measure |
 | Claim register | `docs/CLAIM_REGISTER_v0_1.md` | `VERIFIED` (register declared) | on `main` | Automated linter enforcement (declared ≠ enforced) |
