@@ -1,28 +1,34 @@
+function worktreeChangesAreUsable(workflow) {
+  // Availability true is not enough: missing/malformed changes must not be
+  // coerced to [] and then read as clean success.
+  return Array.isArray(workflow?.worktree_changes);
+}
+
+function workflowWorktreeEvidenceOk(workflow) {
+  return (
+    workflow?.worktree_status_available === true &&
+    worktreeChangesAreUsable(workflow)
+  );
+}
+
 function workflowWorktreeLabel(workflow) {
-  // Align human report with evaluateReleaseReadiness: only an explicit true
-  // status may claim clean/dirty. Missing or false must read as unknown.
-  if (workflow?.worktree_status_available !== true) return "unknown";
-  const changes = Array.isArray(workflow.worktree_changes)
-    ? workflow.worktree_changes
-    : [];
-  return changes.length > 0 ? "dirty" : "clean";
+  // Align human report with fail-closed evaluate: only explicit true status
+  // plus a real changes array may claim clean/dirty.
+  if (!workflowWorktreeEvidenceOk(workflow)) return "unknown";
+  return workflow.worktree_changes.length > 0 ? "dirty" : "clean";
 }
 
 function workflowAuthorizationLabel(workflow) {
-  if (workflow?.worktree_status_available !== true) return "blocked";
+  if (!workflowWorktreeEvidenceOk(workflow)) return "blocked";
   if (workflow.worktree_changes_authorized) return "explicit";
-  const changes = Array.isArray(workflow.worktree_changes)
-    ? workflow.worktree_changes
-    : [];
-  if (changes.length > 0) return "required";
+  if (workflow.worktree_changes.length > 0) return "required";
   return "not_required";
 }
 
 export function formatReleaseReadinessReport(report) {
   const workflow = report.ci?.workflow ?? {};
-  const worktreeChanges = Array.isArray(workflow.worktree_changes)
-    ? workflow.worktree_changes
-    : [];
+  const worktreeEvidenceOk = workflowWorktreeEvidenceOk(workflow);
+  const worktreeChanges = worktreeEvidenceOk ? workflow.worktree_changes : [];
 
   const lines = [
     "DEMA Release Readiness",
@@ -43,10 +49,7 @@ export function formatReleaseReadinessReport(report) {
     `  workflow authorization: ${workflowAuthorizationLabel(workflow)}`,
   ];
 
-  if (
-    workflow.worktree_status_available === true &&
-    worktreeChanges.length > 0
-  ) {
+  if (worktreeEvidenceOk && worktreeChanges.length > 0) {
     lines.push("Workflow worktree changes:");
     for (const change of worktreeChanges) {
       lines.push(`  - ${change.status} ${change.path}`);

@@ -779,6 +779,29 @@ test("formatReleaseReadinessReport: missing/false worktree status → unknown+bl
   assert.match(dirtyOut, /workflow authorization: required/);
 });
 
+test("formatReleaseReadinessReport: available true with malformed worktree_changes must not render clean", async () => {
+  const base = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  assert.equal(base.ci.workflow.worktree_status_available, true);
+  assert.ok(Array.isArray(base.ci.workflow.worktree_changes));
+
+  // evaluateReleaseReadiness currently does not reject malformed changes when
+  // availability is true — only the human formatter must refuse false-clean.
+  for (const malformed of [undefined, null, "dirty", { path: "x" }, 1]) {
+    const report = structuredClone(base);
+    report.ci.workflow.worktree_status_available = true;
+    report.ci.workflow.worktree_changes = malformed;
+    const output = formatReleaseReadinessReport(report);
+    assert.match(
+      output,
+      /workflow worktree: unknown/,
+      `expected unknown for malformed changes=${JSON.stringify(malformed)}`,
+    );
+    assert.match(output, /workflow authorization: blocked/);
+    assert.doesNotMatch(output, /workflow worktree: clean/);
+    assert.doesNotMatch(output, /workflow authorization: not_required/);
+  }
+});
+
 test("formatReleaseReadinessReport renders sparse and missing evidence states", async () => {
   const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
   report.ci.matrix = [];
