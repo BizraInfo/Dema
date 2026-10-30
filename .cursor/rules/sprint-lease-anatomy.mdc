@@ -1,47 +1,60 @@
 ---
-description: Lean sprint lease — replaces paste walls. Always-on for Dema-clean sessions.
+description: Lean sprint lease — Node0-close + Dema-active convergent target. Always-on for Dema-clean.
 alwaysApply: true
 ---
 
 # Sprint Lease Anatomy (no babysitting)
 
+## Convergent target (this lease)
+
+**Close Node0** (honest, no false-GREEN) + **Dema active** (local face usable: `node bin/dema`, doctor/first-run, outsider loop).
+
+Not in this lease: federation · Node1 · mint/wallet · RSI-live claims · silent Downloads ingest.
+
+Do **not** claim `NODE0_CLOSED` or `DEMA_ACTIVE_LOCAL=true` until disk/gates prove it. Target ≠ done.
+
 ## Standing grant (this rule IS the lease)
 
 On every Dema-clean session, without waiting for SPARC paste walls:
 
-1. **Rebind** — `git status -sb`, HEAD, dirty paths. Disk beats transcript.
-2. **One SNR slice** — highest-value, lowest-noise, reversible, testable. Reject the rest in one line.
+1. **Rebind** — `git status -sb`, HEAD vs `origin/main`, dirty paths. Disk beats transcript.
+2. **One SNR slice** — toward the convergent target; highest-value, lowest-noise, reversible, testable. Reject the rest in one line.
 3. **Do it** — implement + focused tests. Do not ask for GO on ordinary in-scope edits.
-4. **Prove** — run the narrowest test command; report exit codes.
-5. **Close** — what shipped · what’s blocked · one next slice. Stop.
+4. **Prove** — narrowest test; report exit codes.
+5. **Close the chain** — ship · note OUTWARD blockers · one next slice · **finish follow-through in the same turn** (restore ruleset after bypass-merge, reply+resolve review threads you fixed, update this board). Do not ping the operator for a second typed GO on cleanup you already opened.
 
 ## Auto-GO (inside lease)
 
 - Edit / add tests / run focused tests / update matching docs for the slice
-- Commit when the user said commit, or when they said “sprint” / “keep going” / “carry me” for that slice’s green proof
+- Commit when user said commit, or “sprint” / “keep going” / “carry me” / “carry the lease” for that slice’s green proof
+- Chain post-act cleanup that the same GO implied (e.g. restore ruleset after an already-authorized admin-bypass merge). Push and merge stay behind fresh typed GO — never auto-chained from “carry the lease”
 - Leave unrelated dirty trees untouched
 
 ## Still halt (fresh typed GO only)
 
-Push · merge · force · delete branches · keys/DID · mint · deploy · secrets · foreign-repo edits · Drive bulk move · live model/daemon start
+Push · merge · force · delete branches · keys/DID · mint · deploy · secrets · foreign-repo edits · Drive bulk move · live model/daemon start · widening `authority_delta` beyond this lease’s convergent target
 
 ## Forbidden noise
 
 - Re-paste SPARC / Peak / Singularity / HHMM / full PDF dumps as the work itself
 - Multi-agent theater without a bounded slice
-- Claiming Node0-closed / RSI-live / federation
-- Full `npm test` when focused suite answers; note OUTWARD blockers honestly (e.g. COVERAGE-COUNTS)
+- Claiming Node0-closed / RSI-live / federation / Dema-active without proof
+- Full `npm test` when focused suite answers; note OUTWARD blockers honestly (billing lock, COVERAGE-COUNTS)
+- Halting mid-chain for “say X next” when X was already the closeout of the authorized act
 
 ## Definition of healthy (DoD for “I can rest”)
 
 A day is healthy when all are true:
 
-- [ ] No false-GREEN on release-readiness (score teeth + CLI exit) — **shipped**
-- [ ] Dirty PEAK-ZERO-SPIN either committed or explicitly parked
-- [ ] Focused gates green for the active slice
-- [ ] One outsider-usable loop documented (first-run truth) — **open**
-- [ ] Map-before-merge for Downloads/absorption — **open**, no silent ingest
-- [ ] `authority_delta = 0` unless operator widened it
+- [x] No false-GREEN on release-readiness (score teeth + CLI exit)
+- [x] Dirty PEAK-ZERO-SPIN committed or parked
+- [x] Outsider first-run / `proof:outsider` loop documented
+- [ ] Focused gates green for the **active** slice
+- [ ] G8 coverage floors 95/84 cleared (or measured gap shrunk with receipt)
+- [ ] Dema local-active path proven (`node bin/dema` + doctor/first-run truth) — **TARGET**
+- [ ] Node0 close criteria measured on disk (not claimed) — **TARGET**
+- [ ] Map-before-merge for Downloads/absorption — no silent ingest
+- [x] `authority_delta = 0` unless operator widened it
 
 ## Wake phrase (user)
 
@@ -64,20 +77,24 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
+| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — Dema face/doctor proven local; NODE0_CLOSED false; DEMA_ACTIVE_LOCAL not Node0-closed; PR #497 CI required green @ be591c03, merge halt |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
-| P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE (this sprint) |
+| P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
 | P3 | Absorption Atlas map-only stub | DONE preview doc |
 | P4 | Cartographer JSON intake when artifacts land | BLOCKED (files absent) |
 | P5 | Outsider reduced-PATH suite | DONE @ `7cc9e804` |
-| P6 | `npm run proof:outsider` one-command loop | DONE (this slice) |
-| P6b | Doctor/first-run/i18n outsider hints → `node bin/dema` | DONE (review follow-up closed footers) |
-| P7 | Push branch + optional PR | DONE push @ `3c6a9095` — PR #496 open; Actions RED OUTWARD (billing); merge needs operator |
-| P8 | G8 coverage floors (95/84) — measured 93.04/78.07 | OPEN — CLI in-process lift ongoing (`cli-model-broker-coverage` @ wake #8); floors not cleared |
-| P9 | Framework constellation preview (HHMM∩hash∩diffusion∩FDE) | DONE @ this slice — PREVIEW_ONLY composer |
-| — | Cartographer JSON intake | BLOCKED (artifacts absent) |
+| P6 | `npm run proof:outsider` one-command loop | DONE |
+| P6b | Doctor/first-run/i18n outsider hints → `node bin/dema` | DONE |
+| P7 | Wisdom-ledger branch + PR #496 | DONE merge @ `551e7ed7` (admin bypass; ruleset restored) |
+| P8 | G8 coverage floors (95/84) | DONE on GitHub test(22)/proof-quality @ be591c03 (adapter branch lift); keep margin |
+| P9 | Framework constellation preview | DONE — PREVIEW_ONLY |
+| P10 | Actions billing lock (OUTWARD) | OPEN — vendor; use `proof:truth:local-lane` while locked; do not fake CI green |
+| P11 | Doctor awaiting-activation resting (no false ❌) + run-dema smoke | DONE @ season face slice |
+| P12 | Gateway-http measured ready (chain+VERIFIED principal) | DONE — live Ready:true / doctor operational |
 | — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
+| — | Cartographer JSON intake | BLOCKED (artifacts absent) |
 
 ## Default next slice when user says SPRINT
 
-Without push GO: start G8 coverage lift (~4k line / ~2.5k branch hits to clear 95/84), or intake Cartographer JSON if present.
+Toward **T0**: (1) G8 coverage lift if floors still open, else (2) Dema local-active proof loop (`node bin/dema` / doctor / outsider) with a receipt that can later support Node0-close measurement, else (3) Cartographer intake if artifacts present. Prefer local proof over waiting on Actions billing.

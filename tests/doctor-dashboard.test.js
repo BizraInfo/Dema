@@ -89,8 +89,62 @@ test("evaluatePredicates: BLOCKED gate fix names the operator bridge, not `dema 
   );
 });
 
-test("evaluatePredicates: not-ready fix does not point at `dema setup` either", () => {
+test("evaluatePredicates: bridged EXPLICIT_GO + consoleReady + ready:false is awaiting activation, not fail", () => {
   const preds = evaluatePredicates({ ...defaultOkStatus(), ready: false });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "expected");
+  assert.equal(ready.fix, undefined);
+  assert.match(ready.note, /activation GO|awaiting/i);
+  assert.match(doctorVerdict(preds), /awaiting activation GO/);
+  assert.equal(doctorState(preds).reason, "awaiting_activation_go");
+  assert.equal(doctorState(preds).repair_required, false);
+  assert.equal(doctorState(preds).preview_environment_valid, true);
+  assert.equal(doctorState(preds).operational, false);
+});
+
+test("evaluatePredicates: principal UNAVAILABLE does not earn calm awaiting-activation", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    principal: { observation: "UNAVAILABLE", identityVerified: null },
+    findings: ["Gateway /principal/status unavailable: HTTP 404"],
+  });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "fail");
+  assert.ok(ready.fix);
+  assert.equal(doctorVerdict(preds), "blocked");
+});
+
+test("evaluatePredicates: chain.available false does not earn calm awaiting-activation", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    chain: { available: false, head: null, length: 0 },
+    findings: ["Gateway /chain failed: HTTP 500"],
+  });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "fail");
+  assert.ok(ready.fix);
+  assert.doesNotMatch(doctorVerdict(preds), /awaiting activation GO/);
+});
+
+test("evaluatePredicates: empty chain (available true) still earns awaiting-activation", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    chain: { available: true, head: null, length: 0 },
+  });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "expected");
+  assert.match(doctorVerdict(preds), /awaiting activation GO/);
+});
+
+test("evaluatePredicates: bridged ready:false without consoleReady stays fail (no dema setup)", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    consoleReady: false,
+  });
   const ready = preds.find((p) => p.key === "ready");
   assert.equal(ready.status, "fail");
   assert.doesNotMatch(

@@ -107,24 +107,60 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
   });
 
   // 3. Ready
+  // Bridged + EXPLICIT_GO_REQUIRED + consoleReady + ready:false is the correct
+  // resting state before activation GO — not a repair failure — only when
+  // readiness evidence is not already degraded (principal invalid/unavailable
+  // or principal findings). Softening only that posture keeps bridged
+  // BLOCKED/console-down outages red (regression guard in doctor-dashboard.test.js).
   const ready = Boolean(s.ready);
+  const consoleReadyEarly = Boolean(s.consoleReady);
+  const principal = s.principal;
+  const principalIdentity = principal?.identityVerified;
+  const principalObservation = principal?.observation;
+  const principalDegraded =
+    principalObservation === "INVALID" ||
+    principalObservation === "UNAVAILABLE" ||
+    principalIdentity === false ||
+    (Array.isArray(s.findings) &&
+      s.findings.some((f) => /principal/i.test(String(f ?? ""))));
+  // Legacy shellout fixtures omit `principal`; treat that as eligible. Gateway
+  // payloads must carry an explicit verified identity before the calm
+  // awaiting-activation verdict is allowed.
+  const activationPendingSignalOk =
+    principal === undefined || principalIdentity === true;
+  // Legacy shellout omits `chain`; only an explicit available:false (gateway
+  // /chain probe failed) blocks the calm awaiting-activation resting state.
+  const chainQueryFailed = s.chain?.available === false;
+  const awaitingActivationGo =
+    !ready &&
+    gateOk &&
+    consoleReadyEarly &&
+    activationPendingSignalOk &&
+    !principalDegraded &&
+    !chainQueryFailed;
   predicates.push({
     key: "ready",
     label: d.ready,
     value: String(ready),
-    status: ready ? "ok" : unbridged ? "expected" : "fail",
+    status: ready
+      ? "ok"
+      : unbridged || awaitingActivationGo
+        ? "expected"
+        : "fail",
     ...(ready
       ? {}
       : unbridged
         ? { note: d.note_ready_unbridged }
-        : {
-            // `ready` mirrors the adapter payload; setup does not set it either.
-            fix: "`ready` is reported by the Node0 runtime, not set locally. Bridge a runtime (see the activation gate fix) and re-check with `node bin/dema status`.",
-          }),
+        : awaitingActivationGo
+          ? { note: d.note_ready_awaiting_activation }
+          : {
+              // `ready` mirrors the adapter payload; setup does not set it either.
+              fix: "`ready` is reported by the Node0 runtime, not set locally. Bridge a runtime (see the activation gate fix) and re-check with `node bin/dema status`.",
+            }),
   });
 
   // 4. Console ready
-  const consoleReady = Boolean(s.consoleReady);
+  const consoleReady = consoleReadyEarly;
   predicates.push({
     key: "consoleReady",
     label: d.console_ready,
@@ -163,6 +199,14 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
 // Deliberately not "healthy". Nothing is broken, but an unbridged node has not
 // earned a health claim — it has earned an accurate description of where it is.
 const VERDICT_PREVIEW_ONLY = "preview-only — runtime not bridged";
+const VERDICT_AWAITING_ACTIVATION =
+  "awaiting activation GO — face intact, runtime not armed";
+
+function isAwaitingActivationGo(predicates) {
+  const ready = predicates.find((p) => p.key === "ready");
+  const gate = predicates.find((p) => p.key === "activationGate");
+  return gate?.status === "ok" && ready?.status === "expected";
+}
 
 // Single source of the verdict for both the dashboard and `--json`. Deriving it
 // twice let the JSON surface print "ready and consent-gated" for an install
@@ -171,9 +215,12 @@ export function doctorVerdict(predicates) {
   if (predicates.some((p) => p.status === "fail" || p.status === "warn")) {
     return "blocked";
   }
-  return predicates.some((p) => p.status === "expected")
-    ? VERDICT_PREVIEW_ONLY
-    : "ready and consent-gated";
+  if (predicates.some((p) => p.status === "expected")) {
+    return isAwaitingActivationGo(predicates)
+      ? VERDICT_AWAITING_ACTIVATION
+      : VERDICT_PREVIEW_ONLY;
+  }
+  return "ready and consent-gated";
 }
 
 // The machine channel, as typed dimensions rather than a parsed sentence.
@@ -203,7 +250,9 @@ export function doctorState(predicates) {
       : has("warn")
         ? "degraded"
         : has("expected")
-          ? "runtime_not_bridged"
+          ? isAwaitingActivationGo(predicates)
+            ? "awaiting_activation_go"
+            : "runtime_not_bridged"
           : null,
   };
 }
@@ -271,9 +320,11 @@ export function formatDoctorDashboard(
 
   const verdict = doctorVerdict(predicates);
   const previewOnly = verdict === VERDICT_PREVIEW_ONLY;
+  const awaitingActivation = verdict === VERDICT_AWAITING_ACTIVATION;
+  const calmResting = previewOnly || awaitingActivation;
   const allOk = failCount === 0 && warnCount === 0;
   const verdictColored = color
-    ? previewOnly
+    ? calmResting
       ? colorize(verdict, ANSI_CYAN, true)
       : allOk
         ? colorize(verdict, ANSI_GREEN, true)
@@ -297,9 +348,15 @@ export function formatDoctorDashboard(
   // The reassurance belongs on the human channel only. The exit code stays
   // nonzero — this node is not operational — so say both things plainly rather
   // than let a calm screen imply a green machine answer.
-  if (previewOnly) {
+  if (calmResting) {
     lines.push("");
-    lines.push(`  ${dLabels.preview_footer_nothing_broken}`);
+    lines.push(
+      `  ${
+        awaitingActivation
+          ? dLabels.awaiting_footer_nothing_broken
+          : dLabels.preview_footer_nothing_broken
+      }`,
+    );
     lines.push(`  ${dLabels.preview_footer_exit_code}`);
     lines.push(`  ${dLabels.preview_footer_preview_flag}`);
   }
