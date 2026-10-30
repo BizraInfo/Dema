@@ -120,6 +120,28 @@ test("FLM-02 NEGATIVE CONTROL — no pointer keeps the generic next step", async
   );
 });
 
+test("FLM-02b cold DEMA_HOME does not absorb host /data/bizra ACTIVE_MISSION", async (t) => {
+  const prevEstate = process.env.BIZRA_ESTATE_MISSION;
+  const prevBizra = process.env.BIZRA_ACTIVE_MISSION;
+  delete process.env.BIZRA_ESTATE_MISSION;
+  delete process.env.BIZRA_ACTIVE_MISSION;
+  t.after(() => {
+    if (prevEstate === undefined) delete process.env.BIZRA_ESTATE_MISSION;
+    else process.env.BIZRA_ESTATE_MISSION = prevEstate;
+    if (prevBizra === undefined) delete process.env.BIZRA_ACTIVE_MISSION;
+    else process.env.BIZRA_ACTIVE_MISSION = prevBizra;
+  });
+  const home = await seededHome(t, {});
+  const ctx = await gatherFirstLookContext({ demaHome: home });
+  const envelope = buildFirstLookHome(ctx);
+  assert.equal(envelope.mission.present, false);
+  assert.doesNotMatch(
+    renderFirstLookHome(envelope, { noColor: true }),
+    /Open mission|T0_REBIND|NODE0_CLOSED/,
+  );
+  assert.match(envelope.recommended_next_step, /setup|key|receipt/i);
+});
+
 test("FLM-03 a malformed pointer degrades, it does not take the home screen down", async (t) => {
   const { writeFile } = await import("node:fs/promises");
   const { join } = await import("node:path");
