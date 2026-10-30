@@ -830,6 +830,52 @@ test("malformed worktree_changes: format, evaluate, and exit code agree blocked"
   }
 });
 
+// WORKFLOW-EVIDENCE-ADMISSION-1A — Array.isArray([null]) and unauthorized dirty
+// rows with emptied risks[] must not evaluate ok (bizra-omni-auditor MEASURED).
+test("release readiness rejects contradictory workflow evidence", () => {
+  const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
+    readiness_score: 100,
+    risks: [],
+    ci: {
+      workflow: {
+        worktree_status_available: true,
+        worktree_changes: [],
+        worktree_changes_authorized: false,
+      },
+    },
+  };
+
+  assert.equal(evaluateReleaseReadiness(report).ok, true);
+  assert.equal(exitCodeFromEvaluation(evaluateReleaseReadiness(report)), 0);
+
+  for (const changes of [
+    [{ status: "M", path: ".github/workflows/check.yml" }],
+    [null],
+  ]) {
+    const candidate = structuredClone(report);
+    candidate.ci.workflow.worktree_changes = changes;
+    const verdict = evaluateReleaseReadiness(candidate);
+    assert.equal(
+      verdict.ok,
+      false,
+      `expected reject for changes=${JSON.stringify(changes)}; reasons=${verdict.reasons}`,
+    );
+    assert.equal(exitCodeFromEvaluation(verdict), 1);
+  }
+
+  const authorizedDirty = structuredClone(report);
+  authorizedDirty.ci.workflow.worktree_changes = [
+    { status: "M", path: ".github/workflows/check.yml" },
+  ];
+  authorizedDirty.ci.workflow.worktree_changes_authorized = true;
+  assert.equal(
+    evaluateReleaseReadiness(authorizedDirty).ok,
+    true,
+    "authorized nonempty changes remain admitted when risks/score allow",
+  );
+});
+
 test("formatReleaseReadinessReport renders sparse and missing evidence states", async () => {
   const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
   report.ci.matrix = [];

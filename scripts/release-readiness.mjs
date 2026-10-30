@@ -894,9 +894,34 @@ export function evaluateReleaseReadiness(report, { minScore = 80 } = {}) {
   }
   // Availability true is not enough: missing/malformed changes must fail closed
   // so machine verdict matches the human formatter (no coerce-to-[] → ready).
-  const workflowChangesOk = Array.isArray(workflow?.worktree_changes);
-  if (workflowStatusAvailable && !workflowChangesOk) {
+  // Array.isArray alone is insufficient: [null] and unauthorized dirty rows must
+  // not admit as clean when risks[] was emptied (WORKFLOW-EVIDENCE-ADMISSION-1A).
+  const changes = workflow?.worktree_changes;
+  const workflowChangesIsArray = Array.isArray(changes);
+  const workflowChangesEntriesOk =
+    workflowChangesIsArray &&
+    changes.every(
+      (change) =>
+        change !== null &&
+        typeof change === "object" &&
+        !Array.isArray(change) &&
+        typeof change.status === "string" &&
+        change.status.length > 0 &&
+        typeof change.path === "string" &&
+        change.path.startsWith(".github/workflows/"),
+    );
+  if (workflowStatusAvailable && !workflowChangesEntriesOk) {
     reasons.push("workflow_worktree_changes_malformed");
+  }
+  const workflowChangesAuthorized =
+    workflow?.worktree_changes_authorized === true;
+  if (
+    workflowStatusAvailable &&
+    workflowChangesEntriesOk &&
+    changes.length > 0 &&
+    !workflowChangesAuthorized
+  ) {
+    reasons.push("workflow_worktree_changes_unauthorized");
   }
   const hasLaunchBlocker = report.risks.some(
     (risk) => risk && risk.severity === "launch_blocker",
@@ -905,7 +930,10 @@ export function evaluateReleaseReadiness(report, { minScore = 80 } = {}) {
   const score = report.readiness_score;
   const scoreOk = typeof score === "number" && Number.isFinite(score) && score >= minScore;
   if (!scoreOk) reasons.push(`readiness_score_below_threshold:${score}<${minScore}`);
-  const workflowEvidenceOk = workflowStatusAvailable && workflowChangesOk;
+  const workflowEvidenceOk =
+    workflowStatusAvailable &&
+    workflowChangesEntriesOk &&
+    (changes.length === 0 || workflowChangesAuthorized);
   return {
     ok: schemaOk && risksValid && workflowEvidenceOk && !hasLaunchBlocker && scoreOk,
     hasLaunchBlocker,
