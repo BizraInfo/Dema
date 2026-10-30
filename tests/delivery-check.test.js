@@ -44,7 +44,7 @@ case "$*" in
     exit \${PERF_EXIT_CODE:-0}
     ;;
   "run release:readiness -- --json")
-      printf '%s\\n' '{"schema":"bizra.dema.release_readiness.v0.1","readiness_score":97,"risks":[],"ci":{"workflow":{"worktree_status_available":true}}}'
+      printf '%s\\n' '{"schema":"bizra.dema.release_readiness.v0.1","readiness_score":97,"risks":[],"ci":{"workflow":{"worktree_status_available":true,"worktree_changes":[]}}}'
     exit \${RELEASE_EXIT_CODE:-0}
     ;;
   "run pre-push:seal")

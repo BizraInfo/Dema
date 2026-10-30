@@ -784,8 +784,6 @@ test("formatReleaseReadinessReport: available true with malformed worktree_chang
   assert.equal(base.ci.workflow.worktree_status_available, true);
   assert.ok(Array.isArray(base.ci.workflow.worktree_changes));
 
-  // evaluateReleaseReadiness currently does not reject malformed changes when
-  // availability is true — only the human formatter must refuse false-clean.
   for (const malformed of [undefined, null, "dirty", { path: "x" }, 1]) {
     const report = structuredClone(base);
     report.ci.workflow.worktree_status_available = true;
@@ -799,6 +797,36 @@ test("formatReleaseReadinessReport: available true with malformed worktree_chang
     assert.match(output, /workflow authorization: blocked/);
     assert.doesNotMatch(output, /workflow worktree: clean/);
     assert.doesNotMatch(output, /workflow authorization: not_required/);
+  }
+});
+
+test("malformed worktree_changes: format, evaluate, and exit code agree blocked", async () => {
+  const base = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  assert.equal(evaluateReleaseReadiness(base, { minScore: 80 }).ok, true);
+  assert.equal(exitCodeFromEvaluation(evaluateReleaseReadiness(base)), 0);
+
+  for (const malformed of [undefined, null, "dirty", { path: "x" }, 1]) {
+    const report = structuredClone(base);
+    report.ci.workflow.worktree_status_available = true;
+    report.ci.workflow.worktree_changes = malformed;
+
+    const output = formatReleaseReadinessReport(report);
+    const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+    const exitCode = exitCodeFromEvaluation(verdict);
+
+    assert.match(output, /workflow worktree: unknown/);
+    assert.match(output, /workflow authorization: blocked/);
+    assert.doesNotMatch(output, /workflow worktree: clean/);
+    assert.equal(
+      verdict.ok,
+      false,
+      `evaluate must fail for malformed changes=${JSON.stringify(malformed)}; reasons=${verdict.reasons}`,
+    );
+    assert.match(
+      verdict.reasons.join(" "),
+      /worktree_changes_malformed|worktree.*unavailable/,
+    );
+    assert.equal(exitCode, 1);
   }
 });
 
@@ -881,6 +909,7 @@ test("evaluateReleaseReadiness PASSES a clean report with no blocker and score >
     ci: {
       workflow: {
         worktree_status_available: true,
+        worktree_changes: [],
         worktree_changes_authorized: true,
       },
     },
@@ -888,6 +917,24 @@ test("evaluateReleaseReadiness PASSES a clean report with no blocker and score >
   const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
   assert.equal(verdict.hasLaunchBlocker, false);
   assert.equal(verdict.ok, true);
+});
+
+test("evaluateReleaseReadiness FAILS closed when worktree_changes is malformed", () => {
+  const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
+    readiness_score: 100,
+    risks: [],
+    ci: {
+      workflow: {
+        worktree_status_available: true,
+        worktree_changes: null,
+      },
+    },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /worktree_changes_malformed/);
+  assert.equal(exitCodeFromEvaluation(verdict), 1);
 });
 
 test("evaluateReleaseReadiness FAILS closed on a missing or unexpected report schema", () => {
