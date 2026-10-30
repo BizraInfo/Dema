@@ -380,6 +380,12 @@ test("buildReleaseReadinessReport reports unavailable worktree status without a 
   try {
     await writeFile(join(root, "package.json"), JSON.stringify({ scripts: {} }));
 
+    const knownStatusReport = await buildReleaseReadinessReport({
+      root,
+      now: fixedNow,
+      workflowStatusText: "",
+    });
+
     const report = await buildReleaseReadinessReport({
       root,
       now: fixedNow,
@@ -397,9 +403,21 @@ test("buildReleaseReadinessReport reports unavailable worktree status without a 
       report.readiness_score <= 88,
       `expected score penalty for unavailable worktree, got ${report.readiness_score}`,
     );
+    assert.equal(
+      report.readiness_score,
+      knownStatusReport.readiness_score - 12,
+    );
     const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
     assert.equal(verdict.ok, false);
     assert.match(verdict.reasons.join(" "), /worktree.*unavailable|launch_blocker/);
+
+    // BIZRA-T0-RELEASE-READINESS-TRUTH-1A: human CLI must not say clean/not_required
+    // when machine verdict fails closed on unavailable worktree status.
+    const output = formatReleaseReadinessReport(report);
+    assert.match(output, /workflow worktree: unknown/);
+    assert.match(output, /workflow authorization: blocked/);
+    assert.doesNotMatch(output, /workflow worktree: clean/);
+    assert.doesNotMatch(output, /workflow authorization: not_required/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -701,6 +719,8 @@ test("formatReleaseReadinessReport names dirty workflow changes", async () => {
   });
   const output = formatReleaseReadinessReport(report);
 
+  assert.match(output, /workflow worktree: dirty/);
+  assert.match(output, /workflow authorization: required/);
   assert.match(output, /Workflow worktree changes:/);
   assert.match(output, /M .github\/workflows\/check\.yml/);
 });
@@ -713,7 +733,50 @@ test("formatReleaseReadinessReport renders explicit workflow authorization", asy
   });
   const output = formatReleaseReadinessReport(report);
 
+  assert.match(output, /workflow worktree: dirty/);
   assert.match(output, /workflow authorization: explicit/);
+});
+
+test("formatReleaseReadinessReport: missing/false worktree status → unknown+blocked; true clean/dirty agree", async () => {
+  const base = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  assert.equal(base.ci.workflow.worktree_status_available, true);
+
+  const missing = structuredClone(base);
+  delete missing.ci.workflow.worktree_status_available;
+  missing.ci.workflow.worktree_changes = [];
+  const missingOut = formatReleaseReadinessReport(missing);
+  assert.match(missingOut, /workflow worktree: unknown/);
+  assert.match(missingOut, /workflow authorization: blocked/);
+  assert.doesNotMatch(missingOut, /workflow worktree: clean/);
+  assert.equal(
+    evaluateReleaseReadiness(missing, { minScore: 80 }).ok,
+    false,
+  );
+
+  const unavailable = structuredClone(base);
+  unavailable.ci.workflow.worktree_status_available = false;
+  unavailable.ci.workflow.worktree_changes = [];
+  const unavailableOut = formatReleaseReadinessReport(unavailable);
+  assert.match(unavailableOut, /workflow worktree: unknown/);
+  assert.match(unavailableOut, /workflow authorization: blocked/);
+  assert.doesNotMatch(unavailableOut, /workflow worktree: clean/);
+  assert.equal(
+    evaluateReleaseReadiness(unavailable, { minScore: 80 }).ok,
+    false,
+  );
+
+  const cleanOut = formatReleaseReadinessReport(base);
+  assert.match(cleanOut, /workflow worktree: clean/);
+  assert.match(cleanOut, /workflow authorization: not_required/);
+
+  const dirty = await buildReleaseReadinessReport({
+    now: fixedNow,
+    workflowStatusText: " M .github/workflows/check.yml\n",
+  });
+  assert.equal(dirty.ci.workflow.worktree_status_available, true);
+  const dirtyOut = formatReleaseReadinessReport(dirty);
+  assert.match(dirtyOut, /workflow worktree: dirty/);
+  assert.match(dirtyOut, /workflow authorization: required/);
 });
 
 test("formatReleaseReadinessReport renders sparse and missing evidence states", async () => {

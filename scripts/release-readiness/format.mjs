@@ -1,10 +1,29 @@
+function workflowWorktreeLabel(workflow) {
+  // Align human report with evaluateReleaseReadiness: only an explicit true
+  // status may claim clean/dirty. Missing or false must read as unknown.
+  if (workflow?.worktree_status_available !== true) return "unknown";
+  const changes = Array.isArray(workflow.worktree_changes)
+    ? workflow.worktree_changes
+    : [];
+  return changes.length > 0 ? "dirty" : "clean";
+}
+
 function workflowAuthorizationLabel(workflow) {
+  if (workflow?.worktree_status_available !== true) return "blocked";
   if (workflow.worktree_changes_authorized) return "explicit";
-  if (workflow.worktree_changes.length > 0) return "required";
+  const changes = Array.isArray(workflow.worktree_changes)
+    ? workflow.worktree_changes
+    : [];
+  if (changes.length > 0) return "required";
   return "not_required";
 }
 
 export function formatReleaseReadinessReport(report) {
+  const workflow = report.ci?.workflow ?? {};
+  const worktreeChanges = Array.isArray(workflow.worktree_changes)
+    ? workflow.worktree_changes
+    : [];
+
   const lines = [
     "DEMA Release Readiness",
     "",
@@ -16,17 +35,20 @@ export function formatReleaseReadinessReport(report) {
     `  rule: ${report.management_bok.operating_rule}`,
     "",
     "CI/CD:",
-    `  workflow: ${report.ci.workflow.path}`,
+    `  workflow: ${workflow.path}`,
     `  node matrix: ${report.ci.matrix.join(", ")}`,
     `  cd status: ${report.pipeline.cd_status}`,
     `  maturity: ${report.ci_cd_maturity.current_level.id} (${report.ci_cd_maturity.current_level.label})`,
-    `  workflow worktree: ${report.ci.workflow.worktree_changes.length > 0 ? "dirty" : "clean"}`,
-    `  workflow authorization: ${workflowAuthorizationLabel(report.ci.workflow)}`,
+    `  workflow worktree: ${workflowWorktreeLabel(workflow)}`,
+    `  workflow authorization: ${workflowAuthorizationLabel(workflow)}`,
   ];
 
-  if (report.ci.workflow.worktree_changes.length > 0) {
+  if (
+    workflow.worktree_status_available === true &&
+    worktreeChanges.length > 0
+  ) {
     lines.push("Workflow worktree changes:");
-    for (const change of report.ci.workflow.worktree_changes) {
+    for (const change of worktreeChanges) {
       lines.push(`  - ${change.status} ${change.path}`);
     }
   }
