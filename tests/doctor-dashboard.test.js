@@ -124,7 +124,8 @@ test("evaluatePredicates: chain.available false does not earn calm awaiting-acti
   });
   const ready = preds.find((p) => p.key === "ready");
   assert.equal(ready.status, "fail");
-  assert.ok(ready.fix);
+  assert.match(ready.fix, /\/chain/);
+  assert.doesNotMatch(ready.fix, /Bridge a runtime/);
   assert.doesNotMatch(doctorVerdict(preds), /awaiting activation GO/);
 });
 
@@ -137,6 +138,35 @@ test("evaluatePredicates: empty chain (available true) still earns awaiting-acti
   const ready = preds.find((p) => p.key === "ready");
   assert.equal(ready.status, "expected");
   assert.match(doctorVerdict(preds), /awaiting activation GO/);
+});
+
+test("evaluatePredicates: length without head does not earn calm awaiting-activation", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    principal: { observation: "VERIFIED", identityVerified: true },
+    chain: { available: true, head: null, length: 3 },
+    findings: ["Gateway /chain reported length without a chain head."],
+  });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "fail");
+  assert.match(ready.fix, /\/chain/);
+  assert.doesNotMatch(ready.fix, /Bridge a runtime/);
+  assert.doesNotMatch(doctorVerdict(preds), /awaiting activation GO/);
+});
+
+test("evaluatePredicates: non-finite length without head does not earn calm awaiting-activation", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    principal: { observation: "VERIFIED", identityVerified: true },
+    chain: { available: true, head: null, length: 1e309 },
+    findings: ["Gateway /chain reported length without a chain head."],
+  });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "fail");
+  assert.ok(ready.fix);
+  assert.doesNotMatch(doctorVerdict(preds), /awaiting activation GO/);
 });
 
 test("evaluatePredicates: bridged ready:false without consoleReady stays fail (no dema setup)", () => {
