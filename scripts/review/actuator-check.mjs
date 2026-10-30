@@ -139,9 +139,6 @@ export function buildActuatorCheckReport({
       ),
     );
   }
-  // #region agent log
-  fetch('http://127.0.0.1:7541/ingest/1e992355-576d-4bbe-b3e2-e1d6e87e0c9d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'54ccd7'},body:JSON.stringify({sessionId:'54ccd7',runId:'post-fix',hypothesisId:'D',location:'scripts/review/actuator-check.mjs:buildActuatorCheckReport',message:'actuator scan summary',data:{ok:findings.length===0,scannedCount:files.length,includesOpCorr:files.includes('packages/dema-ui/tests/operation-correspondence-routes.test.mjs'),includesTrusted:files.includes('packages/dema-ui/tests/trusted-requirement.test.mjs'),findingLabels:findings.map((f)=>f.label).slice(0,12)},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   return {
     schema: "bizra.dema.review.actuator_check.v0.1",
     ok: findings.length === 0,
