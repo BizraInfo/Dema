@@ -202,7 +202,7 @@ test("gateway-http adapter composes v0.2 status from five read-only endpoints", 
   }
 });
 
-test("gateway-http adapter exposes a fully verified principal without making Node0 ready", async () => {
+test("gateway-http adapter exposes a fully verified principal with empty chain without making Node0 ready", async () => {
   const gw = await startFakeGateway({
     ...HEALTHY_ROUTES,
     "/principal/status": () =>
@@ -303,7 +303,7 @@ test("gateway-http adapter leaves principal identity unknown when the endpoint i
   }
 });
 
-test("gateway-http adapter never claims ready=true even with a populated chain", async () => {
+test("gateway-http adapter keeps ready=false when chain exists but principal is unverified", async () => {
   const gw = await startFakeGateway({
     "/health": () =>
       jsonResponse({ status: "ok", domain: HEALTHY_GATEWAY_DOMAIN }),
@@ -322,15 +322,60 @@ test("gateway-http adapter never claims ready=true even with a populated chain",
     const adapter = createGatewayHttpAdapter({ baseUrl: gw.url });
     const status = await adapter.status();
 
-    // Even with chain.length=5, ready remains false — only ARTIFACT-011's
-    // first issuance flips Node0 into SPROUT readiness, and that lives
-    // upstream of this adapter.
+    // Chain alone is insufficient — unverified/absent principal stays not-ready.
     assert.equal(status.ready, false);
     assert.equal(status.missionExecuted, true);
     assert.equal(status.chain.length, 5);
     assert.equal(status.resources.count, 2);
     assert.equal(status.poi.totalEntries, 5);
     assert.equal(status.proof.latestChainHash, "ab".repeat(32));
+    assert.equal(status.nextAdmissibleAction, "bounded_diagnostic_activation");
+  } finally {
+    await gw.stop();
+  }
+});
+
+test("gateway-http adapter sets ready=true when chain + VERIFIED principal are measured", async () => {
+  const gw = await startFakeGateway({
+    "/health": () =>
+      jsonResponse({ status: "ok", domain: HEALTHY_GATEWAY_DOMAIN }),
+    "/chain": () =>
+      jsonResponse({
+        head: "ab".repeat(32),
+        length: 5,
+        latestTimestamp: 1234567890,
+      }),
+    "/poi/summary": () =>
+      jsonResponse({ totalEntries: 5, totalImpact: 1.5, avgImpact: 0.3 }),
+    "/resources/list": () =>
+      jsonResponse({ resources: [{ id: "r1" }, { id: "r2" }] }),
+    "/principal/status": () =>
+      jsonResponse(
+        principalStatus({
+          verdict: "VERIFIED",
+          identityVerified: true,
+          bridgeEligible: true,
+          verifiedIdentity: VERIFIED_PRINCIPAL_IDENTITY,
+          evidenceState: {
+            profilePresent: true,
+            activeChainRecordFound: true,
+            durableReceiptMetadataFound: true,
+            canonicalPayloadAvailable: true,
+            chainContinuityVerified: true,
+          },
+          chainHead: "ab".repeat(32),
+          chainLength: 5,
+        }),
+      ),
+  });
+  try {
+    const status = await createGatewayHttpAdapter({ baseUrl: gw.url }).status();
+    assert.equal(status.ready, true);
+    assert.equal(status.consoleReady, true);
+    assert.equal(status.missionExecuted, true);
+    assert.equal(status.principal.identityVerified, true);
+    assert.equal(status.nextAdmissibleAction, "inspect_receipts");
+    assert.equal(status.proof.nextArtifact, null);
   } finally {
     await gw.stop();
   }
@@ -602,23 +647,24 @@ test("node0 adapter env test helper restores adapter environment variables", asy
 });
 
 test("createNode0Adapter still honors the shellout path when adapterMode is unset", async () => {
-  // No DEMA_NODE0_ADAPTER, no DEMA_NODE0_STATUS_COMMAND, no command option:
+  // No DEMA_NODE0_ADAPTER, no DEMA_GATEWAY_URL, no DEMA_NODE0_STATUS_COMMAND:
   // the adapter must fall through to a blocked legacy-unavailable status.
-  const originalAdapterMode = process.env.DEMA_NODE0_ADAPTER;
-  const originalStatusCommand = process.env.DEMA_NODE0_STATUS_COMMAND;
-  try {
-    delete process.env.DEMA_NODE0_ADAPTER;
-    delete process.env.DEMA_NODE0_STATUS_COMMAND;
-
-    const adapter = createNode0Adapter();
-    const status = await adapter.status();
-    assert.equal(status.schema, "bizra.dema.status.v0.1");
-    assert.equal(status.ready, false);
-    assert.equal(status.activationGate, "BLOCKED");
-  } finally {
-    restoreEnv("DEMA_NODE0_ADAPTER", originalAdapterMode);
-    restoreEnv("DEMA_NODE0_STATUS_COMMAND", originalStatusCommand);
-  }
+  // Clearing DEMA_GATEWAY_URL matters on hosts where the live cognition
+  // gateway URL is exported in the operator environment.
+  await withNode0AdapterEnv(
+    {
+      DEMA_NODE0_ADAPTER: undefined,
+      DEMA_GATEWAY_URL: undefined,
+      DEMA_NODE0_STATUS_COMMAND: undefined,
+    },
+    async () => {
+      const adapter = createNode0Adapter();
+      const status = await adapter.status();
+      assert.equal(status.schema, "bizra.dema.status.v0.1");
+      assert.equal(status.ready, false);
+      assert.equal(status.activationGate, "BLOCKED");
+    },
+  );
 });
 
 test("composeNode0StatusFromGateway is pure: same input -> same output", async () => {

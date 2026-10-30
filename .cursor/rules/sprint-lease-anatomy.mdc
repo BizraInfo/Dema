@@ -77,7 +77,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
-| **T0** | **Convergent: Node0-close + Dema-active** | **IN PROGRESS** — face intact / awaiting activation GO; NODE0_CLOSED still false |
+| **T0** | **Convergent: Node0-close + Dema-active** | **FACE+READY LIVE** — doctor ready and consent-gated; NODE0_CLOSED still false |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
@@ -90,7 +90,8 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | P8 | G8 coverage floors (95/84) — was ~93/78 | OPEN — feeds Dema-active confidence; CLI model-broker lift started |
 | P9 | Framework constellation preview | DONE — PREVIEW_ONLY |
 | P10 | Actions billing lock (OUTWARD) | OPEN — vendor; use `proof:truth:local-lane` while locked; do not fake CI green |
-| P11 | Doctor awaiting-activation resting (no false ❌) + run-dema smoke | DONE this season — face shows node waiting GO, not broken |
+| P11 | Doctor awaiting-activation resting (no false ❌) + run-dema smoke | DONE @ season face slice |
+| P12 | Gateway-http measured ready (chain+VERIFIED principal) | DONE — live Ready:true / doctor operational |
 | — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
 | — | Cartographer JSON intake | BLOCKED (artifacts absent) |
 

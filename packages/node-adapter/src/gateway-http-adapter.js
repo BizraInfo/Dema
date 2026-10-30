@@ -12,10 +12,10 @@
 // extended with `gateway`, `chain`, `poi`, `resources`, `principal`, `unknown`,
 // `truth_label`, and `source` for honest gateway-derived state.
 //
-// `ready` is false until a real mission/receipt exists (chain.length > 0
-// alone is not sufficient — ARTIFACT-011's first issuance is what
-// flips Node0 into the SPROUT readiness state, and that lives upstream
-// of this adapter).
+// `ready` is measured from gateway evidence this adapter can see:
+// reachable health + non-empty receipt chain + VERIFIED principal identity.
+// Chain length alone is not enough (unverified principal stays not-ready).
+// This adapter never POSTs and never invents fields the gateway omits.
 
 const DEFAULT_GATEWAY_URL = "http://127.0.0.1:7421";
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -363,10 +363,12 @@ export function composeNode0StatusFromGateway(state) {
     gatewayReachable && principalStatus.observation !== "INVALID"
       ? "MEASURED_PARTIAL"
       : "DEGRADED";
-  // `ready` remains false until ARTIFACT-011 is issued by the governed
-  // bounded-diagnostic runtime path — the gateway being live is necessary
-  // but not sufficient.
-  const ready = false;
+  // Measured SPROUT readiness: live gateway + durable chain + verified principal.
+  // Hardcoding false forever made a working Node0 look permanently broken.
+  const ready =
+    gatewayReachable &&
+    chainLength > 0 &&
+    principalStatus.identityVerified === true;
 
   return {
     schema: "bizra.dema.node0_status.v0.2",
@@ -390,9 +392,11 @@ export function composeNode0StatusFromGateway(state) {
     rustBus: { ready: gatewayReachable },
     proof: {
       latestChainHash: chainHead,
-      nextArtifact: "ARTIFACT-011",
+      nextArtifact: ready ? null : "ARTIFACT-011",
     },
-    nextAdmissibleAction: "bounded_diagnostic_activation",
+    nextAdmissibleAction: ready
+      ? "inspect_receipts"
+      : "bounded_diagnostic_activation",
     gateway: {
       reachable: gatewayReachable,
       base_url: baseUrl,
