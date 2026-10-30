@@ -77,7 +77,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
-| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — Dema face/doctor proven local; NODE0_CLOSED false; DEMA_ACTIVE_LOCAL not Node0-closed; PR #497 CI required green @ be591c03, merge halt |
+| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — season #497 merged @ `77ffbdc7`; doctor ready+consent-gated local; NODE0_CLOSED **false**; no RSI/singularity LIVE claim |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
