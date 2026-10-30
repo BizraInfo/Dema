@@ -363,12 +363,21 @@ export function composeNode0StatusFromGateway(state) {
     gatewayReachable && principalStatus.observation !== "INVALID"
       ? "MEASURED_PARTIAL"
       : "DEGRADED";
-  // Measured SPROUT readiness: live gateway + durable chain + verified principal.
-  // Hardcoding false forever made a working Node0 look permanently broken.
+  // Measured SPROUT readiness: live gateway + durable chain head + verified
+  // principal. Hardcoding false forever made a working Node0 look permanently
+  // broken. Length without a head is not readiness. This adapter cannot see
+  // ARTIFACT-011 by id, so nextArtifact stays named until that evidence exists.
+  const chainHeadPresent =
+    typeof chainHead === "string" && chainHead.length > 0;
   const ready =
     gatewayReachable &&
     chainLength > 0 &&
+    chainHeadPresent &&
     principalStatus.identityVerified === true;
+
+  if (gatewayReachable && chainLength > 0 && !chainHeadPresent) {
+    findings.push("Gateway /chain reported length without a chain head.");
+  }
 
   return {
     schema: "bizra.dema.node0_status.v0.2",
@@ -392,7 +401,8 @@ export function composeNode0StatusFromGateway(state) {
     rustBus: { ready: gatewayReachable },
     proof: {
       latestChainHash: chainHead,
-      nextArtifact: ready ? null : "ARTIFACT-011",
+      // Gateway does not expose artifact ids; keep the named gate pending.
+      nextArtifact: "ARTIFACT-011",
     },
     nextAdmissibleAction: ready
       ? "inspect_receipts"

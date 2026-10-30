@@ -102,6 +102,19 @@ test("evaluatePredicates: bridged EXPLICIT_GO + consoleReady + ready:false is aw
   assert.equal(doctorState(preds).operational, false);
 });
 
+test("evaluatePredicates: principal UNAVAILABLE does not earn calm awaiting-activation", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    principal: { observation: "UNAVAILABLE", identityVerified: null },
+    findings: ["Gateway /principal/status unavailable: HTTP 404"],
+  });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "fail");
+  assert.ok(ready.fix);
+  assert.equal(doctorVerdict(preds), "blocked");
+});
+
 test("evaluatePredicates: bridged ready:false without consoleReady stays fail (no dema setup)", () => {
   const preds = evaluatePredicates({
     ...defaultOkStatus(),

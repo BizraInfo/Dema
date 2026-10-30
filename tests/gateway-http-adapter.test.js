@@ -375,7 +375,55 @@ test("gateway-http adapter sets ready=true when chain + VERIFIED principal are m
     assert.equal(status.missionExecuted, true);
     assert.equal(status.principal.identityVerified, true);
     assert.equal(status.nextAdmissibleAction, "inspect_receipts");
-    assert.equal(status.proof.nextArtifact, null);
+    // Gateway does not expose artifact ids — keep the named gate pending.
+    assert.equal(status.proof.nextArtifact, "ARTIFACT-011");
+    assert.equal(status.proof.latestChainHash, "ab".repeat(32));
+  } finally {
+    await gw.stop();
+  }
+});
+
+test("gateway-http adapter keeps ready=false when chain length lacks a head", async () => {
+  const gw = await startFakeGateway({
+    "/health": () =>
+      jsonResponse({ status: "ok", domain: HEALTHY_GATEWAY_DOMAIN }),
+    "/chain": () =>
+      jsonResponse({
+        head: null,
+        length: 5,
+        latestTimestamp: 1234567890,
+      }),
+    "/poi/summary": () =>
+      jsonResponse({ totalEntries: 5, totalImpact: 1.5, avgImpact: 0.3 }),
+    "/resources/list": () =>
+      jsonResponse({ resources: [{ id: "r1" }] }),
+    "/principal/status": () =>
+      jsonResponse(
+        principalStatus({
+          verdict: "VERIFIED",
+          identityVerified: true,
+          bridgeEligible: true,
+          verifiedIdentity: VERIFIED_PRINCIPAL_IDENTITY,
+          evidenceState: {
+            profilePresent: true,
+            activeChainRecordFound: true,
+            durableReceiptMetadataFound: true,
+            canonicalPayloadAvailable: true,
+            chainContinuityVerified: true,
+          },
+          chainLength: 5,
+        }),
+      ),
+  });
+  try {
+    const status = await createGatewayHttpAdapter({ baseUrl: gw.url }).status();
+    assert.equal(status.ready, false);
+    assert.equal(status.proof.latestChainHash, null);
+    assert.ok(
+      status.findings.some((f) => /chain head/i.test(f)),
+      "must record length-without-head finding",
+    );
+    assert.equal(status.nextAdmissibleAction, "bounded_diagnostic_activation");
   } finally {
     await gw.stop();
   }

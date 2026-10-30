@@ -108,12 +108,32 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
 
   // 3. Ready
   // Bridged + EXPLICIT_GO_REQUIRED + consoleReady + ready:false is the correct
-  // resting state before activation GO — not a repair failure. Softening only
-  // that posture keeps bridged BLOCKED/console-down outages red (regression
-  // guard in doctor-dashboard.test.js).
+  // resting state before activation GO — not a repair failure — only when
+  // readiness evidence is not already degraded (principal invalid/unavailable
+  // or principal findings). Softening only that posture keeps bridged
+  // BLOCKED/console-down outages red (regression guard in doctor-dashboard.test.js).
   const ready = Boolean(s.ready);
   const consoleReadyEarly = Boolean(s.consoleReady);
-  const awaitingActivationGo = !ready && gateOk && consoleReadyEarly;
+  const principal = s.principal;
+  const principalIdentity = principal?.identityVerified;
+  const principalObservation = principal?.observation;
+  const principalDegraded =
+    principalObservation === "INVALID" ||
+    principalObservation === "UNAVAILABLE" ||
+    principalIdentity === false ||
+    (Array.isArray(s.findings) &&
+      s.findings.some((f) => /principal/i.test(String(f ?? ""))));
+  // Legacy shellout fixtures omit `principal`; treat that as eligible. Gateway
+  // payloads must carry an explicit verified identity before the calm
+  // awaiting-activation verdict is allowed.
+  const activationPendingSignalOk =
+    principal === undefined || principalIdentity === true;
+  const awaitingActivationGo =
+    !ready &&
+    gateOk &&
+    consoleReadyEarly &&
+    activationPendingSignalOk &&
+    !principalDegraded;
   predicates.push({
     key: "ready",
     label: d.ready,

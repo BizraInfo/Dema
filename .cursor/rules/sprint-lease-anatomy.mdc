@@ -27,7 +27,7 @@ On every Dema-clean session, without waiting for SPARC paste walls:
 
 - Edit / add tests / run focused tests / update matching docs for the slice
 - Commit when user said commit, or “sprint” / “keep going” / “carry me” / “carry the lease” for that slice’s green proof
-- Chain post-act cleanup that the same GO implied (e.g. restore ruleset after admin-bypass merge; push-then-merge when both were in the plan)
+- Chain post-act cleanup that the same GO implied (e.g. restore ruleset after an already-authorized admin-bypass merge). Push and merge stay behind fresh typed GO — never auto-chained from “carry the lease”
 - Leave unrelated dirty trees untouched
 
 ## Still halt (fresh typed GO only)
