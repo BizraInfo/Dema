@@ -1,10 +1,35 @@
+function worktreeChangesAreUsable(workflow) {
+  // Availability true is not enough: missing/malformed changes must not be
+  // coerced to [] and then read as clean success.
+  return Array.isArray(workflow?.worktree_changes);
+}
+
+function workflowWorktreeEvidenceOk(workflow) {
+  return (
+    workflow?.worktree_status_available === true &&
+    worktreeChangesAreUsable(workflow)
+  );
+}
+
+function workflowWorktreeLabel(workflow) {
+  // Align human report with fail-closed evaluate: only explicit true status
+  // plus a real changes array may claim clean/dirty.
+  if (!workflowWorktreeEvidenceOk(workflow)) return "unknown";
+  return workflow.worktree_changes.length > 0 ? "dirty" : "clean";
+}
+
 function workflowAuthorizationLabel(workflow) {
+  if (!workflowWorktreeEvidenceOk(workflow)) return "blocked";
   if (workflow.worktree_changes_authorized) return "explicit";
   if (workflow.worktree_changes.length > 0) return "required";
   return "not_required";
 }
 
 export function formatReleaseReadinessReport(report) {
+  const workflow = report.ci?.workflow ?? {};
+  const worktreeEvidenceOk = workflowWorktreeEvidenceOk(workflow);
+  const worktreeChanges = worktreeEvidenceOk ? workflow.worktree_changes : [];
+
   const lines = [
     "DEMA Release Readiness",
     "",
@@ -16,17 +41,17 @@ export function formatReleaseReadinessReport(report) {
     `  rule: ${report.management_bok.operating_rule}`,
     "",
     "CI/CD:",
-    `  workflow: ${report.ci.workflow.path}`,
+    `  workflow: ${workflow.path}`,
     `  node matrix: ${report.ci.matrix.join(", ")}`,
     `  cd status: ${report.pipeline.cd_status}`,
     `  maturity: ${report.ci_cd_maturity.current_level.id} (${report.ci_cd_maturity.current_level.label})`,
-    `  workflow worktree: ${report.ci.workflow.worktree_changes.length > 0 ? "dirty" : "clean"}`,
-    `  workflow authorization: ${workflowAuthorizationLabel(report.ci.workflow)}`,
+    `  workflow worktree: ${workflowWorktreeLabel(workflow)}`,
+    `  workflow authorization: ${workflowAuthorizationLabel(workflow)}`,
   ];
 
-  if (report.ci.workflow.worktree_changes.length > 0) {
+  if (worktreeEvidenceOk && worktreeChanges.length > 0) {
     lines.push("Workflow worktree changes:");
-    for (const change of report.ci.workflow.worktree_changes) {
+    for (const change of worktreeChanges) {
       lines.push(`  - ${change.status} ${change.path}`);
     }
   }
