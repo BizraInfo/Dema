@@ -128,12 +128,16 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
   // awaiting-activation verdict is allowed.
   const activationPendingSignalOk =
     principal === undefined || principalIdentity === true;
+  // Legacy shellout omits `chain`; only an explicit available:false (gateway
+  // /chain probe failed) blocks the calm awaiting-activation resting state.
+  const chainQueryFailed = s.chain?.available === false;
   const awaitingActivationGo =
     !ready &&
     gateOk &&
     consoleReadyEarly &&
     activationPendingSignalOk &&
-    !principalDegraded;
+    !principalDegraded &&
+    !chainQueryFailed;
   predicates.push({
     key: "ready",
     label: d.ready,

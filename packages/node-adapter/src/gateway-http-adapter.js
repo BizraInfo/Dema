@@ -417,6 +417,9 @@ export function composeNode0StatusFromGateway(state) {
       head: chainHead,
       length: chainLength,
       latestTimestamp,
+      // Distinct from length===0 (resting empty chain). Doctor uses this so a
+      // failed /chain probe cannot look like calm awaiting-activation.
+      available: chain.ok,
     },
     poi: {
       totalEntries: poiTotalEntries,

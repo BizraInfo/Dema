@@ -170,6 +170,7 @@ test("gateway-http adapter composes v0.2 status from five read-only endpoints", 
     assert.equal(status.gateway.reachable, true);
     assert.equal(status.gateway.domain, HEALTHY_GATEWAY_DOMAIN);
     assert.equal(status.chain.length, 0);
+    assert.equal(status.chain.available, true, "empty resting chain is still a successful probe");
     assert.equal(status.poi.totalEntries, 0);
     assert.equal(status.resources.count, 0);
     assert.equal(status.principal.observation, "MEASURED");
@@ -378,6 +379,46 @@ test("gateway-http adapter sets ready=true when chain + VERIFIED principal are m
     // Gateway does not expose artifact ids — keep the named gate pending.
     assert.equal(status.proof.nextArtifact, "ARTIFACT-011");
     assert.equal(status.proof.latestChainHash, "ab".repeat(32));
+  } finally {
+    await gw.stop();
+  }
+});
+
+test("gateway-http adapter sets chain.available false when /chain probe fails", async () => {
+  const gw = await startFakeGateway({
+    "/health": () =>
+      jsonResponse({ status: "ok", domain: HEALTHY_GATEWAY_DOMAIN }),
+    // no /chain → 404
+    "/poi/summary": () =>
+      jsonResponse({ totalEntries: 0, totalImpact: 0, avgImpact: 0 }),
+    "/resources/list": () => jsonResponse({ resources: [] }),
+    "/principal/status": () =>
+      jsonResponse(
+        principalStatus({
+          verdict: "VERIFIED",
+          identityVerified: true,
+          bridgeEligible: true,
+          verifiedIdentity: VERIFIED_PRINCIPAL_IDENTITY,
+          evidenceState: {
+            profilePresent: true,
+            activeChainRecordFound: true,
+            durableReceiptMetadataFound: true,
+            canonicalPayloadAvailable: true,
+            chainContinuityVerified: true,
+          },
+        }),
+      ),
+  });
+  try {
+    const status = await createGatewayHttpAdapter({ baseUrl: gw.url }).status();
+    assert.equal(status.consoleReady, true);
+    assert.equal(status.ready, false);
+    assert.equal(status.chain.available, false);
+    assert.equal(status.chain.length, 0);
+    assert.ok(
+      status.findings.some((f) => /\/chain failed/i.test(f)),
+      "must record /chain probe failure",
+    );
   } finally {
     await gw.stop();
   }

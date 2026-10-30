@@ -115,6 +115,30 @@ test("evaluatePredicates: principal UNAVAILABLE does not earn calm awaiting-acti
   assert.equal(doctorVerdict(preds), "blocked");
 });
 
+test("evaluatePredicates: chain.available false does not earn calm awaiting-activation", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    chain: { available: false, head: null, length: 0 },
+    findings: ["Gateway /chain failed: HTTP 500"],
+  });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "fail");
+  assert.ok(ready.fix);
+  assert.doesNotMatch(doctorVerdict(preds), /awaiting activation GO/);
+});
+
+test("evaluatePredicates: empty chain (available true) still earns awaiting-activation", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    chain: { available: true, head: null, length: 0 },
+  });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "expected");
+  assert.match(doctorVerdict(preds), /awaiting activation GO/);
+});
+
 test("evaluatePredicates: bridged ready:false without consoleReady stays fail (no dema setup)", () => {
   const preds = evaluatePredicates({
     ...defaultOkStatus(),

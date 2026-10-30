@@ -545,11 +545,12 @@ test('fixture', () => {
 ]);
 
 // package.json `coverage` uses --test-coverage-lines/branches/functions.
-// Those threshold flags land in Node 22+; Node 20.x rejects them as
-// "bad option" (CI test(20.x) measured 2026-10-30). Skip the spawn suite
-// there rather than pretend floors are enforceable on that runtime.
-const NODE_MAJOR = Number(process.versions.node.split(".")[0]);
-const COVERAGE_THRESHOLD_FLAGS_SUPPORTED = NODE_MAJOR >= 22;
+// Those threshold flags land in Node >=22.8.0 (Node docs); 22.0–22.7 and
+// Node 20 reject them as "bad option". Skip the spawn suite there rather
+// than pretend floors are enforceable on that runtime.
+const [NODE_MAJOR, NODE_MINOR] = process.versions.node.split(".").map(Number);
+const COVERAGE_THRESHOLD_FLAGS_SUPPORTED =
+  NODE_MAJOR > 22 || (NODE_MAJOR === 22 && NODE_MINOR >= 8);
 
 for (const { name, moduleSource, testSource, exit, belowFloor } of COVERAGE_COUNTS_FIXTURES) {
   test(
@@ -557,7 +558,7 @@ for (const { name, moduleSource, testSource, exit, belowFloor } of COVERAGE_COUN
     {
       skip: COVERAGE_THRESHOLD_FLAGS_SUPPORTED
         ? false
-        : `Node ${process.versions.node} lacks --test-coverage-* threshold flags (need >=22)`,
+        : `Node ${process.versions.node} lacks --test-coverage-* threshold flags (need >=22.8.0)`,
     },
     () => {
     const dir = mkdtempSync(join(tmpdir(), "coverage-counts-"));
