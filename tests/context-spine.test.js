@@ -24,6 +24,7 @@ import {
   verifyProjection,
   verifyResolvedContext,
 } from "../packages/core/src/context-spine.js";
+import { sha256 } from "../packages/consent/src/consent-common.js";
 
 const AUTHORITY = {
   capabilities: {
@@ -601,6 +602,42 @@ test("physical binding reports missing Git metadata as a bounded bind failure", 
       () => buildPhysicalState({ cwd: repoRoot, repoRoot }),
       /GIT_BIND_FAILED/,
     );
+  } finally {
+    rmSync(repoRoot, { recursive: true, force: true });
+  }
+});
+
+test("physical binding hashes Git status output larger than the default exec buffer", () => {
+  const repoRoot = mkdtempSync(join(tmpdir(), "bizra-large-status-context-"));
+  const git = (...args) => execFileSync("git", ["-C", repoRoot, ...args], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  try {
+    git("init", "-q");
+    execFileSync("git", [
+      "-C", repoRoot,
+      "-c", "user.name=DEMA test",
+      "-c", "user.email=dema-test@example.invalid",
+      "commit", "--allow-empty", "-q", "-m", "fixture",
+    ], { stdio: "ignore" });
+
+    for (let index = 0; index < 12_000; index += 1) {
+      const name = `untracked-${String(index).padStart(5, "0")}-${"x".repeat(112)}`;
+      writeFileSync(join(repoRoot, name), "");
+    }
+
+    const status = execFileSync("git", [
+      "-C", repoRoot,
+      "status", "--porcelain=v1", "-z", "--untracked-files=all",
+    ], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    assert.ok(Buffer.byteLength(status, "utf8") > 1024 * 1024);
+    const state = buildPhysicalState({ cwd: repoRoot, repoRoot });
+    assert.equal(state.dirty_digest, `sha256:${sha256(status)}`);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

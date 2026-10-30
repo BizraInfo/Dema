@@ -87,6 +87,10 @@ export const REQUIRED_CAPABILITY_IDS = Object.freeze([
   "DEMA_ROOT_CLAUSE_TRACE_REGISTRY_PREVIEW_1A",
   "DEMA_FDE_ISNAD_REPLAY_CAPSULE_PREVIEW_0A",
   "NODE0_AGENT_FLEET_ROLES_1A",
+  "NODE0_CHAT_WISDOM_LEDGER_PREVIEW_1A",
+  "NODE0_CAMPAIGN_LEDGER_PREVIEW_1A",
+  "NODE0_META_GATE_AND_FROZEN_CONTRACT_PREVIEW_1A",
+  "NODE0_ZERO_SPIN_GATE_PREVIEW_1A",
   "NODE0_REALM_STATE_KERNEL_1A",
   "NODE0_METRICS_BASELINE_1A",
   "DEMA_RECOVERY_MISSION_ENGINE_1A",
@@ -1829,6 +1833,60 @@ function defaultCapabilityRows() {
       ],
     }),
     capability({
+      capability_id: "NODE0_CHAT_WISDOM_LEDGER_PREVIEW_1A",
+      truth_label: "NODE0_CHAT_WISDOM_LEDGER_PREVIEW_MEASURED_REPO",
+      summary:
+        "Pure preview-only kernels that derive content-addressed chat cards and byte-offset-anchored wisdom atoms from an operator-local chat export supplied by injected rows; atoms are tagged DERIVED or UNKNOWN, never promoted to built.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/chat-cards.js",
+          "packages/core/src/wisdom-ledger.js",
+        ],
+        test_paths: [
+          "tests/chat-cards.test.js",
+          "tests/wisdom-ledger.test.js",
+        ],
+        review_gate_paths: ["scripts/review/kernel-purity-check.mjs"],
+        receipt_paths: [],
+        documentation_paths: ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "Kernels deterministically build and verify cards and atoms from injected rows; tampered hashes, secrets and forged anchors are rejected by tests.",
+      what_this_does_not_prove:
+        "That any named slice is built, that any extracted rule is correct, or Node0 closure. The kernels read no files; the gather scripts do, read-only.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_CAMPAIGN_LEDGER_PREVIEW_1A",
+      truth_label: "NODE0_CAMPAIGN_LEDGER_PREVIEW_ONLY",
+      summary:
+        "Pure preview-only hash-chained campaign ledger kernel that pins a campaign contract by hash, hash-chains events, and DERIVES counters and status from the event stream so a reset counter, widened lease, rewritten or truncated history, or resurrected terminal status is rejected by verify; zero I/O, no clock, no model, no network.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/campaign-ledger.js"],
+        test_paths: ["tests/campaign-ledger.test.js"],
+        review_gate_paths: ["scripts/review/kernel-purity-check.mjs"],
+        receipt_paths: [],
+        documentation_paths: ["docs/CURRENT_LIMITS.md", "docs/TESTING.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered sandbox preview.",
+      what_this_proves:
+        "The kernel deterministically builds and verifies a hash-chained campaign ledger from injected events: the contract is pinned by contract_sha256, each event is sha256-sealed and prev_hash-linked, and counters/status are RE-DERIVED from the events on verify. Tampering is caught by re-derivation — a rewritten event (event_hash_mismatch), a widened authority lease (contract_hash_mismatch), a truncated chain (head_hash_mismatch), a reset stored counter (state_mismatch), a model/service call over budget (budget_exceeded), a non-zero authority_delta, and a terminal status resurrected to RUNNING without an amendment (terminal_resurrected) are each rejected. append is pure: the input ledger is never mutated. 7 kernel tests + kernel-purity gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It runs no model, invokes no runtime, reads no file, and performs no network or clock access. It provides NO external seal: a writer who consistently rewrites the WHOLE chain is not detected — that requires an external signature/anchor this kernel does not provide. It does not prove operator execution, daemon runtime, wallet access, mint, or live federation.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
       capability_id: "UNTRUSTED_CORPUS_SANITIZER_PREVIEW_1A",
       truth_label: "UNTRUSTED_CORPUS_SANITIZER_PREVIEW_MEASURED_REPO",
       summary:
@@ -2973,6 +3031,60 @@ function defaultCapabilityRows() {
         "live execution",
         "autonomous promotion",
         "production diagnosis",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_META_GATE_AND_FROZEN_CONTRACT_PREVIEW_1A",
+      truth_label: "NODE0_META_GATE_AND_FROZEN_CONTRACT_PREVIEW_ONLY",
+      summary:
+        "Two pure preview-only governing-law kernels: a meta-gate inventory that classifies each declared invariant as a falsifiable control only when it carries a real on-disk executable gate, a negative-control test with a named fault, and a verify re-derivation function (anything missing is UNENFORCED_WISH / UNPROVEN_HAPPY_PATH_ONLY / MISSING_REDERIVATION_PATH), plus a frozen acceptance contract that hash-binds a full slice plan to one exact consent phrase and freezes work at the first unresolved unknown. NOT runtime, NOT ML, no model, no network.",
+      evidence: evidence({
+        source_paths: [
+          "packages/core/src/meta-gate-inventory.js",
+          "packages/core/src/frozen-acceptance-contract.js",
+        ],
+        test_paths: [
+          "tests/meta-gate-inventory.test.js",
+          "tests/frozen-acceptance-contract.test.js",
+        ],
+        review_gate_paths: ["scripts/review/meta-gate-check.mjs"],
+        receipt_paths: [],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation outside registered preview. A VERIFIED_FALSIFIABLE_CONTROL classification or a verified contract consent is a preview classification, never a runtime or activation claim.",
+      what_this_proves:
+        "The governing law — no rule without an executable gate and negative control, and no claim without an independent re-derivation path — is itself executable. auditMetaGateInventory classifies each declared invariant VERIFIED_FALSIFIABLE_CONTROL only when it names a real executable gate, a negative-control test plus a fault, and a verify function (truth ceiling CONTROL_MAPPING_COMPLETE — inventory only). validateProvenancePromotion never mints VERIFIED_BY_ORCHESTRATOR from a caller Boolean (`REFUSED_CALLER_BOOLEAN_NOT_EVIDENCE`) or from structured evidence alone in this pure kernel (`REFUSED_PURE_KERNEL_CANNOT_VERIFY_DISK`); attestation without evidence remains `REFUSED_PROMOTION_WITHOUT_REDERIVATION`. scripts/review/meta-gate-check.mjs existsSync-checks every declared gate and negative-control test (anti-phantom-path guard) and exits non-zero if any is missing. freezeAcceptanceContract hash-binds a full plan via packages/canon to one exact consent phrase; verifyFrozenContractConsent fails closed on a one-byte plan mutation (REFUSED_CONTRACT_HASH_MISMATCH) or a wrong/missing phrase (REFUSED_EXACT_CONSENT_MISMATCH); evaluateUnknownBudget freezes at FREEZE_STOP_AT_UNKNOWN when unresolved unknowns exceed the cap. Focused meta-gate + frozen-contract tests + review gate green; boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It runs no gate itself (the review gate reads the filesystem; the kernels are pure and read nothing), invokes no model, opens no network, starts no daemon, mints nothing, and binds no live identity. A VERIFIED_FALSIFIABLE_CONTROL row means the inventory DECLARES a backed rule, not that the gate passed; a verified contract consent means the phrase matches the exact hashed plan, not that the plan was executed or its claims are true.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
+        "unattended runtime",
+      ],
+    }),
+    capability({
+      capability_id: "NODE0_ZERO_SPIN_GATE_PREVIEW_1A",
+      truth_label: "ZERO_SPIN_GATE_PREVIEW_ONLY",
+      summary:
+        "Pure preview-only spin detector: walks a caller-supplied step sequence and classifies the first falsifiable spin (F-I ctx_spin, F-II ctx_cycle, F-III action_stall, F-IV budget_exhausted) or OK:VERIFIED. NOT runtime, NOT ML, no model, no network. No byte-parity claim against the lost Python prototype.",
+      evidence: evidence({
+        source_paths: ["packages/core/src/zero-spin-gate.js"],
+        test_paths: ["tests/zero-spin-gate.test.js"],
+        review_gate_paths: ["scripts/review/zero-spin-gate-check.mjs"],
+        receipt_paths: [],
+        documentation_paths: ["docs/TESTING.md", "docs/CURRENT_LIMITS.md"],
+      }),
+      blocked_promotion_rule:
+        "May not claim live execution, operator mutation, daemon runtime, network use, token, wallet, or federation. A spin classification is a preview verdict over supplied steps, never a runtime or activation claim.",
+      what_this_proves:
+        "runZeroSpinGate classifies the first falsifiable spin in detection order F-I, F-II, F-III, else F-IV budget_exhausted, else OK:VERIFIED. F-II confirms a sustained period-k cycle on the third recurrence. enableCtxGate and enableActionGate are orthogonal. verifyZeroSpinReceiptChain re-derives the linear receipt chain and fails closed on a broken link. scripts/review/zero-spin-gate-check.mjs re-executes the enumerated controls. 13 tests. The kernel follows the written invariant spec; proof_harness.py is absent, so there is no byte-parity claim. Boundary all-false, authority_delta 0.",
+      what_this_does_not_prove:
+        "It does not run an agent, start a daemon, open a network, invoke a model, or prove Node0 closure. A classification is a preview over caller-supplied steps, not evidence that a live run spun or converged.",
+      forbidden_claims: [
+        "live execution",
+        "operator mutation",
         "unattended runtime",
       ],
     }),

@@ -18,6 +18,11 @@ import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { buildConsentProof } from "../packages/receipts/src/consent-proof.js";
+import {
+  initAuthorshipKey,
+  KEY_INIT_CONSENT_PHRASE,
+} from "../packages/receipts/src/authorship-key-store.js";
 import { runConsentVerifyCli } from "../packages/receipts/src/consent-verify-command.js";
 import { runVerifyGroundedCli } from "../packages/receipts/src/verdict-verify-command.js";
 
@@ -80,6 +85,62 @@ test("consent verify: valid proof but unreadable pubkey → pubkey_read_failed",
     });
     assertRejectEnvelope(r, "pubkey_read_failed");
     assert.ok(r.details.length > 0);
+  });
+});
+
+test("consent verify: expected scope binds supplied fields and fills omitted fields from the proof", async () => {
+  await withDir(async (dir) => {
+    const now = new Date();
+    const expectedActionType = "MINT_VERDICT_RECEIPT";
+    const expectedTargetHash = "a".repeat(64);
+    const initialized = await initAuthorshipKey({
+      consent: KEY_INIT_CONSENT_PHRASE,
+      demaHome: dir,
+    });
+    assert.equal(initialized.initialized, true);
+
+    const built = await buildConsentProof({
+      phrase: "SIGN AUTHORSHIP RECEIPT",
+      actionScope: {
+        action_type: expectedActionType,
+        target_hash: expectedTargetHash,
+      },
+      demaHome: dir,
+      nonce: "c".repeat(64),
+      createdAtIso: new Date(now.getTime() - 1000).toISOString(),
+      expiresAtIso: new Date(now.getTime() + 60_000).toISOString(),
+    });
+    assert.equal(built.built, true);
+
+    const proofPath = join(dir, "proof.json");
+    const pubkeyPath = join(dir, "public.pem");
+    writeFileSync(proofPath, JSON.stringify(built.consent_proof));
+    writeFileSync(pubkeyPath, built.signer_public_key_pem);
+
+    for (const expectedScope of [
+      {},
+      { expectedActionType },
+      { expectedTargetHash },
+      { expectedActionType, expectedTargetHash },
+    ]) {
+      const result = await runConsentVerifyCli({
+        proofPath,
+        pubkeyPath,
+        now: now.toISOString(),
+        ...expectedScope,
+      });
+      assert.equal(result.verified, true);
+      assert.deepEqual(result.action_scope, built.consent_proof.action_scope);
+    }
+
+    const mismatch = await runConsentVerifyCli({
+      proofPath,
+      pubkeyPath,
+      expectedActionType: "DELETE_AUTHORITY",
+      expectedTargetHash,
+      now: now.toISOString(),
+    });
+    assertRejectEnvelope(mismatch, "consent_scope_mismatch");
   });
 });
 

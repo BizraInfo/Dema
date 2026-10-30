@@ -1,0 +1,20 @@
+{
+  "schema": "bizra.skill-manifest/v1",
+  "generated_at": "2026-08-30T20:38:09.091Z",
+  "source_root": "skills-src",
+  "skill_id": "campaign-ledger",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "602da47565beb53cc0bd5966de351f2d88ca5add00f492a795914c42d74032cb",
+      "size": 2447
+    },
+    {
+      "path": "contract.json",
+      "sha256": "78fc56523fe4e388e1279a32b1f2d65ed8efa389d4d43d9a7e79abd5ea92732f",
+      "size": 1720
+    }
+  ],
+  "total_files": 2,
+  "total_bytes": 4167
+}

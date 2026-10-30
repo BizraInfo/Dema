@@ -4,7 +4,12 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { discoverLocalModels, gatherModelEvalBaseline, isLocalUrl } from "../apps/cli/src/commands/eval-baseline-gatherer.js";
+import {
+  buildModelEvalConsentPlan,
+  discoverLocalModels,
+  gatherModelEvalBaseline,
+  isLocalUrl,
+} from "../apps/cli/src/commands/eval-baseline-gatherer.js";
 import { buildModelEvalBaseline, verifyModelEvalBaseline } from "../packages/core/src/model-eval-baseline.js";
 
 const env = { OLLAMA_URL: "http://127.0.0.1:11434", LMSTUDIO_URL: "http://127.0.0.1:1234", LLAMACPP_URL: "http://127.0.0.1:8080" };
@@ -23,6 +28,10 @@ function fakeClock() {
   return () => ({ getTime: () => (c += 50), toISOString: () => "2026-06-24T00:00:00.000Z" });
 }
 
+function consentPhrases(modelKeys) {
+  return buildModelEvalConsentPlan(modelKeys).map((item) => item.phrase);
+}
+
 test("discoverLocalModels finds the local pool + marks unreachable providers", async () => {
   const obs = await discoverLocalModels({ fetchImpl: fakeFetch(), env });
   assert.equal(obs.provider_discovery.ollama.reachable, true);
@@ -33,13 +42,61 @@ test("discoverLocalModels finds the local pool + marks unreachable providers", a
 
 test("gatherModelEvalBaseline runs the suite via POST → build verifies; NO raw-output leak; paths elided", async () => {
   const log = [];
-  const obs = await gatherModelEvalBaseline({ fetchImpl: fakeFetch(log), env, time: fakeClock(), maxModels: 2 });
+  const modelKeys = ["ollama:gemma4:e4b"];
+  const obs = await gatherModelEvalBaseline({
+    fetchImpl: fakeFetch(log),
+    env,
+    time: fakeClock(),
+    modelKeys,
+    consentPhrases: consentPhrases(modelKeys),
+  });
   assert.ok(log.some((l) => l.method === "POST"), "generation uses POST");
   const report = buildModelEvalBaseline(obs);
   assert.equal(verifyModelEvalBaseline(report).valid, true);
   const json = JSON.stringify(report);
   assert.doesNotMatch(json, /"raw_output"|"completion_text"|"response_text"/);
   assert.doesNotMatch(json, /\/home\/secret/, "paths must be elided from the sample");
+});
+
+test("baseline consent is exact and prevalidated before any generation request", async () => {
+  const modelKeys = ["ollama:gemma4:e4b"];
+  for (const consentPhrases of [
+    [],
+    ["GO: invoke local model"],
+  ]) {
+    const log = [];
+    await assert.rejects(
+      gatherModelEvalBaseline({
+        fetchImpl: fakeFetch(log),
+        env,
+        modelKeys,
+        consentPhrases,
+      }),
+      (error) => {
+        assert.equal(error.code, "MODEL_EVAL_CONSENT_REQUIRED");
+        assert.equal(error.consent_plan.length, 7);
+        return true;
+      },
+    );
+    assert.equal(
+      log.filter((entry) => entry.method === "POST").length,
+      0,
+      "no generation request may run until every exact phrase matches",
+    );
+  }
+});
+
+test("baseline requires explicit model selection before inference", async () => {
+  const log = [];
+  await assert.rejects(
+    gatherModelEvalBaseline({ fetchImpl: fakeFetch(log), env }),
+    (error) => {
+      assert.equal(error.code, "MODEL_EVAL_MODEL_SELECTION_REQUIRED");
+      assert.ok(error.available_model_keys.includes("ollama:gemma4:e4b"));
+      return true;
+    },
+  );
+  assert.equal(log.filter((entry) => entry.method === "POST").length, 0);
 });
 
 test("non-local provider URL is REFUSED, never fetched (no off-box egress)", async () => {
@@ -56,7 +113,16 @@ test("warm-up gates the suite — a model that never loads is marked unreachable
     if (url.endsWith("/api/generate")) throw new Error("ETIMEDOUT"); // model never finishes loading
     throw new Error("ECONNREFUSED");
   };
-  const obs = await gatherModelEvalBaseline({ fetchImpl: coldFetch, env, time: fakeClock(), maxModels: 1, warmupTimeoutMs: 10, timeoutMs: 10 });
+  const modelKeys = ["ollama:gemma4:26b"];
+  const obs = await gatherModelEvalBaseline({
+    fetchImpl: coldFetch,
+    env,
+    time: fakeClock(),
+    modelKeys,
+    consentPhrases: consentPhrases(modelKeys),
+    warmupTimeoutMs: 10,
+    timeoutMs: 10,
+  });
   const genPosts = log.filter((l) => l.url.endsWith("/api/generate") && l.method === "POST");
   assert.equal(genPosts.length, 1, "only the warm-up probe runs; the 6-task suite is skipped when warm-up fails");
   const entry = obs.results_by_model["ollama:gemma4:26b"];
@@ -71,7 +137,16 @@ test("fair coverage — chosen models interleave across providers so no provider
     if (url.endsWith("/v1/chat/completions")) return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }) };
     throw new Error("ECONNREFUSED"); // llamacpp /v1/models
   };
-  const obs = await gatherModelEvalBaseline({ fetchImpl: twoProv, env, time: fakeClock(), maxModels: 2, warmupTimeoutMs: 50, timeoutMs: 50 });
+  const modelKeys = ["ollama:a", "lm_studio:x"];
+  const obs = await gatherModelEvalBaseline({
+    fetchImpl: twoProv,
+    env,
+    time: fakeClock(),
+    modelKeys,
+    consentPhrases: consentPhrases(modelKeys),
+    warmupTimeoutMs: 50,
+    timeoutMs: 50,
+  });
   const provsHit = obs.models_tested.map((k) => k.split(":")[0]);
   assert.ok(provsHit.includes("ollama") && provsHit.includes("lm_studio"), "both providers represented in the 2-model slice");
 });
@@ -82,7 +157,16 @@ test("embedding-only model ids are skipped (cannot run a chat suite)", async () 
     if (url.endsWith("/api/generate")) return { ok: true, status: 200, json: async () => ({ response: '{"ok":true}' }) };
     throw new Error("ECONNREFUSED");
   };
-  const obs = await gatherModelEvalBaseline({ fetchImpl: withEmbed, env, time: fakeClock(), maxModels: 5, warmupTimeoutMs: 50, timeoutMs: 50 });
+  const modelKeys = ["ollama:gemma4:e4b"];
+  const obs = await gatherModelEvalBaseline({
+    fetchImpl: withEmbed,
+    env,
+    time: fakeClock(),
+    modelKeys,
+    consentPhrases: consentPhrases(modelKeys),
+    warmupTimeoutMs: 50,
+    timeoutMs: 50,
+  });
   assert.ok(!obs.models_tested.some((k) => /embed/i.test(k)), "embedding ids are not scored");
   assert.ok(obs.models_tested.includes("ollama:gemma4:e4b"));
 });
@@ -106,7 +190,23 @@ test("alias tags sharing one provider digest collapse to ONE artifact before max
     { name: "llama3.2:3b", digest: "dde5aa3fc5ff" },
     { name: "whiterabbitneo-v3:7b-q4_K_M", digest: "aaaa1111bbbb" },
   ]);
-  const obs = await gatherModelEvalBaseline({ fetchImpl, env, time: fakeClock(), maxModels: 2, warmupTimeoutMs: 50, timeoutMs: 50 });
+  const modelKeys = [
+    "ollama:llama3.1:8b",
+    "ollama:llama3.2:3b",
+    "ollama:whiterabbitneo-v3:7b-q4_K_M",
+  ];
+  const obs = await gatherModelEvalBaseline({
+    fetchImpl,
+    env,
+    time: fakeClock(),
+    modelKeys,
+    consentPhrases: consentPhrases([
+      "ollama:llama3.1:8b",
+      "ollama:whiterabbitneo-v3:7b-q4_K_M",
+    ]),
+    warmupTimeoutMs: 50,
+    timeoutMs: 50,
+  });
   assert.equal(obs.artifact_identity.alias_count, 3);
   assert.equal(obs.artifact_identity.unique_artifact_count, 2);
   assert.equal(obs.models_tested.length, 2, "two slots, two DISTINCT artifacts");
@@ -118,7 +218,16 @@ test("alias tags sharing one provider digest collapse to ONE artifact before max
 
 test("a missing provider digest is UNVERIFIED_PROVIDER_IDENTITY and is never merged", async () => {
   const fetchImpl = tagsFetch([{ name: "a" }, { name: "b" }]);
-  const obs = await gatherModelEvalBaseline({ fetchImpl, env, time: fakeClock(), maxModels: 5, warmupTimeoutMs: 50, timeoutMs: 50 });
+  const modelKeys = ["ollama:a", "ollama:b"];
+  const obs = await gatherModelEvalBaseline({
+    fetchImpl,
+    env,
+    time: fakeClock(),
+    modelKeys,
+    consentPhrases: consentPhrases(modelKeys),
+    warmupTimeoutMs: 50,
+    timeoutMs: 50,
+  });
   assert.equal(obs.artifact_identity.unique_artifact_count, 2, "unverified identities stay distinct — never collapsed on absence");
   for (const k of obs.models_tested) {
     assert.equal(obs.artifact_identity.identity_status_by_model[k], "UNVERIFIED_PROVIDER_IDENTITY");
@@ -131,7 +240,16 @@ test("execution-relevant variants sharing weights stay separate (distinct provid
     { name: "gemma4:26b", digest: "7121486771cb" },
     { name: "gemma4:26b-bizra-16k", digest: "34bb5ab01051" },
   ]);
-  const obs = await gatherModelEvalBaseline({ fetchImpl, env, time: fakeClock(), maxModels: 5, warmupTimeoutMs: 50, timeoutMs: 50 });
+  const modelKeys = ["ollama:gemma4:26b", "ollama:gemma4:26b-bizra-16k"];
+  const obs = await gatherModelEvalBaseline({
+    fetchImpl,
+    env,
+    time: fakeClock(),
+    modelKeys,
+    consentPhrases: consentPhrases(modelKeys),
+    warmupTimeoutMs: 50,
+    timeoutMs: 50,
+  });
   assert.equal(obs.artifact_identity.unique_artifact_count, 2, "same weights, different params layer → two artifacts");
 });
 
@@ -143,7 +261,16 @@ test("an identical digest string under two providers is never merged across prov
     if (url.endsWith("/v1/chat/completions")) return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }) };
     throw new Error("ECONNREFUSED");
   };
-  const obs = await gatherModelEvalBaseline({ fetchImpl: crossProv, env, time: fakeClock(), maxModels: 5, warmupTimeoutMs: 50, timeoutMs: 50 });
+  const modelKeys = ["ollama:shared", "lm_studio:shared"];
+  const obs = await gatherModelEvalBaseline({
+    fetchImpl: crossProv,
+    env,
+    time: fakeClock(),
+    modelKeys,
+    consentPhrases: consentPhrases(modelKeys),
+    warmupTimeoutMs: 50,
+    timeoutMs: 50,
+  });
   assert.equal(obs.artifact_identity.unique_artifact_count, 2, "identity is scoped per provider — a digest namespace is not shared");
 });
 
@@ -157,7 +284,15 @@ test("one artifact is benchmarked exactly once — an alias cannot race itself o
     if (url.endsWith("/api/generate")) return { ok: true, status: 200, json: async () => ({ response: '{"ok":true}' }) };
     throw new Error("ECONNREFUSED");
   };
-  const obs = await gatherModelEvalBaseline({ fetchImpl, env, time: fakeClock(), maxModels: 5, warmupTimeoutMs: 50, timeoutMs: 50 });
+  const obs = await gatherModelEvalBaseline({
+    fetchImpl,
+    env,
+    time: fakeClock(),
+    modelKeys: ["ollama:x:1", "ollama:x:2"],
+    consentPhrases: consentPhrases(["ollama:x:1"]),
+    warmupTimeoutMs: 50,
+    timeoutMs: 50,
+  });
   assert.equal(obs.models_tested.length, 1);
   const genPosts = log.filter((l) => l.url.endsWith("/api/generate") && l.method === "POST");
   assert.equal(genPosts.length, 1 + 6, "one warm-up + one 6-task suite, not two");
@@ -175,4 +310,20 @@ test("isLocalUrl: only localhost passes", () => {
   assert.equal(isLocalUrl("http://localhost:8080"), true);
   assert.equal(isLocalUrl("http://10.0.0.5:11434"), false);
   assert.equal(isLocalUrl("http://evil.example.com"), false);
+});
+
+test("ollama eval requests disable thinking and never score thinking text as output", async () => {
+  const bodies = [];
+  const fetchImpl = async (url, opts = {}) => {
+    if (url.endsWith("/api/tags")) return { ok: true, status: 200, json: async () => ({ models: [{ name: "think:1" }] }) };
+    if (url.endsWith("/api/generate")) {
+      bodies.push(JSON.parse(opts.body));
+      return { ok: true, status: 200, json: async () => ({ response: "", thinking: "hidden reasoning" }) };
+    }
+    throw new Error("ECONNREFUSED");
+  };
+  const modelKeys = ["ollama:think:1"];
+  const obs = await gatherModelEvalBaseline({ fetchImpl, env, time: fakeClock(), modelKeys, consentPhrases: consentPhrases(modelKeys) });
+  assert.ok(bodies.length >= 7 && bodies.every((b) => b.think === false));
+  assert.ok(Object.values(obs.results_by_model["ollama:think:1"].tasks).every((t) => t.output === ""));
 });

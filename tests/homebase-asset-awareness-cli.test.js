@@ -26,10 +26,16 @@ function freshFixture() {
 }
 
 function scan(args, env = {}) {
-  return execFileSync("node", [BIN, "assets", "scan", ...args], {
-    encoding: "utf8",
-    env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", DEMA_NO_TUI: "1", ...env },
-  });
+  try {
+    return execFileSync("node", [BIN, "assets", "scan", ...args], {
+      encoding: "utf8",
+      env: { ...process.env, DEMA_BANNER_INTERACTIVE: "0", DEMA_NO_TUI: "1", ...env },
+    });
+  } catch (error) {
+    // TAP reports the message, not the child's captured stdout.
+    error.message += `\nCaptured stdout:\n${error.stdout ?? ""}`;
+    throw error;
+  }
 }
 
 function inventoryExists(home) {
@@ -118,6 +124,32 @@ test("human summary discloses metadata-only boundary and gem counts", () => {
   }
 });
 
-test("missing --root exits non-zero", () => {
-  assert.throws(() => scan([]), (err) => err.status !== 0);
-});
+for (const [mode, args, field, expected] of [
+  ["human", [], "stderr", /Usage: dema assets scan/],
+  ["JSON", ["--json"], "stdout", /"error": "missing_scan_root"/],
+]) {
+  test(`missing --root retains ${mode} failure evidence`, () => {
+    const home = mkdtempSync(join(tmpdir(), "hb-asset-home-"));
+    try {
+      assert.throws(
+        () => scan(args, { DEMA_HOME: home, DEMA_LOCAL_ASSET_ROOT: "" }),
+        (error) => {
+          assert.equal(error.status, 1);
+          assert.equal(error.signal, null);
+          assert.equal(error.output[1], error.stdout);
+          assert.equal(error.output[2], error.stderr);
+          assert.match(error[field], expected);
+          assert.ok(
+            error.message.includes(error[field].trim()),
+            `missing ${field} in failure diagnostics`,
+          );
+          assert.match(error.stack, /execFileSync/);
+          return true;
+        },
+      );
+      assert.equal(inventoryExists(home), false);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+}

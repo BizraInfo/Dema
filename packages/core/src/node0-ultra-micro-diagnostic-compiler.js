@@ -252,7 +252,14 @@ function logSumExp(xs) {
 export function decodeNode0DiagnosticHHMM(observations, memo = new Map()) {
   if (!Array.isArray(observations)) throw new TypeError("observations must be an array");
   if (!(memo instanceof Map)) throw new TypeError("memo must be a Map");
-  if (observations.length === 0) {
+  const symbols = observations.map((raw) => typeof raw === "string" ? raw : raw?.observation);
+  for (const obs of symbols) {
+    if (!OBSERVATION_ALPHABET.includes(obs)) throw new RangeError("unsupported HHMM observation: " + String(obs));
+  }
+  // Missing likelihoods cannot support a health inference; preserve UNKNOWN.
+  if (symbols.length === 0 || symbols.some((obs) =>
+    HEALTH_STATES.some((state) => !Object.hasOwn(EMISSION[state], obs))
+  )) {
     return freezeDeep({
       model: MODEL_VERSION,
       state: "UNKNOWN",
@@ -270,9 +277,8 @@ export function decodeNode0DiagnosticHHMM(observations, memo = new Map()) {
 
   for (let step = 0; step < observations.length; step += 1) {
     const raw = observations[step];
-    const obs = typeof raw === "string" ? raw : raw?.observation;
+    const obs = symbols[step];
     const stage = typeof raw === "string" ? "UNKNOWN" : raw?.stage ?? "UNKNOWN";
-    if (!OBSERVATION_ALPHABET.includes(obs)) throw new RangeError("unsupported HHMM observation: " + String(obs));
     rolling = sha256(rolling + "\u0000" + stableStringify({ observation: obs, stage }));
     prefixes.push(rolling);
     const next = {};
@@ -290,7 +296,7 @@ export function decodeNode0DiagnosticHHMM(observations, memo = new Map()) {
         const score = previous[prior] + logp(TRANSITION[prior][state]);
         if (score > best) { best = score; from = prior; }
       }
-      const score = best + logp(EMISSION[state][obs]) * (STAGE_SALIENCE[stage] ?? 1);
+      const score = best + logp(EMISSION[state][obs]) * (Object.hasOwn(STAGE_SALIENCE, stage) ? STAGE_SALIENCE[stage] : 1);
       memo.set(key, Object.freeze({ score, from }));
       next[state] = score;
     }

@@ -106,6 +106,10 @@ export const HELP_TOPICS = Object.freeze({
         short_description: "List local receipts",
       }),
       Object.freeze({
+        command: "receipt verify <path>",
+        short_description: "Verify talk-runtime receipt fields and content digest (read-only)",
+      }),
+      Object.freeze({
         command: "models",
         short_description:
           "Show local model inventory (read-only; no inference)",

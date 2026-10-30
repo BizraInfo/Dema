@@ -119,7 +119,7 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
         ? { note: d.note_ready_unbridged }
         : {
             // `ready` mirrors the adapter payload; setup does not set it either.
-            fix: "`ready` is reported by the Node0 runtime, not set locally. Bridge a runtime (see the activation gate fix) and re-check with `dema status`.",
+            fix: "`ready` is reported by the Node0 runtime, not set locally. Bridge a runtime (see the activation gate fix) and re-check with `node bin/dema status`.",
           }),
   });
 
@@ -305,7 +305,7 @@ export function formatDoctorDashboard(
   }
 
   lines.push("");
-  lines.push("Type `dema status` for full status JSON.");
+  lines.push("Type `node bin/dema status` for full status JSON.");
   lines.push(i18n.strings.doctor.explain_hint);
   if (i18n.truth_label === "DECLARED_NEEDS_NATIVE_REVIEW") {
     lines.push(`[${i18n.truth_label}] Arabic doctor labels · awaiting native review`);

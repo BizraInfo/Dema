@@ -104,3 +104,39 @@ export function buildTalkRuntimeReceipt({
 
   return deepFreeze({ ...body, receipt_id });
 }
+
+// Verifies the existing v0.1 shape and content digest, not who produced it or
+// whether the recorded invocation occurred. No keys, signing, or runtime I/O.
+export function verifyTalkRuntimeReceipt(receipt) {
+  const reject = (field, reason = "invalid_field") => Object.freeze({ verified: false, field, reason });
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) return reject("receipt", "expected_object");
+  const template = buildTalkRuntimeReceipt();
+  for (const field of Object.keys(template)) {
+    if (!Object.hasOwn(receipt, field)) return reject(field, "missing_field");
+  }
+  if (Object.keys(receipt).length !== Object.keys(template).length) return reject("receipt", "unexpected_field");
+  for (const field of ["schema", "truth_label", "no_task_executed", "no_runtime_autonomy", "no_token_poi_or_federation", "note"]) {
+    if (receipt[field] !== template[field]) return reject(field, "contract_mismatch");
+  }
+  for (const field of ["recorded_at", "provider", "model", "endpoint_family", "prompt_safety_verdict", "response_safety_verdict"]) {
+    if (receipt[field] !== null && typeof receipt[field] !== "string") return reject(field);
+  }
+  for (const field of ["duration_ms", "prompt_length_chars", "response_length_chars"]) {
+    const value = receipt[field];
+    if (value !== null && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) return reject(field);
+  }
+  if (![null, "completed", "refused", "blocked", "failed"].includes(receipt.invocation_status)) return reject("invocation_status");
+  if (![null, "suggestion"].includes(receipt.verdict_role)) return reject("verdict_role");
+  if (typeof receipt.consent_phrase_verified !== "boolean") return reject("consent_phrase_verified");
+  if (receipt.consent_phrase_sha256 !== null && (typeof receipt.consent_phrase_sha256 !== "string" || !/^[0-9a-f]{64}$/.test(receipt.consent_phrase_sha256))) return reject("consent_phrase_sha256");
+  const effects = receipt.invocation_effects;
+  if (!effects || typeof effects !== "object" || Array.isArray(effects)) return reject("invocation_effects");
+  for (const field of CALL_EFFECT_KEYS) {
+    if (!Object.hasOwn(effects, field) || typeof effects[field] !== "boolean") return reject(`invocation_effects.${field}`);
+  }
+  if (Object.keys(effects).length !== CALL_EFFECT_KEYS.length) return reject("invocation_effects", "unexpected_field");
+  if (typeof receipt.receipt_id !== "string" || !/^[0-9a-f]{64}$/.test(receipt.receipt_id)) return reject("receipt_id", "invalid_digest");
+  const { receipt_id, ...body } = receipt;
+  if (sha256Hex(canonicalJson(body)) !== receipt_id) return reject("receipt_id", "digest_mismatch");
+  return Object.freeze({ verified: true, field: null, reason: null, invocation_status: receipt.invocation_status });
+}

@@ -244,8 +244,8 @@ test("formatDoctorDashboard: output contains header and footer hints", () => {
   const preds = evaluatePredicates(defaultFailStatus());
   const output = formatDoctorDashboard(preds, { color: false });
   assert.match(output, /Dema Doctor — Node0 readiness check/);
-  assert.match(output, /dema status/);
-  assert.match(output, /dema explain doctor/);
+  assert.match(output, /node bin\/dema status/);
+  assert.match(output, /node bin\/dema explain doctor/);
 });
 
 test("formatDoctorDashboard: all-fail → summary line shows fail count", () => {
@@ -482,7 +482,12 @@ test("formatDoctorDashboard: unbridged still prints no ❌ and states nothing is
   });
   assert.ok(!output.includes("❌"), "expected state must not render as failure");
   assert.match(output, /Nothing is broken/i);
-  assert.match(output, /--preview/, "must name the flag that exits 0");
+  assert.match(output, /node bin\/dema doctor/, "zero-install path for doctor");
+  assert.match(
+    output,
+    /node bin\/dema doctor --preview/,
+    "must name the zero-install preview flag that exits 0",
+  );
 });
 
 // REGRESSION — Arabic column alignment (transports the real defect).

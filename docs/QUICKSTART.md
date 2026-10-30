@@ -170,6 +170,20 @@ All commands at this stage are **preview-only**. Nothing mints a receipt. Nothin
 
 ---
 
+## One-command outsider proof (no babysitting)
+
+From a clone, with **no** global `dema` on PATH:
+
+```bash
+npm run proof:outsider
+```
+
+This runs `scripts/proof/outsider-first-run-loop.mjs`: temp `DEMA_HOME`, reduced PATH, `node bin/dema` through version → welcome → setup → status → doctor (exit 1 allowed) → first-run `--plan-only`. Exit **0** means the local companion loop is outsider-usable. It does **not** prove Node0 runtime ready or green doctor.
+
+Map-before-merge corpus rules: [`02-architecture/ABSORPTION_ATLAS_PREVIEW.md`](02-architecture/ABSORPTION_ATLAS_PREVIEW.md).
+
+---
+
 ## Verification
 
-This Quickstart was verified by running every command above in a fresh tmpdir against `main @ a6ad0a1` on Node v22.22.2 on 2026-05-24 GST. Every expected-output block is **verbatim** from a real run. If you run the same commands and see different output, that's a regression — please file an issue with the diff.
+Historical Quickstart prose was verified 2026-05-24 against `main @ a6ad0a1`. Re-prove the live loop with `npm run proof:outsider` on the current HEAD. If that exits non-zero, file an issue with the JSON report.

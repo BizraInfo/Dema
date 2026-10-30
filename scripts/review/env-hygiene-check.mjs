@@ -63,6 +63,9 @@ const KNOWN_DEMA_ENV_VARS = Object.freeze([
   "DEMA_STAND_LOG_DIR",
   "DEMA_TALK_MODEL",
   "DEMA_TALK_PROVIDER",
+  // Sprint quality watchdog log dir override (scripts/proof/sprint-quality-watchdog.mjs).
+  // Defaults to /data/bizra/logs/dema-sprint-watchdog when unset. Local pulse only.
+  "DEMA_WATCHDOG_LOG_DIR",
 ]);
 
 /** Intentional operator/CI supply vars — tracked in KNOWN list but not strict polluters. */

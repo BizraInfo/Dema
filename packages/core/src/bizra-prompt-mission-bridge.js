@@ -51,6 +51,42 @@ function validHash(value) {
   return typeof value === "string" && HASH_RE.test(value);
 }
 
+export function evaluateTaskRequirement(requirement, verificationNowIso) {
+  const refuse = (verdict) => ({ verdict, blocked_by: [verdict] });
+  if (!isPlainObject(requirement)) return refuse("PRODUCTION_REQUIREMENT_POLICY_UNBOUND");
+  const owner = requirement.owner;
+  const capability = requirement.capability;
+  if (requirement.schema !== "bizra.dema.trusted_task_requirement.v1" ||
+      typeof requirement.task_id !== "string" || !requirement.task_id.trim() ||
+      !isPlainObject(owner) || typeof owner.identity !== "string" || !owner.identity.trim() ||
+      !validHash(owner.hash) || owner.revision !== owner.hash ||
+      typeof requirement.required_operation !== "string" || !requirement.required_operation.trim() ||
+      !isPlainObject(capability) || capability.mission_id !== "BIZRA-GENESIS-LOCAL-MISSION-0" ||
+      capability.version !== "bizra.genesis.mission_contract.v0.1" ||
+      capability.operation !== "METADATA_INVENTORY_READ_ONLY" ||
+      !validHash(capability.owner_hash) || !validHash(capability.registration_hash) ||
+      requirement.execution_allowed !== false || requirement.authority_delta !== 0) {
+    return refuse("TRUSTED_REQUIREMENT_INVALID");
+  }
+  const now = typeof verificationNowIso === "string" ? Date.parse(verificationNowIso) : NaN;
+  if (!Number.isFinite(now)) return refuse("TRUSTED_VERIFICATION_TIME_REQUIRED");
+  if (requirement.required_operation !== capability.operation) return refuse("BLOCKED_UNSUPPORTED_OPERATION");
+  const policy = requirement.policy;
+  if (!isPlainObject(policy)) return refuse("PRODUCTION_REQUIREMENT_POLICY_UNBOUND");
+  if (policy.scope !== "ISOLATED_NONEXECUTING_TEST_ONLY" ||
+      typeof policy.id !== "string" || !policy.id.trim() || !validHash(policy.hash) ||
+      typeof policy.authority_ref !== "string" || !policy.authority_ref.trim() ||
+      policy.task_id !== requirement.task_id || policy.required_operation !== requirement.required_operation ||
+      typeof policy.revoked !== "boolean") return refuse("TRUSTED_REQUIREMENT_POLICY_INVALID");
+  if (policy.revoked) return refuse("REQUIREMENT_APPROVAL_REVOKED");
+  const from = typeof policy.valid_from === "string" ? Date.parse(policy.valid_from) : NaN;
+  const until = typeof policy.expires_at === "string" ? Date.parse(policy.expires_at) : NaN;
+  if (!Number.isFinite(from) || !Number.isFinite(until) || from >= until || now < from || now >= until) {
+    return refuse("REQUIREMENT_APPROVAL_EXPIRED");
+  }
+  return { verdict: "OPERATION_MATCH_PREVIEW_ONLY", blocked_by: [] };
+}
+
 function safeStatus(value) {
   return typeof value === "string" && value.trim() ? value.trim() : UNKNOWN;
 }
@@ -154,13 +190,14 @@ function validateInputs({ text, now_iso: nowIso, compiler_code_hash: compilerCod
 }
 
 /**
- * @param {{text?: unknown, context?: unknown, now_iso?: unknown, compiler_code_hash?: unknown}} input
+ * @param {{text?: unknown, context?: unknown, now_iso?: unknown, compiler_code_hash?: unknown, task_requirement?: unknown}} input
  */
 export function compileMissionProposal({
   text,
   context = {},
   now_iso: nowIso,
   compiler_code_hash: compilerCodeHash,
+  task_requirement,
 } = {}) {
   validateInputs({ text, now_iso: nowIso, compiler_code_hash: compilerCodeHash });
 
@@ -177,7 +214,11 @@ export function compileMissionProposal({
     .sort((a, b) => a.index - b.index || a.action.localeCompare(b.action));
   const estateCapability = isBizraEstateIntent(sourceText) ? buildEstateCapability() : null;
   const safeEstateObservation = Boolean(estateCapability && actions.length === 0);
-  const missionId = `MISSION-${sourceIntentHash.slice("sha256:".length, "sha256:".length + 16)}`;
+  const requirementHash = task_requirement === undefined ? null : sha256CanonicalJsonV1(task_requirement);
+  const missionIdentityHash = requirementHash === null ? sourceIntentHash :
+    sha256CanonicalJsonV1({ source_intent_hash: sourceIntentHash, requirement_binding_hash: requirementHash });
+  const missionId = `MISSION-${missionIdentityHash.slice("sha256:".length, "sha256:".length + 16)}`;
+  const requirementDecision = requirementHash === null ? null : evaluateTaskRequirement(task_requirement, nowIso);
 
   const missionContract = createMissionContract({
     fields: buildMissionFields({
@@ -190,6 +231,7 @@ export function compileMissionProposal({
   });
 
   const blockedBy = [
+    ...(requirementDecision?.blocked_by ?? []),
     ...(actions.length > 0 ? ["exact_consequential_consent_required"] : []),
     ...(semantics.ambiguous_actions.length > 0 ? ["ambiguous_consequential_language"] : []),
   ];
@@ -237,6 +279,11 @@ export function compileMissionProposal({
     truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
     source_text: sourceText,
     source_intent_hash: sourceIntentHash,
+    ...(requirementHash === null ? {} : {
+      task_requirement,
+      requirement_binding_hash: requirementHash,
+      requirement_verdict: requirementDecision.verdict,
+    }),
     compiler: {
       ...identity,
       identity_hash: identityHash,
@@ -251,7 +298,7 @@ export function compileMissionProposal({
     mission_contract: missionContract,
     attention,
     requested_actions: actions,
-    decision: actions.length > 0 ? "WAIT_FOR_HUMAN" : "PROPOSE_ONLY",
+    decision: requirementDecision?.blocked_by.length ? "REFUSED" : actions.length > 0 ? "WAIT_FOR_HUMAN" : "PROPOSE_ONLY",
     what_i_understood: {
       objective: sourceText,
       recognized_operators: compiledPrompt.operators,
@@ -306,15 +353,34 @@ export function compileMissionProposal({
 
 /**
  * @param {unknown} proposal
- * @param {{expected_compiler_code_hash?: unknown, expected_context?: unknown}} options
+ * @param {{expected_compiler_code_hash?: unknown, expected_context?: unknown, expected_task_requirement?: unknown, verification_now_iso?: unknown}} options
  */
 export function verifyMissionProposal(proposal, {
   expected_compiler_code_hash: expectedCompilerCodeHash,
   expected_context,
+  expected_task_requirement,
+  verification_now_iso,
 } = {}) {
   const blockedBy = [];
   if (!isPlainObject(proposal)) {
     return Object.freeze({ ok: false, blocked_by: ["proposal_not_object"], recomputed_bridge_hash: null });
+  }
+  const taskBound = Object.hasOwn(proposal, "task_requirement") ||
+    Object.hasOwn(proposal, "requirement_binding_hash") || expected_task_requirement !== undefined;
+  let requirementDecision = null;
+  if (taskBound) {
+    requirementDecision = evaluateTaskRequirement(expected_task_requirement, verification_now_iso);
+    blockedBy.push(...requirementDecision.blocked_by);
+    if (expected_task_requirement === undefined) blockedBy.push("independent_requirement_required");
+    if (expected_context === undefined) blockedBy.push("independent_context_required");
+    if (!Object.hasOwn(proposal, "task_requirement")) blockedBy.push("task_requirement_missing");
+    try {
+      const expectedHash = sha256CanonicalJsonV1(expected_task_requirement);
+      if (proposal.requirement_binding_hash !== expectedHash ||
+          sha256CanonicalJsonV1(proposal.task_requirement) !== expectedHash) {
+        blockedBy.push("task_requirement_binding_mismatch");
+      }
+    } catch { blockedBy.push("task_requirement_unhashable"); }
   }
   if (typeof proposal.source_text !== "string" || !proposal.source_text.trim()) blockedBy.push("source_text_missing");
   if (!validHash(proposal.compiler?.code_hash)) blockedBy.push("compiler_code_hash_invalid");
@@ -351,6 +417,7 @@ export function verifyMissionProposal(proposal, {
         context: expected_context === undefined ? proposal.context_snapshot : expected_context,
         now_iso: proposal.mission_contract?.contract?.created_at_iso,
         compiler_code_hash: expectedCompilerCodeHash ?? proposal.compiler.code_hash,
+        ...(taskBound ? { task_requirement: expected_task_requirement } : {}),
       });
     } catch (error) {
       blockedBy.push(`rederive_failed:${error instanceof Error ? error.message : String(error)}`);
@@ -373,5 +440,9 @@ export function verifyMissionProposal(proposal, {
     ok: blockedBy.length === 0,
     blocked_by: Object.freeze([...new Set(blockedBy)]),
     recomputed_bridge_hash: rebuilt?.bridge_hash ?? null,
+    ...(taskBound ? {
+      requirement_verdict: requirementDecision.blocked_by.length ? requirementDecision.verdict :
+        blockedBy.length ? "TRUSTED_REQUIREMENT_BINDING_INVALID" : requirementDecision.verdict,
+    } : {}),
   });
 }

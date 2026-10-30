@@ -32,9 +32,21 @@ import {
   computeTraceDiagnosticReplaySubjectHashV2,
 } from "./dema-trace-diagnostic-contract.js";
 import { verifyTraceCorroborationOrigin } from "./trace-corroboration-origin.js";
+import { isGatheredEvidenceSignal } from "./peak-evidence-gatherer.js";
+import {
+  runZeroSpinGate,
+  verifyZeroSpinReceiptChain,
+  ZERO_SPIN_GATE_SCHEMA,
+  ZERO_SPIN_GATE_TRUTH_LABEL,
+} from "./zero-spin-gate.js";
 
 export const PEAK_SELF_LOOP_PREVIEW_SCHEMA =
   "bizra.dema.peak_self_loop_preview.v0.1";
+
+/** Peak compose status when no caller-supplied spin steps exist (honest abstain). */
+export const PEAK_ZERO_SPIN_NOT_SUPPLIED = "NOT_SUPPLIED";
+export const PEAK_ZERO_SPIN_VERIFIED_PROGRESS = "VERIFIED_PROGRESS";
+export const PEAK_ZERO_SPIN_SPIN_OR_BROKEN = "SPIN_OR_BROKEN";
 
 const HHMM_PHASES = Object.freeze([
   "UNDERSTAND",
@@ -129,20 +141,17 @@ const DEFAULT_NOISE_EVENTS = Object.freeze([
 // ponytail: no freshness/observed_at check — that needs a clock, and
 // .claude/rules/paths/core-kernels.md forbids one without documented injection.
 //
-// CEILING — this validates evidence SHAPE, never evidence BINDING. A pure kernel
-// cannot read source_ref, so it cannot re-derive source_sha256 from real content:
-// a structurally valid envelope pointing at a nonexistent file scores as verified
-// (see PEB-08, which transports that attack). This raises laundering from a kernel
-// DEFAULT to a caller ACT; it does not prevent forgery.
-// Upgrade path: whichever gatherer/CLI layer constructs signal_events must hash
-// source_ref itself and reject mismatches BEFORE calling this kernel. No such
-// caller exists yet — the CLI passes no events and therefore HOLDs.
+// Trust boundary: only same-process objects issued by the existing gatherer can
+// score; the marker is neither durable provenance nor proof that a gate ran.
 const EVIDENCE_TRUTH_LABELS = Object.freeze(["VERIFIED", "MEASURED"]);
 const SOURCE_SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
 function evidenceBindingGap(event) {
   if (!event || typeof event !== "object" || Array.isArray(event)) {
     return "not_an_object";
+  }
+  if (!isGatheredEvidenceSignal(event)) {
+    return "evidence_not_gatherer_issued";
   }
   if (!EVIDENCE_TRUTH_LABELS.includes(event.truth_label)) {
     return "truth_label_not_verified_or_measured";
@@ -501,6 +510,74 @@ function buildIntegrationRsiGate({ signalEvents, noiseEvents, processEvents }) {
   });
 }
 
+/**
+ * Compose ZERO-SPIN-GATE-1A into the peak proactive rail.
+ * Empty steps → honest NOT_SUPPLIED (never fake OK / F-IV).
+ */
+export function composePeakZeroSpinRail({
+  steps = null,
+  maxSteps,
+  enableCtxGate = true,
+  enableActionGate = true,
+} = {}) {
+  const list = Array.isArray(steps) ? steps : null;
+  if (!list || list.length === 0) {
+    return Object.freeze({
+      schema: ZERO_SPIN_GATE_SCHEMA,
+      truth_label: ZERO_SPIN_GATE_TRUTH_LABEL,
+      status: PEAK_ZERO_SPIN_NOT_SUPPLIED,
+      classification: null,
+      verified: false,
+      reason: "spin_steps_not_supplied",
+      spinsDetected: 0,
+      chain_ok: null,
+      progress_verified: false,
+      reinsert_eligible: false,
+      verdict_hash: null,
+      what_this_proves:
+        "No step sequence was supplied; zero-spin abstains rather than inventing progress",
+      what_this_does_not_prove:
+        "That a live agent spun or converged; supply spin_steps to classify",
+    });
+  }
+
+  const result = runZeroSpinGate({
+    steps: list,
+    maxSteps,
+    enableCtxGate,
+    enableActionGate,
+  });
+  const chain = verifyZeroSpinReceiptChain(result.receiptChain);
+  const progress_verified =
+    result.classification === "OK:VERIFIED" && chain.ok === true;
+
+  return Object.freeze({
+    schema: ZERO_SPIN_GATE_SCHEMA,
+    truth_label: ZERO_SPIN_GATE_TRUTH_LABEL,
+    status: progress_verified
+      ? PEAK_ZERO_SPIN_VERIFIED_PROGRESS
+      : PEAK_ZERO_SPIN_SPIN_OR_BROKEN,
+    classification: result.classification,
+    verified: result.verified === true,
+    spinsDetected: result.spinsDetected,
+    stepsConsumed: result.stepsConsumed,
+    budget: result.budget,
+    chain_ok: chain.ok === true,
+    chain_reason: chain.reason ?? null,
+    progress_verified,
+    reinsert_eligible: progress_verified,
+    verdict_hash: result.verdict_hash,
+    final_step_hash: result.final_step_hash,
+    gates: result.gates,
+    boundary: result.boundary,
+    what_this_proves: progress_verified
+      ? "Caller-supplied steps converged with a verified receipt chain (preview classification)"
+      : `Caller-supplied steps classified ${result.classification}; chain ${chain.ok ? "intact" : chain.reason}`,
+    what_this_does_not_prove:
+      "Live agent execution, Node0 closure, or that unsourced steps reflect a real run",
+  });
+}
+
 function buildProactiveSelf({
   snr,
   craftsmanship,
@@ -515,6 +592,7 @@ function buildProactiveSelf({
   certifier = "",
   verifier_bindings = {},
   trace_diagnostic_moat = null,
+  zero_spin = null,
 }) {
   const localHarnessGates = Object.freeze([
     "ux-first-look-gate",
@@ -524,6 +602,7 @@ function buildProactiveSelf({
     "dema-harness-integration",
     "node0-proof-of-truth-control-plane-check",
     "peak-verify-admission",
+    "zero-spin-gate-check",
   ]);
   const nextGate = ciAdvisoryBlocked
     ? "DONE_LOCAL slices + operator seal; remote CI advisory when billing clears"
@@ -546,15 +625,24 @@ function buildProactiveSelf({
     trace_moat.verified?.ok === true &&
     trace_moat.promotion_status === "INSIGHT_AUTHORIZED";
 
+  const spin = zero_spin;
+  const spinBlocks =
+    spin && spin.status === PEAK_ZERO_SPIN_SPIN_OR_BROKEN;
+
+  // Caller-supplied spin classification outranks default SNR/noise fixtures:
+  // a concrete F-I..F-IV is more specific than "noise dominates signal".
+  let critiqueVerdict = spinBlocks
+    ? `HOLD — zero-spin ${spin.classification}`
+    : snr.verdict === "PREVIEW_REJECT" ||
+        (snr.score != null && snr.score < 0.5)
+      ? "HOLD — noise dominates signal"
+      : trace_moat && !trace_authorized
+        ? "HOLD — trace diagnostic moat blocks unverified signal"
+        : "CONTINUE — micro-slice discipline holds";
+
   return Object.freeze({
     critique: Object.freeze({
-      verdict:
-        snr.verdict === "PREVIEW_REJECT" ||
-        (snr.score != null && snr.score < 0.5)
-          ? "HOLD — noise dominates signal"
-          : trace_moat && !trace_authorized
-            ? "HOLD — trace diagnostic moat blocks unverified signal"
-            : "CONTINUE — micro-slice discipline holds",
+      verdict: critiqueVerdict,
       gaps: Object.freeze(
         [
           convergence.summary.declared > 0
@@ -575,6 +663,12 @@ function buildProactiveSelf({
           trace_moat && !trace_authorized
             ? `TRACE moat ${trace_moat.promotion_status} (${(trace_moat.blocked_by || []).slice(0, 2).join("; ") || "no verified trace"}) — insight not authorized until provenance/consistency/disambiguation/corroboration all pass`
             : null,
+          spin?.status === PEAK_ZERO_SPIN_NOT_SUPPLIED
+            ? "Zero-spin rail idle (NOT_SUPPLIED) — pass spin_steps to classify progress"
+            : null,
+          spinBlocks
+            ? `Zero-spin ${spin.classification} (chain_ok=${spin.chain_ok}) — no re-insert until verified progress`
+            : null,
         ].filter(Boolean),
       ),
       limitation:
@@ -589,6 +683,7 @@ function buildProactiveSelf({
         "npm test",
         "npm run check",
         "dema peak-self-loop --json",
+        "node scripts/review/zero-spin-gate-check.mjs",
       ]),
     }),
     consent: Object.freeze({
@@ -607,18 +702,23 @@ function buildProactiveSelf({
       no_network: true,
       no_token_mint: true,
       reinsert_requires_judge_free_admission: true,
-      reinsert_eligible: verification_admission.reinsert_eligible === true,
+      reinsert_eligible:
+        verification_admission.reinsert_eligible === true &&
+        spinBlocks !== true,
       trace_diagnostic_authorized: trace_authorized === true,
       self_consistent_via_moat: trace_authorized === true,
+      zero_spin_progress_verified: spin?.progress_verified === true,
+      zero_spin_status: spin?.status ?? PEAK_ZERO_SPIN_NOT_SUPPLIED,
     }),
     verification_admission,
     trace_diagnostic_moat: trace_moat,
+    zero_spin: spin,
     awareness: Object.freeze({
       truth_label: "NODE0_LOCAL_SEED",
       what_this_proves:
-        "Declared self-loop composition is structurally coherent and gate-aligned; VERIFY admission is judge-free; trace diagnostic moat self-consistently gates insight promotion",
+        "Declared self-loop composition is structurally coherent and gate-aligned; VERIFY admission is judge-free; trace diagnostic moat self-consistently gates insight promotion; zero-spin classifies caller-supplied steps or abstains",
       what_this_does_not_prove:
-        "Autonomy, live scoring, HHMM runtime, economic rights, federation, or closed re-insert loop; trace moat does not prove insight truth, only admissibility",
+        "Autonomy, live scoring, HHMM runtime, economic rights, federation, or closed re-insert loop; trace moat does not prove insight truth, only admissibility; zero-spin does not prove a live run",
     }),
     loop_engineering: Object.freeze({
       hhmm_current: hhmm.peak_phase,
@@ -632,6 +732,7 @@ function buildProactiveSelf({
         "ACT→operator mutation outside sandbox",
         "ACT→mobile node control without ADR",
         "EVAL→INPUT without judge-free admission",
+        "EVAL→INPUT while zero-spin classifies F-I/F-II/F-III/F-IV",
       ]),
     }),
   });
@@ -747,6 +848,7 @@ function buildUltraMicroComposeMap() {
       "proactive_self.compliance",
       "proactive_self.verification_admission",
       "proactive_self.trace_diagnostic_moat",
+      "proactive_self.zero_spin",
       "reasoning_modes.sequential",
       "reasoning_modes.analogical",
       "reasoning_modes.critical",
@@ -757,6 +859,7 @@ function buildUltraMicroComposeMap() {
       "rsi_integration_gate",
       "craftsmanship_witness",
       "trace_diagnostic_moat",
+      "zero_spin_gate",
     ]),
     agent_posture: "outside_sandbox_proposes_inside_sandbox_proves",
     mode: "preview_only",
@@ -803,6 +906,10 @@ export function buildPeakSelfLoopPreview({
   verifier_bindings = {},
   trace_corroboration = null,
   trace_corroboration_context = {},
+  spin_steps = null,
+  spin_max_steps,
+  spin_enable_ctx_gate = true,
+  spin_enable_action_gate = true,
 } = {}) {
   const signalEvents = Array.isArray(signal_events)
     ? signal_events
@@ -823,7 +930,7 @@ export function buildPeakSelfLoopPreview({
   });
 
   const processEvents = [
-    ...signalEvents.map((e) => ({ type: e.type, weight: e.weight })),
+    ...verifiedSignalEvents.map((e) => ({ type: e.type, weight: e.weight })),
     ...noiseEvents.map((e) => ({ type: e.type, weight: e.weight })),
   ];
   const rsi = computeProcessRsi({ events: processEvents, window: 14 });
@@ -851,7 +958,7 @@ export function buildPeakSelfLoopPreview({
     ],
   });
 
-  const event_hash_table = buildEventHashTable(signalEvents, noiseEvents);
+  const event_hash_table = buildEventHashTable(verifiedSignalEvents, noiseEvents);
   const diffusion = diffuseHhmmBelief(snr.score);
   const peakPhase = diffusion.reduce((best, row) =>
     row.belief > best.belief ? row : best,
@@ -905,6 +1012,13 @@ export function buildPeakSelfLoopPreview({
     traceCorroborationContext: trace_corroboration_context,
   });
 
+  const zero_spin = composePeakZeroSpinRail({
+    steps: spin_steps,
+    maxSteps: spin_max_steps,
+    enableCtxGate: spin_enable_ctx_gate !== false,
+    enableActionGate: spin_enable_action_gate !== false,
+  });
+
   const proactive_self = buildProactiveSelf({
     snr,
     craftsmanship,
@@ -919,6 +1033,7 @@ export function buildPeakSelfLoopPreview({
     certifier,
     verifier_bindings,
     trace_diagnostic_moat,
+    zero_spin,
   });
 
   const agent_orchestration = buildAgentOrchestrationPosture({
@@ -928,7 +1043,7 @@ export function buildPeakSelfLoopPreview({
   const micro_process_mining = buildMicroProcessMiningRef();
   const self_loop_ooda = buildPeakOodaReviewCycle();
   const rsi_integration_gate = buildIntegrationRsiGate({
-    signalEvents: signalEvents.map((e) => ({ type: e.type, weight: e.weight })),
+    signalEvents: verifiedSignalEvents.map((e) => ({ type: e.type, weight: e.weight })),
     noiseEvents: noiseEvents.map((e) => ({ type: e.type, weight: e.weight })),
     processEvents,
   });
@@ -958,6 +1073,7 @@ export function buildPeakSelfLoopPreview({
     }),
     snr_autonomous_engine: engine,
     proactive_self,
+    zero_spin,
     trace_diagnostic_moat,
     agent_orchestration,
     reasoning_modes,
@@ -967,9 +1083,9 @@ export function buildPeakSelfLoopPreview({
     ultra_micro_compose,
     proof_spine_backlog,
     what_this_proves:
-      "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, MC witness, agent-outside-sandbox posture, OODA review, RSI gate, and trace-diagnostic moat (four-rail self-consistency) without runtime",
+      "Peak ultra-micro self-loop preview composes SNR, convergence, HHMM diffusion, MC witness, agent-outside-sandbox posture, OODA review, RSI gate, trace-diagnostic moat, and zero-spin progress classification without runtime",
     what_this_does_not_prove:
-      "Live autonomy, HHMM engine execution, economic activation, external trust-root governance, or independent replay itself; moat verifies cryptographic receipt origin and subject/challenge binding but does not prove insight truth",
+      "Live autonomy, HHMM engine execution, economic activation, external trust-root governance, or independent replay itself; moat verifies cryptographic receipt origin and subject/challenge binding but does not prove insight truth; zero-spin classifies caller-supplied steps only",
     boundary: buildPreviewBoundary(),
   });
 }
@@ -998,6 +1114,7 @@ export function renderPeakSelfLoopPreview(preview, { useColor = false } = {}) {
     `  compliance:  MC ${preview.proactive_self.compliance.master_craftsmanship_compliant ? "OK" : "GAP"} · reinsert ${preview.proactive_self.compliance.reinsert_eligible ? "ELIGIBLE" : "BLOCKED"} · trace_moat ${preview.proactive_self.compliance.trace_diagnostic_authorized ? "AUTHORIZED" : "BLOCKED"}`,
     `  admission:   self_verifiable=${preview.proactive_self.verification_admission.self_verifiable} · ${preview.proactive_self.verification_admission.refusal_reason ?? preview.proactive_self.verification_admission.named_verifier ?? "awaiting_act"}`,
     `  trace_moat:  ${preview.trace_diagnostic_moat.promotion_status} · verified:${preview.trace_diagnostic_moat.verified.ok} · traces:${preview.trace_diagnostic_moat.synthesis.verified_trace_count} · ${preview.trace_diagnostic_moat.blocked_by.slice(0, 2).join("; ") || "4/4 rails pass"}`,
+    `  zero_spin:   ${preview.zero_spin.status}${preview.zero_spin.classification ? ` · ${preview.zero_spin.classification}` : ""} · progress=${preview.zero_spin.progress_verified}`,
     `  awareness:   ${preview.proactive_self.awareness.what_this_proves}`,
     `  loop:        ${preview.proactive_self.loop_engineering.hhmm_current} → ${preview.proactive_self.loop_engineering.next_safe_transition}`,
     "",

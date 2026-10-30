@@ -23,6 +23,22 @@ import { buildRuntimeEmissionBoundary } from "./preview-boundary.js";
 import { evaluateArtifactSafety } from "./artifact-safety-eval.js";
 import { LLM_ADAPTER_MAX_PROMPT_LENGTH } from "./llm-adapter.js";
 
+function bearerAuthorizationHeader(key) {
+  if (typeof key !== "string") return null;
+  if (key.trim().length === 0 || /[\r\n]/.test(key)) return null;
+  return `Bearer ${key}`;
+}
+
+// The readiness gatherer uses this existing llama.cpp header contract.
+export function llamacppAuthorizationHeader(env) {
+  return bearerAuthorizationHeader(env?.LLAMACPP_KEY);
+}
+
+function authorizationHeaders(authorization) {
+  if (!authorization) return {};
+  return { Authorization: authorization };
+}
+
 export const DEMA_TALK_LOOP_LIVE_RESULT_SCHEMA =
   "bizra.dema.talk_loop_live_result.v0.1";
 
@@ -113,6 +129,7 @@ export async function invokeDemaTalkLive({
   consentPhrase = "",
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fetchImpl = undefined,
+  env = process.env,
 } = {}) {
   const modelSafe = typeof model === "string" ? model : "";
   const promptSafe = typeof prompt === "string" ? prompt : "";
@@ -128,6 +145,7 @@ export async function invokeDemaTalkLive({
     provider,
     model: modelSafe,
     prompt: promptSafe,
+    env,
   });
 
   // Gate 0: known provider. The router already refuses unknown providers with
@@ -146,7 +164,7 @@ export async function invokeDemaTalkLive({
   const base = {
     provider: route.selected_provider,
     model: modelSafe,
-    endpoint: route.provider_base_url,
+    endpoint: route.endpoint_override_invalid ? null : route.provider_base_url,
     endpointFamily: route.endpoint_family,
     requiredConsent: route.consent_phrase,
     promptLengthChars: promptSafe.length,
@@ -155,6 +173,7 @@ export async function invokeDemaTalkLive({
     buildResult({ ...base, status: "refused", truthLabel: "INVOCATION_REFUSED", consentVerified, errorReason });
 
   // Gate 1: localhost-bound
+  if (route.endpoint_override_invalid) return refuse("invalid_endpoint_override · invocation refused");
   if (!route.target_is_localhost) return refuse("endpoint_not_localhost · invocation refused");
   // Gate 2: model in whitelist (the router's normalized verdict)
   if (!route.model_allowed)
@@ -219,6 +238,13 @@ export async function invokeDemaTalkLive({
   const requestBody = isOpenAi
     ? { model: modelSafe, messages: [{ role: "user", content: promptSafe }], stream: false }
     : { model: modelSafe, prompt: promptSafe, stream: false };
+  const configuredKey = route.selected_provider === "llamacpp"
+    ? env?.LLAMACPP_KEY
+    : route.selected_provider === "lmstudio" ? env?.LMSTUDIO_KEY : undefined;
+  const authorization = bearerAuthorizationHeader(configuredKey);
+  const providerKey = authorization ? configuredKey : "";
+  // Provider-controlled errors and answers can echo keys the generic scanner misses.
+  const redactCredential = (text) => providerKey ? text.replaceAll(providerKey, "[REDACTED: PROVIDER_CREDENTIAL]") : text;
 
   const startedAt = Date.now();
   const controller = new AbortController();
@@ -229,11 +255,13 @@ export async function invokeDemaTalkLive({
       // Fail closed on any 3xx: a compromised localhost LLM server must not be
       // able to bounce this call off-localhost via a redirect.
       redirect: "error",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...authorizationHeaders(authorization),
+      },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
-    clearTimeout(timeoutHandle);
 
     if (!response.ok) {
       return buildResult({
@@ -244,7 +272,7 @@ export async function invokeDemaTalkLive({
         fetchAttempted: true,
         promptSafetyVerdict: promptVerdict,
         durationMs: Date.now() - startedAt,
-        errorReason: `http_status_${response.status} · ${response.statusText || "unknown"}`,
+        errorReason: `http_status_${response.status} · ${redactCredential(response.statusText || "unknown")}`,
       });
     }
 
@@ -252,6 +280,7 @@ export async function invokeDemaTalkLive({
     try {
       body = await response.json();
     } catch (parseErr) {
+      if (parseErr?.name === "AbortError") throw parseErr;
       return buildResult({
         ...base,
         status: "failed",
@@ -260,7 +289,7 @@ export async function invokeDemaTalkLive({
         fetchAttempted: true,
         promptSafetyVerdict: promptVerdict,
         durationMs: Date.now() - startedAt,
-        errorReason: `response_not_json · ${String(parseErr).slice(0, 200)}`,
+        errorReason: `response_not_json · ${redactCredential(String(parseErr)).slice(0, 200)}`,
       });
     }
 
@@ -280,18 +309,35 @@ export async function invokeDemaTalkLive({
       });
     }
 
+    if (responseText.trim().length === 0) {
+      return buildResult({
+        ...base,
+        status: "failed",
+        truthLabel: "INVOCATION_FAILED",
+        consentVerified: true,
+        fetchAttempted: true,
+        promptSafetyVerdict: promptVerdict,
+        durationMs: Date.now() - startedAt,
+        errorReason: "empty_response",
+        responseText,
+        responseTextPreviewOverride: null,
+      });
+    }
+
     // Outbound Layer-1 scan, same loosening as inbound: a local PATH the model
     // echoes back is shown (local, no receipt); a SECRET_LIKE / CLAIM_OVERREACH /
     // SCHEMA blocker is redacted rather than surfaced.
     const responseBlockers = evaluateArtifactSafety(responseText).findings.filter(
       (f) => f.severity === "BLOCKER" && f.kind !== "PATH_LEAK",
     );
+    const responseKinds = new Set(responseBlockers.map((f) => f.kind));
+    if (providerKey && responseText.includes(providerKey)) responseKinds.add("PROVIDER_CREDENTIAL");
     const responseVerdict =
-      responseBlockers.length === 0
+      responseKinds.size === 0
         ? "LOCAL_TALK_OK"
-        : [...new Set(responseBlockers.map((f) => f.kind))].join("+");
+        : [...responseKinds].join("+");
     const override =
-      responseBlockers.length > 0 && responseText
+      responseKinds.size > 0 && responseText
         ? `[REDACTED: ${responseVerdict}]`
         : undefined;
     return buildResult({
@@ -308,7 +354,6 @@ export async function invokeDemaTalkLive({
       responseTextPreviewOverride: override,
     });
   } catch (err) {
-    clearTimeout(timeoutHandle);
     const unreachable =
       err?.code === "ECONNREFUSED" || /ECONNREFUSED|refused/i.test(String(err));
     const errorClass =
@@ -316,7 +361,7 @@ export async function invokeDemaTalkLive({
         ? `timeout_after_${timeoutSafe}ms`
         : unreachable
           ? `provider_unreachable · ${route.selected_provider} not reachable at ${route.provider_base_url} · start it or try --provider llamacpp (no silent fallback to another provider)`
-          : `network_error · ${String(err).slice(0, 200)}`;
+          : `network_error · ${redactCredential(String(err)).slice(0, 200)}`;
     return buildResult({
       ...base,
       status: "failed",
@@ -327,5 +372,7 @@ export async function invokeDemaTalkLive({
       durationMs: Date.now() - startedAt,
       errorReason: errorClass,
     });
+  } finally {
+    clearTimeout(timeoutHandle);
   }
 }

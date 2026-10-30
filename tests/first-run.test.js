@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
@@ -23,6 +23,9 @@ const indexPath = fileURLToPath(
   new URL("../apps/cli/src/index.js", import.meta.url),
 );
 const pkgPath = fileURLToPath(new URL("../package.json", import.meta.url));
+const repoRoot = fileURLToPath(new URL("../", import.meta.url));
+const demaBin = fileURLToPath(new URL("../bin/dema", import.meta.url));
+const nodeDir = dirname(process.execPath);
 
 async function readVersion() {
   const raw = await readFile(pkgPath, "utf8");
@@ -93,7 +96,7 @@ test("summarizeFirstRunOutcome — all predicates ok → ok=true, suggests journ
     ],
   });
   assert.equal(outcome.ok, true);
-  assert.match(outcome.suggested_next, /dema journey/);
+  assert.match(outcome.suggested_next, /node bin\/dema journey/);
 });
 
 test("summarizeFirstRunOutcome — failing predicate → ok=false, points at doctor", () => {
@@ -106,7 +109,7 @@ test("summarizeFirstRunOutcome — failing predicate → ok=false, points at doc
   });
   assert.equal(outcome.ok, false);
   assert.deepEqual(outcome.failed_predicates, ["ready"]);
-  assert.match(outcome.suggested_next, /dema doctor/);
+  assert.match(outcome.suggested_next, /node bin\/dema doctor/);
 });
 
 test("`dema --version` prints the package.json version", async () => {
@@ -239,4 +242,72 @@ test("Plan envelope is deep-frozen", () => {
   assert.ok(Object.isFrozen(plan));
   assert.ok(Object.isFrozen(plan.steps));
   assert.ok(Object.isFrozen(plan.boundary));
+});
+
+// FIRST-RUN-INSTALL-GAP-1A / TASK-046 — outsider path must not require global `dema`.
+test("FIRST_RUN_STEPS advertise node bin/dema (zero-install) commands", () => {
+  for (const step of FIRST_RUN_STEPS) {
+    if (step.id === "next") continue;
+    assert.match(
+      step.command,
+      /^node bin\/dema /,
+      `step ${step.id} must use node bin/dema, got ${step.command}`,
+    );
+  }
+});
+
+test("node bin/dema welcome works with dema absent from PATH", async () => {
+  const { stdout } = await execFileAsync(process.execPath, [demaBin, "welcome"], {
+    encoding: "utf8",
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      PATH: `/usr/bin:/bin:${nodeDir}`,
+      DEMA_NO_TUI: "1",
+      NODE_ENV: "test",
+    },
+  });
+  assert.match(stdout, /Welcome to Dema/i);
+});
+
+test("outsider reduced-PATH suite: welcome → setup → status → doctor", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-outsider-path-"));
+  const env = {
+    ...process.env,
+    PATH: `/usr/bin:/bin:${nodeDir}`,
+    DEMA_HOME: home,
+    DEMA_NO_TUI: "1",
+    NODE_ENV: "test",
+  };
+  try {
+    for (const cmd of ["welcome", "setup", "status"]) {
+      const { stdout } = await execFileAsync(process.execPath, [demaBin, cmd], {
+        encoding: "utf8",
+        cwd: repoRoot,
+        env,
+      });
+      assert.ok(stdout.length > 0, `${cmd} produced empty stdout`);
+    }
+    // Doctor may exit 1 when Ready is false (honest block on a fresh home).
+    let doctorOut = "";
+    let doctorCode = 0;
+    try {
+      const result = await execFileAsync(process.execPath, [demaBin, "doctor"], {
+        encoding: "utf8",
+        cwd: repoRoot,
+        env,
+      });
+      doctorOut = result.stdout;
+    } catch (error) {
+      doctorCode = error.code;
+      doctorOut = error.stdout ?? "";
+    }
+    assert.match(doctorOut, /Dema Doctor/i);
+    assert.ok(
+      doctorCode === 0 || doctorCode === 1,
+      `doctor exit must be 0 or 1, got ${doctorCode}`,
+    );
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
 });

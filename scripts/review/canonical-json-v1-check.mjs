@@ -230,6 +230,26 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   "packages/genesis/src/urp0-sat5.js",
   "scripts/genesis/urp0-runtime.mjs",
   "scripts/genesis/urp0-store.mjs",
+  // META-GATE-INVENTORY-1A / FROZEN-ACCEPTANCE-CONTRACT-1A — both pure kernels
+  // reuse the mandated canonical JSON v1 hash (sha256CanonicalJsonV1) instead of
+  // a bespoke serializer: the meta-gate inventory content-addresses its audited
+  // invariant set, and the frozen acceptance contract binds a full slice plan to
+  // one exact consent phrase by its canonical hash, so a one-byte plan mutation
+  // changes the hash and verification fails closed. Registration is adoption
+  // review only; both kernels are PREVIEW_ONLY, pure, promote nothing, and grant
+  // no runtime authority.
+  "packages/core/src/meta-gate-inventory.js",
+  "packages/core/src/frozen-acceptance-contract.js",
+  // ZERO-SPIN-GATE-1A — the pure spin detector content-addresses every step
+  // record and the final verdict with the mandated canonical JSON v1 hash
+  // instead of a bespoke serializer, and chains the per-step receipts linearly
+  // so the verify path can re-derive each step_hash and fail closed on a
+  // tampered link. The whole point of the gate is that two machines re-derive
+  // the identical classification and receipt chain from the identical steps, so
+  // key-order stability is load-bearing. Registration is adoption review only;
+  // the kernel is PREVIEW_ONLY, pure (no fs/net/clock/random), promotes nothing,
+  // and grants no runtime authority.
+  "packages/core/src/zero-spin-gate.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
@@ -410,6 +430,7 @@ function scanForForbiddenImporters() {
       // Build output is not a production source surface; scanning generated
       // Next chunks would report transitive imports as unreviewed consumers.
       if (rel.includes("/.next/")) continue;
+      if (rel.split("/").includes("tests")) continue;
       if (rel.startsWith("packages/canon/")) continue;
       if (allowed.has(rel)) continue;
       const src = readFileSync(abs, "utf8");

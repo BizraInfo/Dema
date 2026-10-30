@@ -3,8 +3,10 @@ import { existsSync, linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSyn
 import { join } from "node:path";
 
 import {
+  BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
   verifyMissionProposal,
 } from "@core/bizra-prompt-mission-bridge.js";
+import { resolveTrustedRequirement } from "./trusted-requirement";
 import {
   reduceAttentionAllocation,
   verifyAttentionAllocationReceipt,
@@ -203,6 +205,9 @@ export function proposalBinding(proposal: any) {
     compiler_identity_hash: proposal?.compiler?.identity_hash,
     compiled_contract_hash: proposal?.mission_contract?.contract_hash,
     context_hash: proposal?.context_hash,
+    ...(proposal?.requirement_binding_hash === undefined ? {} : {
+      requirement_binding_hash: proposal.requirement_binding_hash,
+    }),
   };
   if (!Object.values(binding).every((value) => typeof value === "string" && HASH_RE.test(value))) {
     throw new Error("proposal_binding_invalid");
@@ -212,11 +217,39 @@ export function proposalBinding(proposal: any) {
 
 export function verifySubmittedProposal(proposal: any) {
   const compilerCodeHash = requireCompilerCodeHash();
-  const verification = verifyMissionProposal(proposal, {
-    expected_compiler_code_hash: compilerCodeHash,
-    expected_context: proposal?.context_snapshot,
-  });
-  return { compilerCodeHash, verification };
+  try {
+    const requirement = resolveTrustedRequirement(proposal?.task_requirement?.task_id, { source_text: proposal?.source_text });
+    const verification = verifyMissionProposal(proposal, {
+      expected_compiler_code_hash: compilerCodeHash,
+      expected_context: mergeNode0MissionContext({}),
+      expected_task_requirement: requirement,
+      verification_now_iso: new Date().toISOString(),
+    });
+    if (verification.ok && proposal?.decision !== "PROPOSE_ONLY") {
+      return { compilerCodeHash, verification: {
+        ...verification, ok: false, blocked_by: ["consequential_request_requires_human_review"],
+        requirement_verdict: "consequential_request_requires_human_review",
+      } };
+    }
+    return { compilerCodeHash, verification };
+  } catch (error) {
+    return { compilerCodeHash, verification: {
+      ok: false, blocked_by: [String((error as Error)?.message ?? error)],
+      recomputed_bridge_hash: null, requirement_verdict: "TRUSTED_OWNER_UNAVAILABLE",
+    } };
+  }
+}
+
+export function missionRequirementResponse(proposal: any, verification: any) {
+  return {
+    ok: verification.ok === true,
+    truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
+    proposal, verification,
+    verdict: verification.requirement_verdict ?? verification.blocked_by?.[0] ?? "PRODUCTION_REQUIREMENT_POLICY_UNBOUND",
+    blocked_by: verification.blocked_by ?? [],
+    consent_card_allowed: false, runtime_call_allowed: false,
+    task_completed: false, effect_observed: null,
+  };
 }
 
 export async function callGovernedRuntime(path: string, body: unknown) {

@@ -99,6 +99,7 @@ const COMMAND_SURFACE = [
   "founder",
   "voice",
   "receipts",
+  "receipt",
   "memory",
   "think",
   "models",

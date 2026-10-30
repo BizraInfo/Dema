@@ -70,7 +70,7 @@ import { cmd_ambient } from "./commands/ambient.js";
 import { cmd_ambient_json } from "./commands/ambient-json.js";
 import { cmd_diagnostics } from "./commands/diagnostics.js";
 import { cmd_consent } from "./commands/consent.js";
-import { cmd_receipts } from "./commands/receipts.js";
+import { cmd_receipt, cmd_receipts } from "./commands/receipts.js";
 import { cmd_models } from "./commands/models.js";
 import { cmd_monitors } from "./commands/monitors.js";
 import { cmd_report } from "./commands/report.js";
@@ -625,6 +625,8 @@ Preview planning:
                     No network. No mutation.
 
 Local evidence:
+  dema receipt verify <path>
+                    Verify talk-runtime receipt fields and content digest (read-only)
   dema receipts     List local receipts
   dema receipts ID  Show by ID, artifact ID, exact path, or unique filename
   dema memory       List local memory entries (profile + ~/.dema/memory/*)
@@ -636,8 +638,8 @@ Local evidence:
                     Read-only · no model load · no prompt execution · no public network · canonical 16-key boundary
   dema models discover [--json]
                     MODEL-EVAL-BASELINE-1A · read-only local model-pool discovery (Ollama · LM Studio · llama.cpp); no inference, local providers only
-  dema models readiness [--json]
-                    LOCAL-LLM-FLEET-READINESS-1A · read-only fleet readiness (provider reachability · installed/loaded models · preferred routes · consent phrases); no model invocation
+  dema models readiness [--json] [--probe-completion]
+                    LOCAL-LLM-FLEET-READINESS-1A · fleet readiness (provider reachability · installed/loaded models · preferred routes · consent phrases); default does not call a model; --probe-completion sends one localhost llama.cpp chat completion before that lane can be ready
   dema monitors run [--json] [--ci-unavailable]
                     MONITOR-GATHERER-1A + RECEIPT-MONITOR-PREVIEW-1A · operator-invoked proof-health scan (stale proof · registry/docs drift · missing gates · evidence gaps); read-only, fail-closed on criticals, no daemon, no autofix
   dema report safety [--json]
@@ -665,8 +667,8 @@ Local evidence:
                       Emit Layer 2 rubric pack (truthfulness · actionability · boundary_compliance); data-only, no LLM invocation
   dema eval layer2 verify <abs-path> [--json]
                       Validate an operator-pasted Layer 2 judge verdict file; structural + semantic checks; read-only; exit 1 on validation failure
-  dema eval baseline [--suite bizra-local-small] [--max-models <n>] [--json]
-                      MODEL-EVAL-BASELINE-1A · warm-up then run the frozen local suite against the model pool; content-addressed; LOCAL ONLY; not a leaderboard
+  dema eval baseline [--suite bizra-local-small] [--model <provider:model>]... [--consent "<exact phrase>"]... [--json]
+                      MODEL-EVAL-BASELINE-1A · discovery is read-only; inference requires one exact, model/task-bound consent phrase per warm-up and suite request; LOCAL ONLY; not a leaderboard
   dema eval compare <--baseline a.json --candidate b.json> [--json]
                       Deterministic before/after delta of two baseline reports; refuses a tampered input
   dema eval route <--baseline a.json> [--json]
@@ -898,6 +900,7 @@ const REGISTERED_COMMANDS_LIST = [
   },
   { command: "voice", description: "preview voice-turn receipt (text transcript only)" },
   { command: "receipts", description: "list or show local receipts" },
+  { command: "receipt", description: "verify a talk-runtime receipt's content digest" },
   {
     command: "authorship",
     description: "verify or demo Ed25519 authorship receipts",
@@ -1356,6 +1359,7 @@ const COMMAND_TABLE = {
   founder: cmd_founder,
   voice: cmd_voice,
   receipts: cmd_receipts,
+  receipt: cmd_receipt,
   memory: cmd_memory,
   think: cmd_think,
   models: cmd_models,

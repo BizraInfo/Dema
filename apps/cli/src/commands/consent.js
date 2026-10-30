@@ -72,7 +72,7 @@ export async function cmd_consent(ctx) {
     });
     if (wantJsonC) {
       console.log(JSON.stringify(result, null, 2));
-    } else if (result.built) {
+    } else if (result.built && !result.error) {
       console.log("Consent Proof");
       console.log("=".repeat(40));
       console.log(`  Schema:       ${result.consent_proof.schema}`);
@@ -94,7 +94,7 @@ export async function cmd_consent(ctx) {
     } else {
       console.error(`Consent proof failed: ${result.error}`);
     }
-    if (!result.built) process.exitCode = 1;
+    if (!result.built || result.error) process.exitCode = 1;
     process.exit(process.exitCode ?? 0);
   }
   if (subcommand === "verify") {

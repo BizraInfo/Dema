@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
   compileMissionProposal,
-  verifyMissionProposal,
 } from "@core/bizra-prompt-mission-bridge.js";
-import { MAX_INTENT_BYTES, mergeNode0MissionContext, persistAttentionAllocation } from "../node0-runtime";
+import { MAX_INTENT_BYTES, mergeNode0MissionContext, verifySubmittedProposal, missionRequirementResponse } from "../node0-runtime";
+import { resolveTrustedRequirement } from "../trusted-requirement";
 import { requireLocalSession } from "@/lib/auth/session-boundary";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +29,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    if (body && ["task_requirement", "proposal", "verification"].some(key => Object.hasOwn(body, key))) {
+      return NextResponse.json(missionRequirementResponse(null, {
+        ok: false, blocked_by: ["caller_requirement_claim_not_allowed"],
+      }), { status: 422 });
+    }
     const text = typeof body?.text === "string" ? body.text : "";
     if (Buffer.byteLength(text, "utf8") > MAX_INTENT_BYTES) {
       return NextResponse.json(
@@ -39,47 +44,19 @@ export async function POST(request: NextRequest) {
 
     const proposal = compileMissionProposal({
       text,
-      context: mergeNode0MissionContext(body?.context),
+      context: mergeNode0MissionContext({}),
       now_iso: new Date().toISOString(),
       compiler_code_hash: compilerCodeHash,
+      task_requirement: resolveTrustedRequirement(body?.task_id, { source_text: text }),
     });
-    const verification = verifyMissionProposal(proposal, {
-      expected_compiler_code_hash: compilerCodeHash,
-      expected_context: proposal.context_snapshot,
-    });
-
-    if (!verification.ok) {
-      return NextResponse.json(
-        { ok: false, truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL, verification },
-        { status: 422 },
-      );
-    }
-    const allocation = persistAttentionAllocation(proposal);
-    if (!allocation.ok) {
-      return NextResponse.json(
-        {
-          ok: false,
-          truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
-          blocked_by: allocation.blocked_by,
-        },
-        { status: 503 },
-      );
-    }
-    return NextResponse.json({
-      ok: true,
-      truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
-      proposal,
-      verification,
-      allocation_receipt: allocation.receipt,
-      allocation_receipt_reused: allocation.reused,
+    const { verification } = verifySubmittedProposal(proposal);
+    // An isolated preview is not an attention receipt or production permission.
+    return NextResponse.json(missionRequirementResponse(proposal, verification), {
+      status: verification.ok ? 200 : 422,
     });
   } catch (error) {
     return NextResponse.json(
-      {
-        ok: false,
-        truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
-        blocked_by: [String((error as Error)?.message ?? error)],
-      },
+      missionRequirementResponse(null, { ok: false, blocked_by: [String((error as Error)?.message ?? error)] }),
       { status: 400 },
     );
   }

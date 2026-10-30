@@ -11,26 +11,27 @@ export const FIRST_RUN_STEPS = Object.freeze([
   Object.freeze({
     id: "welcome",
     label: "Welcome",
-    command: "dema welcome",
+    // Zero-install outsider path (TASK-046): never assume a global `dema` on PATH.
+    command: "node bin/dema welcome",
     description: "Read the product promise. No side effects.",
   }),
   Object.freeze({
     id: "setup",
     label: "Setup",
-    command: "dema setup",
+    command: "node bin/dema setup",
     description:
       "Create ~/.dema/ (idempotent, non-destructive). Writes only inside DEMA_HOME.",
   }),
   Object.freeze({
     id: "status",
     label: "Status",
-    command: "dema status",
+    command: "node bin/dema status",
     description: "Show what is ready and what is blocked. Read-only.",
   }),
   Object.freeze({
     id: "doctor",
     label: "Doctor",
-    command: "dema doctor",
+    command: "node bin/dema doctor",
     description: "Row-by-row readiness check with fix hints. Read-only.",
   }),
   Object.freeze({
@@ -71,7 +72,7 @@ export function buildFirstRunPlan({ dry_run = false } = {}) {
     mode: dry_run ? "DRY_RUN" : "EXECUTE",
     steps: FIRST_RUN_STEPS,
     next_safe_action:
-      "Run `dema first-run` to step through · `--dry-run` to preview only · `--json` for machine output",
+      "Run `node bin/dema first-run` to step through · `--dry-run` to preview only · `--json` for machine output",
     boundary: dry_run ? DRY_RUN_BOUNDARY : BOUNDARY,
   });
 }
@@ -119,8 +120,8 @@ export function summarizeFirstRunOutcome({
     ok,
     failed_predicates: Object.freeze(failed.map((p) => p.key)),
     suggested_next: ok
-      ? 'Try `dema journey "Fix auth.py and run pytest"` to preview a bounded mission'
-      : `Resolve doctor predicates: ${failed.map((p) => p.key).join(", ")} (run \`dema doctor\` for fix hints)`,
+      ? 'Try `node bin/dema journey "Fix auth.py and run pytest"` to preview a bounded mission'
+      : `Resolve doctor predicates: ${failed.map((p) => p.key).join(", ")} (run \`node bin/dema doctor\` for fix hints)`,
     status_snapshot_present: status !== null && status !== undefined,
   });
 }

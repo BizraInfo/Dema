@@ -8,6 +8,7 @@ import {
   configuredMissionRoot,
   proposalBinding,
   verifySubmittedProposal,
+  missionRequirementResponse,
 } from "../node0-runtime";
 import { requireLocalSession } from "@/lib/auth/session-boundary";
 
@@ -23,9 +24,17 @@ export async function POST(request: NextRequest) {
     const { verification } = verifySubmittedProposal(body?.proposal);
     if (!verification.ok) {
       return NextResponse.json(
-        { ok: false, truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL, verification },
+        missionRequirementResponse(body?.proposal, verification),
         { status: 422 },
       );
+    }
+    if (body?.task_id !== undefined && body.task_id !== body?.proposal?.task_requirement?.task_id) {
+      return NextResponse.json(missionRequirementResponse(body?.proposal, {
+        ok: false, blocked_by: ["task_id_mismatch"],
+      }), { status: 422 });
+    }
+    if (verification.requirement_verdict === "OPERATION_MATCH_PREVIEW_ONLY") {
+      return NextResponse.json(missionRequirementResponse(body.proposal, verification));
     }
     if (body?.proposal?.decision !== "PROPOSE_ONLY") {
       return NextResponse.json(
@@ -75,11 +84,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     return NextResponse.json(
-      {
-        ok: false,
-        truth_label: BIZRA_PROMPT_MISSION_BRIDGE_TRUTH_LABEL,
-        blocked_by: [String((error as Error)?.message ?? error)],
-      },
+      missionRequirementResponse(null, { ok: false, blocked_by: [String((error as Error)?.message ?? error)] }),
       { status: 400 },
     );
   }

@@ -27,21 +27,24 @@ import {
   llmAdapterConsentPhraseFor,
 } from "./llm-adapter.js";
 import {
+  isLoopbackHttpUrl,
   resolveLocalLlmBase,
 } from "../../models/src/model-common.js";
 
 /** ADR-042 bridge env → shared resolver, preserving /v1 for OpenAI-compat providers. */
-function resolveProviderBaseUrl(providerKey, registryBaseUrl) {
+function resolveProviderBaseUrl(providerKey, registryBaseUrl, env) {
   const envByProvider = {
-    ollama: process.env.DEMA_OLLAMA_URL,
-    lmstudio: process.env.DEMA_LM_STUDIO_URL,
-    llamacpp: process.env.DEMA_LLAMACPP_URL,
+    ollama: "DEMA_OLLAMA_URL",
+    lmstudio: "DEMA_LM_STUDIO_URL",
+    llamacpp: "DEMA_LLAMACPP_URL",
   };
-  const envValue = envByProvider[providerKey];
+  const envValue = env?.[envByProvider[providerKey]];
   // No bridge set → keep the fixed registry URL (localhost hostnames as shipped).
   if (typeof envValue !== "string" || envValue.trim() === "") {
-    return registryBaseUrl;
+    return { baseUrl: registryBaseUrl, invalidOverride: false };
   }
+  // Discovery retains fallback; live invocation must refuse this discarded override.
+  const invalidOverride = !isLoopbackHttpUrl(envValue.trim());
   const resolved = resolveLocalLlmBase({
     envValue,
     fallback: registryBaseUrl,
@@ -53,9 +56,9 @@ function resolveProviderBaseUrl(providerKey, registryBaseUrl) {
     registryBaseUrl.endsWith("/v1") &&
     !String(resolved).endsWith("/v1")
   ) {
-    return `${String(resolved).replace(/\/$/, "")}/v1`;
+    return { baseUrl: `${String(resolved).replace(/\/$/, "")}/v1`, invalidOverride };
   }
-  return resolved;
+  return { baseUrl: resolved, invalidOverride };
 }
 
 export const LOCAL_LLM_PROVIDER_ROUTER_SCHEMA =
@@ -177,6 +180,7 @@ export function buildLocalLlmProviderRoute({
   provider = null,
   model = "",
   prompt = "",
+  env = process.env,
 } = {}) {
   const modelSafe = typeof model === "string" ? model.trim() : "";
   const promptStr = typeof prompt === "string" ? prompt : "";
@@ -205,6 +209,7 @@ export function buildLocalLlmProviderRoute({
       requested_provider: requested,
       selected_provider: null,
       provider_base_url: null,
+      endpoint_override_invalid: false,
       provider_is_default: false,
       provider_is_legacy: false,
       provider_role: null,
@@ -252,7 +257,7 @@ export function buildLocalLlmProviderRoute({
       : null;
   const consentModel = modelSafe.length > 0 ? modelSafe : "<model>";
   // PERIMETER-BRIDGE-PARITY-1A: same resolveLocalLlmBase inventory/adapter use.
-  const providerBaseUrl = resolveProviderBaseUrl(key, entry.base_url);
+  const endpoint = resolveProviderBaseUrl(key, entry.base_url, env);
 
   return deepFreeze({
     schema: LOCAL_LLM_PROVIDER_ROUTER_SCHEMA,
@@ -262,7 +267,8 @@ export function buildLocalLlmProviderRoute({
     error: null,
     requested_provider: defaulted ? null : key,
     selected_provider: key,
-    provider_base_url: providerBaseUrl,
+    provider_base_url: endpoint.baseUrl,
+    endpoint_override_invalid: endpoint.invalidOverride,
     provider_is_default: entry.is_default === true,
     provider_is_legacy: entry.is_legacy === true,
     provider_role: entry.role,
@@ -274,7 +280,7 @@ export function buildLocalLlmProviderRoute({
     // (invokeDemaTalkLive) enforces — so the previewed phrase == the gate phrase.
     consent_phrase: llmAdapterConsentPhraseFor(consentModel, key),
     consent_phrase_status: "enforced_by_live_gate",
-    target_is_localhost: llmAdapterIsLocalhostBaseUrl(providerBaseUrl),
+    target_is_localhost: llmAdapterIsLocalhostBaseUrl(endpoint.baseUrl),
     prompt_too_long: promptTooLong,
     known_providers: KNOWN_PROVIDERS,
     next_safe_actions: Object.freeze([

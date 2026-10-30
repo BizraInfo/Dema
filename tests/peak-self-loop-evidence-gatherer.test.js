@@ -22,11 +22,17 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function signal({ id = "bound-signal", source_ref, source_sha256 }) {
+function signal({
+  id = "bound-signal",
+  type = "gate_passed",
+  weight = 1,
+  source_ref,
+  source_sha256,
+}) {
   return {
     id,
-    type: "gate_passed",
-    weight: 1,
+    type,
+    weight,
     label: id,
     truth_label: "MEASURED",
     source_ref,
@@ -45,15 +51,16 @@ function withTempRoot(fn) {
   }
 }
 
-test("PEB-G01 matching repo-contained source bytes are admitted", () =>
+test("PEB-G01 matching repo-contained gate JSON is refused without execution provenance", () =>
   withTempRoot(({ repoRoot }) => {
-    const bytes = Buffer.from("measured proof\n");
+    const bytes = Buffer.from('{"gate":"bound-signal","exit":0}');
     const source = join(repoRoot, "proof.txt");
     writeFileSync(source, bytes);
 
     const result = bindPeakSelfLoopSignalEvents(
       [
         signal({
+          weight: 99,
           source_ref: "proof.txt",
           source_sha256: sha256(bytes),
         }),
@@ -61,12 +68,53 @@ test("PEB-G01 matching repo-contained source bytes are admitted", () =>
       { repoRoot },
     );
 
-    assert.equal(result.complete, true);
-    assert.equal(result.admitted.length, 1);
-    assert.deepEqual(result.rejected, []);
+    assert.equal(result.complete, false);
+    assert.equal(result.admitted.length, 0);
+    assert.equal(result.rejected[0].reason, "gate_execution_provenance_unverified");
 
     const preview = buildPeakSelfLoopPreview({ signal_events: result.admitted });
-    assert.equal(preview.snr_framework.verified_signal_count, 1);
+    assert.equal(preview.snr_framework.verified_signal_count, 0);
+    assert.equal(preview.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
+  }));
+
+test("PEB-G10 hash-matched source code cannot masquerade as a passed gate", () =>
+  withTempRoot(({ repoRoot }) => {
+    const bytes = Buffer.from("measured proof\\n");
+    writeFileSync(join(repoRoot, "proof.js"), bytes);
+    const result = bindPeakSelfLoopSignalEvents(
+      [signal({ source_ref: "proof.js", source_sha256: sha256(bytes) })],
+      { repoRoot },
+    );
+
+    assert.equal(result.complete, false);
+    assert.equal(result.admitted.length, 0);
+    assert.equal(result.rejected[0].reason, "gate_receipt_json_required");
+    const preview = buildPeakSelfLoopPreview({ signal_events: result.admitted });
+    assert.equal(preview.snr_framework.verified_signal_count, 0);
+    assert.equal(preview.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
+  }));
+
+test("PEB-G11 unsupported signal classes cannot raise SNR", () =>
+  withTempRoot(({ repoRoot }) => {
+    const bytes = Buffer.from('{"gate":"bound-signal","exit":0}');
+    writeFileSync(join(repoRoot, "proof.json"), bytes);
+    const result = bindPeakSelfLoopSignalEvents(
+      [
+        signal({
+          type: "clean_commit",
+          source_ref: "proof.json",
+          source_sha256: sha256(bytes),
+        }),
+      ],
+      { repoRoot },
+    );
+
+    assert.equal(result.complete, false);
+    assert.equal(result.admitted.length, 0);
+    assert.equal(
+      result.rejected[0].reason,
+      "semantic_evidence_unsupported:clean_commit",
+    );
   }));
 
 test("PEB-G02 nonexistent source is rejected and cannot raise SNR", () =>
@@ -208,14 +256,14 @@ test("PEB-G07 nested cwd still resolves the Dema checkout, not the nested dir", 
 
 test("PEB-G08 duplicate id or source target fails the batch closed", () =>
   withTempRoot(({ repoRoot }) => {
-    const bytes = Buffer.from("one file\n");
-    writeFileSync(join(repoRoot, "proof.txt"), bytes);
-    const digest = sha256(bytes);
+    const duplicateIdBytes = Buffer.from('{"gate":"same","exit":0}');
+    writeFileSync(join(repoRoot, "proof.txt"), duplicateIdBytes);
+    const duplicateIdDigest = sha256(duplicateIdBytes);
 
     const dupId = bindPeakSelfLoopSignalEvents(
       [
-        signal({ id: "same", source_ref: "proof.txt", source_sha256: digest }),
-        signal({ id: "same", source_ref: "proof.txt", source_sha256: digest }),
+        signal({ id: "same", source_ref: "proof.txt", source_sha256: duplicateIdDigest }),
+        signal({ id: "same", source_ref: "proof.txt", source_sha256: duplicateIdDigest }),
       ],
       { repoRoot },
     );
@@ -223,11 +271,13 @@ test("PEB-G08 duplicate id or source target fails the batch closed", () =>
     assert.equal(dupId.admitted.length, 0);
     assert.ok(dupId.rejected.some((row) => row.reason === "duplicate_event_id"));
 
-    writeFileSync(join(repoRoot, "other.txt"), bytes);
+    const duplicateTargetBytes = Buffer.from('{"gate":"a","exit":0}');
+    writeFileSync(join(repoRoot, "proof.txt"), duplicateTargetBytes);
+    const duplicateTargetDigest = sha256(duplicateTargetBytes);
     const dupTarget = bindPeakSelfLoopSignalEvents(
       [
-        signal({ id: "a", source_ref: "proof.txt", source_sha256: digest }),
-        signal({ id: "b", source_ref: "proof.txt", source_sha256: digest }),
+        signal({ id: "a", source_ref: "proof.txt", source_sha256: duplicateTargetDigest }),
+        signal({ id: "b", source_ref: "proof.txt", source_sha256: duplicateTargetDigest }),
       ],
       { repoRoot },
     );

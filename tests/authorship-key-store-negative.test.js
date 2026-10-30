@@ -333,6 +333,13 @@ describe("hasAuthorshipKey — adversarial", () => {
     // freshHome exists but keys/ subdirectory is never created
     assert.equal(await hasAuthorshipKey(home), false);
   });
+
+  it("propagates non-ENOENT filesystem errors instead of reporting absence", async () => {
+    const home = freshHome();
+    writeFileSync(join(home, "keys"), "not a directory");
+
+    await assert.rejects(hasAuthorshipKey(home), { code: "ENOTDIR" });
+  });
 });
 
 // ── demaHome type safety ──────────────────────────────────────────────────

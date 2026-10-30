@@ -16,7 +16,10 @@
 
 import { describe, it } from "node:test";
 import { strict as assert } from "node:assert";
-import { gatherModelEvalBaseline } from "../apps/cli/src/commands/eval-baseline-gatherer.js";
+import {
+  buildModelEvalConsentPlan,
+  gatherModelEvalBaseline,
+} from "../apps/cli/src/commands/eval-baseline-gatherer.js";
 
 function recordingFetch(calls) {
   return async (url, opts = {}) => {
@@ -35,6 +38,14 @@ function recordingFetch(calls) {
 }
 
 const auth = (c) => c.headers.Authorization || c.headers.authorization || null;
+const modelKeys = [
+  "ollama:m-ollama",
+  "lm_studio:m-lcpp",
+  "llamacpp:m-lcpp",
+];
+const consentPhrases = buildModelEvalConsentPlan(modelKeys).map(
+  (item) => item.phrase,
+);
 
 describe("MODEL-PROVIDER-AUTH-1A · optional bearer key per provider lane", () => {
   it("attaches the bearer to llamacpp list + generate when LLAMACPP_KEY is set", async () => {
@@ -42,7 +53,8 @@ describe("MODEL-PROVIDER-AUTH-1A · optional bearer key per provider lane", () =
     await gatherModelEvalBaseline({
       fetchImpl: recordingFetch(calls),
       env: { LLAMACPP_KEY: "k-test" },
-      maxModels: 6,
+      modelKeys,
+      consentPhrases,
     });
     const lcpp = calls.filter((c) => /:8080/.test(c.url));
     assert.ok(lcpp.length >= 2, "llamacpp list + at least one generate call expected");
@@ -51,7 +63,12 @@ describe("MODEL-PROVIDER-AUTH-1A · optional bearer key per provider lane", () =
 
   it("sends NO Authorization header anywhere when no key is set", async () => {
     const calls = [];
-    await gatherModelEvalBaseline({ fetchImpl: recordingFetch(calls), env: {}, maxModels: 6 });
+    await gatherModelEvalBaseline({
+      fetchImpl: recordingFetch(calls),
+      env: {},
+      modelKeys,
+      consentPhrases,
+    });
     for (const c of calls) assert.equal(auth(c), null, `unexpected auth on ${c.url}`);
   });
 
@@ -60,7 +77,8 @@ describe("MODEL-PROVIDER-AUTH-1A · optional bearer key per provider lane", () =
     await gatherModelEvalBaseline({
       fetchImpl: recordingFetch(calls),
       env: { LLAMACPP_KEY: "k-test", LMSTUDIO_KEY: "k2" },
-      maxModels: 6,
+      modelKeys,
+      consentPhrases,
     });
     const ollama = calls.filter((c) => /:11434/.test(c.url));
     assert.ok(ollama.length >= 1, "ollama calls expected");
@@ -72,7 +90,8 @@ describe("MODEL-PROVIDER-AUTH-1A · optional bearer key per provider lane", () =
     const report = await gatherModelEvalBaseline({
       fetchImpl: recordingFetch(calls),
       env: { LLAMACPP_KEY: "k-secret-xyz" },
-      maxModels: 6,
+      modelKeys,
+      consentPhrases,
     });
     assert.ok(!JSON.stringify(report).includes("k-secret-xyz"), "key must not appear in report");
   });

@@ -2,7 +2,7 @@
 
 > **Purpose:** Single-page routing doc. Find the right entry point for your reviewer class in under 60 seconds.
 >
-> **Last verified:** 2026-05-24 GST against `main @ ccde52a`.
+> **Baseline verified:** 2026-05-24 GST against `main @ ccde52a`. The CI workflow inventory below was separately refreshed on 2026-10-11 from checkout `e56f7175120dda2fc276f82a07519852deb325bb`; other measurements remain historical until re-run.
 
 ---
 
@@ -20,7 +20,7 @@ Pick the row that matches your reviewer class. Read top-to-bottom. The path is b
 
 | You are...                        | Start with                                                                                        | Then read                                                                                                                                                                                                                                                                                                                                                                             | Time              |
 | --------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| **Public reviewer**               | [`QUICKSTART.md`](QUICKSTART.md) — run 4 commands · see actual output                             | [`CURRENT_LIMITS.md`](CURRENT_LIMITS.md) → [`public/third-fact-v0.1.md`](public/third-fact-v0.1.md) → [`THIRD_FACT_CURRENT_STATE_DELTA.md`](THIRD_FACT_CURRENT_STATE_DELTA.md)                                                                                                                                                                                                        | ~15 min           |
+| **Public reviewer**               | `npm run proof:outsider` then [`QUICKSTART.md`](QUICKSTART.md)                                    | [`CURRENT_LIMITS.md`](CURRENT_LIMITS.md) → [`public/third-fact-v0.1.md`](public/third-fact-v0.1.md) → [`02-architecture/ABSORPTION_ATLAS_PREVIEW.md`](02-architecture/ABSORPTION_ATLAS_PREVIEW.md)                                                                                                                                                                                      | ~15 min           |
 | **Technical reviewer (engineer)** | [`ARCHITECTURE.md`](ARCHITECTURE.md) — system model                                               | [`TESTING.md`](TESTING.md) → [`06-adr/INDEX.md`](06-adr/INDEX.md) → [`CI_CD_PIPELINE.md`](CI_CD_PIPELINE.md) → [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md)                                                                                                                                                                                                                             | ~45 min           |
 | **Security reviewer**             | [`../SECURITY.md`](../SECURITY.md) — non-negotiables                                              | [`CURRENT_LIMITS.md`](CURRENT_LIMITS.md) "Hard non-claims" → [`THIRD_FACT_CURRENT_STATE_DELTA.md`](THIRD_FACT_CURRENT_STATE_DELTA.md) TF-001/TF-006/TF-007 → [`CI_CD_PIPELINE.md`](CI_CD_PIPELINE.md) §5 gitleaks · §4 CodeQL                                                                                                                                                         | ~30 min           |
 | **Investor / business**           | [`public/third-fact-v0.1.md`](public/third-fact-v0.1.md) — the thesis (public draft)              | [`THIRD_FACT_CURRENT_STATE_DELTA.md`](THIRD_FACT_CURRENT_STATE_DELTA.md) → [`ROADMAP.md`](ROADMAP.md) → [`GTM_READINESS_MATRIX.md`](GTM_READINESS_MATRIX.md)                                                                                                                                                                                                                          | ~30 min           |
@@ -37,10 +37,10 @@ The honest state of this repository as of `main @ ccde52a` (2026-05-24):
 | Surface                   | Truth label                                                   | Source of truth                                                                    |
 | ------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | Doctrine                  | Third Fact v0.1 (public draft)                                | [`public/third-fact-v0.1.md`](public/third-fact-v0.1.md)                           |
-| Test surface              | **MEASURED** · all green (count via `npm test`)              | `npm test`                                                                         |
+| Test surface              | **MEASURED (2026-05-24 baseline)** · all green at that snapshot; current exact-head result is **UNKNOWN** | `npm test` |
 | Coverage                  | **MEASURED** · 97.57 lines · 88.38 branches · 97.56 functions | `npm run coverage`                                                                 |
 | Dependencies              | **MEASURED** · 0 production · 0 dev · stdlib-only             | `package.json`                                                                     |
-| CI gates                  | **MEASURED** · 4 SHA-pinned workflows · all green             | [`CI_CD_PIPELINE.md`](CI_CD_PIPELINE.md)                                           |
+| CI gates                  | **SOURCE_OBSERVED (2026-10-11 checkout)** · 5 validation workflows + 1 three-rail aggregator; current remote results and required-check rules **UNKNOWN** | [`CI_CD_PIPELINE.md`](CI_CD_PIPELINE.md) |
 | Verified Refusal Pattern  | **MEASURED** ★                                                | TF-004 in [`THIRD_FACT_CURRENT_STATE_DELTA.md`](THIRD_FACT_CURRENT_STATE_DELTA.md) |
 | GTM readiness             | **PARTIAL** · 32% of 25-doc minimum pack                      | [`GTM_READINESS_MATRIX.md`](GTM_READINESS_MATRIX.md)                               |
 | Audit grade               | **MEASURED** · A · 94.5 / 100                                 | [`AUDIT_2026_05_24_v0_1.md`](AUDIT_2026_05_24_v0_1.md)                             |
@@ -71,10 +71,11 @@ If a reviewer expects to find one of the above in this repo, route them to the l
 ```bash
 node --version    # must be ≥ 20
 git clone https://github.com/BizraInfo/Dema && cd Dema
+npm run proof:outsider
 node bin/dema status
 ```
 
-If you see the readiness frame, you have a working node. See [`QUICKSTART.md`](QUICKSTART.md) for the full first-run flow.
+`proof:outsider` exit 0 = zero-install local loop works without a global `dema`. Then `status` shows the honest readiness frame. Full walkthrough: [`QUICKSTART.md`](QUICKSTART.md). Corpus map law: [`02-architecture/ABSORPTION_ATLAS_PREVIEW.md`](02-architecture/ABSORPTION_ATLAS_PREVIEW.md).
 
 ---
 

@@ -155,8 +155,17 @@ function classifyRisks({
       note: "Workflow actions use version tags instead of immutable commit SHAs.",
     });
   }
-  if (
-    workflowWorktreeStatus?.changes?.length > 0 &&
+  // Unavailable git/worktree evidence must not silently keep a high score.
+  // evaluateReleaseReadiness already fails closed on this; classifyRisks must
+  // also emit a launch_blocker so readiness_score itself cannot look GREEN.
+  if (workflowWorktreeStatus?.available !== true) {
+    risks.push({
+      code: "ci.workflow_worktree_status_unavailable",
+      severity: "launch_blocker",
+      note: "Workflow worktree status could not be inspected (no git / subprocess failure); release readiness fails closed until status is available.",
+    });
+  } else if (
+    workflowWorktreeStatus.changes?.length > 0 &&
     !workflowWorktreeStatus.authorized
   ) {
     risks.push({
@@ -862,9 +871,25 @@ export function evaluateReleaseReadiness(report, { minScore = 80 } = {}) {
   if (!report || typeof report !== "object") {
     return { ok: false, hasLaunchBlocker: null, score: null, minScore, reasons: ["malformed_report_not_object"] };
   }
+  const schemaOk = report.schema === SCHEMA;
+  if (!schemaOk) reasons.push("malformed_report_schema_mismatch");
   if (!Array.isArray(report.risks)) {
     return { ok: false, hasLaunchBlocker: null, score: null, minScore, reasons: ["malformed_report_missing_risks_array"] };
   }
+  const riskSeverities = new Set(["launch_blocker", "review", "improvement"]);
+  const risksValid = report.risks.every(
+    (risk) =>
+      risk !== null &&
+      typeof risk === "object" &&
+      !Array.isArray(risk) &&
+      typeof risk.code === "string" &&
+      risk.code.trim().length > 0 &&
+      riskSeverities.has(risk.severity),
+  );
+  if (!risksValid) reasons.push("malformed_report_risks_entry");
+  const workflowStatusAvailable =
+    report.ci?.workflow?.worktree_status_available === true;
+  if (!workflowStatusAvailable) reasons.push("workflow_worktree_status_unavailable");
   const hasLaunchBlocker = report.risks.some(
     (risk) => risk && risk.severity === "launch_blocker",
   );
@@ -872,7 +897,13 @@ export function evaluateReleaseReadiness(report, { minScore = 80 } = {}) {
   const score = report.readiness_score;
   const scoreOk = typeof score === "number" && Number.isFinite(score) && score >= minScore;
   if (!scoreOk) reasons.push(`readiness_score_below_threshold:${score}<${minScore}`);
-  return { ok: !hasLaunchBlocker && scoreOk, hasLaunchBlocker, score, minScore, reasons };
+  return {
+    ok: schemaOk && risksValid && workflowStatusAvailable && !hasLaunchBlocker && scoreOk,
+    hasLaunchBlocker,
+    score,
+    minScore,
+    reasons,
+  };
 }
 
 /**
@@ -892,6 +923,17 @@ export function extractReportJson(output) {
   }
 }
 
+/**
+ * CLI-EXIT-TEETH-1A — map evaluateReleaseReadiness() to a process exit code.
+ * Fail closed: only a strict `ok === true` yields 0; anything else yields 1.
+ */
+export function exitCodeFromEvaluation(evaluation) {
+  if (!evaluation || typeof evaluation !== "object" || Array.isArray(evaluation)) {
+    return 1;
+  }
+  return evaluation.ok === true ? 0 : 1;
+}
+
 if (
   process.argv[1] &&
   pathToFileURL(process.argv[1]).href === import.meta.url
@@ -900,10 +942,12 @@ if (
   const report = await buildReleaseReadinessReport({
     workflowChangesAuthorized: options.workflowChangesAuthorized,
   });
+  const evaluation = evaluateReleaseReadiness(report);
   const json = options.json;
   console.log(
     json
       ? JSON.stringify(report, null, 2)
       : formatReleaseReadinessReport(report),
   );
+  process.exitCode = exitCodeFromEvaluation(evaluation);
 }

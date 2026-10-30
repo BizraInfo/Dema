@@ -20,6 +20,11 @@ import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generateEd25519Keypair } from "../packages/receipts/src/authorship-signature.js";
+import {
+  initAuthorshipKey,
+  KEY_INIT_CONSENT_PHRASE,
+} from "../packages/receipts/src/authorship-key-store.js";
+import { runConsentProveCli } from "../packages/receipts/src/consent-prove-command.js";
 
 const CLI_PATH = "apps/cli/src/index.js";
 const VALID_PHRASE = "SIGN AUTHORSHIP RECEIPT";
@@ -34,6 +39,55 @@ async function activePubkeyPath(home) {
 }
 const VALID_ACTION_TYPE = "MINT_VERDICT_RECEIPT";
 const VALID_TARGET_HASH = "a".repeat(64);
+
+it("consent prove wrapper reports in-memory, saved, refused, and failed-write outcomes", async () => {
+  const home = await mkdtemp(join(tmpdir(), "dema-kc1c-wrapper-contract-"));
+  try {
+    const initialized = await initAuthorshipKey({
+      consent: KEY_INIT_CONSENT_PHRASE,
+      demaHome: home,
+    });
+    assert.equal(initialized.initialized, true);
+
+    const input = {
+      phrase: VALID_PHRASE,
+      actionType: VALID_ACTION_TYPE,
+      targetHash: VALID_TARGET_HASH,
+      demaHome: home,
+    };
+    const inMemory = await runConsentProveCli(input);
+    assert.equal(inMemory.built, true);
+    assert.equal(inMemory.out_path, undefined);
+
+    const outPath = join(home, "proof.json");
+    const saved = await runConsentProveCli({
+      ...input,
+      ruleId: "consent-prove-cli-test",
+      outPath,
+    });
+    assert.equal(saved.built, true);
+    assert.equal(saved.out_path, outPath);
+    const written = JSON.parse(await readFile(outPath, "utf8"));
+    assert.equal(written.action_scope.rule_id, "consent-prove-cli-test");
+
+    const failedWrite = await runConsentProveCli({
+      ...input,
+      outPath: join(home, "missing", "proof.json"),
+    });
+    assert.equal(failedWrite.built, true);
+    assert.equal(failedWrite.error, "consent_proof_write_failed");
+
+    const refused = await runConsentProveCli({
+      ...input,
+      phrase: "",
+      outPath: join(home, "refused.json"),
+    });
+    assert.equal(refused.built, false);
+    assert.equal(refused.out_path, undefined);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});
 
 function runCli(argv, env = {}) {
   return new Promise((resolve) => {
@@ -171,6 +225,66 @@ describe("dema consent prove · CLI surface (KEYCONSENT-1C requirements 1-4)", (
       const saved = JSON.parse(await readFile(outPath, "utf8"));
       assert.equal(saved.schema, "bizra.dema.consent_proof.v0.1");
       assert.ok(/^[a-f0-9]{64}$/.test(saved.consent_proof_hash));
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  it("fail-closed: --out write failure returns non-zero and exposes the write error", async () => {
+    const home = await mkdtemp(join(tmpdir(), "dema-kc1c-prove-write-failure-"));
+    const outPath = join(home, "missing", "proof.json");
+    try {
+      await runCli(
+        [
+          "authorship",
+          "key",
+          "init",
+          "--consent",
+          "GENERATE AUTHORSHIP KEY",
+          "--json",
+        ],
+        { DEMA_HOME: home },
+      );
+      const r = await runCli(
+        [
+          "consent",
+          "prove",
+          "--phrase",
+          VALID_PHRASE,
+          "--action-type",
+          VALID_ACTION_TYPE,
+          "--target-hash",
+          VALID_TARGET_HASH,
+          "--out",
+          outPath,
+          "--json",
+        ],
+        { DEMA_HOME: home },
+      );
+      assert.equal(r.exitCode, 1);
+      const result = JSON.parse(r.stdout);
+      assert.equal(result.built, true);
+      assert.equal(result.error, "consent_proof_write_failed");
+      assert.match(result.details, /ENOENT/);
+
+      const human = await runCli(
+        [
+          "consent",
+          "prove",
+          "--phrase",
+          VALID_PHRASE,
+          "--action-type",
+          VALID_ACTION_TYPE,
+          "--target-hash",
+          VALID_TARGET_HASH,
+          "--out",
+          outPath,
+        ],
+        { DEMA_HOME: home },
+      );
+      assert.equal(human.exitCode, 1);
+      assert.match(human.stderr, /consent_proof_write_failed/);
+      assert.doesNotMatch(human.stdout, /Consent Proof/);
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -468,6 +582,13 @@ describe("dema consent verify · CLI surface (KEYCONSENT-1C requirements 2,3,4,5
       const j = JSON.parse(r.stdout);
       assert.equal(j.verified, false);
       assert.equal(j.reason, "consent_signature_invalid");
+
+      const human = await runCli(
+        ["consent", "verify", proofPath, "--pubkey", wrongPubkeyPath],
+        {},
+      );
+      assert.equal(human.exitCode, 1);
+      assert.match(human.stderr, /REJECTED:consent_signature_invalid/);
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -622,12 +743,28 @@ describe("dema consent mobile-challenge · CLI surface", () => {
       assert.equal(ok.exitCode, 0, ok.stderr);
       assert.equal(JSON.parse(ok.stdout).ok, true);
 
+      const missingPhrase = await runCli([
+        "consent", "mobile-challenge", "verify",
+        "--challenge", path, "--json",
+      ]);
+      assert.equal(missingPhrase.exitCode, 1);
+      assert.equal(JSON.parse(missingPhrase.stdout).reason, "missing_phrase");
+      assert.equal(JSON.parse(missingPhrase.stdout).not_an_authorization, true);
+
       const bad = await runCli([
         "consent", "mobile-challenge", "verify",
         "--challenge", path, "--phrase", "000000", "--json",
       ]);
       assert.equal(bad.exitCode, 1);
       assert.equal(JSON.parse(bad.stdout).reason, "phrase_mismatch");
+
+      const badHuman = await runCli([
+        "consent", "mobile-challenge", "verify",
+        "--challenge", path, "--phrase", "000000",
+      ]);
+      assert.equal(badHuman.exitCode, 1);
+      assert.match(badHuman.stdout, /REJECTED:phrase_mismatch/);
+      assert.match(badHuman.stdout, /typed phrase does not match challenge phrase/);
     } finally {
       await rm(home, { recursive: true, force: true });
     }
@@ -641,6 +778,23 @@ describe("dema consent mobile-challenge · CLI surface", () => {
     assert.equal(JSON.parse(r.stdout).valid, false);
   });
 
+  it("verify without a challenge path fails closed with an actionable error", async () => {
+    const r = await runCli(["consent", "mobile-challenge", "verify"]);
+    assert.equal(r.exitCode, 1);
+    assert.match(r.stdout, /REJECTED:challenge_unreadable/);
+    assert.match(r.stdout, /cannot read --challenge <missing>/);
+  });
+
+  it("human issue refusal explains the missing field and exits nonzero", async () => {
+    const r = await runCli([
+      "consent", "mobile-challenge", "issue",
+      "--mission-id", "m-5", "--purpose", "p",
+    ]);
+    assert.equal(r.exitCode, 1, r.stderr);
+    assert.match(r.stdout, /Mobile challenge FAILED: invalid_action/);
+    assert.match(r.stdout, /action must be a non-empty string/);
+  });
+
   it("human issue output shows the phrase and the preview-only boundary note", async () => {
     const r = await runCli([
       "consent", "mobile-challenge", "issue",
@@ -649,5 +803,12 @@ describe("dema consent mobile-challenge · CLI surface", () => {
     assert.equal(r.exitCode, 0, r.stderr);
     assert.match(r.stdout, /phrase/i);
     assert.match(r.stdout, /preview/i);
+  });
+
+  it("unknown consent command fails closed and lists supported paths", async () => {
+    const r = await runCli(["consent", "unknown"]);
+    assert.equal(r.exitCode, 1);
+    assert.match(r.stderr, /Unknown consent command/);
+    assert.match(r.stderr, /mobile-challenge issue\|verify/);
   });
 });

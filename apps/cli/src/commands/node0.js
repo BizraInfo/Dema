@@ -62,6 +62,10 @@ export async function cmd_node0(ctx) {
     const ol = report.local_model_status.ollama;
     console.log(`Node0 activation observe (read-only) — ${report.truth_label}`);
     console.log(`  sovereign: live=${s.live} ready=${s.ready} (${s.base_url})`);
+    if (observations.gateway) {
+      const g = observations.gateway;
+      console.log(`  gateway:   live=${g.live} domain=${g.domain ?? "—"} (${g.base_url}) — observed only; does not set sovereign readiness`);
+    }
     console.log(
       `  models:    lm_studio ${lm.reachable ? lm.model_ids.length : "—"} · ollama ${ol.reachable ? ol.model_ids.length : "—"}`,
     );

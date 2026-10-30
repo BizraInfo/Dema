@@ -50,24 +50,23 @@ test("PTM-02: default unverified signals yield BLOCKED moat and HOLD with gap", 
   assert.ok(out.proactive_self.critique.verdict.startsWith("HOLD"));
 });
 
-// PTM-03: one verified signal with a vacuous alternative hypothesis is NOT a
-// valid disambiguation graph. The second hypothesis must answer to admissible
-// evidence; enumerating an empty alternative never authorizes an insight.
-test("PTM-03: one verified signal plus vacuous alternative yields REMAIN_TRACE", () => {
+// PTM-03: a caller-shaped event without gatherer provenance cannot enter the trace set.
+test("PTM-03: an unissued caller event leaves the trace moat BLOCKED", () => {
   const out = buildPeakSelfLoopPreview({ signal_events: [BOUND(1)], noise_events: [] });
-  assert.equal(out.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
+  assert.equal(out.trace_diagnostic_moat.promotion_status, "BLOCKED");
+  assert.equal(out.trace_diagnostic_moat.trace_set.length, 0);
   assert.equal(out.trace_diagnostic_moat.synthesis.insight_authorized, false);
   assert.equal(out.trace_diagnostic_moat.synthesis.self_consistent, false);
   assert.equal(out.proactive_self.compliance.trace_diagnostic_authorized, false);
-  assert.ok(out.trace_diagnostic_moat.blocked_by.some((b) => b.includes("v2_disambiguation_hypothesis_without_evidence")));
+  assert.ok(out.snr_framework.evidence_debt.some((e) => e.gap === "evidence_not_gatherer_issued"));
 });
 
 // PTM-04: raw caller corroboration assertions are not sufficient. Origin
 // verification is mandatory; positive signed-origin coverage lives in TCO-05.
-test("PTM-04: raw caller corroboration remains trace without origin proof", () => {
+test("PTM-04: raw caller signals and corroboration cannot create a trace set", () => {
   const nine = Array.from({ length: 9 }, (_, i) => BOUND(i));
   const baseline = buildPeakSelfLoopPreview({ signal_events: nine, noise_events: [] });
-  assert.equal(baseline.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
+  assert.equal(baseline.trace_diagnostic_moat.promotion_status, "BLOCKED");
 
   const replaySubjectHash = computeTraceDiagnosticReplaySubjectHashV2(
     baseline.trace_diagnostic_moat.trace_set,
@@ -86,7 +85,7 @@ test("PTM-04: raw caller corroboration remains trace without origin proof", () =
   });
 
   assert.equal(out.trace_diagnostic_moat.origin_verification.ok, false);
-  assert.equal(out.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
+  assert.equal(out.trace_diagnostic_moat.promotion_status, "BLOCKED");
   assert.equal(out.trace_diagnostic_moat.synthesis.insight_authorized, false);
   assert.equal(out.proactive_self.compliance.trace_diagnostic_authorized, false);
 });
@@ -126,15 +125,15 @@ test("PTM-07: render includes trace diagnostic moat line", async () => {
 // Source-bound signals may satisfy provenance/consistency/disambiguation,
 // but MUST NOT self-mint the corroboration rail. Without caller-supplied
 // independent replay evidence, promotion remains REMAIN_TRACE.
-test("PTM-08: bound signals alone cannot self-authorize corroboration", () => {
+test("PTM-08: caller-shaped signals cannot enter corroboration without gatherer provenance", () => {
   const nine = Array.from({ length: 9 }, (_, i) => BOUND(i));
   const out = buildPeakSelfLoopPreview({ signal_events: nine, noise_events: [] });
-  assert.equal(out.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
+  assert.equal(out.trace_diagnostic_moat.promotion_status, "BLOCKED");
   assert.equal(out.trace_diagnostic_moat.synthesis.insight_authorized, false);
   assert.equal(out.proactive_self.compliance.trace_diagnostic_authorized, false);
   assert.ok(
-    out.trace_diagnostic_moat.blocked_by.some((b) => b.includes("corroboration")),
-    "expected a corroboration blocker",
+    out.snr_framework.evidence_debt.some((e) => e.gap === "evidence_not_gatherer_issued"),
+    "expected an evidence-origin blocker",
   );
 });
 
@@ -254,7 +253,7 @@ test("PTM-12: peak moat accepts only verified external-origin corroboration", ()
       replay_subject_hash: subjectHash,
     },
   });
-  assert.equal(rawAssertion.trace_diagnostic_moat.promotion_status, "REMAIN_TRACE");
+  assert.equal(rawAssertion.trace_diagnostic_moat.promotion_status, "BLOCKED");
 
   const receipt = signedOriginReceipt({ replay_subject_hash: subjectHash });
   const signed = buildPeakSelfLoopPreview({
@@ -269,5 +268,6 @@ test("PTM-12: peak moat accepts only verified external-origin corroboration", ()
     },
   });
   assert.equal(signed.trace_diagnostic_moat.origin_verification.ok, true);
-  assert.equal(signed.trace_diagnostic_moat.promotion_status, "INSIGHT_AUTHORIZED");
+  assert.equal(signed.trace_diagnostic_moat.promotion_status, "BLOCKED");
+  assert.equal(signed.trace_diagnostic_moat.synthesis.insight_authorized, false);
 });

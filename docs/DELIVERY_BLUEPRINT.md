@@ -32,14 +32,43 @@ separate hard-gated operation explicitly authorizes them.
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Integration management    | A single release-readiness report joins scope, risk, QA, CI/CD, docs, dependencies, installer posture, and rollback posture. |
 | Scope management          | Each PR carries one invariant or one product surface; mixed bundles are split before commit.                                 |
-| Schedule management       | Roadmaps use phase gates and truth labels instead of unverified dates.                                                       |
-| Cost management           | Zero runtime dependencies are preserved unless a written justification proves value and risk.                                |
-| Quality management        | Native tests, smoke gates, static review scripts, diff hygiene, and coverage thresholds form the quality baseline.           |
-| Resource management       | Local compute and model surfaces are inventoried; no hidden daemon or unbounded background workload is introduced.           |
+| Schedule management       | Roadmaps use evidence-based phase gates instead of treating dates or activity as completion.                                   |
+| Cost management           | Track CI, storage, compute, and any approved model-call budget; compare measured cost with accepted user benefit.              |
+| Quality management        | Focused and aggregate tests, negative controls, security review, UX checks, performance regression gates, and diff hygiene.     |
+| Resource management       | Record local compute, memory, storage, and model constraints; an unavailable resource is an infrastructure finding, not a code failure. |
 | Communications management | Reports are schema-tagged and distinguish preview, declared, measured, blocked, and certified evidence.                      |
 | Risk management           | Risks are emitted as explicit codes with owner-ready remediation, never hidden in prose.                                     |
 | Procurement management    | Third-party tools, actions, and dependencies must be pinned, justified, and replaceable.                                     |
 | Stakeholder management    | Operator consent, reviewer evidence, and user-facing safety language stay separate and auditable.                            |
+
+## Node0 lifecycle delivery map (proposed overlay)
+
+This is a project-management overlay for the phase names used in current Node0
+planning, not a replacement capability lifecycle. The canon in
+`docs/canon/BIZRA_LIFECYCLE_SEED_TO_POOL.md` remains Collect → Verify → Index →
+Choose → Mint; its current status table marks Index, Choose, and Mint
+`DESIGNED_NOT_LIVE`. The `NODE0_DEMA_COMPLETE_COMPONENT_DNA_v0_1.md` status labels
+also remain binding. This overlay promotes nothing. The Delivery Spine remains
+authoritative for Dema release gates; phase exit requires the evidence below,
+not completion of paperwork alone.
+
+| Phase | Management focus | Build / QA evidence required before the phase can claim an exit |
+| --- | --- | --- |
+| Seed / Covenant | Human purpose, accountable owner, scope, claim class, acceptance and cost ceiling. | Versioned intent and acceptance criteria; founder-level decisions remain human. A spec or prototype is not a shipped capability. |
+| Estate & Spine | Asset ownership, source lineage, preservation risk, dependencies and work-in-progress limits. | Current repository/worktree identities, dirty-state inventory, exact source bindings, baseline gate and explicit unknowns. No cleanup of unclassified work. |
+| Identity Birth | Identity ownership, privacy, threat model, recovery and key custody. | Reviewed identity flow and refusal cases; credential ceremony is separately protected. A fixture or hash does not establish a born identity. |
+| Ledger & Mission | Single mission pointer, status transitions, correction/revocation, replay and audit trail. | Transition and negative-control tests, durable state/readback, provenance-bound receipt. A test receipt does not establish a live effect. |
+| Memory Constitution | Purpose, consent, retention, provenance, correction and forgetting. | Retrieval and retention cases, sensitive-data boundaries, and observable user controls. Indexing alone is not permission to remember or use data. |
+| Homebase / Human Bond | First-use journey, accessibility, Arabic/RTL, privacy, support and human choice. | Tested consent/no-action flows plus human UX review for dignity and language. Discovery is not permission. |
+| Presence | Operations, reliability budgets, incident response, backups, restore and rollback. | Evidence from the intended environment: health checks, restore/restart behavior, rollback rehearsal and an explicitly scoped soak. Local tests alone do not qualify production. |
+| Mission Lifecycle | Backlog ownership, one bounded sprint contract, review, acceptance and handoff. | Source-bound plan, red-first focused tests, independent review, exact-head CI evidence and human acceptance. Runtime effects remain behind the governed authorization path. |
+| Forest / GTM | Customer discovery, service/support model, privacy, supply chain and economic assumptions. | Bounded pilot observations, substantiated public claims, cost/benefit evidence and support ownership. No economy or federation claim without its own proof. |
+
+Proposed responsibility map: the First Architect retains covenant, identity,
+release and external-effect decisions; Dema organizes intent, work status and
+evidence; builders propose bounded changes; Guard enforces declared stops; and
+independent verification remains a distinct role. This is an operating design,
+not a claim that PAT, SAT or production FATE is currently active.
 
 ## DevOps value stream
 
@@ -72,6 +101,11 @@ hard-stop events that require separate typed authorization.
 Dema targets Level 4 before any public release and Level 5 before broad
 distribution.
 
+The target is not a status claim. Source presence does not establish remote
+workflow success, configured branch protection, production SLOs, rollback
+rehearsals, or a continuously observed improvement loop. Current maturity must
+be assessed from exact-head evidence and the intended deployment environment.
+
 ## Local gate stack
 
 Run the narrowest relevant check first, then the full local gate:
@@ -100,23 +134,27 @@ hard-stop gate in that local report.
 
 ## Delivery Automation: delivery-check.mjs
 
-`scripts/delivery-check.mjs` is the blueprint's delivery-automation script (the "delivery-check.mjs" referenced in the spine as deferred, now delivered).
+`scripts/delivery-check.mjs` is an existing local composite gate. Its presence
+and workflow wiring are source-observed; a pass for a particular commit still
+requires a fresh command result.
 
-It orchestrates the full gate stack with A+ performance-quality assurance:
+It runs a bounded subset of the delivery checks:
 
-- [MEASURED] Enforces A+ perf ceilings (boot <150ms local / <275ms CI, verify <1ms) via `npm run perf` and `resolveAPlusCeilings` (same headroom as `performance-budget-gate`).
-- Validates coverage thresholds (95/84/95) via `npm run coverage` on Node 22+ in CI.
-- `npm run release:readiness` reports whether the threshold gate is configured and observed in CI; `npm run coverage` remains the measured enforcement point.
-- Integrates release:readiness with A+ perf gate and PMBOK domains.
-- Runs mu pre-push seal as the local DevOps forcing function (104/104 target); skipped in CI (`CI`/`GITHUB_ACTIONS`) because the matrix already runs test + coverage + check.
-- Checks local gates (llm:guidance, diff hygiene) for world-class hygiene.
-- Outputs a unified A+ report aligned with Level 5 Optimizing (performance budgets enforced, post-"release" (local) learning via the report, rollback via gate failures).
+- [CITED] Calls `npm run perf` with the repository's A+ ceilings: verification latency at 1 ms and CLI boot at 150 ms locally / 275 ms in CI. These are local/CI regression thresholds, not customer SLOs (`scripts/perf-bench.mjs`, `packages/perf/src/perf-ceilings.js`).
+- Inspects whether coverage reporting and thresholds are configured; it does not run the full `npm run coverage` suite itself. The CI workflows run their own test and coverage commands.
+- Runs release-readiness, `llm:guidance`, diff hygiene, and consent/covenant fixtures. It reports the pre-push seal as a separate operator gate and never invokes it; the secret scanner used by that gate may fetch a pinned binary when its cache is missing.
+- Emits a local report. It does not deploy, observe production, rehearse an actual rollback, or close the post-release learning loop.
 
-This embodies the MBOK integration (PMBOK domains in the report), DevOps (pre-push seal as CI gate), pipeline automation (orchestrates the CI/CD quality gates), and rigorous perf-QA.
+`delivery:check` complements `npm test`, `npm run coverage`, the relevant package
+gates, and exact-head remote CI; it is not a substitute for them. It is a
+project-level composite check, not evidence of an external maturity standard.
 
-Run with `npm run delivery:check`. Fails closed on any A+ breach locally (including MU pre-push). In CI, MU pre-push is advisory-skipped; perf, coverage rollup, release-readiness, local gates, and covenant QA remain hard-gated. Ties to living-tree: this is the "trunk" check ensuring A+ sustainable growth rings. Root canon preserved (no mutation of immutable DNA).
+Run with `npm run delivery:check`. The script fails on its configured local
+checks and A+ thresholds; it does not run the full test/coverage suites or the
+separate pre-push seal itself.
 
-In CI (check.yml on Node 22+): runs as part of the matrix for A+ verification (MU seal excluded; run `npm run pre-push:seal` locally before push).
+In CI, `check.yml` invokes it on Node 22.x. This is workflow configuration; a
+remote pass for the current commit must be verified from GitHub evidence.
 
 ## Proof-of-truth control plane (NODE0-PROOF-OF-TRUTH-CONTROL-PLANE-1A)
 
@@ -173,7 +211,10 @@ Artifact: `node0-ci-evidence-attestation-aggregated.json`. All rails `PASS` only
 
 Still blocked: `READY_REMOTE`, `PUBLIC_SAFE`, token mint, wallet, URP, Node0 activation.
 
-This advances the blueprint to the "ultimate implementation" for the Dema face: local A+ delivery loop complete, ready for remote CI proof once the push (with workflow scope) lands the Copilot classifier and other rings.
+This checkout contains the local proof-ledger and attestation code. It does not
+establish a successful remote run, complete release readiness, or Node0
+activation. The aggregation workflow covers only `check`, CodeQL and gitleaks;
+it omits BIZRA Review Gate and Dema UI.
 
 ## CI pipeline blueprint
 
@@ -216,39 +257,27 @@ Future CD must be explicit, modular, and reversible:
 
 ## Performance-quality assurance
 
-Dema's performance QA is enforced by the local-first gate set (perf budgets, coverage thresholds, claim:check).
+The checkout implements local and CI regression checks. The measured targets
+below are not production service-level objectives; current customer latency,
+availability, capacity, error-rate, and recovery evidence is not established by
+these source files.
 
-| Mechanism                 | Status (A+)                                                                                                                                                                  |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Zero runtime dependencies | Enforced (0 runtime deps).                                                                                                                                                   |
-| Native Node tests         | Enforced with coverage thresholds.                                                                                                                                           |
-| Smoke commands            | Enforced (npm run check).                                                                                                                                                    |
-| A+ perf gate              | Enforced: `npm run perf` (A+ ceilings in perf-bench.mjs: sub-150ms boot, sub-1ms verification). Integrated into release:readiness and REQUIRED_GATES.                        |
-| Coverage thresholds       | Enforced (95% lines/functions, 84% branches on Node 22+).                                                                                                                    |
-| Bounded gateway probes    | Enforced in smoke.                                                                                                                                                           |
-| Diff hygiene              | Enforced (git diff --check).                                                                                                                                                 |
-| Release-readiness audit   | Enforced (includes perf, PMBOK domains, risk codes).                                                                                                                         |
-| Transition assurance gate | Enforced: `scripts/review/transition-assurance-check.mjs` samples 24 agent-kernel, mission-lifecycle, and URP choose transitions; runs before proof-room in `npm run check`. |
+| Mechanism | Source-observed configuration | Evidence boundary |
+| --- | --- | --- |
+| Root tests and coverage | `check.yml` runs `npm test` on Node 20.x and 22.x; Node 22.x runs `npm run check`, which includes the configured coverage gate. The coverage script targets 95% lines, 84% branches, and 95% functions. | Configuration exists; current remote conclusions and exact-head results were not checked in this review. |
+| Performance A+ gate | [CITED] `npm run perf` and `delivery:check` use inclusive numeric ceilings of 1 ms for verification and 150 ms locally / 275 ms in CI for CLI boot. The composite gate reports PASS only when the benchmark command exits successfully, its summary is OK, and both parsed measurements satisfy those ceilings. The benchmark uses a small sample and reports boot p50 (`scripts/perf-bench.mjs`, `scripts/delivery-check.mjs`, `tests/delivery-check.test.js`). | These are regression-budget checks, not p95/p99 service SLOs or a production baseline. |
+| Additional performance budget gate | `scripts/review/performance-budget-gate.mjs` checks first-look render, doctor gather, CLI boot, and process RSS against local/CI thresholds. | A bounded local/CI check; not a sustained load, leak, or user-experience study. |
+| Dema UI | `dema-ui.yml` separately runs package tests, typecheck, lint, production build, and dependency audit. | Does not by itself establish accessibility, human usefulness, or production behavior. |
+| Rollback and operations | The release process names rollback evidence as a prerequisite. | A failing CI gate blocks a candidate; it does not roll back a deployed service. A production rollback rehearsal, SLO dashboard, restore test, and soak remain unverified here. |
 
-A+ budgets (enforced in `npm run perf --a-plus` and release gate):
+Level 5 (Optimizing) remains a target. The current source shows useful local/CI
+gates, but does not prove production SLOs, a rehearsed deployment rollback, or a
+continuously measured post-release learning loop. Treat a performance breach as
+a release-candidate blocker, not as evidence that a live deployment was
+automatically rolled back.
 
-| Budget                                  | A+ Target        | Status                                                        |
-| --------------------------------------- | ---------------- | ------------------------------------------------------------- |
-| CLI cold-start (dema_boot_latency_ms)   | < 150ms p50      | Enforced (observed ~45ms on Node 22; gate fails above 150ms). |
-| Verification latency (sha256 roundtrip) | < 1ms            | Enforced.                                                     |
-| Memory/CPU during measurement           | Bounded, no leak | Observed via process metrics.                                 |
-
-This achieves Level 5 (Optimizing) in CI/CD maturity for performance QA: measured budgets, regression gates, post-"release" (local) learning via audit lessons feeding autopoietic loop.
-
-DevOps value stream now includes perf as mandatory quality gate before release-readiness sign-off.
-
-Full-stack note: Substrate (bizra-data-lake) has its own Python/Rust perf/QA (pytest, Cargo benchmarks); this blueprint governs Dema face delivery while respecting three-repo canon (substrate evidence referenced, not restated).
-
-Pipeline automation: CI (check.yml) runs perf on Node 22+ matrix; release-readiness orchestrates all gates with PMBOK reporting.
-
-Continuous improvement loop (tying to autopoietic mission lifecycle): perf metrics -> release audit "lesson" -> mission closeout -> SP6 feedback proposal (if consented) -> next improvement ring. This completes the delivery loop as part of the living tree's growth.
-
-Rollback: perf breach blocks release candidate in audit.
+For the substrate (`bizra-data-lake`), use that repository's own test and
+benchmark receipts; this Dema blueprint does not inherit or restate them.
 
 ## Security and supply-chain controls
 

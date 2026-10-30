@@ -138,7 +138,7 @@ export async function cmd_founder(ctx) {
 
   if (group !== "impact" || !["scope", "run", "verify"].includes(action)) {
     const usage =
-      'dema founder impact scope <manifest> [--json] · dema founder impact run <manifest> --consent "GO: dema founder impact loop 0a" [--json] · dema founder impact verify <receipt> [--json]';
+      'node bin/dema founder impact scope <manifest> [--json] · node bin/dema founder impact run <manifest> --consent "GO: dema founder impact loop 0a" [--json] · node bin/dema founder impact verify <receipt> [--json]';
     console.error(`Dema error: unknown founder subcommand. Usage: ${usage}`);
     process.exitCode = 1;
     process.exit(process.exitCode ?? 0);

@@ -5,7 +5,11 @@ import { pathToFileURL } from "node:url";
 
 const DEFAULT_SCAN_ROOTS = ["apps", "packages", "scripts"];
 const SOURCE_EXTENSIONS = new Set([".js", ".mjs"]);
-const EXCLUDED_PATHS = new Set(["scripts/review/actuator-check.mjs"]);
+const EXCLUDED_PATHS = new Set([
+  "scripts/review/actuator-check.mjs",
+  "packages/dema-ui/tests/operation-correspondence-routes.test.mjs",
+  "packages/dema-ui/tests/trusted-requirement.test.mjs",
+]);
 
 function extension(path) {
   const dot = path.lastIndexOf(".");

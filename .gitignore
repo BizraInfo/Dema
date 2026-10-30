@@ -90,3 +90,35 @@ packages/dema-ui/dev.log
 /proof-of-promotion/
 .local/
 .claude/skills/dema-data-steward/
+
+# Ruflo local secrets and runtime data
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+
+# Bucket 4 shield: agent scratch/worktree directories and session transcripts.
+# These are machine-local run output (~50k files across .worktrees/ and
+# .mimosa/ alone), never source — one `git add .` away from polluting history.
+.worktrees/
+.mimosa/
+.cline/
+.superpowers/
+.video_agent/
+.zcode/
+download/
+output/
+tmp/
+copilot-session-*.md
+codex-session-*.md
+copilot-debug-logs-*.tgz
+fraiday log
+grok log cli
+BIZRA_Node0_FounderZero_DigitalTwin_v0.1/
+
+# Agent bookkeeping scratch and a locally-authored skill with no skills-src
+# origin. .agents/skills/run-dema/ has a canonical skills-src/run-dema/SKILL.md
+# origin and stays tracked; dema-autopilot does not, so it is machine-local.
+.agents/tasks/
+.agents/skills/dema-autopilot/

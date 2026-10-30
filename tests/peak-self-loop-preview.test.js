@@ -3,8 +3,12 @@ import assert from "node:assert/strict";
 
 import {
   buildPeakSelfLoopPreview,
+  composePeakZeroSpinRail,
   renderPeakSelfLoopPreview,
   PEAK_SELF_LOOP_PREVIEW_SCHEMA,
+  PEAK_ZERO_SPIN_NOT_SUPPLIED,
+  PEAK_ZERO_SPIN_SPIN_OR_BROKEN,
+  PEAK_ZERO_SPIN_VERIFIED_PROGRESS,
 } from "../packages/core/src/peak-self-loop-preview.js";
 import {
   isCanonicalBoundary,
@@ -54,7 +58,7 @@ test("PSL-05: default 9 signal fixtures are declared-only and cannot score", () 
   assert.equal(out.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
 });
 
-test("PSL-05b: binding evidence to those same 9 events restores CONTINUE", () => {
+test("PSL-05b: caller-authored bindings cannot restore CONTINUE", () => {
   const bound = Array.from({ length: 9 }, (_, i) => ({
     id: `bound-${i}`,
     type: "gate_passed",
@@ -64,9 +68,9 @@ test("PSL-05b: binding evidence to those same 9 events restores CONTINUE", () =>
     source_sha256: String(i).repeat(64).slice(0, 64),
   }));
   const out = buildPeakSelfLoopPreview({ signal_events: bound });
-  assert.equal(out.snr_framework.verified_signal_count, 9);
-  assert.ok(out.snr_framework.score >= 0.7);
-  assert.equal(out.autonomous_rsi.merged_verdict, "CONTINUE_MICRO_SLICE");
+  assert.equal(out.snr_framework.verified_signal_count, 0);
+  assert.equal(out.snr_framework.excluded_signal_count, 9);
+  assert.equal(out.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
 });
 
 test("PSL-06: process RSI uses score field (not undefined rsi alias)", () => {
@@ -206,13 +210,22 @@ test("PEB-02: declared fixtures stay visible but are excluded from score", () =>
   assert.ok(out.snr_framework.evidence_debt.length >= 1);
 });
 
-test("PEB-03: one evidence-bound event contributes one verified signal", () => {
+test("PEB-03: a shape-valid caller event is excluded without gatherer provenance", () => {
+  const roundTripped = JSON.parse(JSON.stringify(BOUND_SIGNAL));
   const out = buildPeakSelfLoopPreview({
-    signal_events: [BOUND_SIGNAL],
+    signal_events: [BOUND_SIGNAL, roundTripped],
     noise_events: [],
   });
-  assert.equal(out.snr_framework.verified_signal_count, 1);
-  assert.equal(out.snr_framework.excluded_signal_count, 0);
+  const baseline = buildPeakSelfLoopPreview({ signal_events: [], noise_events: [] });
+  assert.equal(out.snr_framework.verified_signal_count, 0);
+  assert.equal(out.snr_framework.excluded_signal_count, 2);
+  assert.equal(out.snr_framework.evidence_debt[0].gap, "evidence_not_gatherer_issued");
+  assert.equal(out.snr_framework.evidence_debt[1].gap, "evidence_not_gatherer_issued");
+  assert.equal(out.snr_framework.score, baseline.snr_framework.score);
+  assert.equal(out.autonomous_rsi.process_rsi, baseline.autonomous_rsi.process_rsi);
+  assert.deepEqual(out.event_hash_table, baseline.event_hash_table);
+  assert.equal(out.trace_diagnostic_moat.trace_set.length, 0);
+  assert.equal(out.rsi_integration_gate.recommendation, baseline.rsi_integration_gate.recommendation);
 });
 
 test("PEB-04: missing source_sha256 is excluded as evidence debt", () => {
@@ -233,17 +246,15 @@ test("PEB-05: forged truth_label is rejected, not trusted as carried", () => {
   assert.equal(out.snr_framework.verified_signal_count, 0);
 });
 
-test("PEB-06: duplicate ids fail closed — one receipt cannot be amplified", () => {
+test("PEB-06: duplicate caller ids remain unverified and cannot be amplified", () => {
   const nine = Array.from({ length: 9 }, () => ({ ...BOUND_SIGNAL }));
   const out = buildPeakSelfLoopPreview({ signal_events: nine, noise_events: [] });
-  assert.equal(out.snr_framework.verified_signal_count, 1);
-  assert.equal(out.snr_framework.excluded_signal_count, 8);
+  assert.equal(out.snr_framework.verified_signal_count, 0);
+  assert.equal(out.snr_framework.excluded_signal_count, 9);
 });
 
-// PEB-08 asserts a KNOWN CEILING, not a desired feature. It transports the real
-// attack so the limit stays visible: if someone later adds content re-derivation,
-// this test fails loudly and must be rewritten — not deleted quietly.
-test("PEB-08: CEILING — shape-valid envelopes for nonexistent files still pass", () => {
+// PEB-08 transports the direct-caller attack so it stays visible.
+test("PEB-08: direct callers cannot use shape-valid envelopes to raise SNR", () => {
   const forged = Array.from({ length: 9 }, (_, i) => ({
     id: `totally-real-${i}`,
     type: "gate_passed",
@@ -253,8 +264,9 @@ test("PEB-08: CEILING — shape-valid envelopes for nonexistent files still pass
     source_sha256: String(i).repeat(64).slice(0, 64),
   }));
   const out = buildPeakSelfLoopPreview({ signal_events: forged });
-  assert.equal(out.snr_framework.verified_signal_count, 9);
-  assert.equal(out.autonomous_rsi.merged_verdict, "CONTINUE_MICRO_SLICE");
+  assert.equal(out.snr_framework.verified_signal_count, 0);
+  assert.equal(out.snr_framework.excluded_signal_count, 9);
+  assert.equal(out.autonomous_rsi.merged_verdict, "HOLD_AND_REDUCE_NOISE");
 });
 
 test("PEB-07: evidence binding does not weaken the canonical boundary", () => {
@@ -272,4 +284,72 @@ test("PSL-19: companion disconnected surfaces in self-critique gaps", () => {
     connected.proactive_self.critique.gaps.some((g) => g.includes("Mobile companion")),
     false,
   );
+});
+
+// ---------------------------------------------------------------------------
+// PEAK-ZERO-SPIN-INTEGRATION-1A — wire ZERO-SPIN-GATE into proactive_self.
+// ---------------------------------------------------------------------------
+
+test("PZS-01: default preview abstains zero-spin (NOT_SUPPLIED, never fake OK)", () => {
+  const out = buildPeakSelfLoopPreview();
+  assert.equal(out.zero_spin.status, PEAK_ZERO_SPIN_NOT_SUPPLIED);
+  assert.equal(out.zero_spin.classification, null);
+  assert.equal(out.zero_spin.progress_verified, false);
+  assert.equal(out.proactive_self.zero_spin.status, PEAK_ZERO_SPIN_NOT_SUPPLIED);
+  assert.ok(out.proactive_self.harness.active_gates.includes("zero-spin-gate-check"));
+  assert.ok(out.ultra_micro_compose.subsystems.includes("proactive_self.zero_spin"));
+  assert.ok(out.ultra_micro_compose.subsystems.includes("zero_spin_gate"));
+  assert.ok(
+    out.proactive_self.critique.gaps.some((g) => g.includes("NOT_SUPPLIED")),
+  );
+});
+
+test("PZS-02: converging spin_steps yield VERIFIED_PROGRESS", () => {
+  const out = buildPeakSelfLoopPreview({
+    spin_steps: [
+      { context: { done: 0 }, action: { do: "read" } },
+      { context: { done: 1 }, action: { do: "plan" } },
+      { context: { done: 2 }, action: { do: "edit" }, verified: true },
+    ],
+    spin_max_steps: 6,
+  });
+  assert.equal(out.zero_spin.status, PEAK_ZERO_SPIN_VERIFIED_PROGRESS);
+  assert.equal(out.zero_spin.classification, "OK:VERIFIED");
+  assert.equal(out.zero_spin.progress_verified, true);
+  assert.equal(out.zero_spin.chain_ok, true);
+  assert.equal(out.proactive_self.compliance.zero_spin_progress_verified, true);
+  assert.equal(
+    out.proactive_self.critique.gaps.some((g) => g.includes("Zero-spin F-")),
+    false,
+  );
+});
+
+test("PZS-03: ctx_spin HOLDs critique and blocks reinsert via spin rail", () => {
+  const out = buildPeakSelfLoopPreview({
+    spin_steps: [
+      { context: { goal: "x", seen: ["a"] }, action: { do: "look" } },
+      { context: { goal: "x", seen: ["a"] }, action: { do: "look-again" } },
+    ],
+    spin_max_steps: 5,
+  });
+  assert.equal(out.zero_spin.status, PEAK_ZERO_SPIN_SPIN_OR_BROKEN);
+  assert.equal(out.zero_spin.classification, "F-I:ctx_spin(0->1)");
+  assert.match(out.proactive_self.critique.verdict, /HOLD — zero-spin/);
+  assert.equal(out.proactive_self.compliance.reinsert_eligible, false);
+});
+
+test("PZS-04: composePeakZeroSpinRail is deterministic for same steps", () => {
+  const steps = [
+    { context: { n: 0 }, action: { do: "a" } },
+    { context: { n: 1 }, action: { do: "b" }, verified: true },
+  ];
+  const a = composePeakZeroSpinRail({ steps, maxSteps: 4 });
+  const b = composePeakZeroSpinRail({ steps, maxSteps: 4 });
+  assert.equal(a.verdict_hash, b.verdict_hash);
+  assert.equal(a.status, PEAK_ZERO_SPIN_VERIFIED_PROGRESS);
+});
+
+test("PZS-05: human render surfaces zero_spin line", () => {
+  const text = renderPeakSelfLoopPreview(buildPeakSelfLoopPreview());
+  assert.match(text, /zero_spin:\s+NOT_SUPPLIED/);
 });

@@ -57,6 +57,14 @@ export function proposeBoundedDiagnostic(status) {
     };
   }
 
+  if (status.missionExecuted !== false || status.runtimePulse?.fired !== false) {
+    return {
+      allowed: false,
+      reason: "Mission execution or runtime-pulse state is unknown.",
+      nextAction: "observe_runtime_state",
+    };
+  }
+
   return {
     allowed: isReadyForBoundedDiagnostic(status),
     missionType: "bounded_diagnostic",
@@ -79,9 +87,10 @@ export function previewBoundedDiagnostic(status, phrase = "") {
     executes: false,
     proposal,
     consent,
-    next:
-      proposal.allowed && consent.accepted
+    next: !proposal.allowed
+      ? `No runtime action executed. ${proposal.reason} Next: ${proposal.nextAction}.`
+      : consent.accepted
         ? "Consent phrase accepted. Use the governed Node0 one-shot runtime path to create ARTIFACT-011."
-        : "No runtime action executed. Resolve readiness and provide the exact consent phrase first.",
+        : "No runtime action executed. Provide the exact consent phrase to continue.",
   };
 }

@@ -136,11 +136,11 @@ test("SKC-10: buildRouteCard produces expected shape", () => {
 
 // ─── Skill Registry Tests ─────────────────────────────────────────────
 
-// SKR-01: loadRegistry loads all 6 skills
-test("SKR-01: loadRegistry loads all 6 skills", () => {
+// SKR-01: loadRegistry loads all 7 skills
+test("SKR-01: loadRegistry loads all 7 skills", () => {
   const result = loadRegistry(io);
   assert.equal(result.ok, true);
-  assert.equal(result.skills.length, 6);
+  assert.equal(result.skills.length, 7);
   assert.equal(result.errors.length, 0);
 });
 

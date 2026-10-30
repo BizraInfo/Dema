@@ -16,6 +16,7 @@ import {
   parseWorkflowWorktreeChanges,
   formatReleaseReadinessReport,
   evaluateReleaseReadiness,
+  exitCodeFromEvaluation,
   extractReportJson,
 } from "../scripts/release-readiness.mjs";
 
@@ -386,6 +387,19 @@ test("buildReleaseReadinessReport reports unavailable worktree status without a 
 
     assert.equal(report.ci.workflow.worktree_status_available, false);
     assert.deepEqual(report.ci.workflow.worktree_changes, []);
+    // SCORE-TEETH-1A: unavailable status is a launch_blocker on the report
+    // itself — readiness_score must not stay falsely high without evidence.
+    assert.equal(
+      hasRisk(report, "ci.workflow_worktree_status_unavailable"),
+      true,
+    );
+    assert.ok(
+      report.readiness_score <= 88,
+      `expected score penalty for unavailable worktree, got ${report.readiness_score}`,
+    );
+    const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+    assert.equal(verdict.ok, false);
+    assert.match(verdict.reasons.join(" "), /worktree.*unavailable|launch_blocker/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -775,13 +789,66 @@ test("evaluateReleaseReadiness FAILS when a launch_blocker risk is present", () 
 
 test("evaluateReleaseReadiness PASSES a clean report with no blocker and score >= threshold", () => {
   const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
     readiness_score: 97,
     risks: [{ code: "x.minor", severity: "improvement" }],
-    ci: { workflow: { worktree_changes_authorized: true } },
+    ci: {
+      workflow: {
+        worktree_status_available: true,
+        worktree_changes_authorized: true,
+      },
+    },
   };
   const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
   assert.equal(verdict.hasLaunchBlocker, false);
   assert.equal(verdict.ok, true);
+});
+
+test("evaluateReleaseReadiness FAILS closed on a missing or unexpected report schema", () => {
+  const report = {
+    schema: "bizra.dema.other_report.v0.1",
+    readiness_score: 100,
+    risks: [],
+    ci: { workflow: { worktree_status_available: true } },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /schema/);
+});
+
+test("evaluateReleaseReadiness FAILS closed when workflow status was not inspected", () => {
+  const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
+    readiness_score: 100,
+    risks: [],
+    ci: { workflow: { worktree_status_available: false, worktree_changes: [] } },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /worktree.*unavailable/);
+});
+
+test("evaluateReleaseReadiness FAILS closed when workflow status evidence is missing", () => {
+  const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
+    readiness_score: 100,
+    risks: [],
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /worktree.*unavailable/);
+});
+
+test("evaluateReleaseReadiness FAILS closed on malformed risk entries", () => {
+  const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
+    readiness_score: 100,
+    risks: [null],
+    ci: { workflow: { worktree_status_available: true } },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /malformed_report_risks_entry/);
 });
 
 test("evaluateReleaseReadiness FAILS closed on a malformed report (no risks array)", () => {
@@ -812,4 +879,46 @@ test("extractReportJson recovers the report object even with leading log noise",
   assert.equal(parsed.readiness_score, 97);
   assert.equal(extractReportJson("no json here"), null);
   assert.equal(extractReportJson('{"broken":}'), null);
+});
+
+// CLI-EXIT-TEETH-1A — shell gate must mirror evaluateReleaseReadiness, not always 0.
+test("exitCodeFromEvaluation fails closed on malformed evaluation", () => {
+  assert.equal(exitCodeFromEvaluation(null), 1);
+  assert.equal(exitCodeFromEvaluation(undefined), 1);
+  assert.equal(exitCodeFromEvaluation({}), 1);
+  assert.equal(exitCodeFromEvaluation({ ok: "yes" }), 1);
+  assert.equal(exitCodeFromEvaluation([{ ok: true }]), 1);
+  assert.equal(exitCodeFromEvaluation({ ok: true }), 0);
+  assert.equal(exitCodeFromEvaluation({ ok: false, reasons: ["x"] }), 1);
+});
+
+test("exitCodeFromEvaluation is 1 when unavailable worktree evaluate fails", async () => {
+  const root = await mkdtemp(
+    join(tmpdir(), "bizra-release-readiness-cli-exit-"),
+  );
+  try {
+    await writeFile(join(root, "package.json"), JSON.stringify({ scripts: {} }));
+    const report = await buildReleaseReadinessReport({ root, now: fixedNow });
+    const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+    assert.equal(verdict.ok, false);
+    assert.equal(exitCodeFromEvaluation(verdict), 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("release-readiness CLI exit code mirrors evaluateReleaseReadiness on --json", async () => {
+  let stdout = "";
+  let code = 0;
+  try {
+    const result = await execFileAsync("node", [scriptPath, "--json"]);
+    stdout = result.stdout;
+  } catch (error) {
+    code = error.code;
+    stdout = error.stdout ?? "";
+  }
+  const report = extractReportJson(stdout);
+  assert.ok(report, "CLI must still print a parseable report when blocked");
+  const verdict = evaluateReleaseReadiness(report);
+  assert.equal(code, exitCodeFromEvaluation(verdict));
 });

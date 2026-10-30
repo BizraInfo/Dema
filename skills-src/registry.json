@@ -4,6 +4,12 @@
   "registry_version": "1.0.0",
   "skills": [
     {
+      "skill_id": "campaign-ledger",
+      "version": "1.0.0",
+      "contract_path": "skills-src/campaign-ledger/contract.json",
+      "manifest_path": "skills-src/campaign-ledger/manifest.json"
+    },
+    {
       "skill_id": "dema-data-steward",
       "version": "1.0.0",
       "contract_path": "skills-src/dema-data-steward/contract.json",

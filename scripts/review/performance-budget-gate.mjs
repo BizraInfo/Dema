@@ -39,29 +39,22 @@ async function measureFirstLookRenderMs() {
   return (performance.now() - t0) / 20;
 }
 
-function measureCliBootMs() {
-  try {
-    execFileSync("node", [CLI, "status", "--json"], {
+export function measureCliBootMs({ execute = execFileSync, clock = performance } = {}) {
+  // Discard warm-up duration; its failure still invalidates the measurement.
+  execute("node", [CLI, "status", "--json"], {
+    stdio: "ignore",
+    env: { ...process.env, DEMA_NO_TUI: "1", DEMA_NODE0_ADAPTER: "local" },
+    timeout: 5000,
+  });
+  const samples = [];
+  for (let i = 0; i < 3; i++) {
+    const t0 = clock.now();
+    execute("node", [CLI, "status", "--json"], {
       stdio: "ignore",
       env: { ...process.env, DEMA_NO_TUI: "1", DEMA_NODE0_ADAPTER: "local" },
       timeout: 5000,
     });
-  } catch {
-    // warmup discard — cold module graph on CI runners
-  }
-  const samples = [];
-  for (let i = 0; i < 3; i++) {
-    const t0 = performance.now();
-    try {
-      execFileSync("node", [CLI, "status", "--json"], {
-        stdio: "ignore",
-        env: { ...process.env, DEMA_NO_TUI: "1", DEMA_NODE0_ADAPTER: "local" },
-        timeout: 5000,
-      });
-    } catch {
-      // non-zero exit still exercised boot path
-    }
-    samples.push(performance.now() - t0);
+    samples.push(clock.now() - t0);
   }
   samples.sort((a, b) => a - b);
   return samples[Math.floor(samples.length / 2)];

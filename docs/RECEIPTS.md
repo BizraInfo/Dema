@@ -51,6 +51,31 @@ dema receipts ARTIFACT-011
 
 The selector may be a receipt ID, artifact ID, exact path, or unique receipt filename.
 
+### Verify a local talk-runtime receipt
+
+```bash
+dema receipt verify /path/to/talk-runtime-receipt.json
+dema receipt verify --help
+```
+
+This read-only command supports `bizra.dema.talk_runtime_receipt.v0.1` only.
+Its existing `receipt_id` is SHA-256 of the UTF-8 JSON metadata body with object
+keys sorted recursively and `receipt_id` excluded. Formatting and object-key
+order do not affect the digest. No receipt format or signing key is added.
+
+Exit `0` means the fields conform to this local format and the digest matches;
+exit `1` means invalid fields, digest, JSON, usage, or another read error; exit
+`2` means the file is missing. Errors name the file and failing field without
+printing receipt values. `--help` prints help before any receipt read.
+
+Output includes the recorded `invocation_status`: a valid refused-call receipt
+remains `refused`. Digest verification does not prove producer identity, consent
+authenticity, model-weight identity, or that the invocation occurred. Someone
+who changes the content and recomputes its digest can make a new valid receipt.
+Talk classifies empty or whitespace-only completions as `failed` with
+`empty_response`; the metadata receipt records `failed` but does not include the
+raw reply or `error_reason`.
+
 ## ARTIFACT-011 boundary
 
 ARTIFACT-011 is the first bounded diagnostic runtime receipt.

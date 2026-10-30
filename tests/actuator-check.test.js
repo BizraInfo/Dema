@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
@@ -23,6 +26,35 @@ test("actuator check passes on current source tree", () => {
   assert.equal(report.boundary.read_only_audit, true);
   assert.equal(report.boundary.runtime_execution, false);
   assert.ok(report.scanned_files.includes("apps/cli/src/index.js"));
+  assert.ok(
+    !report.scanned_files.includes(
+      "packages/dema-ui/tests/operation-correspondence-routes.test.mjs",
+    ),
+  );
+  assert.ok(
+    !report.scanned_files.includes(
+      "packages/dema-ui/tests/trusted-requirement.test.mjs",
+    ),
+  );
+});
+
+test("actuator check still scans unrelated directories named tests", () => {
+  const root = mkdtempSync(join(tmpdir(), "dema-actuator-check-"));
+  const sourcePath = "packages/example/tests/fixture.js";
+  try {
+    const absolutePath = join(root, sourcePath);
+    mkdirSync(join(root, "packages/example/tests"), { recursive: true });
+    writeFileSync(absolutePath, "export const fixture = true;\n");
+
+    const report = buildActuatorCheckReport({
+      root,
+      scanRoots: ["packages"],
+    });
+
+    assert.deepEqual(report.scanned_files, [sourcePath]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("actuator check CLI emits a schema-tagged report", async () => {
