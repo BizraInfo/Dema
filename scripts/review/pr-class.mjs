@@ -32,12 +32,16 @@ const REVIEW_CLASSES = {
     // Kept in sync with the branch-class case resolver in
     // .github/workflows/bizra-review.yml. pr/* is the clean release-train
     // convention; refactor/*, test/*, and slice/* are accepted as broad-scope too.
+    // season/ and agent/ are the slash-form lease/season branches (season-
+    // alone only matched hyphen suffixes like season-foo).
     branchPrefixes: [
       "adr/",
       "policy/",
       "governance/",
       "tooling/",
       "season-",
+      "season/",
+      "agent/",
       "fix/",
       "ci/",
       "docs/",
@@ -46,6 +50,7 @@ const REVIEW_CLASSES = {
       "pr/",
       "refactor/",
       "test/",
+      "copilot/",
       "slice/",
     ],
   },
