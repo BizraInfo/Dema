@@ -128,16 +128,24 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
   // awaiting-activation verdict is allowed.
   const activationPendingSignalOk =
     principal === undefined || principalIdentity === true;
-  // Legacy shellout omits `chain`; only an explicit available:false (gateway
-  // /chain probe failed) blocks the calm awaiting-activation resting state.
+  // Legacy shellout omits `chain`. Block calm awaiting-activation when the
+  // gateway /chain probe failed, or when a successful probe is inconsistent
+  // (positive length without a head). Empty successful chain (length 0) stays
+  // eligible for the resting state.
   const chainQueryFailed = s.chain?.available === false;
+  const chainLength = Number(s.chain?.length ?? 0);
+  const chainHeadOk =
+    typeof s.chain?.head === "string" && s.chain.head.length > 0;
+  const chainEvidenceInvalid =
+    s.chain != null && Number.isFinite(chainLength) && chainLength > 0 && !chainHeadOk;
   const awaitingActivationGo =
     !ready &&
     gateOk &&
     consoleReadyEarly &&
     activationPendingSignalOk &&
     !principalDegraded &&
-    !chainQueryFailed;
+    !chainQueryFailed &&
+    !chainEvidenceInvalid;
   predicates.push({
     key: "ready",
     label: d.ready,
