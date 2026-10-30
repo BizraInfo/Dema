@@ -27,12 +27,12 @@ test("actuator check passes on current source tree", () => {
   assert.equal(report.boundary.runtime_execution, false);
   assert.ok(report.scanned_files.includes("apps/cli/src/index.js"));
   assert.ok(
-    !report.scanned_files.includes(
+    report.scanned_files.includes(
       "packages/dema-ui/tests/operation-correspondence-routes.test.mjs",
     ),
   );
   assert.ok(
-    !report.scanned_files.includes(
+    report.scanned_files.includes(
       "packages/dema-ui/tests/trusted-requirement.test.mjs",
     ),
   );
@@ -52,6 +52,61 @@ test("actuator check still scans unrelated directories named tests", () => {
     });
 
     assert.deepEqual(report.scanned_files, [sourcePath]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("source extraction helpers retain shell, EffectCap, and eval scanning", () => {
+  const root = mkdtempSync(join(tmpdir(), "dema-actuator-check-"));
+  const sourcePaths = [
+    "packages/dema-ui/tests/operation-correspondence-routes.test.mjs",
+    "packages/dema-ui/tests/trusted-requirement.test.mjs",
+  ];
+  const helper = 'const handler = new Function("x", "return x");\n';
+  const prohibited = [
+    ['exec("echo hi");', "child_process.exec_raw_shell"],
+    ['execSync("echo hi");', "child_process.execSync_raw_shell"],
+    ['spawn("echo", [], { shell: true });', "child_process.spawn_shell_true"],
+    ['spawnSync("echo", [], { shell: true });', "child_process.spawn_shell_true"],
+    ["EffectCap.perform(intent, exec);", "effectcap.caller_exec_closure"],
+    ['effectingOperation(cap, "file:notes", "read", exec);', "effectcap.caller_exec_closure"],
+    ["perform(intent, () => writeFileSync());", "effectcap.caller_exec_closure"],
+    ["eval(rule.condition);", "policy.executable_rule_code"],
+  ];
+  try {
+    mkdirSync(join(root, "packages/dema-ui/tests"), { recursive: true });
+    for (const sourcePath of sourcePaths) {
+      writeFileSync(join(root, sourcePath), helper);
+    }
+    const scan = () => buildActuatorCheckReport({ root, scanRoots: ["packages"] });
+    assert.equal(scan().ok, true);
+    assert.deepEqual(scan().scanned_files.sort(), sourcePaths);
+    for (const sourcePath of sourcePaths) {
+      for (const [source, label] of prohibited) {
+        writeFileSync(join(root, sourcePath), helper + source);
+        const report = scan();
+        assert.equal(report.ok, false, `${sourcePath}: ${source}`);
+        assert.ok(report.findings.some((f) => f.file === sourcePath && f.label === label));
+      }
+      writeFileSync(join(root, sourcePath), helper);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("Function and eval remain prohibited outside the source extraction helpers", () => {
+  const root = mkdtempSync(join(tmpdir(), "dema-actuator-check-"));
+  try {
+    for (const dir of ["packages/demo/src", "packages/demo/tests"]) {
+      mkdirSync(join(root, dir), { recursive: true });
+      writeFileSync(join(root, dir, "policy.mjs"), 'new Function("return 1"); eval(rule);');
+    }
+    const report = buildActuatorCheckReport({ root, scanRoots: ["packages"] });
+    assert.equal(report.ok, false);
+    assert.equal(report.findings.length, 4);
+    assert.ok(report.findings.every((f) => f.label === "policy.executable_rule_code"));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

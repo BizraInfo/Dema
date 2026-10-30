@@ -400,6 +400,10 @@ test("buildReleaseReadinessReport reports unavailable worktree status without a 
     const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
     assert.equal(verdict.ok, false);
     assert.match(verdict.reasons.join(" "), /worktree.*unavailable|launch_blocker/);
+    const output = formatReleaseReadinessReport(report);
+    assert.match(output, /workflow worktree: unknown/);
+    assert.match(output, /workflow authorization: blocked/);
+    assert.doesNotMatch(output, /workflow worktree: clean/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -714,6 +718,32 @@ test("formatReleaseReadinessReport renders explicit workflow authorization", asy
   const output = formatReleaseReadinessReport(report);
 
   assert.match(output, /workflow authorization: explicit/);
+});
+
+test("formatReleaseReadinessReport keeps unknown status blocked despite authorization", async () => {
+  const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  for (const changes of [[], [{ status: "M", path: ".github/workflows/check.yml" }]]) {
+    report.ci.workflow = {
+      ...report.ci.workflow,
+      worktree_status_available: false,
+      worktree_changes_authorized: true,
+      worktree_changes: changes,
+    };
+    const output = formatReleaseReadinessReport(report);
+    assert.match(output, /workflow worktree: unknown/);
+    assert.match(output, /workflow authorization: blocked/);
+    assert.doesNotMatch(output, /workflow (?:worktree: (?:clean|dirty)|authorization: (?:explicit|not_required|required))/);
+    assert.equal(evaluateReleaseReadiness(report).ok, false);
+  }
+});
+
+test("formatReleaseReadinessReport preserves known clean and dirty labels", async () => {
+  const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  assert.match(formatReleaseReadinessReport(report), /workflow worktree: clean/);
+  assert.match(formatReleaseReadinessReport(report), /workflow authorization: not_required/);
+  report.ci.workflow.worktree_changes = [{ status: "M", path: ".github/workflows/check.yml" }];
+  assert.match(formatReleaseReadinessReport(report), /workflow worktree: dirty/);
+  assert.match(formatReleaseReadinessReport(report), /workflow authorization: required/);
 });
 
 test("formatReleaseReadinessReport renders sparse and missing evidence states", async () => {

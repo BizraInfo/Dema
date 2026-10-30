@@ -5,8 +5,8 @@ import { pathToFileURL } from "node:url";
 
 const DEFAULT_SCAN_ROOTS = ["apps", "packages", "scripts"];
 const SOURCE_EXTENSIONS = new Set([".js", ".mjs"]);
-const EXCLUDED_PATHS = new Set([
-  "scripts/review/actuator-check.mjs",
+const EXCLUDED_PATHS = new Set(["scripts/review/actuator-check.mjs"]);
+const SOURCE_EXTRACTION_TEST_PATHS = new Set([
   "packages/dema-ui/tests/operation-correspondence-routes.test.mjs",
   "packages/dema-ui/tests/trusted-requirement.test.mjs",
 ]);
@@ -128,7 +128,15 @@ export function buildActuatorCheckReport({
     const body = readFileSync(join(root, file), "utf8");
     findings.push(
       ...analyzeActuatorSource(body, file),
-      ...analyzeEffectCapInvariantSource(body, file),
+      ...analyzeEffectCapInvariantSource(body, file).filter(
+        // Only these tests' Function() source extractors are exempt. Keep
+        // eval, shell calls, and caller-provided EffectCap closures visible.
+        (finding) => !(
+          SOURCE_EXTRACTION_TEST_PATHS.has(file) &&
+          finding.label === "policy.executable_rule_code" &&
+          finding.match.startsWith("Function")
+        ),
+      ),
     );
   }
   return {
