@@ -380,6 +380,12 @@ test("buildReleaseReadinessReport reports unavailable worktree status without a 
   try {
     await writeFile(join(root, "package.json"), JSON.stringify({ scripts: {} }));
 
+    const knownStatusReport = await buildReleaseReadinessReport({
+      root,
+      now: fixedNow,
+      workflowStatusText: "",
+    });
+
     const report = await buildReleaseReadinessReport({
       root,
       now: fixedNow,
@@ -397,13 +403,21 @@ test("buildReleaseReadinessReport reports unavailable worktree status without a 
       report.readiness_score <= 88,
       `expected score penalty for unavailable worktree, got ${report.readiness_score}`,
     );
+    assert.equal(
+      report.readiness_score,
+      knownStatusReport.readiness_score - 12,
+    );
     const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
     assert.equal(verdict.ok, false);
     assert.match(verdict.reasons.join(" "), /worktree.*unavailable|launch_blocker/);
+
+    // BIZRA-T0-RELEASE-READINESS-TRUTH-1A: human CLI must not say clean/not_required
+    // when machine verdict fails closed on unavailable worktree status.
     const output = formatReleaseReadinessReport(report);
     assert.match(output, /workflow worktree: unknown/);
     assert.match(output, /workflow authorization: blocked/);
     assert.doesNotMatch(output, /workflow worktree: clean/);
+    assert.doesNotMatch(output, /workflow authorization: not_required/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -705,6 +719,8 @@ test("formatReleaseReadinessReport names dirty workflow changes", async () => {
   });
   const output = formatReleaseReadinessReport(report);
 
+  assert.match(output, /workflow worktree: dirty/);
+  assert.match(output, /workflow authorization: required/);
   assert.match(output, /Workflow worktree changes:/);
   assert.match(output, /M .github\/workflows\/check\.yml/);
 });
@@ -717,33 +733,101 @@ test("formatReleaseReadinessReport renders explicit workflow authorization", asy
   });
   const output = formatReleaseReadinessReport(report);
 
+  assert.match(output, /workflow worktree: dirty/);
   assert.match(output, /workflow authorization: explicit/);
 });
 
-test("formatReleaseReadinessReport keeps unknown status blocked despite authorization", async () => {
-  const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
-  for (const changes of [[], [{ status: "M", path: ".github/workflows/check.yml" }]]) {
-    report.ci.workflow = {
-      ...report.ci.workflow,
-      worktree_status_available: false,
-      worktree_changes_authorized: true,
-      worktree_changes: changes,
-    };
+test("formatReleaseReadinessReport: missing/false worktree status → unknown+blocked; true clean/dirty agree", async () => {
+  const base = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  assert.equal(base.ci.workflow.worktree_status_available, true);
+
+  const missing = structuredClone(base);
+  delete missing.ci.workflow.worktree_status_available;
+  missing.ci.workflow.worktree_changes = [];
+  const missingOut = formatReleaseReadinessReport(missing);
+  assert.match(missingOut, /workflow worktree: unknown/);
+  assert.match(missingOut, /workflow authorization: blocked/);
+  assert.doesNotMatch(missingOut, /workflow worktree: clean/);
+  assert.equal(
+    evaluateReleaseReadiness(missing, { minScore: 80 }).ok,
+    false,
+  );
+
+  const unavailable = structuredClone(base);
+  unavailable.ci.workflow.worktree_status_available = false;
+  unavailable.ci.workflow.worktree_changes = [];
+  const unavailableOut = formatReleaseReadinessReport(unavailable);
+  assert.match(unavailableOut, /workflow worktree: unknown/);
+  assert.match(unavailableOut, /workflow authorization: blocked/);
+  assert.doesNotMatch(unavailableOut, /workflow worktree: clean/);
+  assert.equal(
+    evaluateReleaseReadiness(unavailable, { minScore: 80 }).ok,
+    false,
+  );
+
+  const cleanOut = formatReleaseReadinessReport(base);
+  assert.match(cleanOut, /workflow worktree: clean/);
+  assert.match(cleanOut, /workflow authorization: not_required/);
+
+  const dirty = await buildReleaseReadinessReport({
+    now: fixedNow,
+    workflowStatusText: " M .github/workflows/check.yml\n",
+  });
+  assert.equal(dirty.ci.workflow.worktree_status_available, true);
+  const dirtyOut = formatReleaseReadinessReport(dirty);
+  assert.match(dirtyOut, /workflow worktree: dirty/);
+  assert.match(dirtyOut, /workflow authorization: required/);
+});
+
+test("formatReleaseReadinessReport: available true with malformed worktree_changes must not render clean", async () => {
+  const base = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  assert.equal(base.ci.workflow.worktree_status_available, true);
+  assert.ok(Array.isArray(base.ci.workflow.worktree_changes));
+
+  for (const malformed of [undefined, null, "dirty", { path: "x" }, 1]) {
+    const report = structuredClone(base);
+    report.ci.workflow.worktree_status_available = true;
+    report.ci.workflow.worktree_changes = malformed;
     const output = formatReleaseReadinessReport(report);
-    assert.match(output, /workflow worktree: unknown/);
+    assert.match(
+      output,
+      /workflow worktree: unknown/,
+      `expected unknown for malformed changes=${JSON.stringify(malformed)}`,
+    );
     assert.match(output, /workflow authorization: blocked/);
-    assert.doesNotMatch(output, /workflow (?:worktree: (?:clean|dirty)|authorization: (?:explicit|not_required|required))/);
-    assert.equal(evaluateReleaseReadiness(report).ok, false);
+    assert.doesNotMatch(output, /workflow worktree: clean/);
+    assert.doesNotMatch(output, /workflow authorization: not_required/);
   }
 });
 
-test("formatReleaseReadinessReport preserves known clean and dirty labels", async () => {
-  const report = await buildCleanReleaseReadinessReport({ now: fixedNow });
-  assert.match(formatReleaseReadinessReport(report), /workflow worktree: clean/);
-  assert.match(formatReleaseReadinessReport(report), /workflow authorization: not_required/);
-  report.ci.workflow.worktree_changes = [{ status: "M", path: ".github/workflows/check.yml" }];
-  assert.match(formatReleaseReadinessReport(report), /workflow worktree: dirty/);
-  assert.match(formatReleaseReadinessReport(report), /workflow authorization: required/);
+test("malformed worktree_changes: format, evaluate, and exit code agree blocked", async () => {
+  const base = await buildCleanReleaseReadinessReport({ now: fixedNow });
+  assert.equal(evaluateReleaseReadiness(base, { minScore: 80 }).ok, true);
+  assert.equal(exitCodeFromEvaluation(evaluateReleaseReadiness(base)), 0);
+
+  for (const malformed of [undefined, null, "dirty", { path: "x" }, 1]) {
+    const report = structuredClone(base);
+    report.ci.workflow.worktree_status_available = true;
+    report.ci.workflow.worktree_changes = malformed;
+
+    const output = formatReleaseReadinessReport(report);
+    const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+    const exitCode = exitCodeFromEvaluation(verdict);
+
+    assert.match(output, /workflow worktree: unknown/);
+    assert.match(output, /workflow authorization: blocked/);
+    assert.doesNotMatch(output, /workflow worktree: clean/);
+    assert.equal(
+      verdict.ok,
+      false,
+      `evaluate must fail for malformed changes=${JSON.stringify(malformed)}; reasons=${verdict.reasons}`,
+    );
+    assert.match(
+      verdict.reasons.join(" "),
+      /worktree_changes_malformed|worktree.*unavailable/,
+    );
+    assert.equal(exitCode, 1);
+  }
 });
 
 test("formatReleaseReadinessReport renders sparse and missing evidence states", async () => {
@@ -825,6 +909,7 @@ test("evaluateReleaseReadiness PASSES a clean report with no blocker and score >
     ci: {
       workflow: {
         worktree_status_available: true,
+        worktree_changes: [],
         worktree_changes_authorized: true,
       },
     },
@@ -832,6 +917,24 @@ test("evaluateReleaseReadiness PASSES a clean report with no blocker and score >
   const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
   assert.equal(verdict.hasLaunchBlocker, false);
   assert.equal(verdict.ok, true);
+});
+
+test("evaluateReleaseReadiness FAILS closed when worktree_changes is malformed", () => {
+  const report = {
+    schema: "bizra.dema.release_readiness.v0.1",
+    readiness_score: 100,
+    risks: [],
+    ci: {
+      workflow: {
+        worktree_status_available: true,
+        worktree_changes: null,
+      },
+    },
+  };
+  const verdict = evaluateReleaseReadiness(report, { minScore: 80 });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reasons.join(" "), /worktree_changes_malformed/);
+  assert.equal(exitCodeFromEvaluation(verdict), 1);
 });
 
 test("evaluateReleaseReadiness FAILS closed on a missing or unexpected report schema", () => {
