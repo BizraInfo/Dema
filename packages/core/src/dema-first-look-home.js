@@ -185,9 +185,18 @@ function buildCheckpointView(checkpoint) {
 /// throw and it does not invent a mission.
 async function readMissionPointer(explicitPath, home) {
   const localPath = join(home, "active-mission.json");
+  // Outsider / throwaway DEMA_HOME must not inherit the host estate pointer.
+  // Opt in: BIZRA_ACTIVE_MISSION=<path> or BIZRA_ESTATE_MISSION=1 (reads
+  // /data/bizra/ACTIVE_MISSION.json). Authority remains descriptive_only.
+  const estateOptIn =
+    process.env.BIZRA_ESTATE_MISSION === "1" ||
+    process.env.BIZRA_ESTATE_MISSION === "true";
   const candidates = explicitPath
     ? [explicitPath]
-    : [process.env.BIZRA_ACTIVE_MISSION, "/data/bizra/ACTIVE_MISSION.json"];
+    : [
+        process.env.BIZRA_ACTIVE_MISSION,
+        estateOptIn ? "/data/bizra/ACTIVE_MISSION.json" : null,
+      ];
   if (!explicitPath) {
     try {
       const raw = await readFile(localPath, "utf8");
