@@ -67,9 +67,13 @@ const EN = Object.freeze({
     note_preview_gate:
       "expected with no runtime bridged — bridge one with DEMA_NODE0_ADAPTER=gateway-http plus DEMA_GATEWAY_URL, or DEMA_NODE0_STATUS_COMMAND, to move it",
     note_ready_unbridged: "reported by the Node0 runtime — none is bridged",
+    note_ready_awaiting_activation:
+      "runtime bridged and consent-gated; ready stays false until an exact activation GO arms it — not a repair failure",
     note_console_no_gateway: "no gateway configured",
     preview_footer_nothing_broken:
       "Nothing is broken. This is the expected state before a runtime is bridged.",
+    awaiting_footer_nothing_broken:
+      "Nothing is broken. The face is intact; the runtime waits for an exact activation GO.",
     preview_footer_exit_code:
       "`node bin/dema doctor` still exits non-zero because this node is not operational.",
     preview_footer_preview_flag:
@@ -141,11 +145,15 @@ const AR = Object.freeze({
     explain_hint: "اكتب `node bin/dema explain doctor` لمعرفة معنى كل شرط.",
     note_preview_gate:
       "متوقّعة ما دام لا يوجد وقت تشغيل مربوط — اربط واحداً عبر DEMA_NODE0_ADAPTER=gateway-http مع DEMA_GATEWAY_URL، أو DEMA_NODE0_STATUS_COMMAND، لتحريكها",
+    note_ready_awaiting_activation:
+      "وقت التشغيل مربوط وبانتظار موافقة التفعيل؛ الجاهزية تبقى false حتى GO التفعيل — ليست عطلاً يحتاج إصلاحاً",
     note_ready_unbridged:
       "يبلّغ عنها وقت تشغيل Node0 — ولا يوجد وقت تشغيل مربوط",
     note_console_no_gateway: "لا توجد بوابة مُعدّة",
     preview_footer_nothing_broken:
       "لا يوجد خلل. هذه هي الحالة المتوقّعة قبل ربط وقت التشغيل.",
+    awaiting_footer_nothing_broken:
+      "لا يوجد خلل. الوجه سليم؛ وقت التشغيل بانتظار GO تفعيل حرفي.",
     preview_footer_exit_code:
       "الأمر `node bin/dema doctor` يخرج بقيمة غير صفرية لأن هذه العقدة ليست في وضع التشغيل.",
     preview_footer_preview_flag:

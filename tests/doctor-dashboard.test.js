@@ -89,8 +89,25 @@ test("evaluatePredicates: BLOCKED gate fix names the operator bridge, not `dema 
   );
 });
 
-test("evaluatePredicates: not-ready fix does not point at `dema setup` either", () => {
+test("evaluatePredicates: bridged EXPLICIT_GO + consoleReady + ready:false is awaiting activation, not fail", () => {
   const preds = evaluatePredicates({ ...defaultOkStatus(), ready: false });
+  const ready = preds.find((p) => p.key === "ready");
+  assert.equal(ready.status, "expected");
+  assert.equal(ready.fix, undefined);
+  assert.match(ready.note, /activation GO|awaiting/i);
+  assert.match(doctorVerdict(preds), /awaiting activation GO/);
+  assert.equal(doctorState(preds).reason, "awaiting_activation_go");
+  assert.equal(doctorState(preds).repair_required, false);
+  assert.equal(doctorState(preds).preview_environment_valid, true);
+  assert.equal(doctorState(preds).operational, false);
+});
+
+test("evaluatePredicates: bridged ready:false without consoleReady stays fail (no dema setup)", () => {
+  const preds = evaluatePredicates({
+    ...defaultOkStatus(),
+    ready: false,
+    consoleReady: false,
+  });
   const ready = preds.find((p) => p.key === "ready");
   assert.equal(ready.status, "fail");
   assert.doesNotMatch(
