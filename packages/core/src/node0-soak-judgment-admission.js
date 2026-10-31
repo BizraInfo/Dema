@@ -110,8 +110,10 @@ export function projectSoakJudgmentToAdmission(judgment) {
     });
   }
 
-  const spanMs = Number(judgment.observed_span_ms);
-  if (!Number.isFinite(spanMs) || spanMs < 0) {
+  // Reject null / non-numeric before Number() — Number(null)===0 would launder
+  // missing fields into a zero-failure / zero-span reading (CodeRabbit major).
+  const spanRaw = judgment.observed_span_ms;
+  if (typeof spanRaw !== "number" || !Number.isFinite(spanRaw) || spanRaw < 0) {
     return Object.freeze({
       schema: NODE0_SOAK_JUDGMENT_ADMISSION_SCHEMA,
       truth_label: NODE0_SOAK_JUDGMENT_ADMISSION_TRUTH_LABEL,
@@ -129,10 +131,36 @@ export function projectSoakJudgmentToAdmission(judgment) {
       what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
     });
   }
+  const spanMs = spanRaw;
+
+  const failRaw = judgment.failure_count;
+  if (
+    typeof failRaw !== "number" ||
+    !Number.isFinite(failRaw) ||
+    failRaw < 0 ||
+    !Number.isInteger(failRaw)
+  ) {
+    return Object.freeze({
+      schema: NODE0_SOAK_JUDGMENT_ADMISSION_SCHEMA,
+      truth_label: NODE0_SOAK_JUDGMENT_ADMISSION_TRUTH_LABEL,
+      ok: false,
+      soak: null,
+      refuse_reason: "invalid_failure_count",
+      projection: Object.freeze({
+        observed_duration_seconds: null,
+        healthy: false,
+        run_id: typeof judgment.run_id === "string" ? judgment.run_id : null,
+      }),
+      boundary,
+      authority_delta: 0,
+      what_this_proves: WHAT_THIS_PROVES,
+      what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
+    });
+  }
+  const failure_count = failRaw;
 
   const observed_duration_seconds = Math.floor(spanMs / 1000);
-  const failure_count = Number(judgment.failure_count);
-  const failuresOk = Number.isFinite(failure_count) && failure_count === 0;
+  const failuresOk = failure_count === 0;
   const continuous = judgment.continuously_observed === true;
   const targetMet = judgment.target_met_by_elapsed_run === true;
   // Accepted verdicts only — never OR with target_met to override an explicit

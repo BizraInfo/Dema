@@ -75,6 +75,36 @@ describe("node0-soak-judgment-admission", () => {
     assert.equal(p.refuse_reason, "schema_missing");
   });
 
+  test("null failure_count refused (Number(null) must not become 0)", () => {
+    const p = projectSoakJudgmentToAdmission(
+      insufficientJudgment({
+        failure_count: null,
+        observed_span_ms: DEFAULT_SOAK_MIN_DURATION_SECONDS * 1000,
+        ok: true,
+        verdict: "SUFFICIENT",
+        target_met_by_elapsed_run: true,
+      }),
+    );
+    assert.equal(p.ok, false);
+    assert.equal(p.soak, null);
+    assert.equal(p.refuse_reason, "invalid_failure_count");
+  });
+
+  test("null observed_span_ms refused (Number(null) must not become 0)", () => {
+    const p = projectSoakJudgmentToAdmission(
+      insufficientJudgment({
+        failure_count: 0,
+        observed_span_ms: null,
+        ok: true,
+        verdict: "SUFFICIENT",
+        target_met_by_elapsed_run: true,
+      }),
+    );
+    assert.equal(p.ok, false);
+    assert.equal(p.soak, null);
+    assert.equal(p.refuse_reason, "missing_observed_span_ms");
+  });
+
   test("INSUFFICIENT verdict not overridden by target_met_by_elapsed_run", () => {
     const p = projectSoakJudgmentToAdmission(
       insufficientJudgment({

@@ -33,11 +33,17 @@ function gitHead() {
 }
 
 function parseArgs(argv) {
-  const out = { soakJudgmentPath: null };
+  const out = { soakJudgmentPath: null, soakJudgmentArgError: null };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === "--soak-judgment" || a === "--soak-judgment-file") {
-      out.soakJudgmentPath = argv[i + 1] || null;
+      const next = argv[i + 1];
+      if (next === undefined || next === "" || next.startsWith("-")) {
+        out.soakJudgmentArgError =
+          `${a} requires a path argument (got ${next === undefined ? "missing" : JSON.stringify(next)})`;
+        return out;
+      }
+      out.soakJudgmentPath = next;
       i += 1;
       continue;
     }
@@ -83,6 +89,11 @@ function main() {
       "Usage: node scripts/proof/node0-close-measurement-receipt.mjs [--soak-judgment <endurance-judgment.json>]\n",
     );
     process.exitCode = 0;
+    return;
+  }
+  if (args.soakJudgmentArgError) {
+    process.stderr.write(`${args.soakJudgmentArgError}\n`);
+    process.exitCode = 2;
     return;
   }
   let soak_judgment = null;
