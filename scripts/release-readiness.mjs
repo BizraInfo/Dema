@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, posix as pathPosix } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { formatReleaseReadinessReport } from "./release-readiness/format.mjs";
 import {
@@ -850,6 +850,33 @@ export function parseReleaseReadinessArgs(argv = []) {
   };
 }
 
+const WORKFLOW_CHANGE_DIR_PREFIX = ".github/workflows/";
+
+/**
+ * Admit only workflow YAML paths that stay under `.github/workflows/` after
+ * POSIX normalize (reject `../` escape via bare string-prefix alone).
+ */
+function isAdmittedWorkflowChangePath(pathValue) {
+  if (typeof pathValue !== "string" || pathValue.length === 0) return false;
+  if (pathValue.includes("\0") || pathPosix.isAbsolute(pathValue)) return false;
+  const normalized = pathPosix.normalize(pathValue.replaceAll("\\", "/"));
+  return (
+    normalized.startsWith(WORKFLOW_CHANGE_DIR_PREFIX) &&
+    /\.ya?ml$/i.test(normalized)
+  );
+}
+
+function isAdmittedWorkflowChangeEntry(change) {
+  return (
+    change !== null &&
+    typeof change === "object" &&
+    !Array.isArray(change) &&
+    typeof change.status === "string" &&
+    change.status.trim().length > 0 &&
+    isAdmittedWorkflowChangePath(change.path)
+  );
+}
+
 /**
  * PROOF-GATE-TEETH-HARDENING-1A · defect 1.
  *
@@ -894,9 +921,24 @@ export function evaluateReleaseReadiness(report, { minScore = 80 } = {}) {
   }
   // Availability true is not enough: missing/malformed changes must fail closed
   // so machine verdict matches the human formatter (no coerce-to-[] → ready).
-  const workflowChangesOk = Array.isArray(workflow?.worktree_changes);
-  if (workflowStatusAvailable && !workflowChangesOk) {
+  // Array.isArray alone is insufficient: [null] and unauthorized dirty rows must
+  // not admit as clean when risks[] was emptied (WORKFLOW-EVIDENCE-ADMISSION-1A).
+  const changes = workflow?.worktree_changes;
+  const workflowChangesIsArray = Array.isArray(changes);
+  const workflowChangesEntriesOk =
+    workflowChangesIsArray && changes.every(isAdmittedWorkflowChangeEntry);
+  if (workflowStatusAvailable && !workflowChangesEntriesOk) {
     reasons.push("workflow_worktree_changes_malformed");
+  }
+  const workflowChangesAuthorized =
+    workflow?.worktree_changes_authorized === true;
+  if (
+    workflowStatusAvailable &&
+    workflowChangesEntriesOk &&
+    changes.length > 0 &&
+    !workflowChangesAuthorized
+  ) {
+    reasons.push("workflow_worktree_changes_unauthorized");
   }
   const hasLaunchBlocker = report.risks.some(
     (risk) => risk && risk.severity === "launch_blocker",
@@ -905,7 +947,10 @@ export function evaluateReleaseReadiness(report, { minScore = 80 } = {}) {
   const score = report.readiness_score;
   const scoreOk = typeof score === "number" && Number.isFinite(score) && score >= minScore;
   if (!scoreOk) reasons.push(`readiness_score_below_threshold:${score}<${minScore}`);
-  const workflowEvidenceOk = workflowStatusAvailable && workflowChangesOk;
+  const workflowEvidenceOk =
+    workflowStatusAvailable &&
+    workflowChangesEntriesOk &&
+    (changes.length === 0 || workflowChangesAuthorized);
   return {
     ok: schemaOk && risksValid && workflowEvidenceOk && !hasLaunchBlocker && scoreOk,
     hasLaunchBlocker,
