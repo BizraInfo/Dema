@@ -77,12 +77,12 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
-| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — Dema face/doctor proven local; NODE0_CLOSED false; DEMA_ACTIVE_LOCAL not Node0-closed; PR #497 CI required green @ be591c03, merge halt |
+| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `main` @ `5cbe1072`; measurement receipt keeps `NODE0_CLOSED=false` until soak+remote_write; cartographer intake on `slice/cartographer-claim-stamp-intake-1a` @ `8fd0b4ad` (pushed) |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
 | P3 | Absorption Atlas map-only stub | DONE preview doc |
-| P4 | Cartographer JSON intake when artifacts land | BLOCKED (files absent) |
+| P4 | Cartographer claim-stamp intake (map-only) | KERNEL on pushed branch `8fd0b4ad`; JSON stamps still absent on Downloads |
 | P5 | Outsider reduced-PATH suite | DONE @ `7cc9e804` |
 | P6 | `npm run proof:outsider` one-command loop | DONE |
 | P6b | Doctor/first-run/i18n outsider hints → `node bin/dema` | DONE |
@@ -93,8 +93,9 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | P11 | Doctor awaiting-activation resting (no false ❌) + run-dema smoke | DONE @ season face slice |
 | P12 | Gateway-http measured ready (chain+VERIFIED principal) | DONE — live Ready:true / doctor operational |
 | — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
-| — | Cartographer JSON intake | BLOCKED (artifacts absent) |
+| — | Node0-close measurement receipt | DONE kernel — `proof:node0-close-measurement`; soak+remote_write admission; live pulse OPEN |
+| — | Cartographer JSON artifacts | OPEN — PDF measured; three JSON stamps absent; no silent ingest |
 
 ## Default next slice when user says SPRINT
 
-Toward **T0**: (1) G8 coverage lift if floors still open, else (2) Dema local-active proof loop (`node bin/dema` / doctor / outsider) with a receipt that can later support Node0-close measurement, else (3) Cartographer intake if artifacts present. Prefer local proof over waiting on Actions billing.
+Toward **T0**: (1) Land/push open slice PRs (cartographer + measurement receipt), else (2) wire a real soak producer under exact consent, else (3) Cartographer JSON stamps under typed `--root`. Prefer local proof over waiting on Actions billing.
