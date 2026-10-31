@@ -91,7 +91,8 @@ function isPlainObject(v) {
 
 // --- rail evaluators -------------------------------------------------------
 
-function evaluateProvenance(trace_set) {
+// Preserve historical v0.1 derivation; v0.2 trims only the scope validation view.
+function evaluateProvenance(trace_set, trimScope = false) {
   const blocked = [];
   if (!Array.isArray(trace_set) || trace_set.length === 0) {
     return { ok: false, blocked_by: Object.freeze(["provenance_trace_set_empty"]) };
@@ -108,7 +109,8 @@ function evaluateProvenance(trace_set) {
     else if (seenIds.has(t.trace_id)) blocked.push(`provenance_duplicate_trace_id:${t.trace_id}`);
     else seenIds.add(t.trace_id);
 
-    if (!textVal(t.scope).trim()) blocked.push(`${prefix}_scope_missing`);
+    const scope = trimScope ? textVal(t.scope).trim() : textVal(t.scope);
+    if (!scope.trim()) blocked.push(`${prefix}_scope_missing`);
     if (!TRACE_COMPLETENESS_VALUES.includes(t.completeness))
       blocked.push(`${prefix}_completeness_invalid:${String(t.completeness)}`);
     if (!textVal(t.correlation_limit).trim())
@@ -118,7 +120,7 @@ function evaluateProvenance(trace_set) {
     if (!HEX64_RE.test(h)) blocked.push(`${prefix}_source_sha256_invalid`);
     if (!textVal(t.observed_at).trim()) blocked.push(`${prefix}_observed_at_missing`);
     // scope must be explicitly declared — no inferred or empty scope
-    if (textVal(t.scope) === "UNKNOWN" || textVal(t.scope) === "*")
+    if (scope === "UNKNOWN" || scope === "*")
       blocked.push(`${prefix}_scope_not_explicit`);
   }
   return { ok: blocked.length === 0, blocked_by: Object.freeze(blocked) };
@@ -552,7 +554,7 @@ export function runTraceDiagnosticContractGate({ input = defaultTraceDiagnosticF
 
 export function buildTraceDiagnosticContractV2(input = {}) {
   const normalized = normalizeInput(input);
-  const prov = evaluateProvenance(normalized.trace_set);
+  const prov = evaluateProvenance(normalized.trace_set, true);
   const cons = evaluateConsistencyV2(
     normalized.trace_set,
     normalized.hypothesis_graph,
