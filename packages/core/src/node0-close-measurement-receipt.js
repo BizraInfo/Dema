@@ -1,16 +1,17 @@
 // NODE0-CLOSE-MEASUREMENT-RECEIPT-1A
 //
 // Measurement overlay on the ten-invariant closure ledger. Closure DNA already
-// lives in node0-closure-invariants.js (sole emitter of the node-scope closed
-// flag). This module READS that ledger and refuses to admit NODE0_CLOSED on a
-// measurement receipt until BOTH:
+// lives in node0-closure-invariants.js (sole emitter of the node-scope
+// `node0_closed` flag). This module READS that ledger and refuses
+// `measurement_admits_closed` until BOTH:
 //
 //   1. remote_write is SATISFIED on the ledger (no external write path), and
-//   2. an endurance soak observation is SATISFIED at scope node0_endurance_soak.
+//   2. an endurance soak observation is SATISFIED at scope node0_endurance_soak
+//      for at least 72h (callers may raise the floor, never lower it).
 //
-// Silence / missing soak ⇒ NODE0_CLOSED stays false. A forged ledger that claims
-// CLOSED while soak or remote_write is open is refused (ok:false), never laundered
-// into a green admission.
+// Silence / missing soak ⇒ measurement_admits_closed stays false. A forged
+// ledger that claims CLOSED while soak or remote_write is open is refused
+// (ok:false), never laundered into a green admission.
 //
 // Pure · deterministic · no fs/network/daemon/mint. Does not widen authority.
 
@@ -31,9 +32,9 @@ export const SOAK_OBSERVATION_SCOPE = "node0_endurance_soak";
 export const DEFAULT_SOAK_MIN_DURATION_SECONDS = 72 * 60 * 60;
 
 const WHAT_THIS_PROVES =
-  "Whether a measured receipt may admit NODE0_CLOSED given the closure ledger plus soak and remote_write admission predicates.";
+  "Whether a measured receipt may set measurement_admits_closed given the closure ledger plus soak and remote_write admission predicates.";
 const WHAT_THIS_DOES_NOT_PROVE =
-  "Does not prove live soak occurred, that remote_write was measured honestly, activation, federation, mint, or that Node0 is closed in production.";
+  "Does not prove live soak occurred, that remote_write was measured honestly, activation, federation, mint, or that Node0 is closed in production. Does not emit node-scope node0_closed.";
 
 function textVal(v) {
   return typeof v === "string" ? v : "";
@@ -152,10 +153,11 @@ function remoteWriteRow(ledger) {
  */
 export function buildNode0CloseMeasurementReceipt(input = {}) {
   const blocked_by = [];
+  // Floor is always ≥ 72h. Callers may only raise the bar, never lower it.
+  const requestedMin = Number(input.min_soak_duration_seconds);
   const minSoak =
-    Number.isFinite(input.min_soak_duration_seconds) &&
-    input.min_soak_duration_seconds > 0
-      ? input.min_soak_duration_seconds
+    Number.isFinite(requestedMin) && requestedMin > 0
+      ? Math.max(DEFAULT_SOAK_MIN_DURATION_SECONDS, requestedMin)
       : DEFAULT_SOAK_MIN_DURATION_SECONDS;
 
   let ledger = input.closure_ledger;
@@ -236,7 +238,12 @@ export function buildNode0CloseMeasurementReceipt(input = {}) {
 
   // Force-false when any admission predicate fails — even if a caller forged
   // a CLOSED ledger that somehow passed shape checks without soak.
-  const NODE0_CLOSED = admitClosed === true;
+  //
+  // Naming: this is NOT the node-scope closure flag. Sole emitter of
+  // `node0_closed` remains packages/core/src/node0-closure-invariants.js.
+  // This receipt only reports whether measurement admission would allow a
+  // later operator claim; it does not mint node closure.
+  const measurement_admits_closed = admitClosed === true;
 
   // ok = measurement usable. OPEN with honest blockers is still ok:true.
   // ok:false only when the supplied ledger cannot be verified.
@@ -246,8 +253,8 @@ export function buildNode0CloseMeasurementReceipt(input = {}) {
     schema: NODE0_CLOSE_MEASUREMENT_RECEIPT_SCHEMA,
     truth_label: NODE0_CLOSE_MEASUREMENT_RECEIPT_TRUTH_LABEL,
     ok,
-    NODE0_CLOSED,
-    verdict: NODE0_CLOSED ? "CLOSED" : "OPEN",
+    measurement_admits_closed,
+    admission_verdict: measurement_admits_closed ? "ADMITTED" : "OPEN",
     head_sha: textVal(input.head_sha).trim() || null,
     measured_at: textVal(input.measured_at).trim() || null,
     closure_ledger: ledger,
@@ -263,6 +270,7 @@ export function buildNode0CloseMeasurementReceipt(input = {}) {
     admission: Object.freeze({
       soak_required: true,
       remote_write_required: true,
+      soak_min_duration_seconds: minSoak,
       soak_satisfied: soakAdmission.status === INVARIANT_STATUS.SATISFIED,
       remote_write_satisfied: remoteWriteOk,
       ledger_claims_closed: ledgerFlag,

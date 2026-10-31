@@ -5,7 +5,7 @@
  * Gathers whatever closure adapters can observe (same set as the review gate),
  * overlays soak/remote_write admission, and prints JSON. On a typical host with
  * no soak artefact and incomplete remote_write evidence this prints
- * NODE0_CLOSED:false with ok:true (usable OPEN measurement).
+ * measurement_admits_closed:false with ok:true (usable OPEN measurement).
  *
  * Boundary: no mint, no daemon start, no network beyond what adapters already
  * refuse; soak is never invented.

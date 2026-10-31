@@ -55,8 +55,8 @@ describe("node0-close-measurement-receipt", () => {
     });
     assert.equal(r.schema, NODE0_CLOSE_MEASUREMENT_RECEIPT_SCHEMA);
     assert.equal(r.ok, true);
-    assert.equal(r.NODE0_CLOSED, false);
-    assert.equal(r.verdict, "OPEN");
+    assert.equal(r.measurement_admits_closed, false);
+    assert.equal(r.admission_verdict, "OPEN");
     assert.equal(r.authority_delta, 0);
     assert.equal(isCanonicalBoundary(r.boundary), true);
     assert.equal(r.admission.soak_satisfied, false);
@@ -73,7 +73,7 @@ describe("node0-close-measurement-receipt", () => {
       // soak omitted
     });
     assert.equal(r.ok, true);
-    assert.equal(r.NODE0_CLOSED, false);
+    assert.equal(r.measurement_admits_closed, false);
     assert.equal(r.admission.ledger_claims_closed, true);
     assert.equal(r.admission.remote_write_satisfied, true);
     assert.equal(r.admission.soak_satisfied, false);
@@ -86,7 +86,7 @@ describe("node0-close-measurement-receipt", () => {
       closure_ledger: ledger,
       soak: healthySoak({ observed_duration_seconds: 3600 }),
     });
-    assert.equal(r.NODE0_CLOSED, false);
+    assert.equal(r.measurement_admits_closed, false);
     assert.equal(r.soak.status, "VIOLATED");
     assert.equal(r.soak.reason, "soak_duration_below_minimum");
   });
@@ -98,8 +98,8 @@ describe("node0-close-measurement-receipt", () => {
       soak: healthySoak(),
     });
     assert.equal(r.ok, true);
-    assert.equal(r.NODE0_CLOSED, true);
-    assert.equal(r.verdict, "CLOSED");
+    assert.equal(r.measurement_admits_closed, true);
+    assert.equal(r.admission_verdict, "ADMITTED");
     assert.equal(r.blocked_by.length, 0);
   });
 
@@ -112,7 +112,7 @@ describe("node0-close-measurement-receipt", () => {
       closure_ledger: ledger,
       soak: healthySoak(),
     });
-    assert.equal(r.NODE0_CLOSED, false);
+    assert.equal(r.measurement_admits_closed, false);
     assert.equal(r.remote_write.status, "VIOLATED");
   });
 
@@ -133,7 +133,7 @@ describe("node0-close-measurement-receipt", () => {
       soak: healthySoak(),
     });
     assert.equal(r.ok, false);
-    assert.equal(r.NODE0_CLOSED, false);
+    assert.equal(r.measurement_admits_closed, false);
   });
 
   test("evaluateSoakAdmission rejects wrong scope", () => {
@@ -148,6 +148,18 @@ describe("node0-close-measurement-receipt", () => {
     assert.equal(s.required_scope, SOAK_OBSERVATION_SCOPE);
   });
 
+
+  test("cannot lower soak floor below 72h via min_soak_duration_seconds", () => {
+    const ledger = evaluateNode0ClosureInvariants(allSatisfiedEvidence());
+    const r = buildNode0CloseMeasurementReceipt({
+      closure_ledger: ledger,
+      soak: healthySoak({ observed_duration_seconds: 1 }),
+      min_soak_duration_seconds: 1,
+    });
+    assert.equal(r.measurement_admits_closed, false);
+    assert.equal(r.admission.soak_min_duration_seconds, DEFAULT_SOAK_MIN_DURATION_SECONDS);
+    assert.equal(r.soak.status, "VIOLATED");
+  });
   test("soak scope constant is not the remote_write scope", () => {
     assert.notEqual(SOAK_OBSERVATION_SCOPE, REMOTE_WRITE_OBSERVATION_SCOPE);
   });
