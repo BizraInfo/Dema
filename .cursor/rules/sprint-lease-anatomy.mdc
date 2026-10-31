@@ -93,9 +93,10 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | P11 | Doctor awaiting-activation resting (no false ❌) + run-dema smoke | DONE @ season face slice |
 | P12 | Gateway-http measured ready (chain+VERIFIED principal) | DONE — live Ready:true / doctor operational |
 | — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
-| — | Node0-close measurement receipt | DONE kernel — `proof:node0-close-measurement`; soak+remote_write admission; live pulse OPEN |
+| — | Node0-close measurement receipt | DONE on `main` @ `71a1280b` — `proof:node0-close-measurement`; soak+remote_write admission OPEN |
+| — | Soak judgment → admission bridge | KERNEL on `slice/node0-soak-judgment-admission-1a` — live judgment projects `soak_duration_below_minimum` (40217s), not `no_evidence` |
 | — | Cartographer JSON artifacts | OPEN — PDF measured; three JSON stamps absent; no silent ingest |
 
 ## Default next slice when user says SPRINT
 
-Toward **T0**: (1) Land/push open slice PRs (cartographer + measurement receipt), else (2) wire a real soak producer under exact consent, else (3) Cartographer JSON stamps under typed `--root`. Prefer local proof over waiting on Actions billing.
+Toward **T0**: (1) Land cartographer PR #505 after CI green, else (2) restart/complete a real ≥72h soak under exact consent (unit currently absent; last run INSUFFICIENT), else (3) remote_write observation adapter, else (4) Cartographer JSON stamps under typed `--root`.
