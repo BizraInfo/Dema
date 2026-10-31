@@ -1,0 +1,353 @@
+{
+  "schema": "bizra.c005_candidate_lineage_record.v0.1",
+  "record_id": "C-005-CANDIDATE-LINEAGE-20261004T181623Z",
+  "created_at_utc": "2026-10-04T19:00:57.564Z",
+  "status": "UNSEALED",
+  "crossing_status": "PENDING",
+  "source_snapshot": {
+    "repository_root": "/home/bizra-operating-system/Downloads/Dema",
+    "branch": "main",
+    "head_sha": "282b2b2903df341a0f5f5bdc626c787e6f764d70",
+    "worktree_state": "DIRTY_WORKING_TREE",
+    "index_state": "UNCHANGED_EMPTY",
+    "manifest_path": "docs/receipts/crossings/C-005-20261004T181623Z-candidate-source-manifest.json",
+    "manifest_sha256": "a5a77c268e44380c77c1ccf9048db6c6aeaa1933a3c52d5d30025fe42b3f2a51",
+    "manifest_file_count": 2984,
+    "manifest_format": "sorted-key compact JSON map of Git-listed repository-relative paths to SHA256, trailing newline",
+    "review_binding": "UNKNOWN: the retained manifest binds the prior local snapshot, but the exact review artifact is not bound to this full manifest."
+  },
+  "approved_workflow_artifact": {
+    "reviewed_patch_sha256": "d2e0022da199c531f255b17ffe23ab37774dad2dc7f66109844b684af1b29bb8",
+    "workflow_sha256": "13fb98ad1522c199d26b7b563002260dbb20e741bd84bc4b612e50bbe6ab76e1",
+    "source_manifest_relation": "BYTE_IDENTICAL",
+    "note": "The workflow payload itself matches the approved patch; this does not establish identity of the complete UI candidate."
+  },
+  "prior_ui_source_bindings": {
+    "path": "/tmp/dema-c005-proof-UL78wH/ui-source-bindings.json",
+    "sha256": "07ce605ccb1225e240c93e82172ac09b8480cecd81f599fc9c1a619d44fa3c42",
+    "entries": [
+      {
+        "path": "packages/dema-ui/src/app/realm/page.tsx",
+        "sha256": "8d3b05bdc46e4aca5dde5b4f631d814fc22e5bc0feb6d4507a577d5aedb443d1",
+        "fixture_matches": true
+      },
+      {
+        "path": "packages/dema-ui/src/components/game/CiRaid.tsx",
+        "sha256": "72b3e8625058494e9bbff35faab036c586ee1e04684a8feb740b4d383b32f074",
+        "fixture_matches": true
+      },
+      {
+        "path": "packages/dema-ui/src/components/game/RealResources.tsx",
+        "sha256": "854bd6a2e63c0598c03327485a8594831aa3532882d2f57c155f691722db9ea8",
+        "fixture_matches": true
+      },
+      {
+        "path": "packages/dema-ui/src/components/ui/carousel.tsx",
+        "sha256": "8e8c508d1721d6456e4978944e490aa17fe7bca646fb931cb406ee7d70b5db3e",
+        "fixture_matches": true
+      },
+      {
+        "path": "packages/dema-ui/src/hooks/use-lang.ts",
+        "sha256": "80904be046754cf50bbee74006ad2041d48a62e985e94d0774dcfcca9ed431ca",
+        "fixture_matches": true
+      },
+      {
+        "path": "packages/dema-ui/src/hooks/use-mobile.ts",
+        "sha256": "d2804754b4fae9b6517078f28d5f5e644e4afc7df208816e5427c6d8f77eba2e",
+        "fixture_matches": true
+      },
+      {
+        "path": "packages/dema-ui/tests/ui-lifecycle.proof.mjs",
+        "sha256": "1bf4cadbb5e64098e44ad51c9cc44c03a1603947c022d9e259fa4ae129d72a58",
+        "fixture_matches": true
+      }
+    ],
+    "scope_note": "Seven UI source/proof files only; not a full reviewed-candidate manifest."
+  },
+  "transformation": {
+    "base_branch": "main",
+    "base_sha": "e10d5842726d8c1b228f4bb6c23a9771d3510569",
+    "derived_tree_sha1": "19b4a1e5da2b46f7d6821bdde0116cb399733453",
+    "published_commit_sha": "04d007baadf640fe10f1e052f9a8f5b1876fc7b2",
+    "changed_path_count": 18,
+    "path_relations_to_source_manifest": {
+      "byte_identical": 13,
+      "diverged": 4,
+      "absent": 1
+    },
+    "per_file_map": [
+      {
+        "path": ".github/workflows/dema-ui.yml",
+        "change_status": "A",
+        "source_manifest_sha256": "13fb98ad1522c199d26b7b563002260dbb20e741bd84bc4b612e50bbe6ab76e1",
+        "base_sha256": null,
+        "derived_candidate_sha256": "13fb98ad1522c199d26b7b563002260dbb20e741bd84bc4b612e50bbe6ab76e1",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Add the dedicated hosted UI qualification job with locked install, package tests, typecheck, lint, build, dependency audit, read-only permissions, and pinned actions."
+      },
+      {
+        "path": "packages/core/src/dema-identity-root-canon.js",
+        "change_status": "M",
+        "source_manifest_sha256": "b614b5afb364d2e15fcd2024884ee7e8dea0958dac181b63a779dd3f75cd7d7c",
+        "base_sha256": "73b7a8513cf345cd3a0bfcc41e19ad81c0dd7db6a20f463aec519ef0209c1b60",
+        "derived_candidate_sha256": "380438e1f742aa550b19e6bce971a7d3fdd172e890fbe482d8448392bb1ca799",
+        "source_relation": "DIVERGED_FROM_SOURCE_MANIFEST",
+        "rationale": "Add the JSDoc shape for measured root_files so the current-main UI TypeScript check can type the identity-canon call."
+      },
+      {
+        "path": "packages/core/src/first-encounter-admission.js",
+        "change_status": "M",
+        "source_manifest_sha256": "475fb043fa0c72a3622a572b60a540c5de9461d76bb800a6f544ba627832f048",
+        "base_sha256": "07ba60406bee8b81ebe5faeb151dd2d0d0a1f13d74b70fafd1671acae38fa317",
+        "derived_candidate_sha256": "475fb043fa0c72a3622a572b60a540c5de9461d76bb800a6f544ba627832f048",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Add the buildConsentContract input JSDoc needed for current-main TypeScript inference at the UI API call sites."
+      },
+      {
+        "path": "packages/dema-ui/next.config.ts",
+        "change_status": "M",
+        "source_manifest_sha256": "da2a32d03aae7d8d97974bc40814b2ba9dad04668794f5de14a9caa66a1e3d0a",
+        "base_sha256": "75f5f4936b35a694d284525073fcf772e6087faae03005f76f358e9b8ff20203",
+        "derived_candidate_sha256": "da2a32d03aae7d8d97974bc40814b2ba9dad04668794f5de14a9caa66a1e3d0a",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Remove ignoreBuildErrors so the production build cannot bypass TypeScript failures."
+      },
+      {
+        "path": "packages/dema-ui/package.json",
+        "change_status": "M",
+        "source_manifest_sha256": "27b455111e80933f164b29f32e02492953c11bb25317e989afefe7685995a047",
+        "base_sha256": "7df1b7bafbecccba9efee42e887346a2fbb01fafac3e67b1dee485ac3b457733",
+        "derived_candidate_sha256": "8491928321bd4a84d6cc96b481f763d4051bbfdfa395b8dacc2420cf07206443",
+        "source_relation": "DIVERGED_FROM_SOURCE_MANIFEST",
+        "rationale": "Add the package typecheck script while retaining the current-main dependency set and existing lockfile."
+      },
+      {
+        "path": "packages/dema-ui/src/app/api/demo/node0-value-loop/route.ts",
+        "change_status": "M",
+        "source_manifest_sha256": "6be57f30f8ce7192b1f2001ea693a1410c94bb960715b95d6e8fcb28dbf5656e",
+        "base_sha256": "10e3b35989cd074ed0eb5dfa5c81fa89a55cead17cf17371fcce47ae669dee09",
+        "derived_candidate_sha256": "6be57f30f8ce7192b1f2001ea693a1410c94bb960715b95d6e8fcb28dbf5656e",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Remove an obsolete ts-expect-error after the plain ESM import is typechecked."
+      },
+      {
+        "path": "packages/dema-ui/src/app/api/first-encounter/admit/route.ts",
+        "change_status": "M",
+        "source_manifest_sha256": "10998bd6d19bef900ec0678dddf4a5629ae4c594716777d17915aaed5f3c10b6",
+        "base_sha256": "441008663aa6de3850c2983f5710463d822c2eb824e57cb8e2bf7eefe12245c6",
+        "derived_candidate_sha256": "10998bd6d19bef900ec0678dddf4a5629ae4c594716777d17915aaed5f3c10b6",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Remove two obsolete ts-expect-error suppressions after current-main ESM call-site types are supplied."
+      },
+      {
+        "path": "packages/dema-ui/src/app/api/first-encounter/inventory/route.ts",
+        "change_status": "M",
+        "source_manifest_sha256": "5d5a898fbd69cde4a6f2928bdd43d3fa38d14ff527919ab188b483b9868d9e0f",
+        "base_sha256": "06864853f1b68a57da58701d7498bbeafbc17a35241cee5791e07d85ce0da709",
+        "derived_candidate_sha256": "5d5a898fbd69cde4a6f2928bdd43d3fa38d14ff527919ab188b483b9868d9e0f",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Remove two obsolete ts-expect-error suppressions after current-main ESM call-site types are supplied."
+      },
+      {
+        "path": "packages/dema-ui/src/app/api/mission/node0-runtime.ts",
+        "change_status": "M",
+        "source_manifest_sha256": null,
+        "base_sha256": "675888fca53e4729f73bcf159380b4e63e33d1164589eb389c39ac26dc4474b1",
+        "derived_candidate_sha256": "5b9700bde85d0d91b46c97212e913a69709a2433ea8358fdb09002d9f95cd2dc",
+        "source_relation": "NOT_PRESENT_IN_SOURCE_MANIFEST",
+        "rationale": "Annotate the current-main root_files array with the identity-canon input shape required by the full UI typecheck."
+      },
+      {
+        "path": "packages/dema-ui/src/components/game/AgentDetailDialog.tsx",
+        "change_status": "M",
+        "source_manifest_sha256": "ca1c54d3806733b29a396f6cb8e2ef6717560c719e4e304d36f8a18503bddd64",
+        "base_sha256": "2a59ae3fa595564f38f1923ddf6e77885e32443dcd79c80f56bb3aa1d5f52770",
+        "derived_candidate_sha256": "ca1c54d3806733b29a396f6cb8e2ef6717560c719e4e304d36f8a18503bddd64",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Render UNKNOWN for an absent truth label so missing truth is not presented as an empty or positive state."
+      },
+      {
+        "path": "packages/dema-ui/src/components/game/AgentPanel.tsx",
+        "change_status": "M",
+        "source_manifest_sha256": "df561b19e51ea05dfa76d2ae8c159380eef75df27cfac120a31dcf249c0586ae",
+        "base_sha256": "974f965e30b41735e9c6a513cfff46a232a4499c7a48c4ca45baeb2b85ccf9ab",
+        "derived_candidate_sha256": "df561b19e51ea05dfa76d2ae8c159380eef75df27cfac120a31dcf249c0586ae",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Render UNKNOWN for an absent truth label so missing truth is not presented as an empty or positive state."
+      },
+      {
+        "path": "packages/dema-ui/src/components/game/CiRaid.tsx",
+        "change_status": "M",
+        "source_manifest_sha256": "72b3e8625058494e9bbff35faab036c586ee1e04684a8feb740b4d383b32f074",
+        "base_sha256": "5dfe487e71490124ef8cc9636c2535d15d2d1f9e3303afd2c0a14bfdee45f954",
+        "derived_candidate_sha256": "72b3e8625058494e9bbff35faab036c586ee1e04684a8feb740b4d383b32f074",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Make local demo timers and asynchronous work cancel safely on reset/unmount and prevent duplicate local completion receipts."
+      },
+      {
+        "path": "packages/dema-ui/src/components/game/RealResources.tsx",
+        "change_status": "M",
+        "source_manifest_sha256": "854bd6a2e63c0598c03327485a8594831aa3532882d2f57c155f691722db9ea8",
+        "base_sha256": "16d89ff5c6ee80cdc882c0de1eda92a3d125089ae5db42a138281565d300fdd6",
+        "derived_candidate_sha256": "854bd6a2e63c0598c03327485a8594831aa3532882d2f57c155f691722db9ea8",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Bind telemetry fetches to abort signals, reject stale overlapping results, and report request failure truthfully."
+      },
+      {
+        "path": "packages/dema-ui/src/components/ui/carousel.tsx",
+        "change_status": "M",
+        "source_manifest_sha256": "8e8c508d1721d6456e4978944e490aa17fe7bca646fb931cb406ee7d70b5db3e",
+        "base_sha256": "6dfd1471ac163b8f74f466f60aecd4cfdc8aee9dd5752c48c598d79d5b8ccbf9",
+        "derived_candidate_sha256": "8e8c508d1721d6456e4978944e490aa17fe7bca646fb931cb406ee7d70b5db3e",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Use stable external-store snapshots and clean up both Embla subscriptions."
+      },
+      {
+        "path": "packages/dema-ui/src/hooks/use-lang.ts",
+        "change_status": "M",
+        "source_manifest_sha256": "80904be046754cf50bbee74006ad2041d48a62e985e94d0774dcfcca9ed431ca",
+        "base_sha256": "349895f1271103329432a0507d3e75fad98098f2ca4e23c0aa6cd62c2685f1b8",
+        "derived_candidate_sha256": "80904be046754cf50bbee74006ad2041d48a62e985e94d0774dcfcca9ed431ca",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Keep language state usable when storage is denied and synchronize local and cross-tab preference changes with listener cleanup."
+      },
+      {
+        "path": "packages/dema-ui/src/hooks/use-mobile.ts",
+        "change_status": "M",
+        "source_manifest_sha256": "d2804754b4fae9b6517078f28d5f5e644e4afc7df208816e5427c6d8f77eba2e",
+        "base_sha256": "eea2ff67d114ded9b594aa51a5028154c60e2f5f6772661e84743ba21db2c34c",
+        "derived_candidate_sha256": "d2804754b4fae9b6517078f28d5f5e644e4afc7df208816e5427c6d8f77eba2e",
+        "source_relation": "BYTE_IDENTICAL_TO_SOURCE_MANIFEST",
+        "rationale": "Use matchMedia-backed snapshots with deterministic server state and exact change-listener cleanup."
+      },
+      {
+        "path": "packages/dema-ui/tests/ui-lifecycle.proof.mjs",
+        "change_status": "A",
+        "source_manifest_sha256": "1bf4cadbb5e64098e44ad51c9cc44c03a1603947c022d9e259fa4ae129d72a58",
+        "base_sha256": null,
+        "derived_candidate_sha256": "9bb179b9528ab0341580b1ffaef1f60f034cfd60b884230e64d56f227286207b",
+        "source_relation": "DIVERGED_FROM_SOURCE_MANIFEST",
+        "rationale": "Add package lifecycle tests; adapt realm coverage to retain current-main NowSurface and its client-only dynamic GameShell boundary."
+      },
+      {
+        "path": "packages/dema-ui/tsconfig.json",
+        "change_status": "M",
+        "source_manifest_sha256": "a7bdadfbcc0ef0a0194c7e6f06660976ff204fec05db2212a0a5ca702d265c22",
+        "base_sha256": "bf3249109546b00d8bba7dff3fe12742947bdcc229eb5632f496504c73501c1e",
+        "derived_candidate_sha256": "655476e57a9fbf06fc3d5e0bb973cf833566f16b487c7fe01e61c2212ae05072",
+        "source_relation": "DIVERGED_FROM_SOURCE_MANIFEST",
+        "rationale": "Add the @node-adapter path mapping required by current-main imports and retain allowImportingTsExtensions in compilerOptions."
+      }
+    ],
+    "retained_base_behavior": [
+      {
+        "path": "packages/dema-ui/src/app/realm/page.tsx",
+        "original_source_manifest_sha256": "8d3b05bdc46e4aca5dde5b4f631d814fc22e5bc0feb6d4507a577d5aedb443d1",
+        "prior_ui_source_binding_sha256": "8d3b05bdc46e4aca5dde5b4f631d814fc22e5bc0feb6d4507a577d5aedb443d1",
+        "current_base_sha256": "ed24acdfbb6f859d9284e41ae1eed0d66bf8b622b3e3f112524336ecffe296c8",
+        "derived_candidate_sha256": "ed24acdfbb6f859d9284e41ae1eed0d66bf8b622b3e3f112524336ecffe296c8",
+        "disposition": "PRESERVED_FROM_CURRENT_REMOTE_MAIN",
+        "rationale": "The prior local realm source would have removed NowSurface and replaced the current client-only dynamic GameShell composition. Review caught this rollback; the derived candidate retains current remote-main behavior."
+      }
+    ],
+    "lineage_status": "UNSEALED",
+    "unresolved_edges": [
+      "The retained source snapshot is a dirty local working-tree manifest; its association with a complete reviewed candidate is UNKNOWN.",
+      "Four changed paths differ from the source manifest and one changed path is absent from it; reasons are mapped above, but exact prior review coverage for those transformations is not retained as a cryptographic review artifact."
+    ]
+  },
+  "local_requalification": {
+    "tracked_source_tree_after_checks_and_commit": "19b4a1e5da2b46f7d6821bdde0116cb399733453",
+    "binding": "Checks ran in the isolated worktree before commit. No candidate source changed between those checks and commit; post-commit status showed only the temporary PR body file untracked. The commit tree therefore represents the checked source bytes, while the check logs themselves do not contain a contemporaneous tree hash.",
+    "checks": [
+      {
+        "command": "node --test tests/*.test.mjs tests/ui-lifecycle.proof.mjs",
+        "result": "97 passed / 0 failed"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 npm run typecheck",
+        "result": "PASS"
+      },
+      {
+        "command": "npm run lint",
+        "result": "PASS"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 npm run build",
+        "result": "PASS; NFT tracing warning emitted"
+      },
+      {
+        "command": "node --test tests/first-encounter-admission.test.js tests/dema-identity-root-canon.test.js",
+        "result": "32 passed / 0 failed"
+      },
+      {
+        "command": "package.json dependency/toolchain metadata compared with package-lock.json",
+        "result": "MATCH"
+      },
+      {
+        "command": "git diff --check",
+        "result": "PASS"
+      }
+    ],
+    "retained_log_bindings": [
+      {
+        "path": "/tmp/dema-c005-publish-ui-tests.log",
+        "sha256": "fd14d16fe6018a1bcd470a1972729d8a7c997fa5eabec2ca8eb079d6a477349e"
+      },
+      {
+        "path": "/tmp/dema-c005-publish-typecheck3.log",
+        "sha256": "55e214f247780c45542620859afe7707139bf613cc25ba28992624fced9bb31b"
+      },
+      {
+        "path": "/tmp/dema-c005-publish-lint.log",
+        "sha256": "57f8bece08630fe6799b2e087da825b5d9cba1018e844c88b47631bb465e2567"
+      },
+      {
+        "path": "/tmp/dema-c005-publish-build.log",
+        "sha256": "f21450ee1d24f9c4b84ea95ed33560777c769ccf09fb5f5721327c267898b6a4"
+      },
+      {
+        "path": "/tmp/dema-c005-publish-core-tests.log",
+        "sha256": "272f45896398b0948f7f70b4be626bafe509a8650b7ec019e42e5802abbfff80"
+      }
+    ]
+  },
+  "hosted_qualification": {
+    "receipt_path": "docs/receipts/crossings/C-005-20261004T181623Z-hosted-ui-qualification-partial.json",
+    "receipt_sha256": "8482532d9bdd952931a8cd4ad3d237d5af3a4a82ebfca0c5c075456c166a6c32",
+    "pull_request": "https://github.com/BizraInfo/Dema/pull/479",
+    "workflow_run_id": 37223732368,
+    "workflow_run_url": "https://github.com/BizraInfo/Dema/actions/runs/37223732368",
+    "run_head_sha": "04d007baadf640fe10f1e052f9a8f5b1876fc7b2",
+    "exact_head_match": true,
+    "workflow_result": "FAILURE: dependency audit; package tests/typecheck/lint/build passed",
+    "dependency_audit": "CRITICAL Next.js next/og ImageResponse advisory GHSA-vcvr-r3jv-pc5j",
+    "required_check_binding": "UNBOUND",
+    "run_head_matches_published_commit": true,
+    "actions_checkout": {
+      "ref": "refs/remotes/pull/479/merge",
+      "commit_sha": "2f64657a1c7c40d7bc53a355885b14984d681164",
+      "tree_sha": "19b4a1e5da2b46f7d6821bdde0116cb399733453",
+      "candidate_tree_sha1": "19b4a1e5da2b46f7d6821bdde0116cb399733453",
+      "tree_matches_published_candidate": true
+    },
+    "execution_identity_statement": "The workflow run is attributed to exact PR head 04d007b…; actions/checkout used synthetic merge commit 2f64657a…, whose tree equals published candidate tree 19b4a1e5…. Exact candidate source-tree bytes therefore ran; the checkout commit object itself is the synthetic merge commit.",
+    "checkout_evidence": [
+      "Run log fetches 2f64657a1c7c40d7bc53a355885b14984d681164 to refs/remotes/pull/479/merge and checks out that ref.",
+      "PR API binds head 04d007baadf640fe10f1e052f9a8f5b1876fc7b2 and base e10d5842726d8c1b228f4bb6c23a9771d3510569 to merge commit 2f64657a1c7c40d7bc53a355885b14984d681164.",
+      "GitHub commit API reports merge tree 19b4a1e5da2b46f7d6821bdde0116cb399733453, equal to the published candidate tree."
+    ]
+  },
+  "canonical_historical_claim": "A derived C-005 qualification candidate was reconstructed on current remote main, locally requalified, and hosted on its exact published head.",
+  "proof_ceiling": "The PR head SHA equals published commit 04d007b…. The runner checked out synthetic merge commit 2f64657a… whose tree equals the published candidate tree 19b4a1e5…. Exact candidate source-tree execution is VERIFIED. The original review-to-derived-candidate edge remains UNSEALED. C-005 remains PENDING.",
+  "boundary": {
+    "execution_authority_changed": false,
+    "runtime_mission_started": false,
+    "DEMA_HOME_mutated": false,
+    "GitHub_state_changed_by_this_recording": false,
+    "hosted_receipt_changed": false,
+    "crossing_ledger_changed": false,
+    "C005_status_changed": false,
+    "authority_delta": 0
+  }
+}
