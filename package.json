@@ -41,6 +41,7 @@
     "proof:outsider": "node scripts/proof/outsider-first-run-loop.mjs",
     "proof:watchdog": "node scripts/proof/sprint-quality-watchdog.mjs",
     "proof:cartographer-intake": "node scripts/proof/cartographer-claim-stamp-intake.mjs",
+    "proof:node0-close-measurement": "node scripts/proof/node0-close-measurement-receipt.mjs",
     "pat-sat:blackboard:check": "node scripts/review/pat-sat-blackboard-dry-run-check.mjs",
     "eval:layer1": "node scripts/artifact-safety-check.mjs",
     "smoke-boundary": "node scripts/smoke-boundary.mjs",

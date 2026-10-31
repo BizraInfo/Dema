@@ -77,12 +77,12 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
-| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `main` @ `5cbe1072` (#503/#504 merged); outsider+doctor measured; NODE0_CLOSED **false**; DEMA_ACTIVE_LOCAL not claimed as Node0-closed |
+| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `main` @ `71a1280b` (#506 measurement receipt merged); `NODE0_CLOSED` stays false until soak+remote_write; cartographer PR #505 conflict-resolved onto main |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
 | P3 | Absorption Atlas map-only stub | DONE preview doc |
-| P4 | Cartographer claim-stamp intake (map-only) | **KERNEL DONE** — `assessCartographerIntake` + `proof:cartographer-intake`; Downloads PDF present / JSON **absent** ⇒ honest BLOCKED |
+| P4 | Cartographer claim-stamp intake (map-only) | **KERNEL** — `assessCartographerIntake` + `proof:cartographer-intake`; Downloads PDF present / JSON **absent** ⇒ honest BLOCKED |
 | P5 | Outsider reduced-PATH suite | DONE @ `7cc9e804` |
 | P6 | `npm run proof:outsider` one-command loop | DONE |
 | P6b | Doctor/first-run/i18n outsider hints → `node bin/dema` | DONE |
@@ -93,8 +93,9 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | P11 | Doctor awaiting-activation resting (no false ❌) + run-dema smoke | DONE @ season face slice |
 | P12 | Gateway-http measured ready (chain+VERIFIED principal) | DONE — live Ready:true / doctor operational |
 | — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
+| — | Node0-close measurement receipt | DONE on `main` @ `71a1280b` — `proof:node0-close-measurement`; soak+remote_write admission OPEN |
 | — | Cartographer JSON artifacts | OPEN — PDF sha256 `dc75867f…5c4b78bb` measured; three JSON stamps still absent; no silent ingest |
 
 ## Default next slice when user says SPRINT
 
-Toward **T0**: (1) Node0-close measurement receipt that keeps `NODE0_CLOSED=false` until soak/remote-write predicates pass, else (2) Dema local-active throwaway-home proof loop with bound receipt, else (3) Cartographer JSON stamps when they land under a typed intake root. Prefer local proof over waiting on Actions billing. Reject PR #494 until rebased onto current `main`.
+Toward **T0**: (1) Land cartographer PR #505 after CI green, else (2) wire a real soak producer under exact consent, else (3) Cartographer JSON stamps under typed `--root`. Prefer local proof over waiting on Actions billing.
