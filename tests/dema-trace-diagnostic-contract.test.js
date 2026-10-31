@@ -145,6 +145,60 @@ test("T06: scope UNKNOWN is not explicit", () => {
   assert.equal(built.promotion_status, "BLOCKED");
 });
 
+test("v0.2 refuses reserved scopes despite whitespace and valid replay binding", () => {
+  for (const sentinel of ["*", "UNKNOWN"]) {
+    for (const padding of ["", " ", "\t\r\n", "\u00a0"]) {
+      for (const index of [0, 1]) {
+        const input = structuredClone(defaultTraceDiagnosticFixtureV2());
+        input.trace_set[index].scope = `${padding}${sentinel}${padding}`;
+        const gate = runTraceDiagnosticContractGateV2({ input: withV2ReplaySubjectHash(input) });
+        assert.equal(gate.rails.corroboration.ok, true);
+        assert.equal(gate.promotion_status, "BLOCKED", JSON.stringify(input.trace_set[index].scope));
+        assert.equal(gate.ok, false);
+        assert.ok(gate.blocked_by.includes(`provenance_trace_${index}_scope_not_explicit`));
+        assert.equal(verifyTraceDiagnosticContractV2(JSON.parse(JSON.stringify(gate.report))).ok, true);
+        assert.ok(Object.values(gate.report.boundary).every((value) => value === false));
+      }
+    }
+  }
+});
+
+test("v0.2 rejects pre-hardening authorization even after subject and report rehash", () => {
+  const forged = structuredClone(buildTraceDiagnosticContractV2(defaultTraceDiagnosticFixtureV2()));
+  forged.trace_set[0].scope = " * ";
+  forged.verification.replay_subject_hash = computeTraceDiagnosticReplaySubjectHashV2(
+    forged.trace_set, forged.hypothesis_graph, forged.insight_candidate,
+  );
+  const { diagnostic_hash: _omit, ...body } = forged;
+  forged.diagnostic_hash = `sha256:${createHash("sha256").update(stableJson(body)).digest("hex")}`;
+  assert.equal(forged.diagnostic_hash, "sha256:963ec1a7b37015eadf2feea573686f6a46b8c3dea09a454a1ca92ac4ff815299");
+  const verified = verifyTraceDiagnosticContractV2(forged);
+  assert.equal(verified.ok, false);
+  assert.ok(verified.blocked_by.includes("v2_semantic_rederivation_mismatch"));
+  assert.equal(runTraceDiagnosticContractGateV2({ report: forged }).ok, false);
+});
+
+test("v0.2 scope validation preserves raw evidence and pre-hardening valid hashes", () => {
+  const input = structuredClone(defaultTraceDiagnosticFixtureV2());
+  const ordinary = buildTraceDiagnosticContractV2(input);
+  assert.equal(ordinary.diagnostic_hash, "sha256:18f4eea788ecd68848e59fb1d7dcdac4ec6094d39157d245a6a0da3a3470fbe3");
+  input.trace_set[0].scope = ` \t${input.trace_set[0].scope}\r\n`;
+  const bound = withV2ReplaySubjectHash(input);
+  const gate = runTraceDiagnosticContractGateV2({ input: bound });
+  assert.equal(gate.ok, true);
+  assert.deepEqual(gate.report.trace_set, bound.trace_set);
+  assert.equal(gate.report.verification.replay_subject_hash, bound.verification.replay_subject_hash);
+  assert.equal(gate.diagnostic_hash, "sha256:80c321b3890b5ba8874d42efa34551ad1263f4045937f097bdbfe2a4f6ce8c4c");
+});
+
+test("historical v0.1 retains its pre-hardening padded-scope derivation", () => {
+  const input = structuredClone(defaultTraceDiagnosticFixture());
+  input.trace_set[0].scope = " * ";
+  const historical = buildTraceDiagnosticContract(input);
+  assert.equal(historical.diagnostic_hash, "sha256:833e19522a6596b05e6add552638d4e8bbf52e2fc58f297474b1e858612a052a");
+  assert.equal(verifyTraceDiagnosticContract(historical).ok, true);
+});
+
 // T07 — duplicate trace_id fails consistency/provenance
 test("T07: duplicate trace_id is blocked", () => {
   const t = validTrace("dup");
