@@ -864,6 +864,33 @@ test("release readiness rejects contradictory workflow evidence", () => {
     assert.equal(exitCodeFromEvaluation(verdict), 1);
   }
 
+  // Even with authorization, blank status / path escape / non-YAML must fail closed.
+  for (const changes of [
+    [{ status: "  ", path: ".github/workflows/check.yml" }],
+    [
+      {
+        status: "M",
+        path: ".github/workflows/../../src/other.yml",
+      },
+    ],
+    [{ status: "M", path: ".github/workflows/note.txt" }],
+  ]) {
+    const candidate = structuredClone(report);
+    candidate.ci.workflow.worktree_changes = changes;
+    candidate.ci.workflow.worktree_changes_authorized = true;
+    const verdict = evaluateReleaseReadiness(candidate);
+    assert.equal(
+      verdict.ok,
+      false,
+      `expected reject authorized-malformed changes=${JSON.stringify(changes)}; reasons=${verdict.reasons}`,
+    );
+    assert.match(
+      verdict.reasons.join(" "),
+      /workflow_worktree_changes_malformed/,
+    );
+    assert.equal(exitCodeFromEvaluation(verdict), 1);
+  }
+
   const authorizedDirty = structuredClone(report);
   authorizedDirty.ci.workflow.worktree_changes = [
     { status: "M", path: ".github/workflows/check.yml" },

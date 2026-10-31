@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, posix as pathPosix } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { formatReleaseReadinessReport } from "./release-readiness/format.mjs";
 import {
@@ -850,6 +850,33 @@ export function parseReleaseReadinessArgs(argv = []) {
   };
 }
 
+const WORKFLOW_CHANGE_DIR_PREFIX = ".github/workflows/";
+
+/**
+ * Admit only workflow YAML paths that stay under `.github/workflows/` after
+ * POSIX normalize (reject `../` escape via bare string-prefix alone).
+ */
+function isAdmittedWorkflowChangePath(pathValue) {
+  if (typeof pathValue !== "string" || pathValue.length === 0) return false;
+  if (pathValue.includes("\0") || pathPosix.isAbsolute(pathValue)) return false;
+  const normalized = pathPosix.normalize(pathValue.replaceAll("\\", "/"));
+  return (
+    normalized.startsWith(WORKFLOW_CHANGE_DIR_PREFIX) &&
+    /\.ya?ml$/i.test(normalized)
+  );
+}
+
+function isAdmittedWorkflowChangeEntry(change) {
+  return (
+    change !== null &&
+    typeof change === "object" &&
+    !Array.isArray(change) &&
+    typeof change.status === "string" &&
+    change.status.trim().length > 0 &&
+    isAdmittedWorkflowChangePath(change.path)
+  );
+}
+
 /**
  * PROOF-GATE-TEETH-HARDENING-1A · defect 1.
  *
@@ -899,17 +926,7 @@ export function evaluateReleaseReadiness(report, { minScore = 80 } = {}) {
   const changes = workflow?.worktree_changes;
   const workflowChangesIsArray = Array.isArray(changes);
   const workflowChangesEntriesOk =
-    workflowChangesIsArray &&
-    changes.every(
-      (change) =>
-        change !== null &&
-        typeof change === "object" &&
-        !Array.isArray(change) &&
-        typeof change.status === "string" &&
-        change.status.length > 0 &&
-        typeof change.path === "string" &&
-        change.path.startsWith(".github/workflows/"),
-    );
+    workflowChangesIsArray && changes.every(isAdmittedWorkflowChangeEntry);
   if (workflowStatusAvailable && !workflowChangesEntriesOk) {
     reasons.push("workflow_worktree_changes_malformed");
   }
