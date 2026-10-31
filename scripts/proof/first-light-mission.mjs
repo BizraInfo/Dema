@@ -177,7 +177,7 @@ export function runFirstLightMission({ workDir, now = FIRST_LIGHT_NOW } = {}) {
     proof_card: sealed.proof_card,
     authority_delta: sealed.authority_delta,
     seal_head: sealed.seal_head,
-    anchor_outside_scope: !anchorDir.startsWith(root),
+    anchor_outside_scope: !`${anchorDir}/`.startsWith(`${root}/`),
     replay: {
       replayed: replay.replayed,
       seal_head_matches: replay.seal_head_matches,
