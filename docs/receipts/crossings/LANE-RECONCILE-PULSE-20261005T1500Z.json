@@ -1,0 +1,100 @@
+{
+  "schema": "bizra.crossing.lane_reconciliation.v0.1",
+  "id": "LANE-RECONCILE-PULSE-20261005",
+  "generated_at_utc": "2026-10-05T14:59:42Z",
+  "authority_delta": 0,
+  "dema_home_mutated": false,
+  "campaign_state_mutated": false,
+  "node0_closed": false,
+  "truth_label": "LANE_LEDGER_DIVERGENCE_DECLARED",
+  "ledger": {
+    "found": true,
+    "path": "/home/bizra-operating-system/Downloads/Dema/docs/CROSSING_LEDGER.md",
+    "tracked_in_git": false,
+    "note": "Untracked in Downloads/Dema dirty checkout; absent from bizra-home docs/. Prior pulse rebind SOURCE_BOUND was correct at search time for bizra-home; ledger exists here.",
+    "file_hash": "sha256:41928e4c09147db15ea436f8107b5f0e5ed976119cc344f9bc85043bb6e3aac2",
+    "c001_c004_receipts_present": [
+      "C-001-20261002T211702Z.json",
+      "C-002-20261002T214158Z.json",
+      "C-003-20261002T215546Z.json",
+      "C-004-20261002T233134Z.json"
+    ],
+    "frontier_at_reconcile": {
+      "CLOSED": [
+        "C-001",
+        "C-002",
+        "C-003",
+        "C-004"
+      ],
+      "PENDING": [
+        "C-005",
+        "C-006",
+        "C-007",
+        "C-008",
+        "C-009",
+        "C-010"
+      ]
+    }
+  },
+  "lane": {
+    "name": "NODE0-SINGULAR-CONDUCTION-1A sandbox pulse + compose CLI + hermeticity P0",
+    "pulse_receipt": "sha256:0833b7a7d3cffc70955056f391a5147eefa91ccb1825e1821409fd269a9bbfbb",
+    "pulse_path": "/home/bizra-operating-system/bizra-home/outputs/node0-singular-conduction-1a-20261005T000234Z/CONDUCTION-RECEIPT.json",
+    "singular_conduction_label": "SANDBOX_PULSE_VERIFIED",
+    "authority_delta": 0,
+    "founder_usefulness": {
+      "status": "PENDING_OPERATOR_VERDICT",
+      "note": "Agent must not mint USEFUL; operator judges USEFUL or NEEDS_CORRECTION"
+    },
+    "hermeticity_p0": {
+      "status": "IMPLEMENTED_UNCOMMITTED",
+      "receipt": "sha256:2a2ae593de049759c162552ec693fe912e1c7a585fe03f9c5e5de89c6b5710ac"
+    }
+  },
+  "divergence": {
+    "fact": "Lane executed sandbox pulse under exact GO and sealed receipts; ledger C-005\u2026C-010 still PENDING describing an earlier check/launcher/mission frontier.",
+    "law": "Phrase/GO is authority for the act; ledger is season projection \u2014 must be re-derived, not assumed.",
+    "false_promotion_refused": [
+      "C-009 NOT closed by SANDBOX_PULSE_VERIFIED (kernel rehearsal \u2260 product mission through DEMA)",
+      "C-010 NOT closed \u2014 V is founder-only and still PENDING_OPERATOR_VERDICT",
+      "NODE0_CLOSED remains false",
+      "NODE0_SINGULAR_CONDUCTION_VERIFIED product conjunction remains unearned"
+    ]
+  },
+  "consent_scope_interpretation_declared": {
+    "id": "LOCAL_CANDIDATE_AS_LEASE_CONTEXT_1A",
+    "class": "CONSENT_SCOPE_INTERPRETATION",
+    "status": "DECLARED_POST_HOC_LESSON_CANDIDATE",
+    "what_happened": "Pulse GO asked for exactly one qualified Node0-local URP resource. Bound resource truth_label was LOCAL_CANDIDATE. Agent proceeded under interpretation that GO lease context could use LOCAL_CANDIDATE without DEMA_ACTIVE_LOCAL.",
+    "situation_binding": {
+      "truth_label": "LOCAL_CANDIDATE",
+      "label": "VERIFIED_LOCAL_CANDIDATE",
+      "qualified_for_this_go": "BOUND_AS_NODE0_LOCAL_RESOURCE \u2014 LOCAL_CANDIDATE not DEMA_ACTIVE_LOCAL; used as lease context only (no remote_write)",
+      "ready": true,
+      "urp_state_root": "sha256:75292b3253856de6c89eaeba9836b4006cb6e587d9f4762988023dc4c5cf8ea7"
+    },
+    "severity": "INTERPRETATION_INSIDE_HIDDEN_REASONING_HALF_SURFACED \u2014 must be explicit in receipt family (this document).",
+    "future_go_rule": "Future effect GOs must say either 'LOCAL_CANDIDATE acceptable for this act' or wait until resource earns QUALIFIED_FOR_THIS_MISSION. Silence \u2260 promotion.",
+    "admission": "NOT_ADMITTED \u2014 candidate lesson only; no policy change"
+  },
+  "labels_held": {
+    "SANDBOX_PULSE_VERIFIED": true,
+    "NODE0_SINGULAR_CONDUCTION_VERIFIED": false,
+    "NODE0_PRODUCTION_STABILITY_QUALIFIED": false,
+    "NODE0_CLOSED": false,
+    "DEMA_ACTIVE_LOCAL": false
+  },
+  "usefulness_verdict": {
+    "status": "AWAITING_FOUNDER",
+    "judge": "MUMU",
+    "agent_must_not_mint": true,
+    "template_path": "/home/bizra-operating-system/bizra-home/outputs/node0-pulse-lane-reconciliation-1a-20261005T1500Z/usefulness-verdict.AWAITING.json",
+    "closes": "nothing"
+  },
+  "next_after_verdict": [
+    "Record USEFUL or NEEDS_CORRECTION into usefulness-verdict.json (founder)",
+    "Hermeticity P0 commit GO + P1 assets-scan consent (qualification credibility)",
+    "Product ceremony: one boring mission through DEMA + qualified URP under its own GO"
+  ],
+  "envelope_sha256": "sha256:3bb7f0e61f1e4b4339a4142be192834fa4eb24af9a13862c2760dc7be1ddf0b3"
+}

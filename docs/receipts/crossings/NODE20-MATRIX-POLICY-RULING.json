@@ -1,0 +1,138 @@
+{
+  "payload": {
+    "actions_performed": {
+      "ci_rerun": false,
+      "merge": false,
+      "push": false
+    },
+    "authority_delta": 0,
+    "authority_source": {
+      "signature_state": "conversation_level_instruction; not a cryptographic signature",
+      "type": "founder_ruling_in_active_user_message"
+    },
+    "crossing_ledger": {
+      "owner_path": "/home/bizra-operating-system/Downloads/Dema/docs/CROSSING_LEDGER.md",
+      "pre_append_sha256": "65ab57d64a51d27912dd0fe6522e6fe9544768777630f78deed73f94beffe5eb"
+    },
+    "founder_ruling": "Node 22 is the qualification authority; Node 20 is the smoke leg. The six steps conditionally excluded by `if: matrix.node-version == '22.x'` in check.yml (lines 28–43) are documented exclusions citing the founder suite's Node 20 loader limitation; they are not qualification skips. The G3 step-green requirement is satisfied by the Node-22 leg.",
+    "github_actions_observation": {
+      "check_runs": {
+        "all_conclusions": "success",
+        "all_head_sha_equal_subject": true,
+        "count": 10,
+        "socket_pull_request_alerts_output_title": "Pull Request #480 Alerts: Skipped",
+        "socket_pull_request_alerts_summary": "Pull request contains no net changes to dependencies"
+      },
+      "job_20": {
+        "conclusion": "success",
+        "name": "test (20.x)",
+        "qualification_steps": [
+          {
+            "api_conclusion": "skipped",
+            "name": "npm run check",
+            "workflow_line": 28
+          },
+          {
+            "api_conclusion": "skipped",
+            "name": "npm run perf",
+            "workflow_line": 30
+          },
+          {
+            "api_conclusion": "skipped",
+            "name": "npm run delivery:check",
+            "workflow_line": 34
+          },
+          {
+            "api_conclusion": "skipped",
+            "name": "npm run proof:attest:ci",
+            "workflow_line": 37
+          },
+          {
+            "api_conclusion": "skipped",
+            "name": "DEMA_CI_EVIDENCE_ATTESTATION_PATH=./node0-ci-evidence-attestation.json node scripts/audit/node0-proof-of-truth-control-plane.mjs --json > /dev/null",
+            "workflow_line": 41
+          },
+          {
+            "api_conclusion": "skipped",
+            "name": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            "workflow_line": 43
+          }
+        ]
+      },
+      "job_22": {
+        "conclusion": "success",
+        "name": "test (22.x)",
+        "qualification_steps": [
+          {
+            "api_conclusion": "success",
+            "name": "npm run check",
+            "workflow_line": 28
+          },
+          {
+            "api_conclusion": "success",
+            "name": "npm run perf",
+            "workflow_line": 30
+          },
+          {
+            "api_conclusion": "success",
+            "name": "npm run delivery:check",
+            "workflow_line": 34
+          },
+          {
+            "api_conclusion": "success",
+            "name": "npm run proof:attest:ci",
+            "workflow_line": 37
+          },
+          {
+            "api_conclusion": "success",
+            "name": "DEMA_CI_EVIDENCE_ATTESTATION_PATH=./node0-ci-evidence-attestation.json node scripts/audit/node0-proof-of-truth-control-plane.mjs --json > /dev/null",
+            "workflow_line": 41
+          },
+          {
+            "api_conclusion": "success",
+            "name": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+            "workflow_line": 43
+          }
+        ]
+      },
+      "run_conclusion": "success",
+      "run_head_sha": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318",
+      "run_id": 37367678833,
+      "run_url": "https://github.com/BizraInfo/Dema/actions/runs/37367678833"
+    },
+    "observed_at_utc": "2026-10-05T22:54:45Z",
+    "policy_classification": {
+      "founder_policy": "Intentional documented exclusions from the Node-20 smoke leg, not outstanding qualification skips and not a G3 blocker.",
+      "g3_step_green": "SATISFIED: all six qualification steps succeeded on Node 22 at the exact PR head.",
+      "limit": "This binds one workflow revision and one completed Actions run; it does not claim continuous verification or technical branch protection.",
+      "qualification_authority": "test (22.x)",
+      "raw_api_step_conclusion": "GitHub reports `skipped` for these six Node-20 steps; this raw observation is preserved."
+    },
+    "schema": "bizra.campaign_lane.G3_node20_matrix_policy_ruling.v1",
+    "subject": {
+      "base_branch": "main",
+      "base_sha": "e10d5842726d8c1b228f4bb6c23a9771d3510569",
+      "branch": "fix/qualification-hermeticity-consent-parity-1a",
+      "head_sha": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318",
+      "pr": 480,
+      "repository": "BizraInfo/Dema",
+      "url": "https://github.com/BizraInfo/Dema/pull/480"
+    },
+    "truth_label": "FOUNDER_POLICY_RECORDED_NODE22_QUALIFICATION_NODE20_SMOKE",
+    "workflow_evidence": {
+      "blob_content_sha256": "26d0909c92ca2b2832c63c429e276775804307d413f31399a775162e72fbec0c",
+      "comments_lines_23_27": "Node 22+ threshold/tooling limitation; Node 20 founder-suite loader limitation is documented in workflow comments.",
+      "conditional_lines": [
+        28,
+        30,
+        34,
+        37,
+        41,
+        43
+      ],
+      "path": ".github/workflows/check.yml",
+      "source_commit": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318"
+    }
+  },
+  "payload_sha256": "d65c67a95d41e86a7533eff9d9605047e149e9333742a2a462594219f8dc64b6"
+}

@@ -1,0 +1,126 @@
+{
+  "schema": "bizra.crossing_receipt.v0.1",
+  "crossing_id": "C-004",
+  "run_id": "20261002T233134Z",
+  "trigger_phrase_sha256": "433e9198ae2df983f21d852dab59be6b927ad73c6609cc3bc5290901bd542c17",
+  "trigger_phrase_scope": "sha256 of the exact UTF-8 C-004 gate string, with no trailing newline",
+  "before_identity": {
+    "head": "282b2b2903df341a0f5f5bdc626c787e6f764d70",
+    "head_scope": "git rev-parse HEAD before and after this run",
+    "index": "empty",
+    "dema_home": "unset"
+  },
+  "bindings": [
+    {
+      "path": "docs/CROSSING_SEASON_AGENT_INSTRUCTION_v1.0.md",
+      "sha256": "fbba26d1ccee8d70fe022cd09bfda0c4fb86fc28c62f1ac867a088d96745f524",
+      "sha256_scope": "instruction bytes; matched the bound copy; not edited",
+      "state": "UNCHANGED"
+    },
+    {
+      "path": "/home/bizra-operating-system/Documents/Codex/2026-10-02/DEMA_MUMU_PRODUCT_EXECUTION_CONTRACT_1A.md",
+      "sha256": "d0fc99155e61a2328d408963d6a519a3a7ec724529614ad98f7bbd7730250a63",
+      "sha256_scope": "external contract bytes; matched C-001; not edited",
+      "state": "EXTERNAL"
+    },
+    {
+      "path": "artifacts/proofs/proof-room-v0.1/proof-room-bundle.json",
+      "sha256": "4fb5861931b1400e603a2173c678af30a6fbd5ae7b7a9eb11400e7690ff728b4",
+      "sha256_scope": "witness bytes before and after npm run check",
+      "state": "UNCHANGED"
+    },
+    {
+      "path": "Dema/docs/root-canon/root-canon.manifest.json",
+      "sha256": "1c150f368fd231745754461832498d6f601e92c0292cd5693c99fabeebc0303e",
+      "sha256_scope": "nested manifest bytes; matched C-001; not edited",
+      "state": "UNCHANGED"
+    },
+    {
+      "path": "scripts/check.mjs",
+      "sha256": "452f9857fec7fce982edf247015d0e2ba2ada7bb2c9ab4efa90c188fca116be6",
+      "sha256_scope": "working-tree bytes containing the exclusion globs; file was already dirty; not edited by this run",
+      "state": "DIRTY_PREEXISTING"
+    }
+  ],
+  "actions": [
+    "Re-read the ledger. C-004 was the top PENDING crossing and the spoken phrase matched its gate.",
+    "Re-hashed the instruction, the contract, the witness, and the nested root-canon manifest. All four matched the prior record.",
+    "Read R3. Recorded option (a) exclude and option (b) remove. Executed (a). Left the nested checkout on disk.",
+    "Confirmed the working-tree check command passes tests/*.test.js and packages/dema-ui/tests/*.test.mjs. node:fs glob of those two patterns returned 752 and 3 files, with 0 paths under Dema/.",
+    "Counted 759 auto-discoverable test files under the nested checkout. A bare node --test from the parent would still see them. The check command is not bare.",
+    "Confirmed founder-useful-system.js, scripts/genesis/urp0-store.mjs, and scripts/genesis/urp0-runtime.mjs are absent in the parent tree and present only inside the nested checkout. Did not copy them.",
+    "Ran npm run check. It exited 1 at identity-pair-coherence-check.mjs before the test-discovery command.",
+    "Re-hashed the witness. It was unchanged.",
+    "Wrote this receipt. The ledger close is the following append, not a fact this file claims as already done."
+  ],
+  "options": {
+    "a_exclude": {
+      "chosen": true,
+      "mechanism": "working-tree scripts/check.mjs node --test globs: tests/*.test.js and packages/dema-ui/tests/*.test.mjs",
+      "reason": "R3 default. The phrase authorizes the recorded disposition. The globs were already in the dirty check file. This run did not add a second edit and did not stage the file.",
+      "blast_radius": "No nested file removed. Parent product modules unchanged. The exclusion shares scripts/check.mjs with the pre-existing hermeticity hunk and the face-turn gate line.",
+      "glob_measurement": {
+        "tests/*.test.js": { "count": 752, "under_nested_dema": 0 },
+        "packages/dema-ui/tests/*.test.mjs": { "count": 3, "under_nested_dema": 0 }
+      }
+    },
+    "b_remove": {
+      "chosen": false,
+      "blast_radius": "Nested checkout is a separate git worktree, 57M, HEAD 7115683539c905cf40d76fc90e8f49d472c9fa03, one untracked path .cline/. It holds the three modules the parent tree does not have. Seven parent note files mention the path string. Removal was not executed."
+    }
+  },
+  "results": {
+    "nested_checkout": "retained at Dema/",
+    "nested_head": "7115683539c905cf40d76fc90e8f49d472c9fa03",
+    "path_split": "C-001 left it unconfirmed. This run did not re-run the nested root-canon test.",
+    "npm_run_check": {
+      "exit": 1,
+      "stopped_at": "node scripts/review/identity-pair-coherence-check.mjs",
+      "test_discovery_command_reached": false,
+      "log": "/tmp/dema-c004-check.log"
+    },
+    "npm_test": "not run as its own command"
+  },
+  "failure_attribution": {
+    "this_slice": [],
+    "pre_existing": [
+      "identity-pair-coherence-check.mjs ok false, scanned 1097, three violations, all under packages/dema-ui/.next/dev/server/chunks/: apps_cli_src_commands_observe-gatherer_0mjlx9w.js direct_legacy_key_path; packages_receipts_src_0zp3573._.js separate_pair_loaders and direct_legacy_key_path. AGGREGATE generated output. Outside the nested checkout. Not repaired.",
+      "scripts/check.mjs remains dirty with hermeticity and the face-turn gate line plus the exclusion globs",
+      "DEMA_RETURN_PEER_SEAL remains absent from KNOWN_DEMA_ENV_VARS",
+      "launcher bind remains later"
+    ]
+  },
+  "verdict": "GREEN",
+  "verdict_scope": "disposition only: option (a) stands, the nested checkout remains, no missing module was recreated, and the check red is outside that checkout",
+  "non_proofs": [
+    "This receipt does not establish that npm run check exits 0.",
+    "This receipt does not establish that the test-discovery command, once reached, is free of nested failures. The command was not reached.",
+    "This receipt does not establish a CURRENT_LIMITS promotion, a launcher bind, source-to-delivery, or Node0 closure.",
+    "This receipt does not establish the path-split hypothesis.",
+    "The exclusion globs are uncommitted working-tree bytes."
+  ],
+  "did_not": [
+    "commit",
+    "push",
+    "merge",
+    "deploy",
+    "remove the nested checkout",
+    "recreate founder-useful-system.js",
+    "recreate scripts/genesis/urp0-store.mjs",
+    "recreate scripts/genesis/urp0-runtime.mjs",
+    "edit scripts/check.mjs",
+    "edit the nested tree",
+    "promote a truth-label row",
+    "bind the launcher",
+    "edit the contract",
+    "edit a prior receipt or checkpoint",
+    "start C-005",
+    "call a provider",
+    "start a daemon",
+    "restore the witness"
+  ],
+  "authority_delta": 0,
+  "effects_started": 0,
+  "next_crossing": "C-005",
+  "next_gate": "follows C-004"
+}

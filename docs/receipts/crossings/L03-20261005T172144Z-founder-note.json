@@ -1,0 +1,14 @@
+{
+  "schema": "bizra.crossing.receipt.v1",
+  "id": "L03-FOUNDER-NOTE-20261005T172144Z",
+  "generated_at_utc": "2026-10-05T17:21:44Z",
+  "authority_delta": 0,
+  "kind": "POINTER_TO_ADDITIVE_FOUNDER_NOTE",
+  "binds": {
+    "usefulness_verdict_sha256": "89b29f216e4d6effbe3c7c9690d8cc1002950abe3957064578ccf88dee8138d7",
+    "founder_note_path": "/home/bizra-operating-system/bizra-home/outputs/node0-pulse-lane-reconciliation-1a-20261005T1500Z/usefulness-verdict.FOUNDER-NOTE-20261005T172144Z.json",
+    "founder_note_sha256": "006363d96128e5bdee0f6962423b78e1a34c5f060663ff8d3230e867109f49c0"
+  },
+  "summary": "Additive founder note on recorded USEFUL pulse verdict; ceremony mission target named; sealed verdict bytes unchanged.",
+  "envelope_sha256": "sha256:e6f26e698f9d8e777ae9141589dd37aa3ce45d9da6f3aef5a84a9789f7094f10"
+}

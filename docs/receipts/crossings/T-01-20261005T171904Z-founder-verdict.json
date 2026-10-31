@@ -1,0 +1,139 @@
+{
+  "schema": "bizra.conduction_season.receipt.v1",
+  "todo_id": "T-01",
+  "run_id": "20261005T171904Z",
+  "trigger": {
+    "exact_phrase": "GO: record founder verdict for pulse 0833b7a7 — USEFUL",
+    "encoding": "UTF-8",
+    "consumed_for": "G1 pulse verdict only"
+  },
+  "before_identity": {
+    "primary": {
+      "path": "/home/bizra-operating-system/Downloads/Dema",
+      "head": "7c0edbad5a7624dd73b5edee71f8ed6349e9b975",
+      "tree": "e6214bf3bbba34bf34ac0940cd278161987cbfa6",
+      "branch": "feat/compose-dema-cli-fate-staged-effect-1a",
+      "porcelain_entries": 268,
+      "porcelain_sha256": "344538c1c4e538870b1cca94139b40d44823d18a690c0ae78f6c321707861c9e"
+    },
+    "ledger_stability_reads": [
+      {
+        "observed_at_utc": "2026-10-05T17:19:01Z",
+        "sha256": "3b8f26c2ec88b6d007ca266d50110a10e0fd7216079a341953df3a9ee20b10e5"
+      },
+      {
+        "observed_at_utc": "2026-10-05T17:19:04Z",
+        "sha256": "3b8f26c2ec88b6d007ca266d50110a10e0fd7216079a341953df3a9ee20b10e5"
+      }
+    ],
+    "ledger_read_separation_seconds": 3
+  },
+  "bindings": [
+    {
+      "path": "docs/CONDUCTION_SEASON_AGENT_INSTRUCTION_v2_0.md",
+      "sha256": "a19456426c4f1f0ebe7c0e82c3332160e3464f8b3039770f5a1a80a8c13b7ddd",
+      "scope": "full instruction bytes"
+    },
+    {
+      "path": "/home/bizra-operating-system/bizra-home/outputs/node0-singular-conduction-1a-20261005T000234Z/CONDUCTION-RECEIPT.json",
+      "sha256": "0833b7a7d3cffc70955056f391a5147eefa91ccb1825e1821409fd269a9bbfbb",
+      "scope": "full pulse receipt bytes"
+    },
+    {
+      "path": "/home/bizra-operating-system/bizra-home/outputs/node0-pulse-lane-reconciliation-1a-20261005T1500Z/usefulness-verdict.AWAITING.json",
+      "sha256": "815eeb18d74a38d1860d44cc0bb55c3342d65aec9c6a91a570e8057df9d15aed",
+      "scope": "full awaiting-template bytes; unchanged"
+    },
+    {
+      "path": "/home/bizra-operating-system/bizra-home/outputs/node0-pulse-lane-reconciliation-1a-20261005T1500Z/usefulness-verdict.json",
+      "sha256": "89b29f216e4d6effbe3c7c9690d8cc1002950abe3957064578ccf88dee8138d7",
+      "scope": "full new founder-verdict bytes"
+    },
+    {
+      "path": "docs/receipts/crossings/LANE-RECONCILE-PULSE-20261005T1500Z.json",
+      "sha256": "48ba0e4d2f231eb175db22284b21fb8939d94bb82c745eb29cc149fbcfa51f1e",
+      "scope": "full lane-reconciliation receipt bytes"
+    },
+    {
+      "path": "/home/bizra-operating-system/bizra-home/outputs/node0-pulse-lane-reconciliation-1a-20261005T1500Z/G1-STOP-20261005T165541Z.json",
+      "sha256": "71ddc46ce26d338a6c0d58eaf50d9a313b530c8a196abd22095a387562ce2819",
+      "scope": "full prior STOP receipt bytes"
+    },
+    {
+      "path": "docs/CROSSING_LEDGER.md",
+      "sha256_before": "3b8f26c2ec88b6d007ca266d50110a10e0fd7216079a341953df3a9ee20b10e5",
+      "sha256_after": "ce6988f0b186ef13e79e422505b626791a795d95dfcfb1dd28d2a433ec1ed9bb",
+      "scope": "full bytes; one change-log entry appended"
+    },
+    {
+      "path": "docs/LANE-REGISTRY.md",
+      "sha256": "32210f20bc2f40472bdf38aad6a85ef8aed912bbad774f59955c6c560bee9b28",
+      "scope": "full owner-registry bytes; not modified"
+    },
+    {
+      "path": "/home/bizra-operating-system/bizra-home/docs/LANE-REGISTRY.md",
+      "sha256": "2bba83832e117c220d8f3362fa50c22d2a5459cd5b55c01b405efffae410128d",
+      "scope": "full mirror-registry bytes; not modified"
+    }
+  ],
+  "actions": [
+    "Recorded the exact founder G1 statement as USEFUL in a new verdict artifact derived from the bound awaiting template.",
+    "Appended a T-01 G1 entry to the crossing-ledger change log and created this append-only receipt.",
+    "Left both lane-registry copies unchanged because their observed hashes differ; that discrepancy remains explicit."
+  ],
+  "results": {
+    "founder_usefulness": "USEFUL",
+    "scope": "SANDBOX_PULSE_ONLY",
+    "effect_count": 1,
+    "resume_effect_count": 1,
+    "authority_delta": 0,
+    "economic_value_measured": false,
+    "mintable": false,
+    "closes": "nothing",
+    "C-009": "PENDING",
+    "C-010": "PENDING",
+    "NODE0_CLOSED": false,
+    "T-01_verdict_intake": "RECORDED",
+    "ledger_stability": "TWO_READS_EQUAL"
+  },
+  "failure_attribution": {
+    "this_step": [],
+    "pre_existing": [],
+    "flake_ledger": []
+  },
+  "interpretations": [
+    {
+      "decision": "Founder USEFUL applies only to the sealed sandbox pulse.",
+      "basis": "Exact G1 phrase bound to pulse receipt SHA-256 0833b7a7d3cffc70955056f391a5147eefa91ccb1825e1821409fd269a9bbfbb",
+      "surfaced": true
+    },
+    {
+      "decision": "LOCAL_CANDIDATE-as-lease-context remains disclosed context, not production qualification.",
+      "basis": "Bound lane-reconciliation receipt; no production resource claim added.",
+      "surfaced": true
+    },
+    {
+      "decision": "Owner lane registry and mirror currently differ and remain unmodified by this step.",
+      "basis": "Owner SHA-256 32210f20bc2f40472bdf38aad6a85ef8aed912bbad774f59955c6c560bee9b28; mirror SHA-256 2bba83832e117c220d8f3362fa50c22d2a5459cd5b55c01b405efffae410128d",
+      "surfaced": true
+    }
+  ],
+  "verdict": "GREEN",
+  "non_proofs": [
+    "No product-level DEMA conduction, production URP qualification, live PAT, runtime/source correspondence, production stability, or Node0 closure is established.",
+    "No economic value was measured and this judgment is non-mintable.",
+    "Lane-registry mirror divergence remains open."
+  ],
+  "did_not": [
+    "edit the sealed pulse receipt or awaiting template",
+    "change C-001 through C-010 status fields",
+    "admit a candidate lesson",
+    "modify either lane-registry copy",
+    "commit, push, merge, or publish",
+    "start/restart runtime or run a mission/effect/provider call",
+    "use keys/signing or mutate DEMA_HOME"
+  ],
+  "authority_delta": 0,
+  "next_todo": "T-02 P1 consent parity remains product-lane-owned/in-flight; rebind lane routing before campaign action.",
+  "next_gate": null
+}

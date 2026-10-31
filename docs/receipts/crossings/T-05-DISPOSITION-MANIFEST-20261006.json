@@ -1,0 +1,2399 @@
+{
+  "authority_and_preservation": {
+    "authorization": "User approval with amendments in active conversation",
+    "future_emulation_instruction": "The re-commissioned emulation session should relocate the five listed paths into its own worktree before continuing. This T-05 operation does not move or edit them.",
+    "stratum_A": "Commit campaign records from a clean worktree at merged base 4edcd02; includes three byte-identical receipt mirrors with originals retained.",
+    "stratum_B": "No current dirty primary paths overlap the compose slice. Existing 7c0edbad compose commit and boundary worktree remain deferred to L-04 with correspondence receipt.",
+    "stratum_C": "Preserve all listed paths exactly as-is, including deletions and the five ecosystem-emulation session paths; do not commit them."
+  },
+  "delta_from_G3_merge_receipt": {
+    "current_count": 230,
+    "current_porcelain_bytes_sha256": "c39c370a5ef7a6afc08c40b457827a62c0992922997a1f3e2001d4664fc8107f",
+    "explanation": "Founder-confirmed early writes from the ecosystem-emulation session in the shared tree before its own-worktree condition was set; its context later crashed. These five remain Stratum C and are not committed by T-05.",
+    "five_paths": [
+      "packages/core/src/ecosystem-lifecycle-emulation-preview.js",
+      "packages/core/src/peak-invoke-snr-spearpoint-preview.js",
+      "scripts/emulate/",
+      "tests/ecosystem-lifecycle-emulation-preview.test.js",
+      "tests/peak-invoke-snr-spearpoint-preview.test.js"
+    ],
+    "five_paths_status": "all untracked (??)",
+    "hash_proof": {
+      "algorithm": "SHA-256 over exact git status --porcelain=v1 -z bytes",
+      "matches_merge_receipt": true,
+      "operation": "Remove only the five listed status records from current porcelain bytes; retain all other records and NUL delimiters in original order.",
+      "reconstructed_entry_count": 225,
+      "reconstructed_sha256": "452bd04287799fda261cb2f4e02ef722cac846b1f6b86190b6da7789f8e7d00a"
+    },
+    "receipt_path": "/home/bizra-operating-system/bizra-home/outputs/campaign-lane-G3-merge-20261006/G3-MERGE-RECEIPT.json",
+    "receipt_sha256": "51583ed88c7f9d520c396c5890b1de8ca40d4987c196c0592b4fe7454b484d57",
+    "receipted_count": 225,
+    "receipted_porcelain_bytes_sha256": "452bd04287799fda261cb2f4e02ef722cac846b1f6b86190b6da7789f8e7d00a"
+  },
+  "directory_hash_note": "For status rows whose path is an untracked directory, sha256 is computed over canonical JSON for all recursive descendants, sorted by path; each member binds relative path, kind, mode, and file-byte or symlink-target SHA-256. Directory rows are collapsed by the declared normal porcelain mode. Deleted files bind the HEAD blob SHA-256 with kind=missing.",
+  "entries": [
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0644",
+      "path": "AGENTS.md",
+      "sha256": "32226d66fe3e2a6ea77f3cee6cea3d80da65cc5f0a318a35d7fc55d4283dc494",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0644",
+      "path": "CLAUDE.md",
+      "sha256": "fc35e51993e593fca906ec7bdd475070c66ae5b52b98786678a77ef155cee01e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(HEAD blob; working-tree path is deleted)",
+      "kind": "missing",
+      "mode": null,
+      "path": "RECOVERY_CENSUS_2026-08-30.md",
+      "sha256": "9ae698f1fb98b5d7713dc70c08f3704336eece540b5fea7023e951653d98831e",
+      "status": " D",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/agent-loop.js",
+      "sha256": "87b8a006ef95f816fb2d8ec6354a5c524a0803f75917eaf96865e27e61f3d20c",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/fleet-readiness-gatherer.js",
+      "sha256": "8496e6ff2464f7e68d52413139e31c26f5cd36a10dd2cddceaf9cf95bbe35650",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/identity-root-gatherer.js",
+      "sha256": "de678ce1c98768a87a5ec7b5e77bcbc4ebd789a04f0cd66452d2e783ea604716",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/mcp.js",
+      "sha256": "ffafa3c29eb85c4ed47074b4efe9022497a5b2b0bd36575b2209cd6b7cb249a2",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/mission-loop.js",
+      "sha256": "6f9f599e3e53b46baf631092bd148046aefe20f150e3540888b511c8627b31f8",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/mission.js",
+      "sha256": "5c84f4afd7fd8ac5a6c6eb2456d6707aee9c450d4b7a5b03ea4ec54f54d9e60c",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/models.js",
+      "sha256": "5b5343197294e81c107126b7224d699af30de12a353814d71a1c27ce32ce431d",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/profiles.js",
+      "sha256": "a6c6e22a4c56381f55bdf7b6ddf3c016dc4a9b73a023e929341316bfe27d0efa",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/season.js",
+      "sha256": "0e4fded7cdc33b86e12514340d3f5a8ce552e89279617e52d7e0980792d08f65",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/status.js",
+      "sha256": "58f25c7421210d57c65513d0634b15dee0f151ac76b92f69ae2e28af217af125",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/commands/talk.js",
+      "sha256": "b12e1d505a8284b864c891313dcd11affa99e828b44b9f40d0a064626d568e5e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/index.js",
+      "sha256": "5246669d45185d1c03da9422d726331454903b1b8a0ca6d1752cf18fc030052c",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-019 - DEMA-UI-CI-TRUTH-GATE-1A-packages-dema-ui-in-canonical-CI.md",
+      "sha256": "ac055df7b07177d148c42b099fedb24db51aa7b494e6662aa436f360818de384",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-026 - MISSION-RUNTIME-0A-\u2014-external-deterministic-mission-supervisor-compose-swaphandoff-kernels.md",
+      "sha256": "460955283cb4b06c4b1b2ea311ac0ca1cce33135da74d16d8fd372c78d1c03d6",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-075 - NODE0-DEMA-PRODUCTION-CLOSURE-1A-spec-driven-production-closure-of-Node0-Dema.md",
+      "sha256": "0e0c3f227c841f342959f5165ef21788978587c3cd1e89412f64b5b79db1c906",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-075.04 - PROD-03-\u2014-REAL-LOCAL-MODEL-PATH-1A.md",
+      "sha256": "4ebf7e42ca048fc51c823aa2fe63ceb7812e87e07ef29f58fcd9bd24bcaafc0b",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/02-architecture/DEMA_MASTER_REGISTRY_EFFECTIVE_CONFIG_v0_1.md",
+      "sha256": "af31672cfba9963650c4a3d0bdb2046a8480625c02dff7a785fd3f3346186037",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/02-architecture/gateway-http-adapter.md",
+      "sha256": "3a3d3ba05faeb86f7763ee7c7c80e889ef0f8a7f8d2063c1539a532765143a46",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/08-quality/SBOM.md",
+      "sha256": "7136851dcec15bbf3939c7ae0e38546bbdeba5fed50ae80914dbbcbedf71260a",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "2f6b796aed515fc51d2adfd8055690f53f1b901f71103ddcaa8107522b13ecee",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/CURRENT_LIMITS.md",
+      "sha256": "ab05d9088b2dcaa679f9e9384edf6aeec754991b5c98746c170ff50a2b9a8669",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0644",
+      "path": "docs/LLM_SYSTEM_FLOW.md",
+      "sha256": "63f80beb0c41c04fb00e94d026c5be6a63c3c03cb2dd05aa47dff1fdac41cf3e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/RELEASE_PROCESS.md",
+      "sha256": "f088d3b56e558b1fad292a5fc9ccfbdc530eae121f5d4936d98d257bc7b445b2",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/TESTING.md",
+      "sha256": "3cf6b5013d6991f292fbbb24c3491540278375cee5286486ebf08338f11fb86f",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/UX_BLUEPRINT.md",
+      "sha256": "bda4eb84f8df9b4d23e60c42800c435313f7f8535748a31a67052eca21d8bf49",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/schemas/proof-room-bundle.v0.1.json",
+      "sha256": "de8ae1fce4f53d07c6d7e7a968af0ab06d5f65aa81bcee10e632e3d716e7fc62",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-capability-truth-registry.js",
+      "sha256": "a4c2feaf89b23fed5ae3589b77665496fec868e8dd7d9afad7135a6c875c3459",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-first-look-home.js",
+      "sha256": "5e4a1b53a513580708a022fc7ec1a0590c652702f0d16c25bb48d4349a060415",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-identity-root-canon.js",
+      "sha256": "b614b5afb364d2e15fcd2024884ee7e8dea0958dac181b63a779dd3f75cd7d7c",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-master-registry-effective-config.js",
+      "sha256": "58234e35a72109dbb476de9c469d57f9f07b256f761be92f831387fc9417fc02",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-sovereign-companion-loop.js",
+      "sha256": "5b77b9751e1324642b274af8890bd64e620bf62330f7f47ad209b962d465995e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-talk-loop-live.js",
+      "sha256": "033e5a7e265d6cd8a46ac84360ba841bcc3af153dc4cff950a6c7f22b65df3ed",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-talk-loop-preview.js",
+      "sha256": "c5e5f53e3ac2019d96a5275b90053f083b26122c4a55e6f1f77532076f2028db",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-talk-profile.js",
+      "sha256": "110ba9238a57c3b110eab4ca4c0d8392c6411950c62c86939f55628d451c3834",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/first-encounter-admission.js",
+      "sha256": "475fb043fa0c72a3622a572b60a540c5de9461d76bb800a6f544ba627832f048",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/local-llm-fleet-readiness.js",
+      "sha256": "5e6b8e0c1a4c031a41e55b5c86c4cd6dca5dbc0507ea8c1a4b9d1180f5b184d7",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/mission-loop-preview.js",
+      "sha256": "d63f873e12ff8ebd1b0ca6069985ff35a58e333a1f3b88f73a70264f62a1adde",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/mission-supervisor.js",
+      "sha256": "d53d5efe88e18e0746d988081c0c6e307cedb4db17416c2d2a605f267ed6fd54",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/mission-worker-adapter.js",
+      "sha256": "ca8f10dd1eb0e13defff499902de497abf7c99eb7907062e0f5446c406a08126",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/mission.js",
+      "sha256": "5fb51f6af6a7006523f791b45a36b1b28e5df890b19c770aad7e3acfe8eaeb17",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/node0-deployment-remote-write-adapter.js",
+      "sha256": "441b9bea9e45f56199a0fb840326b34a48a536c2fd2ded2dc19530e1e531fd31",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/node0-evidence-source-registry.js",
+      "sha256": "50cdfe5b41a95298f1c404041d4ade0fcd5f80679889f960815403bb57c917cb",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/onboarding-seal.js",
+      "sha256": "827d235e6f9a026f4a387415cb2c4bf6914d793fbaf7963aecb861419658b169",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/pat-sat-blackboard-live.js",
+      "sha256": "62671fd78cfc162b257ebac54dbe5a49213e728b8298d62b05dfc94e75772b4d",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/peak-evidence-gatherer.js",
+      "sha256": "12aa2d9f10512451b7f59cc1a4afde62d07f1a30ff9e89afca2bd12f804d21ca",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/peak-self-loop-preview.js",
+      "sha256": "76537e2b4ea0868a452f692a3467bf0704b19bf4a0b3084d08bffad012e02ee2",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/profiles.js",
+      "sha256": "0e328125846be5138b409ccced66b95d1be38bfa632abeecfc7bc6743c918b67",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/proof-room-bundle.js",
+      "sha256": "9952fc6e5e1408f5634cf85331eede8868e8914df873a11a3b278dc5243f504c",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/status.js",
+      "sha256": "1e9a55cde3574c559dbf4ef199ee393eca849d74c52d01cbd561953450a826a5",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/next.config.ts",
+      "sha256": "da2a32d03aae7d8d97974bc40814b2ba9dad04668794f5de14a9caa66a1e3d0a",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/package.json",
+      "sha256": "27b455111e80933f164b29f32e02492953c11bb25317e989afefe7685995a047",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/src/app/api/demo/node0-value-loop/route.ts",
+      "sha256": "6be57f30f8ce7192b1f2001ea693a1410c94bb960715b95d6e8fcb28dbf5656e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/src/app/api/first-encounter/admit/route.ts",
+      "sha256": "10998bd6d19bef900ec0678dddf4a5629ae4c594716777d17915aaed5f3c10b6",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/src/app/api/first-encounter/inventory/route.ts",
+      "sha256": "5d5a898fbd69cde4a6f2928bdd43d3fa38d14ff527919ab188b483b9868d9e0f",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/app/page.tsx",
+      "sha256": "61dabde945ea4bbd981e9e96fce0c0c659b20b5224915e2b39788269871df4fe",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/src/app/realm/page.tsx",
+      "sha256": "8d3b05bdc46e4aca5dde5b4f631d814fc22e5bc0feb6d4507a577d5aedb443d1",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/src/components/dema/MissionCorridor.tsx",
+      "sha256": "5bfa4b1df0226fc522b335e1099a569e7a909a23db2b40c82c11dee387f93560",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/components/game/AgentDetailDialog.tsx",
+      "sha256": "ca1c54d3806733b29a396f6cb8e2ef6717560c719e4e304d36f8a18503bddd64",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/components/game/AgentPanel.tsx",
+      "sha256": "df561b19e51ea05dfa76d2ae8c159380eef75df27cfac120a31dcf249c0586ae",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/components/game/CiRaid.tsx",
+      "sha256": "72b3e8625058494e9bbff35faab036c586ee1e04684a8feb740b4d383b32f074",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/components/game/EcosystemView.tsx",
+      "sha256": "40228bdc06a477108c381d6128e1e154bd0ac1a9ba3e089f5c910ee0b06b77dd",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/src/components/game/RealResources.tsx",
+      "sha256": "854bd6a2e63c0598c03327485a8594831aa3532882d2f57c155f691722db9ea8",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/components/game/SovereignBoot.tsx",
+      "sha256": "0307e0087dffb95170e27b6dc56d0b7c5613985628e5afd48ded27e58b38cbdd",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/components/game/TaskBoard.tsx",
+      "sha256": "c8f42f023356397e0e7673b0931a77622fb60529d85c9a0b5e7c5f2bf1788080",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/components/ui/carousel.tsx",
+      "sha256": "8e8c508d1721d6456e4978944e490aa17fe7bca646fb931cb406ee7d70b5db3e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/src/hooks/use-lang.ts",
+      "sha256": "80904be046754cf50bbee74006ad2041d48a62e985e94d0774dcfcca9ed431ca",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/hooks/use-mobile.ts",
+      "sha256": "d2804754b4fae9b6517078f28d5f5e644e4afc7df208816e5427c6d8f77eba2e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/lib/game/ecosystem.ts",
+      "sha256": "da6c4b7e5630bb6c65f33dfc81ea7e1757ec3f36be20c200974c00457bb4cbec",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/lib/game/store.ts",
+      "sha256": "9a67e879eb607a8070843101f2918315c8faa12a6fe5f8d337e32863f6014303",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0775",
+      "path": "packages/dema-ui/tsconfig.json",
+      "sha256": "a7bdadfbcc0ef0a0194c7e6f06660976ff204fec05db2212a0a5ca702d265c22",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/models/src/model-routing.js",
+      "sha256": "898908e52a119629a6f428ec8ae4b98b494b6f904e5b83655ab2a2499e9076a8",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/node-adapter/src/gateway-http-adapter.js",
+      "sha256": "5c6e1dab0b088116a1759d067187adf8238ba020495bcfda82d37aba8a2b0926",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/node-adapter/src/node0-adapter.js",
+      "sha256": "ba0908be8807abf4cc1653619844b34955e75937ceb086d540eaf9896306470a",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/receipts/src/season-state-store.js",
+      "sha256": "3538d1f966182645a160536373f6d90a8342966b76b0201bb92bcfb47a896cc7",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0644",
+      "path": "scripts/bind-peak-evidence.mjs",
+      "sha256": "195618dcc517439a8fac30234761a14dceb1efca20b4534584ee3cddd69021d0",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/check.mjs",
+      "sha256": "452f9857fec7fce982edf247015d0e2ba2ada7bb2c9ab4efa90c188fca116be6",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/proof-room-bundle.mjs",
+      "sha256": "c0d3380fd93309d7c58fbb63ebf847a5698fb4a0a0689d637f8a640a55acd752",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/proof/node0-deployment-remote-write-proof.mjs",
+      "sha256": "a682d753788220d760ca442c4aa2dc4f0add805c55f3c7dd54c94837f4e6aece",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/proof/node0-runtime-mission-worker.mjs",
+      "sha256": "efe6f51baa265cbea0907741e1866c0880b97340594189abbe5a34411a865d5d",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/release-readiness.mjs",
+      "sha256": "7d32c80c80afbf53384d2d8cc4a41b424134355653153f07f52c3ce4c3a7ee5b",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/release-readiness/format.mjs",
+      "sha256": "5a17200d67e78c9ba498110db201b7129267aa47a3569d815f305214d397e83c",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/review/canonical-json-v1-check.mjs",
+      "sha256": "41891d6fd03051583104e3c8deb5ed910fd33f37f6298acca7271d614aad4378",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/review/env-hygiene-check.mjs",
+      "sha256": "d258f69502f0cc1fc385c238c87576bdf28610426eaafdbb204309e24356115e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/review/identity-pair-coherence-check.mjs",
+      "sha256": "14e1eb9c4488c761044104cdd05a26243c8862f7dbbb33795650a28eebd562d2",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/review/kernel-purity-check.mjs",
+      "sha256": "6b30d2739ff1ab802af35e4031181ab1112bd0b8765f2b258005d7bf4c0b03ab",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/review/ui-truth-label-check.mjs",
+      "sha256": "72ae889a0aed99c69c28ac5fc8f1dc22bf7e28cee013f859a0647f53fe42077b",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/verify-root-canon.mjs",
+      "sha256": "ea5620e8614236bc37826201fa7c8290689fe9afe9816d3feb744cbd9d5e6c3a",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/agent-invoke-reference.test.js",
+      "sha256": "06fc459ccbb7b3954a282f595deed983abc586299f34f6e44dadf11791afa233",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/canonical-json-v1.test.js",
+      "sha256": "6b5ed10ce45ddbd07fb44ecb72d5591b4a06664a593ec9100b1d7f3d3a637b7f",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/check-exit-integrity-adversarial.test.js",
+      "sha256": "c3368e82691af8a4512d08f732516af7e897db5b0558657a23c6cb2f2d3d5d47",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/check-exit-integrity.test.js",
+      "sha256": "37498c1e93bc183ce346de0af10ef1896804701fcd0540f1d21ad80be747fa46",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/closed-dual-loop-dry-run-cli.test.js",
+      "sha256": "6841c325471f1c47cbbf73121f26221690e40461d288d95e5a044479bcab1b82",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-capability-truth-registry.test.js",
+      "sha256": "30f4f6191c7cfea386e58ee8803d328e25dd25d0c00642303deb2d51cbbc1a40",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-first-look-home.test.js",
+      "sha256": "9b2aad0402a5cc14e1c0d655eea3f9c0e6faf60ae2026a017e305b619d19e535",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-identity-root-canon.test.js",
+      "sha256": "206e6d1704c40ddf8d4bf4150dbf74f6b918ba92eb49321c28e8285edf2efdd5",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-master-registry-effective-config.test.js",
+      "sha256": "81b2a05c317f21fce186017e4e305fca8e876add7d4e7e3bb62a0ab47f6b7063",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-talk-loop-live.test.js",
+      "sha256": "974bb60e6b78460160a42b98325d19ef5c476eaea5d694b70807e3f48e6bea3c",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-talk-loop-preview.test.js",
+      "sha256": "4736a20ab514786542c856eb6af90d8269e745969d456001df6939b549befc29",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-talk-profile-cli.test.js",
+      "sha256": "0c2a7ce4646b3dddbabd6a25c1b42360dead9a67f119533fd7c239e94c830907",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-talk-profile.test.js",
+      "sha256": "bbba924d7592270916db017c5a42a3fdcb27640fec4de9f399a1d93c9645a1ec",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/env-hygiene-check.test.js",
+      "sha256": "1863adff84ecbcbedd7677f0d953fdda727c25a9937be2f62937321ef6fbdb4f",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/gateway-http-adapter.test.js",
+      "sha256": "e0a65283796322b9aefe6ec511cec0fbbbb6973f0f579716caf015b6294dc83f",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/homebase-asset-awareness-cli.test.js",
+      "sha256": "2e152d06a8c713dfb656171dd49f7d87bb9182f3fecced2d45b24c0bd33203da",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/homebase-cli-dispatch.test.js",
+      "sha256": "c138481a4cb8ce64ec2790868a0f18d592f98feef874a7efeef10bc9c52f5cc2",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/identity-pair-coherence.test.js",
+      "sha256": "baccb3bd640dd5c41b7a029c32567f31c90786a4284d5c7a23c4cfe459fd2dd2",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/local-llm-fleet-readiness-cli.test.js",
+      "sha256": "6ea76648cd0df4a2fc08d1ceefcec207bfed77dbc60060ba877710c733b7a45b",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/local-llm-fleet-readiness.test.js",
+      "sha256": "cb9d5c18ad67975e49aa6261ad661e14f0258e13492b2bfcd57ef0dc30513d4e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/mission-loop-preview.test.js",
+      "sha256": "bb66e137ebaf2b3c4dcfd120c65ad9554778b3a70f0d78d23213b7fe4d8c7939",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/mission-supervisor.test.js",
+      "sha256": "d51282850748471e41793881381fbf7cccce418b9df6620c93644e564b0162cf",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/mission-worker-adapter.test.js",
+      "sha256": "e6f0899871ec5ea306d155721c97714858427380a03a877e550e371a8768a142",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/models.test.js",
+      "sha256": "137fdd2cc4f9e106132269ee92e55343e2c3eb09acbeeef116200a180a78b9fc",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/node0-deployment-remote-write.test.js",
+      "sha256": "d69d53d18bece7a677bed07a7d1683bda2f3f7936113187757f361f7dd4ac351",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/node0-evidence-source-registry.test.js",
+      "sha256": "3b51689646a77309b789a59432729f749e0bbafe4ebc341182ecc1f3918fcc8e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/node0-local-loop-integration.test.js",
+      "sha256": "3b3825107643198fae063371a740829574b29f79da377358d70035486c764d9b",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/node0-recovery-adapter.test.js",
+      "sha256": "7722be224b3f03d290c7c9fe58f029ae09bfaf22d8981ba704de96ec4687a785",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/node0-runtime-mission-adapter.test.js",
+      "sha256": "e5c1c962ded9ac2e3c40e35f0383ffc97b53414ef07b0db5e336af9c84822d39",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/onboarding-seal.test.js",
+      "sha256": "a3bb65941453d74ee3d9a8effe9b5a61b5c696746ce235d5d0807b67a7fd2ab4",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/pat-sat-blackboard-live-cli.test.js",
+      "sha256": "5e9debbda52fe53ecc4d6639337e743e567e3a9f38f64e5e5a6143fc2f9fe44e",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/peak-evidence-gatherer.test.js",
+      "sha256": "2c28aa593bbfec6fd86090a3668b15442aa0bc1d060b7725caf605d69f828459",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/peak-self-loop-preview.test.js",
+      "sha256": "dfdeaaeb9ed367bdc805a98fe1dee5b4047a5930011666a67a822421413dbaa9",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/peak-trace-diagnostic-moat.test.js",
+      "sha256": "d65817817bc2ffb3c73ad37cb980cc94f49b09649cbddadfd271c8429481ea0d",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/profile-foundation-preview.test.js",
+      "sha256": "f51cd59f4bc98927bdbf0d8c4a5e578e1386642e9b6f1d5c932c024e24cf2042",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/proof-room-bundle.test.js",
+      "sha256": "733b25be1ea14022003b8c3b551b5282366f4c02118107990c5fd6ee64b11925",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/release-readiness.test.js",
+      "sha256": "6c8ff1f67bc35131f2919756cde44f19ce031dc359fb60c23a99239d896e5bc4",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/status.test.js",
+      "sha256": "aba25826b856de956dcc1be9775212da890be7b6acce4362edd68f27cb38511b",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/test-artifact-isolation.test.js",
+      "sha256": "1b228b67e4409523a6bc20376b439fe0fc08c8ef2d44cc5576f73a466bddcaaa",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/ui-truth-label-check.test.js",
+      "sha256": "4aaf9290c19bc2ada4411cc3225ccde1f53aa40c85cec20ba0a8ea989a35bd83",
+      "status": " M",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": ".cline/",
+      "sha256": "518066edd481d5524a70b8a67a843d8f5b751c3557e86ae57e3021bbe7afc523",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 4
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": ".github/workflows/dema-ui.yml",
+      "sha256": "13fb98ad1522c199d26b7b563002260dbb20e741bd84bc4b612e50bbe6ab76e1",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "BIZRA.md",
+      "sha256": "fa6f8390cd688e403e0ca5360cf5d0bd9ff2d050bb89a62292c007398ab2e668",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "Dema/",
+      "sha256": "0825fa89b36e1861cb261c6c4510edaab51627f8c4742d0765d2084a5bb0a267",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 3254
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/daily-return-situation.js",
+      "sha256": "d746f368ca9c5e2206dc895bdb8241ccaa19eeef0a17c3c3b45ba768d24ddbd1",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "apps/cli/src/first-look-season-resume.js",
+      "sha256": "686cdbe5ed813f50e8d95cf814599180ec052513007596625cb8c59aca81578d",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "backlog/completed/",
+      "sha256": "81686f2a042a18df1f6a9cc2e1baa41ddd2191d466c83eb2e906be915e5ef10e",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 1
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-026.01 - MISSION-RESOURCE-HANDOFF-CONTINUITY-PREVIEW-1A.md",
+      "sha256": "e4f0e38542035252e2aea6116a50673d5c0bfc71ac82041f2050e96efe0878d3",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-075.04.01 - Prefer-ready-llama.cpp-in-canon-QA-readiness-preview.md",
+      "sha256": "47bd0b16778774ce489684270f7f54eee379bb6076dceb61c966daec6ef46e10",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-075.04.02 - DEMA-ON-DEMAND-LOCAL-ROUTE-1A-\u2014-distinguish-dormant-actor-from-blocked-mission.md",
+      "sha256": "38685ca92af84049911b5032a2da17c69e58500a7cb4ca1e7c4f1a58b6bd9773",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-075.04.03 - Bind-talk-profile-readiness-to-the-explicitly-selected-resource.md",
+      "sha256": "6410db7fb7ed893ce7d447f9e5b2c72c7a9b0e40937439dd873bcf31f7ff4d20",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-075.04.04 - Preserve-readiness-probe-boundaries-in-talk-profile-output.md",
+      "sha256": "1cc5dc185c1f182b8b7dc1d5b4037ac79c394376dfadb417bea771298417b3d4",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-075.14.01 - Dema-dormant-resource-mission-continuation-preview.md",
+      "sha256": "e804804e2b607fe1b2562be4f79dbe54167762ad12dbeaa6d5c315be28e07128",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-075.25 - NODE0-REMOTE-WRITE-FRESH-ROOT-READ-1A-rebind-privileged-observation-to-current-listener-evidence.md",
+      "sha256": "64fb350e7e4211d49767295a97cad168275b6fb191080d1d8686a121bb01d26c",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-075.26 - Source-cited-Node0-status-brief-through-one-governed-mission.md",
+      "sha256": "133222699145f360c383230810b3b2aed9ac984c2906afda6d901a17e4a46ac8",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-081 - BIZRA-CONTEXT-SPINE-1A-canonical-context-resolver-and-tool-projections.md",
+      "sha256": "feb3971db54a1c1699121048f51b5d017282a0445d340f37b4db68a9f265d3df",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-082 - BIZRA-ENV-HYGIENE-1A-reconcile-gateway-fixture-environment-registry.md",
+      "sha256": "fa4afffcf2d43cf67c51fccddc357c1bdec9b13d1640380bb4053ba5e573c7ca",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-083 - BIZRA-CONTEXT-SPINE-1B1-recursive-ancestor-context-resolution.md",
+      "sha256": "394f0e89e0445ab9321658b4d698047f025a5389bb898c0a3d9ef7e1754877bf",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-084 - BIZRA-CONTEXT-SPINE-1B2-authority-semantic-lattice.md",
+      "sha256": "f77f9b07c5e721ae69673742611da6cf555ef2a991ba7074ae3a13b8eee555d3",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-085 - BIZRA-CONTEXT-SPINE-1B2R1-authority-evidence-coherence-repair.md",
+      "sha256": "d91e52e8a80fbfeab272cb9d0245036211e7068d16a2e66afc2dfd737ccd59f1",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-086 - BIZRA-CONTEXT-SPINE-1B2R2-historical-resolver-recovery-and-migration-proof.md",
+      "sha256": "721cd8a003e253cd4afb966b756beee169387bab6f48c061e3987876279d9eb3",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-087 - BIZRA-CONTEXT-SPINE-1B2R2R1-recursive-migration-proof-closure.md",
+      "sha256": "b0a23201bd9c0007332214b7ea8e3bd09d768853c1fbec5a1f50f6792477d0fb",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-088 - BIZRA-CONTEXT-SPINE-1B2R3-lease-network-and-mutation-truth-semantics.md",
+      "sha256": "ed19372de1dde369d7afef85ee711339c163a8092d182ab376fa85f9146d2f18",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-089 - BIZRA-NODE0-GENESIS-COMMISSIONING-1A-commission-local-sovereign-Node0.md",
+      "sha256": "c088c4ff8066e4125bed5be9e85ec29579ccf4a23f5715281e50a394a995f5ae",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-090 - DEMA-TALK-BODY-TIMEOUT-1A-bound-suggestion-response-body-reads.md",
+      "sha256": "acb0021a84bd999f4e8bc4d1e6565e13e8447c25e9981fbb0b2c9ab7682a7c92",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-091 - BIZRA-CONTEXT-SPINE-RELEASE-1C-canonicalize-sealed-checkout-bound-context-V1.md",
+      "sha256": "6684d06162a9e0e962a0d1ec6adb1d4ec124352eecc3eeff727d486d0061ff39",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-092 - BIZRA-CONTEXT-IDENTITY-PORTABILITY-1D0-separate-semantic-identity-from-physical-binding.md",
+      "sha256": "0a435455ddd979c697c99ef7dd05870c5d312851106daa3e87e46e17b351244c",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-096 - BIZRA-TOOL-HISTORY-KNOWLEDGE-INGESTION-1A-\u2014-preserve-normalize-graph-and-promote-local-agent-history.md",
+      "sha256": "83f826a8bb8741d210b1ed157930573fcfbc2ce16954b340dc2d3453448eaf03",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-097 - BIZRA-ACTIVE-MISSION-POINTER-RECONCILIATION-1A-\u2014-rebind-stale-pointer-to-current-campaign-evidence.md",
+      "sha256": "b4c7366b75334a15130972692e49112baaecbe0a28805bad940c40780c5aa03d",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-098 - DEMA-FIRST-ENCOUNTER-AX-1A-\u2014-keep-keyboard-and-screen-reader-users-oriented-through-phase-changes.md",
+      "sha256": "080c51b94ca67f866f60791d2de622798150fe75a550aea6e109b8596f7d744b",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-099 - DEMA-First-Return-TUI-1A-\u2014-resume-interrupted-work-safely.md",
+      "sha256": "f147899f73ab19aca7ee7325177e127f6e903623b4a4783eda0b038d42b29bba",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-100 - DEMA-Capability-Acquisition-and-Absorption-Lifecycle-DCAAP.md",
+      "sha256": "82203548ff27c613ed8aa02c378d20abe08615ea7fda8fd8065f5b183862ed22",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-100.01 - DEMA-DCAAP-Acquisition-1A-\u2014-qualify-a-capability-gap-without-granting-use.md",
+      "sha256": "dc5e4231077533130cdd73289b89c656543b1bed17ff2a3d1cf294e31ea69459",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-101 - BIZRA-GENESIS-EXPERIENCE-180S-1A-\u2014-freeze-First-180-Seconds-product-design-only-sequence.md",
+      "sha256": "d5b8bf0c3c22d04c084542b5f50151dc7980f190805d8f0af80f3ee41c8cb786",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-102 - PEAK-SNR-SOURCE-TRUTH-1A-\u2014-prevent-source-hashes-from-scoring-as-measured-evidence.md",
+      "sha256": "5451d58645fe1556aa45a7cf8dbce3270b232c08b515ddd3c90bb8482bf5861d",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-103 - AX-SNR-VERIFIER-OWNER-1A-prevent-fabricated-evidence-envelopes-from-becoming-the-next-action.md",
+      "sha256": "5a4f909b46d6be326b91ae6402c7432520b9e62d9110267e21f9747d96f7bff9",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-104 - Preview-personal-council-resource-routing.md",
+      "sha256": "d96daf24866daf25eea0cf8d6545185313c80ae38744c00a77ee2cf203556c8a",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-105 - DEMA-INVOKE-AX-FLOW-STATE-CLI-VIEW-1A.md",
+      "sha256": "aca0414683ea2421664c9d04c128429dca02300036e1ee4daab9db3c281a8ade",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "backlog/tasks/task-106 - C-005-qualification-repair-and-proof-bound-season-synthesis.md",
+      "sha256": "40d3b4ca76db12eb7a380ddca79a89da8196252c2bf601ffcb3d9fa55aa285e1",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "bizra-flywheel-sprint-loop/",
+      "sha256": "267ef2763f2954d377d8d2b4669bacc8919d90647da0919bac5f2162f6c3e9f7",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 14
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "bizra-flywheel-v3/",
+      "sha256": "6f0aa8b6a816294764bbdbe553ed718fb0fd293944519369116a044d9476afe6",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 28
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/00-product-thesis/BIZRA_AUTOPOIETIC_LOOP_PRD_v0_1.md",
+      "sha256": "b3b3a68c834fb451fb4b2a61a660b74cac7b9c97a791295e9ae04740276b57ec",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/BIZRA_CURRENT_STATE.md",
+      "sha256": "1f4c95f86aab9fbda58073bf1159e971a0fc80b17952ad90058262022039e36c",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/CONDUCTION_SEASON_AGENT_INSTRUCTION_v2_0.md",
+      "sha256": "a19456426c4f1f0ebe7c0e82c3332160e3464f8b3039770f5a1a80a8c13b7ddd",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "CAMPAIGN_RECORDS; commit path-scoped onto merged main in this T-05 campaign commit.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/CROSSING_LEDGER.md",
+      "sha256": "ccd370fc28b11dd4e1b049b335fababce6175ccf4431e5b511efffd3652933a9",
+      "status": "??",
+      "stratum": "A"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/CROSSING_SEASON_AGENT_INSTRUCTION_v1.0.md",
+      "sha256": "232ef64dcfb0e25c2b52e9a0c0b80c47465b63f87164b429e2b66b5ab7ea5dff",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "CAMPAIGN_RECORDS; commit path-scoped onto merged main in this T-05 campaign commit.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0600",
+      "path": "docs/LANE-REGISTRY.md",
+      "sha256": "29a15e5f0260aa8971fb46dd02e1d006e63589c9076fb29979976cee04a31c00",
+      "status": "??",
+      "stratum": "A"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0644",
+      "path": "docs/audits/2026-10-04-codex-post-tool-use-hook-observability.json",
+      "sha256": "5e7258635ee811d957e489f4440eca435ea9dbfd6e351fdd45b5f44a96644904",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/receipts/DEMA_MUMU_RUN_CHECKPOINT.json",
+      "sha256": "8e182f65e2aafeea9bca6e0d1f0cc832a271d5311dbd8ebef6a8fa9fb1a951d9",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/receipts/DEMA_MUMU_RUN_CHECKPOINT_20261002T215546Z.json",
+      "sha256": "69dfd1ecc1e61c32d7a971d1b6e1ffff04b4dc6e4e51776ddd7187a1da69f6df",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "CAMPAIGN_RECORDS; commit path-scoped onto merged main in this T-05 campaign commit.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/receipts/FLAKE-LEDGER.jsonl",
+      "sha256": "55068009c22a003ec7d73f8f30a8b8b66599d0aebe1f1b0ceb3016f8bb4072fa",
+      "status": "??",
+      "stratum": "A"
+    },
+    {
+      "disposition": "CAMPAIGN_RECORDS; commit path-scoped onto merged main in this T-05 campaign commit.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "docs/receipts/crossings/",
+      "sha256": "4d55279a96343e3f881ccf0adc0ff4c9fb6c04931a24f191f9239563f2148b3d",
+      "status": "??",
+      "stratum": "A",
+      "tree_member_count": 16
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/superpowers/plans/2026-10-02-proof-room-write-guards.md",
+      "sha256": "9c001e8a540dbfab10861e5c9ca05bffda40f97524fccb625888dffe8a182fac",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/superpowers/plans/2026-10-04-c005-proof-bound-synthesis.md",
+      "sha256": "e8636bffa23d8bd62132c8f045b99eecef747a757490b152b04e43d9b0c0d2ec",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/superpowers/plans/2026-10-04-dema-ui-ci-review.patch",
+      "sha256": "d2e0022da199c531f255b17ffe23ab37774dad2dc7f66109844b684af1b29bb8",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "docs/ux/BIZRA_GENESIS_EXPERIENCE_FIRST_180_SECONDS_v0_1.md",
+      "sha256": "42c821e38840937b1a8a218e00506d868c47afb2056e8609629cbc443cdbb01c",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/consent/src/capability-absorption-preview.js",
+      "sha256": "75076a4412be7f9a760a935bd05cf965af3a76aa11add14e575a8d4521ea3920",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/consent/src/mcp-capability-acquisition-preview.js",
+      "sha256": "d4833d3585c93956c0b9a44e232af2c22173f0e3347b169e5ce53817f7b89245",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/BIZRA.md",
+      "sha256": "61d40887c08e13cf4af827cb9139a109b076fa6d559511923299f0712fe86ba7",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/agent-invoke-reference.js",
+      "sha256": "931a00bc94183c2ce18f6798c819c30821b61f2dc50c15386604d6cac043f8b5",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/context-attestation.js",
+      "sha256": "85cfcd44f540d9e3eacd5dcdc037b186aa4a93b27c9bd51b050e4117655bb023",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/context-spine.js",
+      "sha256": "a2cfbe3e7093e879721fe12967213a458c48466e8d038003c24af4d9ac03de70",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-council-resource-plan-preview.js",
+      "sha256": "b5fb7c03eb5d8dbb15d69e7dc6d082ba2f0ec02d7f989278b3506b8607569c32",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-return-read-gate.js",
+      "sha256": "28e45fb21597b5474a02853d459cc905eb8ff2bc01f05c1bae15c7a42aff1a26",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-return-situation.js",
+      "sha256": "c452a691ce996b7a7a4953aba7609405efcdce0cbbfe9bc48e62d8212be4b21c",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/dema-snr-thought-join.js",
+      "sha256": "9536c804763ca94af559cd6bc5df5be03d8fc51255aff4bbf6b0e5b590b0f292",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "attribution": "Founder-confirmed early writes from ecosystem-emulation session before own-worktree condition; session context later crashed.",
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve exactly as-is; do not stage or commit.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "next_action": "Re-commissioned emulation session relocates these paths into its own worktree before continuing; this T-05 sync leaves them in primary unchanged.",
+      "path": "packages/core/src/ecosystem-lifecycle-emulation-preview.js",
+      "sha256": "5059b30f61ba3c8b36f4276263163b8a059f235187e7466fef8435c5055a4573",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/genesis-180s-pulse-preview.js",
+      "sha256": "7157ffe5cc9eb9b2e913795ca6d13e45b735f2130d4e036ae8947c951fc060eb",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/invoke-ax-flow-state.js",
+      "sha256": "b4c0efbef309e9ca8fde6379a26d346e3261320defa4e75e909f23bf1e8616f0",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/mumo-node0-activation-preview.js",
+      "sha256": "cc85168a9b9585d456279fa57b3112f8499a8dad76d0e70ad7bcaabfbca8ace9",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/core/src/node0-deployment-remote-write-output.js",
+      "sha256": "cb9141593bc220b6826e66b5bd650dce17854ff46801cd5f61a487394b76eae5",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "attribution": "Founder-confirmed early writes from ecosystem-emulation session before own-worktree condition; session context later crashed.",
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve exactly as-is; do not stage or commit.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "next_action": "Re-commissioned emulation session relocates these paths into its own worktree before continuing; this T-05 sync leaves them in primary unchanged.",
+      "path": "packages/core/src/peak-invoke-snr-spearpoint-preview.js",
+      "sha256": "79cdba06a22b5f09259059d4526e9aca3b3532fed4e6f6d1a680c3ab59377dd0",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/3010",
+      "sha256": "094ea8ad7a6ea89e63ee6e1ca534b20ce86c8571e5f8f074bd1745cb7bf46417",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "packages/dema-ui/server/",
+      "sha256": "9a75488427ccda9017cd95b9218c8c04a4a7e1df056839235b372f0484c35745",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 1
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/app/api/genesis-180/",
+      "sha256": "f101d2669a3a55bc873c65ec830bbac0a3c397e816964e789a7c0b9d5752d862",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 1
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/app/api/node0/",
+      "sha256": "651695a54c2c8513fb6fffc9a0d2daf44bf9ae6e3d8f75552f9b276c9d0c6f20",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 2
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/app/api/return-situation/",
+      "sha256": "23a1552766479ae7944b90e4c89112a312d8379e76db663c12f929da60b8d6eb",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 2
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "path": "packages/dema-ui/src/app/genesis-180/",
+      "sha256": "a391566cc000240a92070c734f05ea4afd0607c5d34723b18c5f8a017ba31dfe",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 1
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/src/components/game/MumoActivation.tsx",
+      "sha256": "ab62c5c1ba71ab14de8e7a24ffb0e674acf661a671e4ae3689369d7649a45ee4",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "packages/dema-ui/tests/ui-lifecycle.proof.mjs",
+      "sha256": "1bf4cadbb5e64098e44ad51c9cc44c03a1603947c022d9e259fa4ae129d72a58",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/context-attestation.mjs",
+      "sha256": "edec6c8fa852ade80505757f85c4cdad3009195fe212f85763bd922865943fbd",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "scripts/context-spine.mjs",
+      "sha256": "8cd3a5cc4c8b19bf7d364978c29810c6a0304c23ef50b3b3cc45791ece46cecc",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "attribution": "Founder-confirmed early writes from ecosystem-emulation session before own-worktree condition; session context later crashed.",
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve exactly as-is; do not stage or commit.",
+      "hash_method": "sha256(canonical-json(sorted recursive path,kind,mode,sha256 members))",
+      "kind": "directory",
+      "mode": "0775",
+      "next_action": "Re-commissioned emulation session relocates these paths into its own worktree before continuing; this T-05 sync leaves them in primary unchanged.",
+      "path": "scripts/emulate/",
+      "sha256": "79eb677f7ab4a92c1d4002bff4acb6c73013793946c012ff2e472627104bb198",
+      "status": "??",
+      "stratum": "C",
+      "tree_member_count": 1
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/capability-absorption-preview.test.js",
+      "sha256": "ed03b06a93bb569652d079590bf42c3d5d89405ab56f04195598b77a11044ac4",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/context-attestation.test.js",
+      "sha256": "8cbd89e0d14d49d4ca4a7cd4ec105f342209105878cc3eacf45657d91597dafd",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/context-spine.test.js",
+      "sha256": "45d5396dd857edc1ffeb65c38dbf3824600abf31ffa0ebac2f4789345eef66be",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-council-resource-plan-preview.test.js",
+      "sha256": "3957b4bd915beaaa300f352be99bcaa3d966dc1a04a3173427ed6b7b677c15e5",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-first-return-tui.test.js",
+      "sha256": "619c1186f0cf11cface4251bcec1b60b93dea8693f220a021de83703c4b9ac75",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-return-situation.test.js",
+      "sha256": "20692c50028e17bcad3099b8308accebe15b963803b6ab4a5bd8123ec0e4361c",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-snr-thought-join.test.js",
+      "sha256": "ba6309018772b6fe934fe7caaa5e0b253c7f2330df2422b5e041f5d038f5699f",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-ui-first-encounter-ax.test.js",
+      "sha256": "da6716780dedbaea613d018bbb7214a8155263581450b1d4106e0a21a13cafd8",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/dema-ui-genesis-180-pulse.test.js",
+      "sha256": "e4cb6a2144e7ff866bf6281268c3d2950e6b73db5dd57854803a1e550a1b9c12",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "attribution": "Founder-confirmed early writes from ecosystem-emulation session before own-worktree condition; session context later crashed.",
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve exactly as-is; do not stage or commit.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "next_action": "Re-commissioned emulation session relocates these paths into its own worktree before continuing; this T-05 sync leaves them in primary unchanged.",
+      "path": "tests/ecosystem-lifecycle-emulation-preview.test.js",
+      "sha256": "be43c177c3313d459e6d6ba24c24ed2c488fe8ef0f53d909c7587071318b6ae0",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/genesis-180s-pulse-preview.test.js",
+      "sha256": "f3399fbf7c95c7333e5749475996113629cb3b1a7c8dcb07cb2b9d413218b10f",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/invoke-ax-flow-state.test.js",
+      "sha256": "548625e494b3090a48904b4464add8cd2ccd6aadd6c3cb7b10337ae59ac409b4",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/mcp-capability-acquisition-preview.test.js",
+      "sha256": "47f08af3437f7f182f89ba1b13797af404a8b8516395981eabc1c3e0386d9914",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/mumo-node0-activation-preview.test.js",
+      "sha256": "296a40c79d52f93c3df80d971875121e53401c693fba034887d3d98b15e086a5",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/node0-deployment-remote-write-output.test.js",
+      "sha256": "59f5d5e8ab7b685404820132765d147a14a2728ca90d55c08e26ec6ca2b6e5c8",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "attribution": "Founder-confirmed early writes from ecosystem-emulation session before own-worktree condition; session context later crashed.",
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve exactly as-is; do not stage or commit.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "next_action": "Re-commissioned emulation session relocates these paths into its own worktree before continuing; this T-05 sync leaves them in primary unchanged.",
+      "path": "tests/peak-invoke-snr-spearpoint-preview.test.js",
+      "sha256": "5ec7545b7d17c1912ba5680cc2f03b742d33549e3de9496df4b328ffda30ba92",
+      "status": "??",
+      "stratum": "C"
+    },
+    {
+      "disposition": "DEFERRED/OTHER (Stratum C); preserve current bytes or deletion; do not stage, restore, or delete.",
+      "hash_method": "sha256(current working-tree bytes; symlink hashes link-target bytes)",
+      "kind": "file",
+      "mode": "0664",
+      "path": "tests/proof-room-write-guards.test.js",
+      "sha256": "c0e562b1b4cd28a6ae6eed43fe1f8248509c8d0d3f43ac4c3a073da0ab07d72e",
+      "status": "??",
+      "stratum": "C"
+    }
+  ],
+  "generated_at_utc": "2026-10-06T01:32:08Z",
+  "receipt_mirrors": {
+    "G2-95BBABE-FOUNDER-RATIFICATION-RECEIPT.json": {
+      "byte_copy_verified": true,
+      "destination": "docs/receipts/crossings/G2-95BBABE-FOUNDER-RATIFICATION-RECEIPT.json",
+      "original_retained": true,
+      "sha256": "091c03d64159dac8871b9d3c939d6b2fe7006f93330ce842b952a230ff2ad21e",
+      "source": "/home/bizra-operating-system/bizra-home/outputs/campaign-lane-G3-founder-rulings-20261006/G2-95BBABE-FOUNDER-RATIFICATION-RECEIPT.json"
+    },
+    "G3-MERGE-RECEIPT.json": {
+      "byte_copy_verified": true,
+      "destination": "docs/receipts/crossings/G3-MERGE-RECEIPT.json",
+      "original_retained": true,
+      "sha256": "51583ed88c7f9d520c396c5890b1de8ca40d4987c196c0592b4fe7454b484d57",
+      "source": "/home/bizra-operating-system/bizra-home/outputs/campaign-lane-G3-merge-20261006/G3-MERGE-RECEIPT.json"
+    },
+    "NODE20-MATRIX-POLICY-RULING.json": {
+      "byte_copy_verified": true,
+      "destination": "docs/receipts/crossings/NODE20-MATRIX-POLICY-RULING.json",
+      "original_retained": true,
+      "sha256": "a3457ab5332b0bf413b40f1e8e14b6c0c05e0fb3f8009d9ab7dfc8ade9eb26ea",
+      "source": "/home/bizra-operating-system/bizra-home/outputs/campaign-lane-G3-founder-rulings-20261006/NODE20-MATRIX-POLICY-RULING.json"
+    }
+  },
+  "schema": "bizra.campaign_lane.T05_disposition_manifest.v1",
+  "self_reference_note": "This manifest records the pre-campaign-commit 230-entry primary snapshot. It is intentionally not included in the hash of its own status row; the current snapshot did not yet contain this manifest.",
+  "snapshot": {
+    "branch": "feat/compose-dema-cli-fate-staged-effect-1a",
+    "entry_count": 230,
+    "head": "7c0edbad5a7624dd73b5edee71f8ed6349e9b975",
+    "mode": "git status --porcelain=v1 -z (default normal untracked-directory collapsing)",
+    "path": "/home/bizra-operating-system/Downloads/Dema",
+    "porcelain_bytes_sha256": "c39c370a5ef7a6afc08c40b457827a62c0992922997a1f3e2001d4664fc8107f",
+    "repository": "BizraInfo/Dema",
+    "stratum_counts": {
+      "A": 4,
+      "B": 0,
+      "C": 226
+    }
+  },
+  "truth_label": "SOURCE_BOUND_PRIMARY_DISPOSITION_SNAPSHOT__NOT_A_CLEAN_TREE"
+}

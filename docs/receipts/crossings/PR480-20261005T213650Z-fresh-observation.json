@@ -1,0 +1,113 @@
+{
+  "schema": "bizra.conduction_season.receipt.v1",
+  "run_id": "20261005T213650Z",
+  "trigger": {
+    "exact_phrase": "Rebind. Two items: flake #4 + fresh gh pr checks 480",
+    "encoding": "UTF-8",
+    "consumed_for": "observation and ledger append only; not G3; not merge"
+  },
+  "observed_at_utc": "2026-10-05T21:36:50Z",
+  "pr": {
+    "number": 480,
+    "head_sha": "95bbabe3afa67f7ab9913dfb5d8a92c33ab92318",
+    "head_short": "95bbabe",
+    "g2_bound_sha": "c1485e8ea3a3dc8f407064b11fc964728c702431",
+    "parent_of_tip": "c1485e8ea3a3dc8f407064b11fc964728c702431",
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "CLEAN",
+    "reviewDecision": "APPROVED",
+    "base": "main"
+  },
+  "tip_commit": {
+    "message_subject": "fix(check): classify closure invariants as operator_observation",
+    "author_name": "Mohamed Beshr",
+    "author_email": "155658129+BizraInfo@users.noreply.github.com",
+    "authored_at_utc": "2026-10-05T20:06:21Z",
+    "co_authored_by": "Cursor <cursoragent@cursor.com>",
+    "authority_explanation": "UNKNOWN this session — G2-amendment receipt still owed from bizra-home lane",
+    "g2_amendment_receipt": "MISSING"
+  },
+  "check_runs_at_head": {
+    "source": "GET /repos/BizraInfo/Dema/commits/95bbabe3afa67f7ab9913dfb5d8a92c33ab92318/check-runs?per_page=100",
+    "total_count": 10,
+    "all_head_sha_match": true,
+    "all_conclusions_success": true,
+    "items": [
+      {"name": "CodeQL", "conclusion": "success"},
+      {"name": "Analyze (JavaScript) (javascript)", "conclusion": "success"},
+      {"name": "proof-quality", "conclusion": "success", "duration": "19m42s", "run_id": 37367678828},
+      {"name": "scan", "conclusion": "success", "run_id": 37367678811},
+      {"name": "test (22.x)", "conclusion": "success", "run_id": 37367678833},
+      {"name": "test (20.x)", "conclusion": "success", "run_id": 37367678833},
+      {"name": "Socket Security: Pull Request Alerts", "conclusion": "success", "output_title": "Pull Request #480 Alerts: Skipped"},
+      {"name": "Socket Security: Project Report", "conclusion": "success"},
+      {"name": "Cursor Security Agent: Security Reviewer", "conclusion": "success"},
+      {"name": "Cursor Approval Agent: Pull Request Router", "conclusion": "success"}
+    ],
+    "commit_status": [{"context": "CodeRabbit", "state": "SUCCESS"}]
+  },
+  "step_level": {
+    "test_22_x": {
+      "job_conclusion": "success",
+      "qualification_steps": "all success (npm test, npm run check, npm run perf, delivery:check, proof:attest:ci, node0 proof-of-truth, upload-artifact)"
+    },
+    "test_20_x": {
+      "job_conclusion": "success",
+      "npm_test": "success",
+      "skipped_inside_success": [
+        "npm run check",
+        "npm run perf",
+        "npm run delivery:check",
+        "npm run proof:attest:ci",
+        "node0-proof-of-truth-control-plane",
+        "upload-artifact"
+      ]
+    },
+    "proof_quality": {
+      "job_conclusion": "success",
+      "all_steps": "success (including npm run check and review scripts)"
+    },
+    "scan": {"job_conclusion": "success", "all_steps": "success"},
+    "codeql_analyze": {"job_conclusion": "success", "all_steps": "success"}
+  },
+  "verdict": {
+    "gh_pr_checks_surface": "ALL_PASS",
+    "merge_state": "CLEAN",
+    "fully_green_at_step_level": false,
+    "reason": "test (20.x) job conclusion success but six qualification steps SKIPPED (same pattern as c1485e8). Socket Pull Request Alerts conclusion success with output title Skipped. Under explicit rule skipped≠green, 95bbabe is NOT FULLY GREEN.",
+    "g3_bar": {
+      "a_step_level_green": false,
+      "b_g2_amendment_receipt_binding_95bbabe": false,
+      "c_founder_g3_phrase": false,
+      "g3_fires": false
+    }
+  },
+  "flake_4": {
+    "occurrence_id": "FLAKE-20261005T2130Z-CURSOR-AGENT-V8-FATAL",
+    "ledger_path": "docs/receipts/FLAKE-LEDGER.jsonl",
+    "envelope_sha256": "sha256:16838f86c740f113e973297d67d33b1ce9f0a6763a39c4d897c78f72535cd085",
+    "prior_watch_result": "NOT_ESTABLISHED",
+    "this_observation": "ESTABLISHED via fresh gh API + gh run watch 37367678828 exit 0"
+  },
+  "lesson_candidate": {
+    "id": "LC-SLASH-COMMANDS-NOT-CONSENT-20261005",
+    "status": "DECLARED_LESSON_CANDIDATE",
+    "statement": "Slash-commands and agent skills are not consent surfaces. /autopilot used twice ungoverned (PR #479 push-adjacent; PR #480 workflow reruns). Repo-affecting slash commands need GO-registry treatment.",
+    "admission": "CANDIDATE_ONLY — not law until founder admits",
+    "authority_delta": 0
+  },
+  "primary_checkout": {
+    "path": "/home/bizra-operating-system/Downloads/Dema",
+    "branch": "feat/compose-dema-cli-fate-staged-effect-1a",
+    "head_short": "7c0edba",
+    "note": "compose branch — deferred stratum; not PR #480 tip"
+  },
+  "actions": [
+    "Appended flake ledger season anomaly #4",
+    "Fresh-observed PR #480 checks at 95bbabe including step inventory",
+    "Declared slash-command lesson-candidate",
+    "Did not merge; did not fire G3; did not push"
+  ],
+  "authority_delta": 0,
+  "crossing_status": "C-005 remains PENDING"
+}
