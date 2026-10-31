@@ -86,16 +86,18 @@ export function projectSoakJudgmentToAdmission(judgment) {
     });
   }
 
-  if (
-    judgment.schema !== undefined &&
-    judgment.schema !== NODE0_ENDURANCE_JUDGMENT_SCHEMA
-  ) {
+  // Schema is mandatory provenance. Missing schema must not project as soak
+  // evidence (Codex P1: omit-schema payloads with positive flags).
+  if (judgment.schema !== NODE0_ENDURANCE_JUDGMENT_SCHEMA) {
     return Object.freeze({
       schema: NODE0_SOAK_JUDGMENT_ADMISSION_SCHEMA,
       truth_label: NODE0_SOAK_JUDGMENT_ADMISSION_TRUTH_LABEL,
       ok: false,
       soak: null,
-      refuse_reason: "schema_mismatch",
+      refuse_reason:
+        judgment.schema === undefined || judgment.schema === null
+          ? "schema_missing"
+          : "schema_mismatch",
       projection: Object.freeze({
         observed_duration_seconds: null,
         healthy: false,
@@ -133,15 +135,20 @@ export function projectSoakJudgmentToAdmission(judgment) {
   const failuresOk = Number.isFinite(failure_count) && failure_count === 0;
   const continuous = judgment.continuously_observed === true;
   const targetMet = judgment.target_met_by_elapsed_run === true;
+  // Accepted verdicts only — never OR with target_met to override an explicit
+  // failing verdict such as INSUFFICIENT (Codex P1).
   const verdictOk =
-    judgment.verdict === "SUFFICIENT" ||
-    judgment.verdict === "PASS" ||
-    targetMet === true;
+    judgment.verdict === "SUFFICIENT" || judgment.verdict === "PASS";
   // Healthy only when the judge itself says the run met its bar with zero
   // failures and continuous observation. Short or failing runs still project
   // a soak object (so admission can cite duration), but observed stays false.
+  // target_met_by_elapsed_run is corroboration, not a substitute for verdict.
   const healthy =
-    judgment.ok === true && continuous && failuresOk && verdictOk;
+    judgment.ok === true &&
+    continuous &&
+    failuresOk &&
+    verdictOk &&
+    targetMet === true;
 
   const runId =
     typeof judgment.run_id === "string" && judgment.run_id.trim()

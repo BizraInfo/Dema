@@ -77,12 +77,12 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
-| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `main` @ `5cbe1072`; measurement receipt keeps `NODE0_CLOSED=false` until soak+remote_write; cartographer intake on `slice/cartographer-claim-stamp-intake-1a` @ `8fd0b4ad` (pushed) |
+| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `main` @ `d85c2379` (#505 cartographer + #506 measurement); `NODE0_CLOSED` false until soak≥72h + remote_write; PR #507 soak-judgment bridge |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
 | P3 | Absorption Atlas map-only stub | DONE preview doc |
-| P4 | Cartographer claim-stamp intake (map-only) | KERNEL on pushed branch `8fd0b4ad`; JSON stamps still absent on Downloads |
+| P4 | Cartographer claim-stamp intake (map-only) | DONE kernel on `main` @ `d85c2379`; Downloads JSON stamps still absent ⇒ honest BLOCKED |
 | P5 | Outsider reduced-PATH suite | DONE @ `7cc9e804` |
 | P6 | `npm run proof:outsider` one-command loop | DONE |
 | P6b | Doctor/first-run/i18n outsider hints → `node bin/dema` | DONE |
@@ -94,9 +94,9 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | P12 | Gateway-http measured ready (chain+VERIFIED principal) | DONE — live Ready:true / doctor operational |
 | — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
 | — | Node0-close measurement receipt | DONE on `main` @ `71a1280b` — `proof:node0-close-measurement`; soak+remote_write admission OPEN |
-| — | Soak judgment → admission bridge | KERNEL on `slice/node0-soak-judgment-admission-1a` — live judgment projects `soak_duration_below_minimum` (40217s), not `no_evidence` |
-| — | Cartographer JSON artifacts | OPEN — PDF measured; three JSON stamps absent; no silent ingest |
+| — | Soak judgment → admission bridge | KERNEL on PR #507 — require endurance schema; never override failing verdict |
+| — | Cartographer JSON artifacts | OPEN — PDF sha256 `dc75867f…5c4b78bb` measured; three JSON stamps still absent; no silent ingest |
 
 ## Default next slice when user says SPRINT
 
-Toward **T0**: (1) Land cartographer PR #505 after CI green, else (2) restart/complete a real ≥72h soak under exact consent (unit currently absent; last run INSUFFICIENT), else (3) remote_write observation adapter, else (4) Cartographer JSON stamps under typed `--root`.
+Toward **T0**: (1) Land soak-judgment PR #507 after CI green, else (2) complete ≥72h soak after CLEAN home verdict (shakedown ≠ health), else (3) remote_write observation adapter, else (4) Cartographer JSON stamps under typed `--root`.

@@ -61,6 +61,37 @@ describe("node0-soak-judgment-admission", () => {
     assert.equal(p.refuse_reason, "schema_mismatch");
   });
 
+  test("missing schema refused (not projected as soak evidence)", () => {
+    const p = projectSoakJudgmentToAdmission({
+      observed_span_ms: DEFAULT_SOAK_MIN_DURATION_SECONDS * 1000,
+      failure_count: 0,
+      continuously_observed: true,
+      ok: true,
+      verdict: "SUFFICIENT",
+      target_met_by_elapsed_run: true,
+    });
+    assert.equal(p.ok, false);
+    assert.equal(p.soak, null);
+    assert.equal(p.refuse_reason, "schema_missing");
+  });
+
+  test("INSUFFICIENT verdict not overridden by target_met_by_elapsed_run", () => {
+    const p = projectSoakJudgmentToAdmission(
+      insufficientJudgment({
+        failure_count: 0,
+        observed_span_ms: DEFAULT_SOAK_MIN_DURATION_SECONDS * 1000,
+        ok: true,
+        verdict: "INSUFFICIENT",
+        target_met_by_elapsed_run: true,
+      }),
+    );
+    assert.equal(p.ok, true);
+    assert.equal(p.soak.observed, false);
+    const admission = evaluateSoakAdmission(p.soak);
+    assert.equal(admission.status, "VIOLATED");
+    assert.equal(admission.reason, "soak_not_healthy");
+  });
+
   test("real insufficient judgment projects duration but not healthy", () => {
     const p = projectSoakJudgmentToAdmission(insufficientJudgment());
     assert.equal(p.ok, true);
