@@ -12,10 +12,16 @@ import assert from "node:assert/strict";
 import {
   MISSION_CONTRACT_SCHEMA,
   MISSION_CONTRACT_SCHEMA_V0_1,
+  MISSION_CONTRACT_INSPECTION_SCHEMA,
+  MISSION_CONTRACT_CREATED_KIND,
+  MISSION_CONTRACT_INSPECTION_KIND,
   MISSION_STATE_SCHEMA,
   MISSION_CONTRACT_GO_PHRASE,
   ACCEPTANCE_PRECEDENCE,
   createMissionContract,
+  inspectMissionContractFields,
+  isCreatedMissionContract,
+  isMissionContractInspection,
   proposeContractAmendment,
   buildMissionState,
   checkpointMissionState,
@@ -268,4 +274,374 @@ test("NC: every state field is load-bearing in state_hash", () => {
     const rehashed = checkpointMissionState({ ...mutated, state_seq: mutated.state_seq - 1 });
     assert.notEqual(rehashed.state_hash, base.state_hash, `${key} must change state_hash`);
   }
+});
+
+// ── AGENT-LAUNCHPAD-NO-SYNTHETIC-CONSENT-1A · pure inspection vs creation ─────
+test("1A: valid draft is inspectable without consent", () => {
+  const inspected = inspectMissionContractFields({ fields: { ...FIELDS } });
+  assert.equal(inspected.schema, MISSION_CONTRACT_INSPECTION_SCHEMA);
+  assert.equal(inspected.kind, MISSION_CONTRACT_INSPECTION_KIND);
+  assert.equal(inspected.validation_only, true);
+  assert.equal(inspected.human_consent_established, false);
+  assert.equal(inspected.creation_authorized, false);
+  assert.match(inspected.contract_hash, /^(?:sha256:)?[0-9a-f]{64}$/);
+});
+
+test("1A: inspection hash matches consent-gated creation hash", () => {
+  const inspected = inspectMissionContractFields({ fields: { ...FIELDS } });
+  const created = createMissionContract({ fields: { ...FIELDS }, consent: GO });
+  assert.equal(inspected.contract_hash, created.contract_hash);
+  assert.equal(created.schema, MISSION_CONTRACT_SCHEMA);
+  assert.equal(created.kind, MISSION_CONTRACT_CREATED_KIND);
+});
+
+test("1A: creation without exact GO still refuses", () => {
+  assert.throws(
+    () => createMissionContract({ fields: { ...FIELDS } }),
+    (e) => e.code === "consent_phrase_mismatch",
+  );
+  assert.throws(
+    () => createMissionContract({ fields: { ...FIELDS }, consent: "GO: inspect only" }),
+    (e) => e.code === "consent_phrase_mismatch",
+  );
+});
+
+test("1A: invalid semantics refuse identically on inspect and create", () => {
+  assert.throws(
+    () => inspectMissionContractFields({ fields: { ...FIELDS, acceptance_criteria: [] } }),
+    (e) => e.code === "acceptance_criteria_empty",
+  );
+  assert.throws(
+    () => createMissionContract({ fields: { ...FIELDS, acceptance_criteria: [] }, consent: GO }),
+    (e) => e.code === "acceptance_criteria_empty",
+  );
+  assert.throws(
+    () => inspectMissionContractFields({ fields: { ...FIELDS, acceptance_contract: {} } }),
+    (e) => e.code === "acceptance_contract_invalid",
+  );
+});
+
+test("1A: inspection never grants authority flags", () => {
+  const inspected = inspectMissionContractFields({ fields: { ...FIELDS } });
+  assert.equal(inspected.validation_only, true);
+  assert.equal(inspected.human_consent_established, false);
+  assert.equal(inspected.creation_authorized, false);
+  assert.equal(Object.hasOwn(inspected, "consent"), false);
+});
+
+// ── DEMA-PR490-F3-INSPECTION-CONTRACT-CLOSURE-1C · ownership + type ───────────
+test("1C: inspection does not freeze or mutate caller-owned nests", () => {
+  const required_output_keys = ["patch", "test_result"];
+  const forbidden_substrings = ["TODO"];
+  const acceptance_contract = { required_output_keys, forbidden_substrings };
+  const acceptance_criteria = ["focused test green", "full gates green"];
+  const prohibited_outcomes = ["push", "merge", "network"];
+  const completion_conditions = ["all acceptance criteria met"];
+  const fields = {
+    ...FIELDS,
+    acceptance_contract,
+    acceptance_criteria,
+    prohibited_outcomes,
+    completion_conditions,
+  };
+  const before = JSON.stringify({
+    acceptance_contract,
+    acceptance_criteria,
+    prohibited_outcomes,
+    completion_conditions,
+  });
+
+  const inspected = inspectMissionContractFields({ fields });
+  assert.equal(Object.isFrozen(acceptance_contract), false);
+  assert.equal(Object.isFrozen(required_output_keys), false);
+  assert.equal(Object.isFrozen(forbidden_substrings), false);
+  assert.equal(Object.isFrozen(acceptance_criteria), false);
+  assert.equal(Object.isFrozen(prohibited_outcomes), false);
+  assert.equal(Object.isFrozen(completion_conditions), false);
+  assert.equal(
+    JSON.stringify({
+      acceptance_contract,
+      acceptance_criteria,
+      prohibited_outcomes,
+      completion_conditions,
+    }),
+    before,
+  );
+
+  acceptance_criteria.push("caller-still-owns-this");
+  prohibited_outcomes.push("caller-mutation");
+  required_output_keys.push("extra");
+  assert.equal(acceptance_criteria.includes("caller-still-owns-this"), true);
+  assert.equal(inspected.contract.acceptance_criteria.includes("caller-still-owns-this"), false);
+  assert.equal(inspected.contract.prohibited_outcomes.includes("caller-mutation"), false);
+  assert.equal(Object.isFrozen(inspected.contract), true);
+  assert.equal(Object.isFrozen(inspected.contract.acceptance_contract), true);
+  assert.throws(() => {
+    inspected.contract.acceptance_criteria.push("x");
+  }, TypeError);
+
+  const again = inspectMissionContractFields({
+    fields: {
+      ...FIELDS,
+      acceptance_contract: { required_output_keys: ["patch", "test_result"], forbidden_substrings: ["TODO"] },
+      acceptance_criteria: ["focused test green", "full gates green"],
+      prohibited_outcomes: ["push", "merge", "network"],
+      completion_conditions: ["all acceptance criteria met"],
+    },
+  });
+  assert.equal(again.contract_hash, inspected.contract_hash);
+});
+
+test("1C: create also detaches caller nests while preserving consent-first gate", () => {
+  const acceptance_criteria = ["focused test green", "full gates green"];
+  const fields = { ...FIELDS, acceptance_criteria };
+  const created = createMissionContract({ fields, consent: GO });
+  assert.equal(Object.isFrozen(acceptance_criteria), false);
+  acceptance_criteria.push("after-create");
+  assert.equal(created.contract.acceptance_criteria.includes("after-create"), false);
+  assert.throws(
+    () => createMissionContract({ fields, consent: "wrong" }),
+    (e) => e.code === "consent_phrase_mismatch",
+  );
+});
+
+test("1C: inspection envelope is not a created mission contract", () => {
+  const inspected = inspectMissionContractFields({ fields: { ...FIELDS } });
+  const created = createMissionContract({ fields: { ...FIELDS }, consent: GO });
+  assert.equal(isMissionContractInspection(inspected), true);
+  assert.equal(isCreatedMissionContract(inspected), false);
+  assert.equal(isCreatedMissionContract(created), true);
+  assert.equal(isMissionContractInspection(created), false);
+  assert.notEqual(inspected.schema, created.schema);
+  assert.equal(inspected.contract_hash, created.contract_hash);
+  // Schema+hash alone must not imply creation: strip kind/flags and require helpers.
+  const confused = {
+    schema: MISSION_CONTRACT_SCHEMA,
+    contract: inspected.contract,
+    contract_hash: inspected.contract_hash,
+    validation_only: true,
+    creation_authorized: false,
+  };
+  assert.equal(isCreatedMissionContract(confused), false);
+});
+
+// ── DEMA-PR490-F3-VALIDATED-SNAPSHOT-SEAL-1E · validate ≡ seal ───────────────
+function statefulGetter(first, later) {
+  let n = 0;
+  const obj = {};
+  Object.defineProperty(obj, "required_output_keys", {
+    enumerable: true,
+    configurable: true,
+    get() {
+      n += 1;
+      return n === 1 ? first : later;
+    },
+  });
+  Object.defineProperty(obj, "forbidden_substrings", {
+    enumerable: true,
+    configurable: true,
+    get() {
+      return ["TODO"];
+    },
+  });
+  return obj;
+}
+
+function alternatingProxy(first, later) {
+  let hits = 0;
+  return new Proxy(
+    { forbidden_substrings: ["TODO"] },
+    {
+      ownKeys() {
+        return ["required_output_keys", "forbidden_substrings"];
+      },
+      getOwnPropertyDescriptor() {
+        return { enumerable: true, configurable: true };
+      },
+      has(_, prop) {
+        return prop === "required_output_keys" || prop === "forbidden_substrings";
+      },
+      get(t, prop) {
+        if (prop === "forbidden_substrings") return t.forbidden_substrings;
+        if (prop === "required_output_keys") {
+          hits += 1;
+          return hits === 1 ? first : later;
+        }
+        return undefined;
+      },
+    },
+  );
+}
+
+function onceThen(first, later) {
+  let n = 0;
+  return {
+    get() {
+      n += 1;
+      return n === 1 ? first : later;
+    },
+    enumerable: true,
+    configurable: true,
+  };
+}
+
+test("1E T1: acceptance getter valid→vacuous refuses or seals only admitted snapshot", () => {
+  const ac = statefulGetter(["patch", "test_result"], []);
+  const fields = { ...FIELDS, acceptance_contract: ac };
+  // Validator admits first read; seal must use that snapshot — never empty later.
+  const inspected = inspectMissionContractFields({ fields });
+  assert.deepEqual([...inspected.contract.acceptance_contract.required_output_keys], ["patch", "test_result"]);
+  assert.notEqual(inspected.contract.acceptance_contract.required_output_keys.length, 0);
+  const created = createMissionContract({ fields: { ...FIELDS, acceptance_contract: statefulGetter(["patch", "test_result"], []) }, consent: GO });
+  assert.deepEqual([...created.contract.acceptance_contract.required_output_keys], ["patch", "test_result"]);
+});
+
+test("1E T2: acceptance getter valid→weaker valid seals the validated stronger law", () => {
+  const fields = { ...FIELDS, acceptance_contract: statefulGetter(["patch", "test_result"], ["patch"]) };
+  const inspected = inspectMissionContractFields({ fields });
+  assert.deepEqual([...inspected.contract.acceptance_contract.required_output_keys], ["patch", "test_result"]);
+  const created = createMissionContract({
+    fields: { ...FIELDS, acceptance_contract: statefulGetter(["patch", "test_result"], ["patch"]) },
+    consent: GO,
+  });
+  assert.deepEqual([...created.contract.acceptance_contract.required_output_keys], ["patch", "test_result"]);
+  assert.equal(inspected.contract_hash, createMissionContract({
+    fields: {
+      ...FIELDS,
+      acceptance_contract: { required_output_keys: ["patch", "test_result"], forbidden_substrings: ["TODO"] },
+    },
+    consent: GO,
+  }).contract_hash);
+});
+
+test("1E T3: alternating Proxy acceptance predicates seal first admitted law", () => {
+  const inspected = inspectMissionContractFields({
+    fields: { ...FIELDS, acceptance_contract: alternatingProxy(["patch", "test_result"], []) },
+  });
+  assert.deepEqual([...inspected.contract.acceptance_contract.required_output_keys], ["patch", "test_result"]);
+  const created = createMissionContract({
+    fields: { ...FIELDS, acceptance_contract: alternatingProxy(["patch", "test_result"], []) },
+    consent: GO,
+  });
+  assert.deepEqual([...created.contract.acceptance_contract.required_output_keys], ["patch", "test_result"]);
+});
+
+test("1E T4: changing acceptance_criteria across reads uses the first admitted list", () => {
+  const fields = { ...FIELDS };
+  Object.defineProperty(fields, "acceptance_criteria", onceThen(["focused test green", "full gates green"], ["tampered"]));
+  const inspected = inspectMissionContractFields({ fields });
+  assert.deepEqual([...inspected.contract.acceptance_criteria], ["focused test green", "full gates green"]);
+});
+
+test("1E T5: changing prohibited_outcomes across reads uses the first admitted list", () => {
+  const fields = { ...FIELDS };
+  Object.defineProperty(fields, "prohibited_outcomes", onceThen(["push", "merge", "network"], ["tampered"]));
+  const inspected = inspectMissionContractFields({ fields });
+  assert.deepEqual([...inspected.contract.prohibited_outcomes], ["push", "merge", "network"]);
+});
+
+test("1E T6: changing completion_conditions across reads uses the first admitted list", () => {
+  const fields = { ...FIELDS };
+  Object.defineProperty(fields, "completion_conditions", onceThen(["all acceptance criteria met"], ["tampered"]));
+  const inspected = inspectMissionContractFields({ fields });
+  assert.deepEqual([...inspected.contract.completion_conditions], ["all acceptance criteria met"]);
+});
+
+test("1E T7: unknown own __proto__ acceptance key is refused", () => {
+  const ac = {
+    required_output_keys: ["patch"],
+    forbidden_substrings: ["TODO"],
+  };
+  Object.defineProperty(ac, "__proto__", {
+    value: { polluted: true },
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  assert.throws(
+    () => inspectMissionContractFields({ fields: { ...FIELDS, acceptance_contract: ac } }),
+    (e) => e.code === "acceptance_contract_invalid" && e.blocked_by.includes("contract_unknown_field:__proto__"),
+  );
+  assert.throws(
+    () => createMissionContract({ fields: { ...FIELDS, acceptance_contract: ac }, consent: GO }),
+    (e) => e.code === "acceptance_contract_invalid",
+  );
+});
+
+test("1E T8: throwing getter / uninspectable field refuses", () => {
+  const fields = { ...FIELDS };
+  Object.defineProperty(fields, "purpose", {
+    enumerable: true,
+    get() {
+      throw new Error("boom");
+    },
+  });
+  assert.throws(
+    () => inspectMissionContractFields({ fields }),
+    (e) => e.code === "mission_fields_uninspectable",
+  );
+  assert.throws(
+    () => createMissionContract({ fields, consent: GO }),
+    (e) => e.code === "mission_fields_uninspectable",
+  );
+});
+
+test("1E T9: honest canonical contract hash parity inspect≡create", () => {
+  const inspected = inspectMissionContractFields({ fields: { ...FIELDS } });
+  const created = createMissionContract({ fields: { ...FIELDS }, consent: GO });
+  assert.equal(inspected.contract_hash, created.contract_hash);
+  assert.deepEqual(
+    [...inspected.contract.acceptance_contract.required_output_keys],
+    [...created.contract.acceptance_contract.required_output_keys],
+  );
+});
+
+test("1E T10/T11: inspection leaves caller mutable; later mutation does not change sealed hash", () => {
+  const required_output_keys = ["patch", "test_result"];
+  const forbidden_substrings = ["TODO"];
+  const acceptance_contract = { required_output_keys, forbidden_substrings };
+  const acceptance_criteria = ["focused test green", "full gates green"];
+  const fields = { ...FIELDS, acceptance_contract, acceptance_criteria };
+  const inspected = inspectMissionContractFields({ fields });
+  const sealedHash = inspected.contract_hash;
+  assert.equal(Object.isFrozen(acceptance_contract), false);
+  assert.equal(Object.isFrozen(acceptance_criteria), false);
+  acceptance_criteria.push("after");
+  required_output_keys.push("extra");
+  assert.equal(inspected.contract_hash, sealedHash);
+  assert.equal(inspected.contract.acceptance_criteria.includes("after"), false);
+  assert.equal(inspected.contract.acceptance_contract.required_output_keys.includes("extra"), false);
+});
+
+test("1E T12: creation without exact GO refuses before field examination", () => {
+  const fields = { ...FIELDS };
+  Object.defineProperty(fields, "mission_id", {
+    enumerable: true,
+    get() {
+      throw new Error("should-not-read-fields-before-consent");
+    },
+  });
+  assert.throws(
+    () => createMissionContract({ fields, consent: "wrong" }),
+    (e) => e.code === "consent_phrase_mismatch",
+  );
+});
+
+test("1E T14: inspection remains non-authoritative", () => {
+  const inspected = inspectMissionContractFields({ fields: { ...FIELDS } });
+  assert.equal(inspected.validation_only, true);
+  assert.equal(inspected.human_consent_established, false);
+  assert.equal(inspected.creation_authorized, false);
+  assert.equal(isCreatedMissionContract(inspected), false);
+  // Structural kind forge is not consent evidence.
+  assert.equal(
+    isCreatedMissionContract({
+      schema: MISSION_CONTRACT_SCHEMA,
+      kind: MISSION_CONTRACT_CREATED_KIND,
+      contract: inspected.contract,
+      contract_hash: inspected.contract_hash,
+    }),
+    true,
+    "type guard alone is not human consent — documented limitation",
+  );
 });

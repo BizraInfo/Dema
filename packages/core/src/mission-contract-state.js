@@ -36,9 +36,13 @@ import { validateAcceptanceContract } from "./node0-model-swap-invariance.js";
 // failure.
 export const MISSION_CONTRACT_SCHEMA = "bizra.dema.mission_contract.v0.2";
 export const MISSION_CONTRACT_SCHEMA_V0_1 = "bizra.dema.mission_contract.v0.1";
+/** Envelope schema for pure inspection — never interchangeable with created contracts. */
+export const MISSION_CONTRACT_INSPECTION_SCHEMA = "bizra.dema.mission_contract_inspection.v0.1";
 export const MISSION_STATE_SCHEMA = "bizra.dema.mission_state.v0.1";
 export const MISSION_CONTRACT_TRUTH_LABEL = "MISSION_CONTRACT_STATE_PREVIEW";
 export const MISSION_CONTRACT_GO_PHRASE = "GO: create mission contract";
+export const MISSION_CONTRACT_CREATED_KIND = "mission_contract_created";
+export const MISSION_CONTRACT_INSPECTION_KIND = "mission_contract_inspection";
 
 // ── ONE ACCEPTANCE SOURCE OF TRUTH ──────────────────────────────────────────
 // `acceptance_contract` is NORMATIVE: it is the machine-executable law, and the
@@ -113,10 +117,180 @@ function exactKeys(obj, expected) {
 }
 
 const isNonBlank = (v) => typeof v === "string" && v.trim().length > 0;
-const isStringList = (v) => Array.isArray(v) && v.every(isNonBlank);
 
 export function missionContractStateBoundary() {
   return buildPreviewBoundary();
+}
+
+/// Read one caller field exactly once. Stateful getters / Proxies cannot present
+/// a different value to a later seal step if we never re-read the property.
+function readMissionField(fields, key) {
+  try {
+    return fields[key];
+  } catch {
+    throw new MissionContractError(
+      "mission_fields_uninspectable",
+      `mission field ${key} is uninspectable`,
+      { field: key },
+    );
+  }
+}
+
+/// Copy a string-list field from the single admitted read. Elements are sampled
+/// once into an owner-owned array; the caller array is never frozen or reused.
+function admitStringList(value, { emptyCode, invalidCode }) {
+  if (!Array.isArray(value)) {
+    throw new MissionContractError(invalidCode, `${invalidCode}: not a string list`);
+  }
+  const copy = [];
+  for (const item of value) copy.push(item);
+  if (!copy.every(isNonBlank)) {
+    throw new MissionContractError(invalidCode, `${invalidCode}: blank or non-string entry`);
+  }
+  if (emptyCode && copy.length === 0) {
+    throw new MissionContractError(emptyCode, emptyCode);
+  }
+  return copy;
+}
+
+/// Shared semantic validation + freeze for mission contract fields.
+/// Used by both consent-free inspection and consent-gated creation so rules
+/// cannot drift. Does not check consent and does not claim creation authority.
+///
+/// INVARIANT: Semantics_validated === Semantics_sealed.
+/// Each supported field is read from the caller at most once. The acceptance
+/// law sealed into the contract is acceptanceCheck.snapshot — never a second
+/// read of fields.acceptance_contract.
+function assertAndFreezeMissionContractFields(fields) {
+  if (!exactKeys(fields, [...CONTRACT_FIELDS].sort())) {
+    throw new MissionContractError("contract_shape_invalid", "contract fields must match CONTRACT_FIELDS exactly");
+  }
+
+  // ── ONE owned admission of every supported field (single property reads) ──
+  const mission_id = readMissionField(fields, "mission_id");
+  const purpose = readMissionField(fields, "purpose");
+  const scope = readMissionField(fields, "scope");
+  const acceptance_contract_raw = readMissionField(fields, "acceptance_contract");
+  const acceptance_criteria_raw = readMissionField(fields, "acceptance_criteria");
+  const prohibited_outcomes_raw = readMissionField(fields, "prohibited_outcomes");
+  const authority_ceiling = readMissionField(fields, "authority_ceiling");
+  const iteration_budget = readMissionField(fields, "iteration_budget");
+  const completion_conditions_raw = readMissionField(fields, "completion_conditions");
+  const escalation_rule = readMissionField(fields, "escalation_rule");
+  const created_at_iso = readMissionField(fields, "created_at_iso");
+
+  if (!isNonBlank(mission_id)) {
+    throw new MissionContractError("mission_id_missing", "mission_id must be a non-blank string");
+  }
+  // EC-4 — a mission that cannot be judged cannot be conducted. Both halves are
+  // required: the human intent AND the executable law that actually decides.
+  const acceptance_criteria = admitStringList(acceptance_criteria_raw, {
+    emptyCode: "acceptance_criteria_empty",
+    invalidCode: "acceptance_criteria_empty",
+  });
+  // The judge owns acceptance semantics; this kernel does not re-implement them.
+  // A vacuous law (`{}`, or predicates that constrain nothing) is refused here
+  // rather than at verdict time, because a contract that cannot fail anything
+  // would make every EXECUTE trivially acceptable.
+  const acceptanceCheck = validateAcceptanceContract(acceptance_contract_raw);
+  if (!acceptanceCheck.valid) {
+    throw new MissionContractError("acceptance_contract_invalid", "acceptance_contract is not an admissible acceptance law", {
+      blocked_by: acceptanceCheck.blocked_by,
+    });
+  }
+  if (!acceptanceCheck.snapshot || typeof acceptanceCheck.snapshot !== "object") {
+    throw new MissionContractError(
+      "acceptance_contract_invalid",
+      "acceptance_contract validator returned no admitted snapshot",
+    );
+  }
+  // EC-5
+  if (!Number.isInteger(iteration_budget) || iteration_budget <= 0) {
+    throw new MissionContractError("iteration_budget_invalid", "iteration_budget must be a positive integer");
+  }
+  const prohibited_outcomes = admitStringList(prohibited_outcomes_raw, {
+    invalidCode: "prohibited_outcomes_invalid",
+  });
+  const completion_conditions = admitStringList(completion_conditions_raw, {
+    emptyCode: "completion_conditions_invalid",
+    invalidCode: "completion_conditions_invalid",
+  });
+  for (const [key, value] of [
+    ["purpose", purpose],
+    ["scope", scope],
+    ["authority_ceiling", authority_ceiling],
+    ["escalation_rule", escalation_rule],
+    ["created_at_iso", created_at_iso],
+  ]) {
+    if (!isNonBlank(value)) {
+      throw new MissionContractError(`${key}_missing`, `${key} must be a non-blank string`);
+    }
+  }
+
+  // Seal ONLY admitted data. acceptance_contract is the validator snapshot —
+  // the single inert copy validation already judged. No further caller reads.
+  return deepFreeze({
+    acceptance_contract: acceptanceCheck.snapshot,
+    acceptance_criteria,
+    authority_ceiling,
+    completion_conditions,
+    created_at_iso,
+    escalation_rule,
+    iteration_budget,
+    mission_id,
+    prohibited_outcomes,
+    purpose,
+    scope,
+  });
+}
+
+/// True only for consent-gated createMissionContract envelopes.
+/// Inspection results share contract_hash shape but not this schema/kind.
+export function isCreatedMissionContract(value) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      value.schema === MISSION_CONTRACT_SCHEMA &&
+      value.kind === MISSION_CONTRACT_CREATED_KIND &&
+      value.contract &&
+      typeof value.contract === "object" &&
+      typeof value.contract_hash === "string" &&
+      value.validation_only !== true &&
+      value.creation_authorized !== false,
+  );
+}
+
+/// True only for pure inspectMissionContractFields envelopes.
+export function isMissionContractInspection(value) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      value.schema === MISSION_CONTRACT_INSPECTION_SCHEMA &&
+      value.kind === MISSION_CONTRACT_INSPECTION_KIND &&
+      value.validation_only === true &&
+      value.human_consent_established === false &&
+      value.creation_authorized === false &&
+      value.contract &&
+      typeof value.contract === "object" &&
+      typeof value.contract_hash === "string",
+  );
+}
+
+/// Pure validation / hash inspection. No consent parameter. No creation claim.
+/// Callers that need an authorized contract must use createMissionContract.
+export function inspectMissionContractFields({ fields } = {}) {
+  const contract = assertAndFreezeMissionContractFields(fields);
+  return Object.freeze({
+    schema: MISSION_CONTRACT_INSPECTION_SCHEMA,
+    kind: MISSION_CONTRACT_INSPECTION_KIND,
+    contract,
+    contract_hash: sha256CanonicalJsonV1(contract),
+    validation_only: true,
+    human_consent_established: false,
+    creation_authorized: false,
+  });
 }
 
 /// Ordering matters: consent is checked BEFORE shape so a malformed unconsented
@@ -128,46 +302,10 @@ export function createMissionContract({ fields, consent } = {}) {
       "exact-string consent required to create a mission contract",
     );
   }
-  if (!exactKeys(fields, [...CONTRACT_FIELDS].sort())) {
-    throw new MissionContractError("contract_shape_invalid", "contract fields must match CONTRACT_FIELDS exactly");
-  }
-  if (!isNonBlank(fields.mission_id)) {
-    throw new MissionContractError("mission_id_missing", "mission_id must be a non-blank string");
-  }
-  // EC-4 — a mission that cannot be judged cannot be conducted. Both halves are
-  // required: the human intent AND the executable law that actually decides.
-  if (!isStringList(fields.acceptance_criteria) || fields.acceptance_criteria.length === 0) {
-    throw new MissionContractError("acceptance_criteria_empty", "at least one acceptance criterion is required");
-  }
-  // The judge owns acceptance semantics; this kernel does not re-implement them.
-  // A vacuous law (`{}`, or predicates that constrain nothing) is refused here
-  // rather than at verdict time, because a contract that cannot fail anything
-  // would make every EXECUTE trivially acceptable.
-  const acceptanceCheck = validateAcceptanceContract(fields.acceptance_contract);
-  if (!acceptanceCheck.valid) {
-    throw new MissionContractError("acceptance_contract_invalid", "acceptance_contract is not an admissible acceptance law", {
-      blocked_by: acceptanceCheck.blocked_by,
-    });
-  }
-  // EC-5
-  if (!Number.isInteger(fields.iteration_budget) || fields.iteration_budget <= 0) {
-    throw new MissionContractError("iteration_budget_invalid", "iteration_budget must be a positive integer");
-  }
-  if (!isStringList(fields.prohibited_outcomes)) {
-    throw new MissionContractError("prohibited_outcomes_invalid", "prohibited_outcomes must be non-blank strings");
-  }
-  if (!isStringList(fields.completion_conditions) || fields.completion_conditions.length === 0) {
-    throw new MissionContractError("completion_conditions_invalid", "at least one completion condition is required");
-  }
-  for (const k of ["purpose", "scope", "authority_ceiling", "escalation_rule", "created_at_iso"]) {
-    if (!isNonBlank(fields[k])) {
-      throw new MissionContractError(`${k}_missing`, `${k} must be a non-blank string`);
-    }
-  }
-
-  const contract = deepFreeze({ ...fields, acceptance_criteria: [...fields.acceptance_criteria] });
+  const contract = assertAndFreezeMissionContractFields(fields);
   return Object.freeze({
     schema: MISSION_CONTRACT_SCHEMA,
+    kind: MISSION_CONTRACT_CREATED_KIND,
     contract,
     contract_hash: sha256CanonicalJsonV1(contract),
   });
