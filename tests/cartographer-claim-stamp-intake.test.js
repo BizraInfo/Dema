@@ -75,6 +75,41 @@ describe("cartographer-claim-stamp-intake", () => {
     assert.equal(r.ok, false);
     assert.equal(r.truth_label, CARTOGRAPHER_INTAKE_TRUTH.PARSE_FAILED);
     assert.deepEqual([...r.parse_errors], ["cross_repo_ledger.json"]);
+    assert.equal(r.io_disclosure.content_read, true);
+    assert.equal(r.boundary.content_read, false);
+  });
+
+  test("claims:null is PARSE_FAILED not a one-key count", () => {
+    const io = memFs({
+      "cross_repo_ledger.json": JSON.stringify({ a: 1 }),
+      "bizra_hypergraph_triples.jsonl": '{"t":1}\n',
+      "public_claims_audit.json": JSON.stringify({ claims: null }),
+    });
+    const r = assessCartographerIntake({
+      intakeRoot: "/virtual/null-claims",
+      ...io,
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.truth_label, CARTOGRAPHER_INTAKE_TRUTH.PARSE_FAILED);
+    assert.ok(r.parse_errors.includes("public_claims_audit.json"));
+  });
+
+  test("unreadable artifact ⇒ BLOCKED not thrown", () => {
+    const io = {
+      listNames: () => [...REQUIRED_CARTOGRAPHER_FILES],
+      readText: () => {
+        throw new Error("EACCES");
+      },
+      pathJoin: (...parts) => parts.join("/"),
+    };
+    const r = assessCartographerIntake({
+      intakeRoot: "/virtual/unreadable",
+      ...io,
+    });
+    assert.equal(r.ok, false);
+    assert.equal(r.truth_label, CARTOGRAPHER_INTAKE_TRUTH.BLOCKED);
+    assert.deepEqual([...r.missing], ["artifact_unreadable"]);
+    assert.ok(r.read_errors.length >= 1);
   });
 
   test("valid artifacts ⇒ REPARSE_GREEN with measured counts", () => {

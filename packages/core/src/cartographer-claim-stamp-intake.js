@@ -58,22 +58,39 @@ function tryParseNdjson(text) {
   return lines;
 }
 
+/**
+ * Count claim entries. Returns null when a dedicated collection key is present
+ * but not an array (e.g. `{ "claims": null }`) — that is PARSE_FAILED, not 1.
+ */
 function countClaimEntries(claims) {
   if (Array.isArray(claims)) return claims.length;
-  if (!isPlainObject(claims)) return 0;
-  if (Array.isArray(claims.claims)) return claims.claims.length;
-  if (Array.isArray(claims.entries)) return claims.entries.length;
-  if (Array.isArray(claims.badged_claims)) return claims.badged_claims.length;
+  if (!isPlainObject(claims)) return null;
+  for (const key of ["claims", "entries", "badged_claims"]) {
+    if (Object.prototype.hasOwnProperty.call(claims, key)) {
+      return Array.isArray(claims[key]) ? claims[key].length : null;
+    }
+  }
   return Object.keys(claims).length;
 }
 
 function baseResult(extra) {
   return Object.freeze({
     schema: CARTOGRAPHER_INTAKE_SCHEMA,
+    // Canonical preview boundary stays all-false (ADR). Content-read honesty
+    // lives in io_disclosure so we never launder a true effect into the
+    // all-false mint/network/federation stamp.
     boundary: buildPreviewBoundary(),
     authority_delta: 0,
     ...extra,
   });
+}
+
+function safeReadText(readText, absPath) {
+  try {
+    return { ok: true, text: readText(absPath) };
+  } catch (error) {
+    return { ok: false, error: String(error?.message || error) };
+  }
 }
 
 /**
@@ -143,27 +160,67 @@ export function assessCartographerIntake({
   }
 
   const parse_errors = [];
+  const read_errors = [];
   const counts = {};
+  let contentRead = false;
 
-  const ledgerText = readText(pathJoin(root, "cross_repo_ledger.json"));
-  const ledger = tryParseJson(ledgerText);
-  if (!isPlainObject(ledger)) parse_errors.push("cross_repo_ledger.json");
-  else counts.ledger_keys = Object.keys(ledger).length;
-
-  const claimsText = readText(pathJoin(root, "public_claims_audit.json"));
-  const claims = tryParseJson(claimsText);
-  if (claims === null || (!isPlainObject(claims) && !Array.isArray(claims))) {
-    parse_errors.push("public_claims_audit.json");
+  const ledgerRead = safeReadText(
+    readText,
+    pathJoin(root, "cross_repo_ledger.json"),
+  );
+  if (!ledgerRead.ok) {
+    read_errors.push(`cross_repo_ledger.json:${ledgerRead.error}`);
   } else {
-    counts.claim_entries = countClaimEntries(claims);
+    contentRead = true;
+    const ledger = tryParseJson(ledgerRead.text);
+    if (!isPlainObject(ledger)) parse_errors.push("cross_repo_ledger.json");
+    else counts.ledger_keys = Object.keys(ledger).length;
   }
 
-  const triplesText = readText(
+  const claimsRead = safeReadText(
+    readText,
+    pathJoin(root, "public_claims_audit.json"),
+  );
+  if (!claimsRead.ok) {
+    read_errors.push(`public_claims_audit.json:${claimsRead.error}`);
+  } else {
+    contentRead = true;
+    const claims = tryParseJson(claimsRead.text);
+    if (claims === null || (!isPlainObject(claims) && !Array.isArray(claims))) {
+      parse_errors.push("public_claims_audit.json");
+    } else {
+      const claimCount = countClaimEntries(claims);
+      if (claimCount === null) parse_errors.push("public_claims_audit.json");
+      else counts.claim_entries = claimCount;
+    }
+  }
+
+  const triplesRead = safeReadText(
+    readText,
     pathJoin(root, "bizra_hypergraph_triples.jsonl"),
   );
-  const triples = tryParseNdjson(triplesText);
-  if (triples === null) parse_errors.push("bizra_hypergraph_triples.jsonl");
-  else counts.triple_lines = triples.length;
+  if (!triplesRead.ok) {
+    read_errors.push(`bizra_hypergraph_triples.jsonl:${triplesRead.error}`);
+  } else {
+    contentRead = true;
+    const triples = tryParseNdjson(triplesRead.text);
+    if (triples === null) parse_errors.push("bizra_hypergraph_triples.jsonl");
+    else counts.triple_lines = triples.length;
+  }
+
+  const io_disclosure = Object.freeze({ content_read: contentRead === true });
+
+  if (read_errors.length > 0) {
+    return baseResult({
+      truth_label: CARTOGRAPHER_INTAKE_TRUTH.BLOCKED,
+      ok: false,
+      missing: Object.freeze(["artifact_unreadable"]),
+      read_errors: Object.freeze(read_errors),
+      epistemic: "UNKNOWN",
+      intake_root: root,
+      io_disclosure,
+    });
+  }
 
   if (parse_errors.length > 0) {
     return baseResult({
@@ -172,6 +229,7 @@ export function assessCartographerIntake({
       parse_errors: Object.freeze(parse_errors),
       epistemic: "DECLARED_PARTIAL",
       intake_root: root,
+      io_disclosure,
     });
   }
 
@@ -196,6 +254,7 @@ export function assessCartographerIntake({
         epistemic: "CONTRADICTS",
         note: "expectedCounts mismatch — do not mint burst verified",
         intake_root: root,
+        io_disclosure,
       });
     }
   }
@@ -206,5 +265,6 @@ export function assessCartographerIntake({
     counts: Object.freeze({ ...counts }),
     epistemic: "MEASURED_FROM_ARTIFACTS",
     intake_root: root,
+    io_disclosure,
   });
 }
