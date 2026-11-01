@@ -163,6 +163,28 @@ test("v0.2 refuses reserved scopes despite whitespace and valid replay binding",
   }
 });
 
+test("v0.2 blocks Unicode format controls in raw scopes with valid replay binding", () => {
+  const adversarialScopes = [
+    "\u200bUNKNOWN\u200b",
+    "\u200b*\u200b",
+    "\u200cUNKNOWN",
+    "UNKNOWN\u2060",
+    "\ufeffUNKNOWN\ufeff",
+  ];
+
+  for (const scope of adversarialScopes) {
+    const input = structuredClone(defaultTraceDiagnosticFixtureV2());
+    input.trace_set[0].scope = scope;
+    const gate = runTraceDiagnosticContractGateV2({ input: withV2ReplaySubjectHash(input) });
+
+    assert.equal(gate.rails.provenance.ok, false, JSON.stringify(scope));
+    assert.equal(gate.rails.corroboration.ok, true, JSON.stringify(scope));
+    assert.ok(gate.blocked_by.includes("provenance_trace_0_scope_not_explicit"), JSON.stringify(scope));
+    assert.notEqual(gate.promotion_status, "INSIGHT_AUTHORIZED", JSON.stringify(scope));
+    assert.equal(verifyTraceDiagnosticContractV2(JSON.parse(JSON.stringify(gate.report))).ok, true);
+  }
+});
+
 test("v0.2 rejects pre-hardening authorization even after subject and report rehash", () => {
   const forged = structuredClone(buildTraceDiagnosticContractV2(defaultTraceDiagnosticFixtureV2()));
   forged.trace_set[0].scope = " * ";

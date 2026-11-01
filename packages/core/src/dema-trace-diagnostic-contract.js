@@ -109,7 +109,8 @@ function evaluateProvenance(trace_set, trimScope = false) {
     else if (seenIds.has(t.trace_id)) blocked.push(`provenance_duplicate_trace_id:${t.trace_id}`);
     else seenIds.add(t.trace_id);
 
-    const scope = trimScope ? textVal(t.scope).trim() : textVal(t.scope);
+    const rawScope = textVal(t.scope);
+    const scope = trimScope ? rawScope.trim() : rawScope;
     if (!scope.trim()) blocked.push(`${prefix}_scope_missing`);
     if (!TRACE_COMPLETENESS_VALUES.includes(t.completeness))
       blocked.push(`${prefix}_completeness_invalid:${String(t.completeness)}`);
@@ -120,7 +121,7 @@ function evaluateProvenance(trace_set, trimScope = false) {
     if (!HEX64_RE.test(h)) blocked.push(`${prefix}_source_sha256_invalid`);
     if (!textVal(t.observed_at).trim()) blocked.push(`${prefix}_observed_at_missing`);
     // scope must be explicitly declared — no inferred or empty scope
-    if (scope === "UNKNOWN" || scope === "*")
+    if (scope === "UNKNOWN" || scope === "*" || (trimScope && /\p{Cf}/u.test(rawScope)))
       blocked.push(`${prefix}_scope_not_explicit`);
   }
   return { ok: blocked.length === 0, blocked_by: Object.freeze(blocked) };
