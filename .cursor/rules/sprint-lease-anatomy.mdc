@@ -77,7 +77,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
-| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `main` @ `d85c2379` (#505 cartographer + #506 measurement); `NODE0_CLOSED` false until soak≥72h + remote_write; PR #507 soak-judgment bridge |
+| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `origin/main` @ `a9f40522` (#507 soak bridge landed); `measurement_admits_closed=false`; doctor ready; remote_write host diag = `OBSERVATION_STALE` (artefact also EXTERNAL_WRITE_PATH_PRESENT when fresh) |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
@@ -94,9 +94,12 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | P12 | Gateway-http measured ready (chain+VERIFIED principal) | DONE — live Ready:true / doctor operational |
 | — | COVERAGE-COUNTS hermetic | DONE @ `c67d63c3` |
 | — | Node0-close measurement receipt | DONE on `main` @ `71a1280b` — `proof:node0-close-measurement`; soak+remote_write admission OPEN |
-| — | Soak judgment → admission bridge | KERNEL on PR #507 — require endurance schema; never override failing verdict |
-| — | Cartographer JSON artifacts | OPEN — PDF sha256 `dc75867f…5c4b78bb` measured; three JSON stamps still absent; no silent ingest |
+| — | Soak judgment → admission bridge | DONE merge #507 @ `a9f40522` |
+| — | Close-measurement RW diagnostic surface | LOCAL slice `slice/node0-close-measurement-rw-diag-1a` — silence→`observation_stale`; focused 13/13 |
+| — | Shakedown soak `shakedown-20261031-1755` | DONE sealed — ~2h span, all samples ATTENTION/`ok:false`; unit crash-loop after seal **stopped** |
+| — | Cartographer JSON artifacts | OPEN — PDF measured; three JSON stamps still absent; no silent ingest |
+| — | Focused gates green for active slice | DONE this turn (close-measurement + proof) |
 
 ## Default next slice when user says SPRINT
 
-Toward **T0**: (1) Land soak-judgment PR #507 after CI green, else (2) complete ≥72h soak after CLEAN home verdict (shakedown ≠ health), else (3) remote_write observation adapter, else (4) Cartographer JSON stamps under typed `--root`.
+Toward **T0**: (1) Land/push RW-diag PR, else (2) refresh remote_write observation under exact consent (clear EXTERNAL findings or sterile home), else (3) CLEAN doctor then new 72h soak run-id (not replay sealed shakedown), else (4) Cartographer JSON stamps under typed `--root`.

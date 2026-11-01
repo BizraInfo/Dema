@@ -11,6 +11,8 @@ import {
 import {
   buildNode0CloseMeasurementReceipt,
   evaluateSoakAdmission,
+  normalizeRemoteWriteDiagnostic,
+  resolveRemoteWriteBlockReason,
   NODE0_CLOSE_MEASUREMENT_RECEIPT_SCHEMA,
   SOAK_OBSERVATION_SCOPE,
   DEFAULT_SOAK_MIN_DURATION_SECONDS,
@@ -162,5 +164,71 @@ describe("node0-close-measurement-receipt", () => {
   });
   test("soak scope constant is not the remote_write scope", () => {
     assert.notEqual(SOAK_OBSERVATION_SCOPE, REMOTE_WRITE_OBSERVATION_SCOPE);
+  });
+
+  test("stale remote_write diagnostic replaces ledger silence (no_evidence)", () => {
+    const r = buildNode0CloseMeasurementReceipt({
+      evidence: {},
+      soak: healthySoak(),
+      remote_write_diagnostic: {
+        invariant_id: "remote_write",
+        state: "OBSERVATION_STALE",
+        integrity_suspect: false,
+      },
+    });
+    assert.equal(r.measurement_admits_closed, false);
+    assert.equal(r.remote_write.status, "UNKNOWN");
+    assert.equal(r.remote_write.reason, "observation_stale");
+    assert.equal(r.remote_write.diagnostic.state, "OBSERVATION_STALE");
+    const block = r.blocked_by.find((b) => b.id === "remote_write");
+    assert.equal(block.reason, "observation_stale");
+  });
+
+  test("NOT_RECORDED diagnostic keeps no_evidence silence", () => {
+    const r = buildNode0CloseMeasurementReceipt({
+      evidence: {},
+      remote_write_diagnostic: {
+        state: "NOT_RECORDED",
+        integrity_suspect: false,
+      },
+    });
+    assert.equal(r.remote_write.reason, "no_evidence");
+    assert.equal(r.remote_write.diagnostic.state, "NOT_RECORDED");
+  });
+
+  test("diagnostic never upgrades remote_write to SATISFIED", () => {
+    const r = buildNode0CloseMeasurementReceipt({
+      evidence: {},
+      soak: healthySoak(),
+      remote_write_diagnostic: {
+        state: "ACCEPTED",
+        remote_write_verdict: "NO_EXTERNAL_WRITE_PATH",
+        integrity_suspect: false,
+      },
+    });
+    assert.equal(r.admission.remote_write_satisfied, false);
+    assert.equal(r.measurement_admits_closed, false);
+    assert.notEqual(r.remote_write.status, "SATISFIED");
+  });
+
+  test("normalizeRemoteWriteDiagnostic / resolveRemoteWriteBlockReason pure helpers", () => {
+    assert.equal(normalizeRemoteWriteDiagnostic(null), null);
+    assert.equal(normalizeRemoteWriteDiagnostic("x"), null);
+    const n = normalizeRemoteWriteDiagnostic({
+      state: "KERNEL_BYTES_MISMATCH",
+      integrity_suspect: true,
+      finding_count: 3,
+    });
+    assert.equal(n.state, "KERNEL_BYTES_MISMATCH");
+    assert.equal(n.integrity_suspect, true);
+    assert.equal(n.finding_count, 3);
+    assert.equal(
+      resolveRemoteWriteBlockReason("no_evidence", n),
+      "kernel_bytes_mismatch",
+    );
+    assert.equal(
+      resolveRemoteWriteBlockReason("observation_scope_mismatch", n),
+      "observation_scope_mismatch",
+    );
   });
 });

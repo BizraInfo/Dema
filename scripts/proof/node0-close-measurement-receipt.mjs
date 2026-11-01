@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 import { evaluateNode0ClosureInvariants } from "../../packages/core/src/node0-closure-invariants.js";
 import { buildNode0CloseMeasurementReceipt } from "../../packages/core/src/node0-close-measurement-receipt.js";
 import { projectSoakJudgmentToAdmission } from "../../packages/core/src/node0-soak-judgment-admission.js";
+import { remoteWriteDeploymentDiagnostic } from "../../packages/core/src/node0-deployment-remote-write-adapter.js";
 import { gatherClosureEvidence } from "../review/node0-closure-invariants-check.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -57,6 +58,7 @@ function parseArgs(argv) {
 export function runNode0CloseMeasurementReceiptProof({
   soak = null,
   soak_judgment = null,
+  remote_write_diagnostic = undefined,
   now = new Date(),
 } = {}) {
   let soakProjection = null;
@@ -67,9 +69,16 @@ export function runNode0CloseMeasurementReceiptProof({
   }
   const evidence = gatherClosureEvidence();
   const closure_ledger = evaluateNode0ClosureInvariants(evidence);
+  // Prefer an injected diagnostic (tests); otherwise read the live adapter
+  // diagnose channel. Diagnosis never settles the row — only explains silence.
+  const resolvedRwDiagnostic =
+    remote_write_diagnostic === undefined
+      ? remoteWriteDeploymentDiagnostic()
+      : remote_write_diagnostic;
   const receipt = buildNode0CloseMeasurementReceipt({
     closure_ledger,
     soak: resolvedSoak,
+    remote_write_diagnostic: resolvedRwDiagnostic,
     head_sha: gitHead(),
     measured_at: now.toISOString(),
   });
