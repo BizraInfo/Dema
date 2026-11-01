@@ -31,7 +31,10 @@ const CHECKS = [
   { argv: ["help"], marker: "Dema — Sovereign AI Node Companion" },
   { argv: ["help", "preview"], marker: null },
   { argv: ["welcome"], marker: null },
-  { argv: ["readiness"], marker: null },
+  // `readiness` was removed from the CLI surface; doctor --preview is the
+  // zero-install smoke for "is the local face intact?" (exit 0 when nothing
+  // needs repair, even if runtime is not yet armed).
+  { argv: ["doctor", "--preview"], marker: "Dema Doctor" },
   { argv: ["state"], marker: null },
   {
     argv: ["peak-self-loop", "--json"],

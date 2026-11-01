@@ -34,7 +34,7 @@ Expected output (verified this container):
 PASS  dema help
 PASS  dema help preview
 PASS  dema welcome
-PASS  dema readiness
+PASS  dema doctor --preview
 PASS  dema state
 PASS  dema peak-self-loop --json
 PASS  peak-self-loop --json: mode=preview_only + boundary all-false

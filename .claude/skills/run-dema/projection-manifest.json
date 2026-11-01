@@ -2,9 +2,9 @@
   "schema": "bizra.skill-projection/v1",
   "skill_id": "run-dema",
   "projection_target": ".claude",
-  "source_registry_hash": "9c8c18c7e954f18a92bc5e78cf5bebf9e1a4e1a5945551dc090e600ffdc12e37",
+  "source_registry_hash": "bc9458d864a8a95d078df92d0e8fc36de2807173a060931f10801b665d9bffab",
   "contract_hash": "1fecdb8d36e296a3b7cc8c84e33ec0bbb5ae2fa91144aec10c6c2accba29dbb3",
-  "generated_at": "2026-08-30T20:41:22.075Z",
+  "generated_at": "2026-11-01T13:19:47.533Z",
   "files_projected": 4,
   "files_skipped": 0
 }

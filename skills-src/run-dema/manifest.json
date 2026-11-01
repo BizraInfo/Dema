@@ -1,13 +1,13 @@
 {
   "schema": "bizra.skill-manifest/v1",
-  "generated_at": "2026-08-30T20:38:09.092Z",
+  "generated_at": "2026-11-01T13:19:47.503Z",
   "source_root": "skills-src",
   "skill_id": "run-dema",
   "files": [
     {
       "path": "SKILL.md",
-      "sha256": "4b0f44ffc415e7c9697e95e35667f5f601839ac470ac777d67d829a9886d23b1",
-      "size": 4017
+      "sha256": "da000cd142e617947c189100db80d9cf76217b1f350c4a7b6b34451692736d97",
+      "size": 4024
     },
     {
       "path": "contract.json",
@@ -16,15 +16,10 @@
     },
     {
       "path": "driver.mjs",
-      "sha256": "fb5f63f70666ee95dad1828a94c6a5efd869827cf238d8fb2e37710a8e52c7f9",
-      "size": 3523
-    },
-    {
-      "path": "manifest.json",
-      "sha256": "4b788c51b775551a18290b9c402aaba7e2d220353e47a11c9f721beb1635c695",
-      "size": 352
+      "sha256": "40f7557f234f74a63506a55ef178a0372e4d5f9085c76402ab373e30ac3e65a0",
+      "size": 3748
     }
   ],
-  "total_files": 4,
-  "total_bytes": 9217
+  "total_files": 3,
+  "total_bytes": 9097
 }
