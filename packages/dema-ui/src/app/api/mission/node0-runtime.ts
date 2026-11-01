@@ -259,6 +259,7 @@ export async function callGovernedRuntime(path: string, body: unknown) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+    redirect: "error",
     signal: AbortSignal.timeout(GOVERNED_RUNTIME_TIMEOUT_MS),
     cache: "no-store",
   });

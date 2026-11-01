@@ -96,6 +96,7 @@ reproduction.
 | `tests/genesis-journal-lock.test.js` | Cross-process journal ownership boundary: unique lock election, stale/live/malformed predecessor handling, legacy singleton cutover, unrelated-file preservation, and token-validated release. |
 | `tests/urp0-world-cell-boundary.test.js` | World-cell boundary: loopback/local scope, bounded resource offer, and no public federation or token/economy effects. |
 | `tests/founder-useful-system.test.js` | Candidate founder Situation commitment, grounded PAT proposal quarantine, and candidate-sandbox FATE replay idempotence; no installed-runtime promotion. Runs on Node 22 because its cross-package UI TypeScript dependency graph has no Node 20 loader. |
+| `tests/node0-runtime-redirect-refusal.test.js` | Governed runtime redirect refusal: a loopback 307 fails closed; the first listener receives the request and the second receives none. Runs on Node 22 because Node 20 does not export `stripTypeScriptTypes` from `node:module`. |
 | `tests/bizra-estate-workflow.test.js` | Founder Estate bounded read-only intent classification, negation safety, metadata-only observation, evidence-bound reporting, and persistent/reopenable mission results. |
 | `tests/founder-pat-harness.test.js` | PAT seat receipts, structured claim classes, permitted evidence binding, and unsupported-claim quarantine. |
 | `tests/fate-effect-admission.test.js` | Deterministic FATE effect-admission policy, fail-closed protected-action checks, and pre-effect execution correspondence. |
