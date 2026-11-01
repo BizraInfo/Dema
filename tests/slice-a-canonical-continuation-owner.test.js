@@ -239,10 +239,29 @@ test("Slice A owner matrix: multiple Seasons are a visible ambiguity", async () 
       demaHome: home,
       state: baseState({ season_id: "node0-slice-a-owner-2", mission_id: "MISSION-B" }),
     });
+    const headPaths = [SEASON, "node0-slice-a-owner-2"].map((id) =>
+      join(home, "seasons", id, "HEAD.json"),
+    );
+    const headsBefore = await Promise.all(headPaths.map((path) => readFile(path, "utf8")));
     const result = await gatherFirstLookContext({ demaHome: home });
     assert.equal(result.continuation.status, "CONTRADICTION");
     assert.equal(result.continuation.reason, "season_ambiguous");
     assert.deepEqual(result.continuation.season_ids, [SEASON, "node0-slice-a-owner-2"]);
+
+    const view = buildFirstLookHome({
+      ...result,
+      profile: { source_present: true, name: "Mumu", language_code: "en" },
+      key_present: true,
+    });
+    assert.equal(view.continuation.status, "CONTRADICTION");
+    assert.equal(view.continuation.authority_delta, 0);
+    assert.match(view.rendered_text, /AMBIGUOUS · season_ambiguous/);
+    for (const seasonId of result.continuation.season_ids) {
+      assert.ok(view.rendered_text.includes(seasonId));
+    }
+    assert.match(view.recommended_next_step, /dema season status --season <id>/);
+    assert.match(view.rendered_text, /dema season status --season <id>/);
+    assert.deepEqual(await Promise.all(headPaths.map((path) => readFile(path, "utf8"))), headsBefore);
   } finally {
     await rm(home, { recursive: true, force: true });
   }
