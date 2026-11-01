@@ -250,6 +250,13 @@ export const CANONICAL_JSON_V1_REGISTERED_CONSUMERS = Object.freeze([
   // the kernel is PREVIEW_ONLY, pure (no fs/net/clock/random), promotes nothing,
   // and grants no runtime authority.
   "packages/core/src/zero-spin-gate.js",
+  // NODE0-ENDURANCE-CHAIN / node0-run — the endurance record's hash chain and
+  // the runner's binding of executed bytes (`runner_code_hash`) both use
+  // sha256CanonicalJsonV1 so a later judge re-derives the same digests. Key
+  // order must not change a sealed soak. Registration is adoption review only;
+  // does not claim NODE0_CLOSED or invent 72h health.
+  "packages/core/src/node0-endurance-chain.js",
+  "apps/cli/src/commands/node0-run.js",
   // scaffold:register-consumer (anchored insertion point — do not remove)
 ]);
 
