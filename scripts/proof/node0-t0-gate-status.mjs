@@ -198,9 +198,15 @@ function main() {
   }
 
   const soakSeconds = close?.soak?.observed_duration_seconds ?? null;
-  const halt = ["GO measurement window"];
-  if (!soak_runtime.unit_active) halt.unshift("GO start 72h soak");
-  halt.unshift("GO push PR slice/health-snapshot-bridge-1a");
+  // Halt phrases are exact consent still owed — drop gates already satisfied on disk.
+  const halt = [];
+  if (!soak_runtime.unit_active) halt.push("GO start 72h soak");
+  const rwVerdict = close.remote_write?.diagnostic?.remote_write_verdict
+    || close.remote_write?.status
+    || null;
+  if (rwVerdict !== "NO_EXTERNAL_WRITE_PATH" && close.remote_write?.status !== "SATISFIED") {
+    halt.push("GO measurement window");
+  }
 
   const out = {
     schema: "bizra.dema.node0_t0_gate_status.v0.1",
