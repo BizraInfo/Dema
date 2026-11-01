@@ -107,13 +107,12 @@ test("continuity preview: modified boundary fails isCanonicalBoundary", () => {
     genuine_ambiguity: false,
   });
   assert.equal(isCanonicalBoundary(card.boundary), true);
-  assert.equal(
-    isCanonicalBoundary({
-      ...card.boundary,
-      filesystem_write_performed: true,
-    }),
-    false,
-  );
+  // Freeze first so rejection is for the true effect bit, not Object.isFrozen.
+  const tampered = Object.freeze({
+    ...card.boundary,
+    filesystem_write_performed: true,
+  });
+  assert.equal(isCanonicalBoundary(tampered), false);
 });
 
 test("continuity preview: missing objective may ask to restate", () => {
