@@ -77,7 +77,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
-| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `origin/main` @ `727cbb60` (#510 autopilot continuity landed; #509 redirect pin); `measurement_admits_closed=false`; soak missing; remote_write `OBSERVATION_STALE` |
+| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — Dema Ready; soak preflight GREEN; 8s probe HEALTHY drift=0 (gateway-http); `measurement_admits_closed=false`; rw INCOMPLETE (non_loopback); 72h + commit/push need typed GO |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
@@ -100,8 +100,14 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | — | Dema Autopilot North-star continuity (versioned) | DONE merge #510 @ `727cbb60` — PREVIEW_ONLY card + versioned skill; continuity ≠ write authority |
 | — | Shakedown soak `shakedown-20261031-1755` | DONE sealed — ~2h span, all samples ATTENTION/`ok:false`; unit crash-loop after seal **stopped** |
 | — | Cartographer JSON artifacts | OPEN — PDF measured; three JSON stamps still absent; no silent ingest |
-| — | Focused gates green for active slice | DONE @ merge #510 — `node --test tests/dema-autopilot-continuity.test.js tests/skill-routing.test.js` 39/39; projection parity PASS |
+| — | Focused gates green for active slice | DONE — endurance EC+freeze 35/35; probe HEALTHY |
+| — | Health-snapshot bridge restore | LOCAL @ `88195934` on `slice/health-snapshot-bridge-1a` (push/PR GO) |
+| — | Endurance runner port into Dema-clean | LOCAL uncommitted (`node0-run` + kernels + tests); habitat `start.sh` gateway freeze fixed |
+| — | 8s instrumented probe under gateway | DONE HEALTHY drift=0 — `probe-gw-20261101-190456` |
+| — | Soak admission HEALTHY + run_receipt unwrap | LOCAL uncommitted — 27/27; live probe now `soak_duration_below_minimum` (was schema_mismatch) |
+| — | 72h MULTI_DAY_CONFIDENCE soak | OPEN — preflight GREEN; typed `GO start 72h soak` |
+| — | remote_write NO_EXTERNAL | OPEN — fresh INCOMPLETE; typed `GO measurement window` / sterile host |
 
 ## Default next slice when user says SPRINT
 
-Toward **T0**: (1) refresh remote_write observation under exact consent (clear EXTERNAL findings or sterile home), else (2) CLEAN doctor then new 72h soak run-id (not replay sealed shakedown), else (3) Cartographer JSON stamps under typed `--root`.
+Toward **T0**: (1) typed GO commit+push/PR endurance+bridge on `slice/health-snapshot-bridge-1a`, else (2) typed `GO start 72h soak`, else (3) typed `GO measurement window` / sterile host for remote_write, else (4) Cartographer JSON stamps under typed `--root`.

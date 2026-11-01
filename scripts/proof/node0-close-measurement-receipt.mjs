@@ -94,7 +94,7 @@ function main() {
   const args = parseArgs(process.argv);
   if (args.help) {
     process.stdout.write(
-      "Usage: node scripts/proof/node0-close-measurement-receipt.mjs [--soak-judgment <endurance-judgment.json>]\n",
+      "Usage: node scripts/proof/node0-close-measurement-receipt.mjs [--soak-judgment <endurance-judgment-or-run-receipt.json>]\n",
     );
     process.exitCode = 0;
     return;
