@@ -64,7 +64,8 @@
     "layer-a5:prep": "node scripts/layer-a5-operator-prep.mjs --json",
     "genesis:node0": "node scripts/genesis-node0.mjs",
     "scan:secrets": "node scripts/review/scan-secrets.mjs",
-    "proof:node0-t0-gate-status": "node scripts/proof/node0-t0-gate-status.mjs"
+    "proof:node0-t0-gate-status": "node scripts/proof/node0-t0-gate-status.mjs",
+    "proof:ax-liftoff": "node scripts/proof/dema-ax-liftoff.mjs"
   },
   "engines": {
     "node": ">=20"
