@@ -16,8 +16,9 @@
 
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdtemp, mkdir, writeFile, readFile, access } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -372,6 +373,103 @@ describe("EC · the endurance record is tamper-evident", () => {
     assert.equal(body.target_source, "header");
     assert.equal(body.target_ms, MULTI_DAY);
     assert.equal(body.verdict, "INSUFFICIENT");
+  });
+
+  test("EC-12 runner refuses traversal ids, non-positive duration, erased-sample reinit, and judge mkdir", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ec-12-"));
+    const run = (args) => spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, ...args,
+    ], { cwd: REPO, encoding: "utf8", timeout: 15_000, env: { ...process.env, DEMA_HOME: home } });
+
+    const badId = run(["--run-id", "../escape", "--interval-ms", "5", "--duration-ms", "1"]);
+    assert.notEqual(badId.status, 0);
+    assert.match(`${badId.stdout}${badId.stderr}`, /single path segment/);
+
+    const badDur = run(["--run-id", "bad-dur", "--interval-ms", "5", "--duration-ms", "-1"]);
+    assert.notEqual(badDur.status, 0);
+    assert.match(`${badDur.stdout}${badDur.stderr}`, /positive finite duration/);
+
+    // --judge must not create a missing run directory.
+    const missingJudge = run(["--judge", "--run-id", "never-created", "--json"]);
+    assert.equal(missingJudge.status, 1);
+    let judgeCreated = true;
+    try {
+      await access(join(home, ENDURANCE_RELDIR, "never-created"), fsConstants.F_OK);
+    } catch {
+      judgeCreated = false;
+    }
+    assert.equal(judgeCreated, false, "--judge must not mkdir a missing run");
+
+    // Surviving anchor + empty samples refuse re-init.
+    const erasedDir = join(home, ENDURANCE_RELDIR, "erased");
+    await mkdir(erasedDir, { recursive: true });
+    const orphan = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: "erased",
+        runner_code_hash: CODE_HASH,
+        evidence_class: "ELAPSED",
+        interval_ms: 5,
+        target_ms: 1,
+      },
+    });
+    await writeFile(join(erasedDir, ENDURANCE_ANCHOR_FILE),
+      JSON.stringify(buildEnduranceAnchor({ head: orphan, runId: "erased" })));
+    await writeFile(join(erasedDir, "samples.jsonl"), "");
+    const erased = run(["--run-id", "erased", "--interval-ms", "5", "--duration-ms", "1"]);
+    assert.notEqual(erased.status, 0);
+    assert.match(`${erased.stdout}${erased.stderr}`, /anchor but no samples/);
+  });
+
+  test("EC-12b live lock refuses a second recorder; stale lock recovers", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ec-12b-"));
+    const runId = "locked";
+    const dir = join(home, ENDURANCE_RELDIR, runId);
+    await mkdir(dir, { recursive: true });
+
+    // Live lock: write this process's pid so the runner sees a live owner.
+    await writeFile(join(dir, "runner.lock"), `${process.pid}\n`);
+    const live = spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, "--run-id", runId,
+      "--interval-ms", "5", "--duration-ms", "1",
+    ], { cwd: REPO, encoding: "utf8", timeout: 15_000, env: { ...process.env, DEMA_HOME: home } });
+    assert.notEqual(live.status, 0);
+    assert.match(`${live.stdout}${live.stderr}`, /already owned by another live runner/);
+
+    // Stale lock: unlikely-live pid recovers via rename displace + O_EXCL.
+    const staleId = `stale-${Date.now()}`;
+    const staleDir = join(home, ENDURANCE_RELDIR, staleId);
+    await mkdir(staleDir, { recursive: true });
+    await writeFile(join(staleDir, "runner.lock"), "2147483646\n");
+    const recovered = spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, "--run-id", staleId,
+      "--interval-ms", "5", "--duration-ms", "1", "--json",
+    ], { cwd: REPO, encoding: "utf8", timeout: 30_000, env: { ...process.env, DEMA_HOME: home } });
+    // Hermetic homes often yield non-CLEAN samples (exit 1) — lock recovery is
+    // proven by a sealed receipt existing after a displaced dead lock.
+    assert.match(
+      `${recovered.stdout}${recovered.stderr}`,
+      /"chain_state": "SEALED"/,
+      `stale lock should recover to a sealed receipt: ${recovered.stdout}${recovered.stderr}`,
+    );
+  });
+
+  test("EC-12c resume refuses widened --interval-ms vs header binding", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ec-12c-"));
+    const child = spawn("node", [
+      DEMA, "node0", "run", "--dema-home", home, "--run-id", "widen",
+      "--interval-ms", "80", "--duration-ms", "60000",
+    ], { cwd: REPO, env: { ...process.env, DEMA_HOME: home }, stdio: ["ignore", "pipe", "pipe"] });
+    await new Promise((r) => setTimeout(r, 350));
+    child.kill("SIGKILL");
+    await new Promise((r) => child.on("exit", r));
+
+    const widened = spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, "--run-id", "widen",
+      "--interval-ms", "500", "--duration-ms", "1",
+    ], { cwd: REPO, encoding: "utf8", timeout: 30_000, env: { ...process.env, DEMA_HOME: home } });
+    assert.notEqual(widened.status, 0);
+    assert.match(`${widened.stdout}${widened.stderr}`, /widens/);
   });
 });
 
