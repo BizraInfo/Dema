@@ -22,8 +22,20 @@ const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const binDema = join(repoRoot, "bin", "dema");
 
 // Isolate all local state in a throwaway home so smoke runs are side-effect-free.
+// Also drop operator-bridge env so doctor --preview cannot shell out via
+// DEMA_NODE0_STATUS_COMMAND or contact a configured gateway-http adapter.
+// Match case-insensitively: on Windows process.env lookups ignore case, so a
+// surviving `dema_node0_status_command` would still resolve at runtime.
 const demaHome = mkdtempSync(join(tmpdir(), "dema-smoke-"));
 const env = { ...process.env, DEMA_HOME: demaHome };
+const BRIDGE_ENV_KEYS = new Set([
+  "dema_node0_adapter",
+  "dema_gateway_url",
+  "dema_node0_status_command",
+]);
+for (const key of Object.keys(env)) {
+  if (BRIDGE_ENV_KEYS.has(key.toLowerCase())) delete env[key];
+}
 
 // { argv, marker } — marker is a substring stdout must contain (null = any
 // non-empty stdout). All must exit 0.
@@ -31,7 +43,10 @@ const CHECKS = [
   { argv: ["help"], marker: "Dema — Sovereign AI Node Companion" },
   { argv: ["help", "preview"], marker: null },
   { argv: ["welcome"], marker: null },
-  { argv: ["readiness"], marker: null },
+  // `readiness` was removed from the CLI surface; doctor --preview is the
+  // zero-install smoke for "is the local face intact?" (exit 0 when nothing
+  // needs repair, even if runtime is not yet armed).
+  { argv: ["doctor", "--preview"], marker: "Dema Doctor" },
   { argv: ["state"], marker: null },
   {
     argv: ["peak-self-loop", "--json"],

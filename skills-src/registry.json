@@ -10,6 +10,12 @@
       "manifest_path": "skills-src/campaign-ledger/manifest.json"
     },
     {
+      "skill_id": "dema-autopilot",
+      "version": "1.0.0",
+      "contract_path": "skills-src/dema-autopilot/contract.json",
+      "manifest_path": "skills-src/dema-autopilot/manifest.json"
+    },
+    {
       "skill_id": "dema-data-steward",
       "version": "1.0.0",
       "contract_path": "skills-src/dema-data-steward/contract.json",

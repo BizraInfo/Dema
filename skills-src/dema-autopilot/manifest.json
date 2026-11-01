@@ -1,0 +1,25 @@
+{
+  "schema": "bizra.skill-manifest/v1",
+  "generated_at": "2026-11-01T13:19:47.503Z",
+  "source_root": "skills-src",
+  "skill_id": "dema-autopilot",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "b8f507469f312403fb4d793521eb1623d75a8eabe6ac198ccc7faa620faca268",
+      "size": 5147
+    },
+    {
+      "path": "contract.json",
+      "sha256": "e9d2acfb4d51940c6c794c2158e1e5aa8dea9a84d59e61d457d880fd1321faa4",
+      "size": 1818
+    },
+    {
+      "path": "evals/evals.json",
+      "sha256": "2f4fb2d4d5d05ee6385b976251567800d2dc8943889800cebc823e5ba4a97124",
+      "size": 1157
+    }
+  ],
+  "total_files": 3,
+  "total_bytes": 8122
+}

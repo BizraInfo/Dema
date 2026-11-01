@@ -1,0 +1,60 @@
+{
+  "skill_id": "dema-autopilot",
+  "version": "1.0.0",
+  "capability_family": "dema-local-mission",
+  "lifecycle_phase": "always",
+  "applicability": [
+    "local dema autopilot",
+    "bounded engineering mission",
+    "resume after a completed slice",
+    "north-star continuity",
+    "generic dema-autopilot invocation"
+  ],
+  "exclusions": [
+    "push merge deploy publish",
+    "key generation or signing",
+    "mint or economic activation",
+    "starting governed Node0 runtime without exact consent",
+    "claiming Node0 closed without measurement receipt"
+  ],
+  "preconditions": [
+    "repository checkout exists",
+    "user requested local autopilot or equivalent bounded mission"
+  ],
+  "inputs": [
+    "established long-term objective when available",
+    "current direct request grant",
+    "current disk and git state"
+  ],
+  "outputs": [
+    "rebound objective and frontier",
+    "smallest useful in-scope act or read-only inspection",
+    "closeout with proof ceiling and authority delta"
+  ],
+  "side_effects": [
+    "may perform reversible local edits only when the current request authorizes them",
+    "does not push, merge, deploy, or invoke runtime by default",
+    "continuity preview kernel is read-only"
+  ],
+  "permissions": [
+    "read repository",
+    "read governing docs",
+    "run authorized focused checks",
+    "write only under explicit current-request grant"
+  ],
+  "resource_bindings": [
+    "skills-src/dema-autopilot/SKILL.md",
+    "packages/core/src/dema-autopilot-continuity-preview.js",
+    "docs/LLM_SYSTEM_FLOW.md",
+    "BIZRA.md"
+  ],
+  "truth_boundary": "report-only-unless-explicitly-authorized",
+  "evidence_refs": [],
+  "projection_targets": [".claude", ".agents"],
+  "convergence": {
+    "formal": 2,
+    "cryptographic": 0,
+    "empirical": 2,
+    "economic": 0
+  }
+}

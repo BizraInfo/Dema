@@ -136,12 +136,13 @@ test("SKC-10: buildRouteCard produces expected shape", () => {
 
 // ─── Skill Registry Tests ─────────────────────────────────────────────
 
-// SKR-01: loadRegistry loads all 7 skills
-test("SKR-01: loadRegistry loads all 7 skills", () => {
+// SKR-01: loadRegistry loads all registered skills (8 after dema-autopilot)
+test("SKR-01: loadRegistry loads all registered skills", () => {
   const result = loadRegistry(io);
   assert.equal(result.ok, true);
-  assert.equal(result.skills.length, 7);
+  assert.equal(result.skills.length, 8);
   assert.equal(result.errors.length, 0);
+  assert.ok(result.skills.some((s) => s.skill_id === "dema-autopilot"));
 });
 
 // SKR-02: registry hash is deterministic

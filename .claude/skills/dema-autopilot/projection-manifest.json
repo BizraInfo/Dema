@@ -1,0 +1,10 @@
+{
+  "schema": "bizra.skill-projection/v1",
+  "skill_id": "dema-autopilot",
+  "projection_target": ".claude",
+  "source_registry_hash": "bc9458d864a8a95d078df92d0e8fc36de2807173a060931f10801b665d9bffab",
+  "contract_hash": "e9d2acfb4d51940c6c794c2158e1e5aa8dea9a84d59e61d457d880fd1321faa4",
+  "generated_at": "2026-11-01T13:19:47.528Z",
+  "files_projected": 4,
+  "files_skipped": 0
+}
