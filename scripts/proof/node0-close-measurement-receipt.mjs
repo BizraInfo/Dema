@@ -20,8 +20,7 @@ import { fileURLToPath } from "node:url";
 import { evaluateNode0ClosureInvariants } from "../../packages/core/src/node0-closure-invariants.js";
 import { buildNode0CloseMeasurementReceipt } from "../../packages/core/src/node0-close-measurement-receipt.js";
 import { projectSoakJudgmentToAdmission } from "../../packages/core/src/node0-soak-judgment-admission.js";
-import { remoteWriteDeploymentDiagnostic } from "../../packages/core/src/node0-deployment-remote-write-adapter.js";
-import { gatherClosureEvidence } from "../review/node0-closure-invariants-check.mjs";
+import { gatherClosureReadout } from "../review/node0-closure-invariants-check.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -67,13 +66,13 @@ export function runNode0CloseMeasurementReceiptProof({
     soakProjection = projectSoakJudgmentToAdmission(soak_judgment);
     resolvedSoak = soakProjection.ok ? soakProjection.soak : null;
   }
-  const evidence = gatherClosureEvidence();
-  const closure_ledger = evaluateNode0ClosureInvariants(evidence);
-  // Prefer an injected diagnostic (tests); otherwise read the live adapter
-  // diagnose channel. Diagnosis never settles the row — only explains silence.
+  const readout = gatherClosureReadout();
+  const closure_ledger = evaluateNode0ClosureInvariants(readout.evidence);
+  // Prefer an injected diagnostic (tests); otherwise use the diagnostic paired
+  // with the closure observation from this same readout.
   const resolvedRwDiagnostic =
     remote_write_diagnostic === undefined
-      ? remoteWriteDeploymentDiagnostic()
+      ? readout.diagnostics.remote_write ?? null
       : remote_write_diagnostic;
   const receipt = buildNode0CloseMeasurementReceipt({
     closure_ledger,

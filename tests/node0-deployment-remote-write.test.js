@@ -257,6 +257,7 @@ describe("node0 deployment remote-write · negative-control integrity", () => {
 import {
   remoteWriteDeploymentObservation,
   remoteWriteDeploymentDiagnostic,
+  remoteWriteDeploymentSnapshot,
   currentRemoteWriteCollectorHash,
   currentRemoteWriteKernelHash,
   REMOTE_WRITE_INVARIANT_ID,
@@ -392,6 +393,10 @@ describe("node0 deployment remote-write · adapter", () => {
   it("DRW-47 v0.2: stale, future, legacy, and surface-less artefacts cannot settle the row", () => {
     const stale = artefact({ observedAt: "2026-08-30T12:00:00.000Z" });
     assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(stale), now: NOW }).state, "OBSERVATION_STALE");
+    assert.equal(
+      remoteWriteDeploymentObservation({ readFile: reader(stale), now: NOW }),
+      null,
+    );
 
     const future = artefact({ observedAt: "2026-08-31T12:36:00.000Z" });
     assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(future), now: NOW }).state, "OBSERVATION_FUTURE_DATED");
@@ -405,6 +410,47 @@ describe("node0 deployment remote-write · adapter", () => {
     const { surface: _surface, ...surfaceLessBody } = body;
     const surfaceLess = { ...surfaceLessBody, observation_hash: sha256CanonicalJsonV1(surfaceLessBody) };
     assert.equal(remoteWriteDeploymentDiagnostic({ readFile: reader(surfaceLess), now: NOW }).state, "DERIVATION_UNVERIFIED");
+  });
+
+  it("DRW-48: stale diagnose discloses last verified verdict without settling", () => {
+    const stale = artefact({ observedAt: "2026-08-30T12:00:00.000Z" });
+    const d = remoteWriteDeploymentDiagnostic({ readFile: reader(stale), now: NOW });
+    assert.equal(d.state, "OBSERVATION_STALE");
+    assert.equal(d.remote_write_verdict, stale.remote_write_verdict);
+    assert.equal(d.finding_count, Array.isArray(stale.findings) ? stale.findings.length : null);
+    assert.equal(d.observed_at, "2026-08-30T12:00:00.000Z");
+    assert.equal(typeof d.finding_kind_counts, "object");
+    assert.equal(remoteWriteDeploymentObservation({ readFile: reader(stale), now: NOW }), null);
+  });
+
+  it("DRW-49: one snapshot binds stale diagnosis to its non-settling observation", () => {
+    const stale = artefact({ observedAt: "2026-08-30T12:00:00.000Z" });
+    let reads = 0;
+    const snapshot = remoteWriteDeploymentSnapshot({
+      readFile: () => {
+        reads += 1;
+        return JSON.stringify(stale);
+      },
+      now: NOW,
+    });
+    assert.equal(reads, 1);
+    assert.equal(snapshot.observation, null);
+    assert.equal(snapshot.diagnostic.state, "OBSERVATION_STALE");
+    assert.equal(snapshot.diagnostic.remote_write_verdict, stale.remote_write_verdict);
+
+    const fresh = artefact();
+    let freshReads = 0;
+    const freshSnapshot = remoteWriteDeploymentSnapshot({
+      readFile: () => {
+        freshReads += 1;
+        return JSON.stringify(fresh);
+      },
+      now: NOW,
+    });
+    assert.equal(freshReads, 1);
+    assert.equal(freshSnapshot.observation.observed, false);
+    assert.equal(freshSnapshot.diagnostic.state, "ACCEPTED");
+    assert.equal(freshSnapshot.diagnostic.remote_write_verdict, fresh.remote_write_verdict);
   });
 });
 

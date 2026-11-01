@@ -67,6 +67,7 @@ import {
 import {
   remoteWriteDeploymentObservation,
   remoteWriteDeploymentDiagnostic,
+  remoteWriteDeploymentSnapshot,
   REMOTE_WRITE_INVARIANT_ID,
 } from "../../packages/core/src/node0-deployment-remote-write-adapter.js";
 
@@ -190,10 +191,50 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
   // artefact records INCOMPLETE and this adapter returns null.
   Object.freeze({
     invariant_id: REMOTE_WRITE_INVARIANT_ID,
+    capture: () => remoteWriteDeploymentSnapshot(),
     observe: () => remoteWriteDeploymentObservation(),
     diagnose: () => remoteWriteDeploymentDiagnostic(),
   }),
 ]);
+
+function captureAdapter(adapter) {
+  return typeof adapter.capture === "function" ? adapter.capture() : undefined;
+}
+
+function summarizeAdapterDiagnostics(diagnostics) {
+  return Object.freeze(
+    Object.entries(diagnostics).map(([invariant_id, d]) =>
+      Object.freeze({
+        invariant_id,
+        state: typeof d.state === "string" ? d.state : "UNKNOWN",
+        integrity_suspect: d.integrity_suspect === true,
+      }),
+    ),
+  );
+}
+
+/// Capture observations and their diagnostics together when an adapter supports
+/// it. The remote-write pair comes from one file read and one freshness decision.
+export function gatherClosureReadout(adapters = CLOSURE_EVIDENCE_ADAPTERS) {
+  const evidence = {};
+  const diagnostics = {};
+  for (const adapter of adapters) {
+    const captured = captureAdapter(adapter);
+    const observation = captured === undefined ? adapter.observe() : captured?.observation;
+    const diagnostic = captured === undefined
+      ? typeof adapter.diagnose === "function"
+        ? adapter.diagnose()
+        : null
+      : captured?.diagnostic;
+    if (observation !== null && observation !== undefined) {
+      evidence[adapter.invariant_id] = observation;
+    }
+    if (diagnostic && typeof diagnostic === "object") {
+      diagnostics[adapter.invariant_id] = diagnostic;
+    }
+  }
+  return Object.freeze({ evidence, diagnostics: Object.freeze(diagnostics) });
+}
 
 /// Gathers whatever the registered adapters can honestly observe. An adapter
 /// returning null contributes nothing — silence, which the kernel scores as
@@ -201,7 +242,8 @@ export const CLOSURE_EVIDENCE_ADAPTERS = Object.freeze([
 export function gatherClosureEvidence(adapters = CLOSURE_EVIDENCE_ADAPTERS) {
   const evidence = {};
   for (const adapter of adapters) {
-    const observation = adapter.observe();
+    const captured = captureAdapter(adapter);
+    const observation = captured === undefined ? adapter.observe() : captured?.observation;
     if (observation !== null && observation !== undefined) {
       evidence[adapter.invariant_id] = observation;
     }
@@ -220,20 +262,18 @@ export function gatherClosureEvidence(adapters = CLOSURE_EVIDENCE_ADAPTERS) {
 /// are structurally incapable of settling a row: `gatherClosureEvidence` above
 /// is the only path into the evaluator, and it never reads this.
 export function gatherAdapterDiagnostics(adapters = CLOSURE_EVIDENCE_ADAPTERS) {
-  const out = [];
+  const diagnostics = {};
   for (const adapter of adapters) {
-    if (typeof adapter.diagnose !== "function") continue;
-    const d = adapter.diagnose();
+    const captured = captureAdapter(adapter);
+    const d = captured === undefined
+      ? typeof adapter.diagnose === "function"
+        ? adapter.diagnose()
+        : null
+      : captured?.diagnostic;
     if (!d || typeof d !== "object") continue;
-    out.push(
-      Object.freeze({
-        invariant_id: adapter.invariant_id,
-        state: typeof d.state === "string" ? d.state : "UNKNOWN",
-        integrity_suspect: d.integrity_suspect === true,
-      }),
-    );
+    diagnostics[adapter.invariant_id] = d;
   }
-  return Object.freeze(out);
+  return summarizeAdapterDiagnostics(diagnostics);
 }
 
 /// THE ONE file permitted to emit a node-scope closure flag. Everything else may
@@ -341,7 +381,8 @@ export function runNode0ClosureInvariantsCheck() {
   if (verifyClosureVerdict(forged).ok !== false) blocked_by.push("forged_verdict_accepted");
 
   // 4. The published state, from whatever adapters exist today.
-  const report = evaluateNode0ClosureInvariants(gatherClosureEvidence());
+  const readout = gatherClosureReadout();
+  const report = evaluateNode0ClosureInvariants(readout.evidence);
   if (verifyClosureVerdict(report).ok !== true) blocked_by.push("published_ledger_not_verifiable");
 
   return Object.freeze({
@@ -349,7 +390,7 @@ export function runNode0ClosureInvariantsCheck() {
     schema: NODE0_CLOSURE_INVARIANTS_SCHEMA,
     truth_label: NODE0_CLOSURE_INVARIANTS_TRUTH_LABEL,
     adapters_registered: CLOSURE_EVIDENCE_ADAPTERS.length,
-    adapter_diagnostics: gatherAdapterDiagnostics(),
+    adapter_diagnostics: summarizeAdapterDiagnostics(readout.diagnostics),
     closure_authority_owner: CLOSURE_AUTHORITY_OWNER,
     closure_authority_producers: Object.freeze(authority.producers),
     subordinate_closure_schemas: SUBORDINATE_CLOSURE_SCHEMAS,

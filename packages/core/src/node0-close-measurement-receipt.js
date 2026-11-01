@@ -170,6 +170,22 @@ export function normalizeRemoteWriteDiagnostic(diagnostic) {
   ) {
     out.finding_count = diagnostic.finding_count;
   }
+  const observedAt = textVal(diagnostic.observed_at).trim();
+  if (observedAt) out.observed_at = observedAt;
+  if (
+    isPlainObject(diagnostic.finding_kind_counts) &&
+    !Array.isArray(diagnostic.finding_kind_counts)
+  ) {
+    const kinds = {};
+    for (const [k, v] of Object.entries(diagnostic.finding_kind_counts)) {
+      if (typeof k === "string" && k && typeof v === "number" && Number.isFinite(v)) {
+        kinds[k] = v;
+      }
+    }
+    if (Object.keys(kinds).length > 0) {
+      out.finding_kind_counts = Object.freeze(kinds);
+    }
+  }
   return Object.freeze(out);
 }
 

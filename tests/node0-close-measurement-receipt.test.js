@@ -18,6 +18,7 @@ import {
   DEFAULT_SOAK_MIN_DURATION_SECONDS,
 } from "../packages/core/src/node0-close-measurement-receipt.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
+import { gatherClosureReadout } from "../scripts/review/node0-closure-invariants-check.mjs";
 
 function obs(invariant, observed) {
   return {
@@ -182,6 +183,39 @@ describe("node0-close-measurement-receipt", () => {
     assert.equal(r.remote_write.diagnostic.state, "OBSERVATION_STALE");
     const block = r.blocked_by.find((b) => b.id === "remote_write");
     assert.equal(block.reason, "observation_stale");
+  });
+
+  test("one stale remote_write readout cannot pair stale diagnosis with settlement", () => {
+    let captures = 0;
+    const readout = gatherClosureReadout([
+      {
+        invariant_id: "remote_write",
+        capture: () => {
+          captures += 1;
+          return {
+            observation: null,
+            diagnostic: {
+              state: "OBSERVATION_STALE",
+              remote_write_verdict: "NO_EXTERNAL_WRITE_PATH",
+              integrity_suspect: false,
+            },
+          };
+        },
+        observe: () => assert.fail("paired capture must own the observation"),
+        diagnose: () => assert.fail("paired capture must own the diagnostic"),
+      },
+    ]);
+    const ledger = evaluateNode0ClosureInvariants(readout.evidence);
+    const r = buildNode0CloseMeasurementReceipt({
+      closure_ledger: ledger,
+      soak: healthySoak(),
+      remote_write_diagnostic: readout.diagnostics.remote_write,
+    });
+    assert.equal(captures, 1);
+    assert.equal("remote_write" in readout.evidence, false);
+    assert.equal(r.remote_write.status, "UNKNOWN");
+    assert.equal(r.remote_write.diagnostic.state, "OBSERVATION_STALE");
+    assert.equal(r.measurement_admits_closed, false);
   });
 
   test("NOT_RECORDED diagnostic keeps no_evidence silence", () => {

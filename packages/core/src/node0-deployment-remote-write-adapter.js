@@ -124,8 +124,6 @@ function classify({ demaHome, kernelPath, collectorPath, readFile, now }) {
   if (c === null || a.collector_code_hash !== c) {
     return { state: "COLLECTOR_BYTES_MISMATCH", artefact: null };
   }
-  const timeState = temporalState(a.observed_at, now);
-  if (timeState) return { state: timeState, artefact: null };
   if (!a.surface || typeof a.surface !== "object" || Array.isArray(a.surface)) {
     return { state: "DERIVATION_UNVERIFIED", artefact: null };
   }
@@ -142,7 +140,35 @@ function classify({ demaHome, kernelPath, collectorPath, readFile, now }) {
   ) {
     return { state: "DERIVATION_MISMATCH", artefact: null };
   }
+  // Temporal refuse AFTER derivation so diagnose can still surface the last
+  // verified verdict/findings. Observation admission stays ACCEPTED-only.
+  const timeState = temporalState(a.observed_at, now);
+  if (timeState) return { state: timeState, artefact: a };
   return { state: "ACCEPTED", artefact: a };
+}
+
+function findingKindCounts(findings) {
+  if (!Array.isArray(findings)) return null;
+  const counts = Object.create(null);
+  for (const f of findings) {
+    if (!f || typeof f !== "object" || Array.isArray(f)) continue;
+    const kind = typeof f.kind === "string" && f.kind.trim() ? f.kind.trim() : "unknown";
+    counts[kind] = (counts[kind] || 0) + 1;
+  }
+  return Object.freeze({ ...counts });
+}
+
+function diagnosticArtefactSummary(artefact) {
+  if (!artefact || typeof artefact !== "object") return null;
+  const summary = {
+    remote_write_verdict: artefact.remote_write_verdict ?? null,
+    remote_write_reason: artefact.remote_write_reason ?? null,
+    finding_count: Array.isArray(artefact.findings) ? artefact.findings.length : null,
+    observed_at: typeof artefact.observed_at === "string" ? artefact.observed_at : null,
+  };
+  const kinds = findingKindCounts(artefact.findings);
+  if (kinds) summary.finding_kind_counts = kinds;
+  return summary;
 }
 
 const defaults = () => ({
@@ -153,6 +179,11 @@ const defaults = () => ({
   now: () => Date.now(),
 });
 
+function classifyWithDefaults(opts) {
+  const { demaHome, kernelPath, collectorPath, readFile, now } = { ...defaults(), ...opts };
+  return classify({ demaHome, kernelPath, collectorPath, readFile, now });
+}
+
 /**
  * The invariant declares `required: false` — "no external party may silently
  * mutate local sovereign state". So a clean surface emits `observed: false`,
@@ -161,9 +192,8 @@ const defaults = () => ({
  */
 const REMOTE_WRITE_ARTEFACT_RELPATH_REEVALUATION = join("node0", "deployment", "observation.json");
 
-export function remoteWriteDeploymentObservation(opts = {}) {
-  const { demaHome, kernelPath, collectorPath, readFile, now } = { ...defaults(), ...opts };
-  const { state, artefact } = classify({ demaHome, kernelPath, collectorPath, readFile, now });
+function observationFrom(classified) {
+  const { state, artefact } = classified;
   if (state !== "ACCEPTED") return null;
 
   if (isCleanEligibleDeployment(artefact)) {
@@ -189,22 +219,50 @@ export function remoteWriteDeploymentObservation(opts = {}) {
   return null;
 }
 
-export function remoteWriteDeploymentDiagnostic(opts = {}) {
-  const { demaHome, kernelPath, collectorPath, readFile, now } = { ...defaults(), ...opts };
-  const { state, artefact } = classify({ demaHome, kernelPath, collectorPath, readFile, now });
+function diagnosticFrom(classified) {
+  const { state, artefact } = classified;
   if (state !== "ACCEPTED") {
-    return Object.freeze({
+    const out = {
       invariant_id: REMOTE_WRITE_INVARIANT_ID,
       state,
       integrity_suspect: REMOTE_WRITE_INTEGRITY_SUSPECT_STATES.includes(state),
-    });
+    };
+    // Stale/future artefacts that still re-derive may disclose last known
+    // verdict for operator routing — never settles the ledger row.
+    if (
+      (state === "OBSERVATION_STALE" || state === "OBSERVATION_FUTURE_DATED") &&
+      artefact
+    ) {
+      const summary = diagnosticArtefactSummary(artefact);
+      if (summary) Object.assign(out, summary);
+    }
+    return Object.freeze(out);
   }
+  const summary = diagnosticArtefactSummary(artefact) || {};
   return Object.freeze({
     invariant_id: REMOTE_WRITE_INVARIANT_ID,
     state: artefact.remote_write_verdict === "INCOMPLETE" ? "NOT_CLEAN_ELIGIBLE" : "ACCEPTED",
-    remote_write_verdict: artefact.remote_write_verdict ?? null,
-    remote_write_reason: artefact.remote_write_reason ?? null,
-    finding_count: Array.isArray(artefact.findings) ? artefact.findings.length : null,
+    remote_write_verdict: summary.remote_write_verdict ?? null,
+    remote_write_reason: summary.remote_write_reason ?? null,
+    finding_count: summary.finding_count ?? null,
+    finding_kind_counts: summary.finding_kind_counts ?? null,
+    observed_at: summary.observed_at ?? null,
     integrity_suspect: false,
   });
+}
+
+export function remoteWriteDeploymentSnapshot(opts = {}) {
+  const classified = classifyWithDefaults(opts);
+  return Object.freeze({
+    observation: observationFrom(classified),
+    diagnostic: diagnosticFrom(classified),
+  });
+}
+
+export function remoteWriteDeploymentObservation(opts = {}) {
+  return observationFrom(classifyWithDefaults(opts));
+}
+
+export function remoteWriteDeploymentDiagnostic(opts = {}) {
+  return diagnosticFrom(classifyWithDefaults(opts));
 }
