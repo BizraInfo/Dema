@@ -105,7 +105,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | — | Endurance runner port into Dema-clean | DONE @ `82e70ed2` (`node0-run` + kernels + tests); habitat `start.sh` gateway freeze fixed |
 | — | 8s instrumented probe under gateway | DONE HEALTHY drift=0 — `probe-gw-20261101-190456` |
 | — | Soak admission HEALTHY + run_receipt unwrap | DONE @ `82e70ed2` — live probe `soak_duration_below_minimum` (was schema_mismatch) |
-| — | 72h MULTI_DAY_CONFIDENCE soak | OPEN — preflight GREEN; typed `GO start 72h soak` |
+| — | 72h MULTI_DAY_CONFIDENCE soak | RUNNING `soak-72h-20261101-2314` (gateway-http; first sample CLEAN) |
 | — | remote_write NO_EXTERNAL | OPEN — fresh INCOMPLETE; typed `GO measurement window` / sterile host |
 
 ## Default next slice when user says SPRINT
