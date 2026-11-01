@@ -14,6 +14,8 @@ import {
   defaultTraceDiagnosticFixtureV2,
   buildTraceDiagnosticContractV2,
   verifyTraceDiagnosticContractV2,
+  computeTraceDiagnosticReplaySubjectHashV2,
+  runTraceDiagnosticContractGateV2,
 } from "../../packages/core/src/dema-trace-diagnostic-contract.js";
 
 const JSON_MODE = process.argv.includes("--json");
@@ -63,6 +65,21 @@ export function runDemaTraceDiagnosticContractCheck() {
   const v2built = buildTraceDiagnosticContractV2(v2input);
   if (v2built.promotion_status !== "INSIGHT_AUTHORIZED") {
     return { ok: false, blocked_by: ["v2_happy_path_not_authorized"], report: v2built };
+  }
+  const unicodeScopeInput = structuredClone(defaultTraceDiagnosticFixtureV2());
+  unicodeScopeInput.trace_set[0].scope = "\u200bUNKNOWN\u200b";
+  unicodeScopeInput.verification.replay_subject_hash = computeTraceDiagnosticReplaySubjectHashV2(
+    unicodeScopeInput.trace_set,
+    unicodeScopeInput.hypothesis_graph,
+    unicodeScopeInput.insight_candidate,
+  );
+  const unicodeScopeProbe = runTraceDiagnosticContractGateV2({ input: unicodeScopeInput });
+  if (
+    unicodeScopeProbe.rails?.provenance?.ok !== false ||
+    unicodeScopeProbe.rails?.corroboration?.ok !== true ||
+    unicodeScopeProbe.promotion_status === "INSIGHT_AUTHORIZED"
+  ) {
+    throw new Error("v2 Unicode format-control scope negative control failed");
   }
   // Evict: remove H2 so trace.runtime_harness_001 becomes orphan
   const attacked = {

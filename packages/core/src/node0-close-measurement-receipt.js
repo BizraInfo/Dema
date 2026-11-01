@@ -139,6 +139,78 @@ function remoteWriteRow(ledger) {
   return rows.find((r) => r && r.id === "remote_write") || null;
 }
 
+/** Silence-shaped ledger reasons that a host diagnostic may honestly replace. */
+const REMOTE_WRITE_SILENCE_REASONS = Object.freeze(
+  new Set(["no_evidence", "remote_write_not_satisfied"]),
+);
+
+/**
+ * Normalize an optional remote_write adapter diagnostic for receipt surfacing.
+ * Never invents satisfaction — diagnosis only. Pure.
+ *
+ * @param {object|null|undefined} diagnostic
+ * @returns {object|null}
+ */
+export function normalizeRemoteWriteDiagnostic(diagnostic) {
+  if (diagnostic === undefined || diagnostic === null) return null;
+  if (!isPlainObject(diagnostic)) return null;
+  const state = textVal(diagnostic.state).trim();
+  if (!state) return null;
+  const out = {
+    state,
+    integrity_suspect: diagnostic.integrity_suspect === true,
+  };
+  const verdict = textVal(diagnostic.remote_write_verdict).trim();
+  if (verdict) out.remote_write_verdict = verdict;
+  const reason = textVal(diagnostic.remote_write_reason).trim();
+  if (reason) out.remote_write_reason = reason;
+  if (
+    typeof diagnostic.finding_count === "number" &&
+    Number.isFinite(diagnostic.finding_count)
+  ) {
+    out.finding_count = diagnostic.finding_count;
+  }
+  const observedAt = textVal(diagnostic.observed_at).trim();
+  if (observedAt) out.observed_at = observedAt;
+  if (
+    isPlainObject(diagnostic.finding_kind_counts) &&
+    !Array.isArray(diagnostic.finding_kind_counts)
+  ) {
+    const kinds = {};
+    for (const [k, v] of Object.entries(diagnostic.finding_kind_counts)) {
+      if (typeof k === "string" && k && typeof v === "number" && Number.isFinite(v)) {
+        kinds[k] = v;
+      }
+    }
+    if (Object.keys(kinds).length > 0) {
+      out.finding_kind_counts = Object.freeze(kinds);
+    }
+  }
+  return Object.freeze(out);
+}
+
+/**
+ * Prefer a concrete host diagnostic over ledger silence (`no_evidence`).
+ * Diagnostic never upgrades status to SATISFIED.
+ *
+ * @param {string|null|undefined} ledgerReason
+ * @param {object|null} diagnostic
+ * @returns {string}
+ */
+export function resolveRemoteWriteBlockReason(ledgerReason, diagnostic) {
+  const base =
+    typeof ledgerReason === "string" && ledgerReason.trim()
+      ? ledgerReason.trim()
+      : "remote_write_not_satisfied";
+  if (!diagnostic || typeof diagnostic.state !== "string") return base;
+  const state = diagnostic.state.trim();
+  if (!state) return base;
+  // Truly absent artefact stays no_evidence / silence.
+  if (state === "NOT_RECORDED") return base;
+  if (!REMOTE_WRITE_SILENCE_REASONS.has(base)) return base;
+  return state.toLowerCase();
+}
+
 /**
  * Build a Node0-close measurement receipt.
  *
@@ -146,6 +218,7 @@ function remoteWriteRow(ledger) {
  *   evidence?: object,
  *   closure_ledger?: object,
  *   soak?: object|null,
+ *   remote_write_diagnostic?: object|null,
  *   min_soak_duration_seconds?: number,
  *   head_sha?: string,
  *   measured_at?: string,
@@ -202,12 +275,19 @@ export function buildNode0CloseMeasurementReceipt(input = {}) {
   const rw = remoteWriteRow(ledger);
   const remoteWriteOk =
     rw !== null && rw.status === INVARIANT_STATUS.SATISFIED;
+  const rwDiagnostic = normalizeRemoteWriteDiagnostic(
+    input.remote_write_diagnostic,
+  );
+  const rwLedgerReason = rw?.reason || "remote_write_not_satisfied";
+  const rwReason = remoteWriteOk
+    ? rwLedgerReason
+    : resolveRemoteWriteBlockReason(rwLedgerReason, rwDiagnostic);
   if (!remoteWriteOk) {
     blocked_by.push(
       Object.freeze({
         id: "remote_write",
         status: rw?.status || INVARIANT_STATUS.UNKNOWN,
-        reason: rw?.reason || "remote_write_not_satisfied",
+        reason: rwReason,
       }),
     );
   }
@@ -262,10 +342,13 @@ export function buildNode0CloseMeasurementReceipt(input = {}) {
     remote_write: Object.freeze({
       required_scope: REMOTE_WRITE_OBSERVATION_SCOPE,
       status: rw?.status || INVARIANT_STATUS.UNKNOWN,
-      reason: rw?.reason || "remote_write_not_satisfied",
+      reason: remoteWriteOk
+        ? rw?.reason || null
+        : rwReason,
       observed: rw?.observed ?? null,
       source: rw?.source ?? null,
       scope: rw?.scope ?? null,
+      diagnostic: rwDiagnostic,
     }),
     admission: Object.freeze({
       soak_required: true,
