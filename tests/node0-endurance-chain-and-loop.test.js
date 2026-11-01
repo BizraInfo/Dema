@@ -31,8 +31,13 @@ import {
   ENDURANCE_SAMPLE_KIND,
   ENDURANCE_EVIDENCE_CLASSES,
 } from "../packages/core/src/node0-endurance-chain.js";
-import { judgeRun, measureRunnerCodeHash, ENDURANCE_RELDIR, ENDURANCE_ANCHOR_FILE }
-  from "../apps/cli/src/commands/node0-run.js";
+import {
+  judgeRun,
+  measureRunnerCodeHash,
+  resolveJudgeTimingFromHeader,
+  ENDURANCE_RELDIR,
+  ENDURANCE_ANCHOR_FILE,
+} from "../apps/cli/src/commands/node0-run.js";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DEMA = join(REPO, "bin/dema");
@@ -305,6 +310,51 @@ describe("EC · the endurance record is tamper-evident", () => {
     assert.match(`${second.stdout}${second.stderr}`, /terminally sealed|refusing to extend run 'cli'/);
     const after = (await readFile(path, "utf8")).trim().split("\n");
     assert.equal(after.length, recs.length - 1, "a refused run must append nothing");
+  });
+
+  test("EC-11 --judge without --target uses header target_ms (72h soak must not default to 24h)", async () => {
+    const MULTI_DAY = 72 * HOUR;
+    const header = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: "ec-run",
+        runner_code_hash: CODE_HASH,
+        evidence_class: "ELAPSED",
+        target_ms: MULTI_DAY,
+        interval_ms: HOUR,
+      },
+    });
+    const sample = chainEnduranceRecord({
+      record: { kind: ENDURANCE_SAMPLE_KIND, run_id: "ec-run", at_ms: T0, ok: true },
+      prev: header,
+    });
+    const fromHeader = resolveJudgeTimingFromHeader([header, sample], {
+      targetMs: 24 * HOUR,
+      intervalMs: 5 * 60 * 1000,
+      explicitTarget: false,
+    });
+    assert.equal(fromHeader.source, "header");
+    assert.equal(fromHeader.targetMs, MULTI_DAY);
+    assert.equal(fromHeader.intervalMs, HOUR);
+
+    const forced = resolveJudgeTimingFromHeader([header, sample], {
+      targetMs: 24 * HOUR,
+      intervalMs: 5 * 60 * 1000,
+      explicitTarget: true,
+    });
+    assert.equal(forced.source, "cli");
+    assert.equal(forced.targetMs, 24 * HOUR);
+
+    const { home, write } = await layDownRun([header, sample]);
+    await write([header, sample], sample);
+    const judged = spawnSync("node", [
+      DEMA, "node0", "run", "--judge", "--run-id", "ec-run", "--dema-home", home, "--json",
+    ], { cwd: REPO, encoding: "utf8", timeout: 30_000, env: { ...process.env, DEMA_HOME: home } });
+    assert.equal(judged.status, 1, `INSUFFICIENT expected: ${judged.stdout}${judged.stderr}`);
+    const body = JSON.parse(judged.stdout.slice(judged.stdout.indexOf("{")));
+    assert.equal(body.target_source, "header");
+    assert.equal(body.target_ms, MULTI_DAY);
+    assert.equal(body.verdict, "INSUFFICIENT");
   });
 });
 

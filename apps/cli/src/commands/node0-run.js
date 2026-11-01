@@ -263,6 +263,34 @@ export async function readAnchor({ demaHome, runId }) {
  * judged as before but is explicitly marked not tamper-evident, because
  * accusing it of tampering would be as dishonest as vouching for it.
  */
+/**
+ * When `--judge` is invoked without an explicit `--target` / `--duration-ms`,
+ * prefer the run header's recorded `target_ms` (and `interval_ms`). Otherwise a
+ * 72h MULTI_DAY soak is silently judged against the 24h MINIMUM_OPERATIONAL
+ * default — false progress framing mid-soak, and a false HEALTHY at 24h.
+ */
+export function resolveJudgeTimingFromHeader(records, { targetMs, intervalMs, explicitTarget }) {
+  const header = Array.isArray(records)
+    ? records.find((r) => r?.kind === ENDURANCE_HEADER_KIND)
+    : null;
+  if (explicitTarget) {
+    return Object.freeze({
+      targetMs,
+      intervalMs,
+      source: "cli",
+      header_target_ms: Number.isFinite(Number(header?.target_ms)) ? Number(header.target_ms) : null,
+    });
+  }
+  const headerTarget = Number(header?.target_ms);
+  const headerInterval = Number(header?.interval_ms);
+  return Object.freeze({
+    targetMs: Number.isFinite(headerTarget) && headerTarget > 0 ? headerTarget : targetMs,
+    intervalMs: Number.isFinite(headerInterval) && headerInterval > 0 ? headerInterval : intervalMs,
+    source: Number.isFinite(headerTarget) && headerTarget > 0 ? "header" : "cli_default",
+    header_target_ms: Number.isFinite(headerTarget) ? headerTarget : null,
+  });
+}
+
 export async function judgeRun({ demaHome, runId, targetMs, intervalMs = DEFAULT_INTERVAL_MS }) {
   const records = await readRecords({ demaHome, runId });
   const chain = verifyEnduranceChain({
@@ -332,9 +360,13 @@ export async function cmdNode0Run(ctx) {
   const wantJson = argv.includes("--json");
   const home = resolveHome(argv);
   const runId = argValue(argv, "--run-id") || `run-${process.pid}`;
-  const intervalMs = Number(argValue(argv, "--interval-ms") ?? DEFAULT_INTERVAL_MS);
-  const targetKey = (argValue(argv, "--target") || "MINIMUM_OPERATIONAL").toUpperCase();
-  const targetMs = Number(argValue(argv, "--duration-ms") ?? ENDURANCE_TARGETS[targetKey] ?? ENDURANCE_TARGETS.MINIMUM_OPERATIONAL);
+  const explicitInterval = argValue(argv, "--interval-ms");
+  const explicitDuration = argValue(argv, "--duration-ms");
+  const explicitTargetKey = argValue(argv, "--target");
+  const intervalMs = Number(explicitInterval ?? DEFAULT_INTERVAL_MS);
+  const targetKey = (explicitTargetKey || "MINIMUM_OPERATIONAL").toUpperCase();
+  const targetMs = Number(explicitDuration ?? ENDURANCE_TARGETS[targetKey] ?? ENDURANCE_TARGETS.MINIMUM_OPERATIONAL);
+  const explicitTarget = explicitDuration != null || explicitTargetKey != null;
 
   // Run ids become directory names under DEMA_HOME — refuse traversal / separators.
   if (
@@ -395,12 +427,26 @@ export async function cmdNode0Run(ctx) {
 
   // ── judge-only mode: read an existing record, write nothing ──
   if (argv.includes("--judge")) {
-    const verdict = await judgeRun({ demaHome: home, runId, targetMs, intervalMs });
-    if (wantJson) console.log(JSON.stringify({ preview_only: true, run_id: runId, ...verdict }, null, 2));
-    else {
+    const records = await readRecords({ demaHome: home, runId });
+    const timing = resolveJudgeTimingFromHeader(records, { targetMs, intervalMs, explicitTarget });
+    const verdict = await judgeRun({
+      demaHome: home,
+      runId,
+      targetMs: timing.targetMs,
+      intervalMs: timing.intervalMs,
+    });
+    if (wantJson) {
+      console.log(JSON.stringify({
+        preview_only: true,
+        run_id: runId,
+        target_source: timing.source,
+        header_target_ms: timing.header_target_ms,
+        ...verdict,
+      }, null, 2));
+    } else {
       console.log(`DEMA · node0 endurance judgment (read-only) · run ${runId}`);
       console.log(`  verdict: ${verdict.verdict} · reason: ${verdict.reason}`);
-      console.log(`  observed span: ${verdict.observed_span_ms}ms of ${verdict.target_ms}ms target`);
+      console.log(`  observed span: ${verdict.observed_span_ms}ms of ${verdict.target_ms}ms target (source=${timing.source})`);
       console.log(`  samples: ${verdict.sample_count} · failures: ${verdict.failure_count} · gaps: ${verdict.gap_count}`);
       console.log(`  continuously observed: ${verdict.continuously_observed}`);
     }
