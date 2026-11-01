@@ -16,6 +16,11 @@ import {
   discoverLongestEnduranceReceipt,
   runNode0CloseMeasurementReceiptProof,
 } from "./node0-close-measurement-receipt.mjs";
+import { gatherClosureReadout } from "../review/node0-closure-invariants-check.mjs";
+import {
+  evaluateNode0ClosureInvariants,
+  CLOSURE_INVARIANTS,
+} from "../../packages/core/src/node0-closure-invariants.js";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SOAK_PREFLIGHT = "/data/bizra/bin/node0-soak/preflight.sh";
@@ -47,6 +52,14 @@ function main() {
   const discovery = discoverLongestEnduranceReceipt(demaHome);
   const soak_judgment = discovery?.judgment ?? null;
   const close = runNode0CloseMeasurementReceiptProof({ soak_judgment });
+  const readout = gatherClosureReadout();
+  const ledger = evaluateNode0ClosureInvariants(readout.evidence);
+  const ledgerRows = (ledger.invariants || []).map((row, i) => ({
+    id: row.id || CLOSURE_INVARIANTS[i]?.id || String(i),
+    status: row.status,
+    reason: row.reason ?? null,
+  }));
+  const ledgerOpen = ledgerRows.filter((r) => r.status !== "SATISFIED");
 
   const gatewayEnv = {
     ...process.env,
@@ -108,6 +121,14 @@ function main() {
       },
       measurement_admits_closed: close.measurement_admits_closed === true,
       admission_verdict: close.admission_verdict ?? null,
+      closure_ledger: {
+        node0_closed: ledger.node0_closed === true,
+        verdict: ledger.verdict ?? null,
+        satisfied_count: ledger.satisfied_count ?? null,
+        open: ledgerOpen,
+        note:
+          "Soak is NOT one of the ten ledger invariants — it gates measurement_admits_closed only. Ledger node0_closed needs all ten SATISFIED (today: remote_write).",
+      },
     },
     halt_gates_exact: [
       "GO push PR slice/health-snapshot-bridge-1a",
