@@ -7,6 +7,7 @@ import { buildHarnessIntegrationSummary } from "../../core/src/harness-integrati
 import { checkSetup } from "../../installer/src/setup.js";
 import { evaluatePredicates } from "../../core/src/doctor-dashboard.js";
 import { defaultStatus } from "../../core/src/status.js";
+import { createNode0Adapter } from "../../node-adapter/src/node0-adapter.js";
 import {
   findLatestWitness,
   verifyWitnessReceipt,
@@ -18,6 +19,32 @@ const CONSENT_PHRASE = "RUN NODE0 HEALTH SNAPSHOT";
 
 export { CONSENT_PHRASE as HEALTH_MISSION_CONSENT_PHRASE };
 export { SCHEMA as HEALTH_MISSION_RECEIPT_SCHEMA };
+
+// NODE0-HEALTH-SNAPSHOT-BRIDGE-1A — which Node0 status does the doctor judge?
+//
+// Only an operator-configured bridge (DEMA_NODE0_ADAPTER / DEMA_GATEWAY_URL /
+// DEMA_NODE0_STATUS_COMMAND) is ever consulted; with none set, nothing executes
+// and the unbridged defaultStatus() is judged (byte-identical to pre-bridge
+// behaviour). When a bridge IS configured, every failure arm falls back to that
+// same red default — never to an adapter "unavailable" payload that would
+// soften BLOCKED/false into "expected" and let a broken bridge read as healthy.
+async function resolveNode0Status() {
+  const configured = Boolean(
+    process.env.DEMA_NODE0_ADAPTER ||
+      process.env.DEMA_GATEWAY_URL ||
+      process.env.DEMA_NODE0_STATUS_COMMAND,
+  );
+  if (!configured) return { status: defaultStatus(), consulted: false };
+  try {
+    const status = await createNode0Adapter().status();
+    if (status?.adapter?.available === false) {
+      return { status: defaultStatus(), consulted: true };
+    }
+    return { status, consulted: true };
+  } catch {
+    return { status: defaultStatus(), consulted: true };
+  }
+}
 
 function deriveMissionVerdict(results) {
   const setupOk = results.setup.verdict === "INTACT";
@@ -31,12 +58,22 @@ function deriveMissionVerdict(results) {
   return "FAILED";
 }
 
-export async function buildHealthSnapshot({ now = new Date() } = {}) {
-  const home = process.env.DEMA_HOME || join(homedir(), ".dema");
+/**
+ * `demaHome` is additive: omitting it preserves environment-derived behaviour.
+ */
+export async function buildHealthSnapshot({ now = new Date(), demaHome } = {}) {
+  const home =
+    typeof demaHome === "string" && demaHome.length > 0
+      ? demaHome
+      : process.env.DEMA_HOME || join(homedir(), ".dema");
 
   const setup = await checkSetup(home);
   const harness = buildHarnessIntegrationSummary();
-  const predicates = evaluatePredicates(defaultStatus());
+  const node0 = await resolveNode0Status();
+  const predicates = evaluatePredicates(node0.status);
+  // consulted=true means a configured bridge was attempted; available===false
+  // already fell back to defaultStatus above.
+  const bridged = node0.consulted && node0.status?.adapter?.available !== false;
   const witnessPath = await findLatestWitness(home);
   let witnessResult = { exists: false, verdict: null };
   if (witnessPath) {
@@ -61,6 +98,7 @@ export async function buildHealthSnapshot({ now = new Date() } = {}) {
       ok: predicates.filter((p) => p.status === "ok").length,
       fail: predicates.filter((p) => p.status === "fail").length,
       warn: predicates.filter((p) => p.status === "warn").length,
+      bridged,
     },
     witness: witnessResult,
     memory: {
@@ -78,7 +116,8 @@ export async function buildHealthSnapshot({ now = new Date() } = {}) {
     results,
     boundary: {
       filesystem_write_performed: false,
-      network_used: false,
+      // Attempt is attested even when the bridge fails — a dead bridge cannot hide.
+      network_used: node0.consulted,
       runtime_execution_performed: false,
       model_loaded: false,
       model_invocation_performed: false,
@@ -86,11 +125,11 @@ export async function buildHealthSnapshot({ now = new Date() } = {}) {
       external_call_performed: false,
       raw_corpus_scan_performed: false,
       raw_data_included: false,
-      tool_executed: false,
+      tool_executed: node0.consulted,
       chain_advance_performed: false,
       receipt_mint_performed: false,
       federation_invoked: false,
-      node_connection_performed: false,
+      node_connection_performed: node0.consulted,
       public_network_used: false,
       consent_collected: false,
     },

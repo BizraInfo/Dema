@@ -17,14 +17,25 @@ const FIXED_NOW = new Date("2026-05-26T12:00:00Z");
 
 async function freshHome() {
   const home = await mkdtemp(join(tmpdir(), "dema-health-test-"));
-  const old = process.env.DEMA_HOME;
+  const old = {
+    DEMA_HOME: process.env.DEMA_HOME,
+    DEMA_NODE0_ADAPTER: process.env.DEMA_NODE0_ADAPTER,
+    DEMA_GATEWAY_URL: process.env.DEMA_GATEWAY_URL,
+    DEMA_NODE0_STATUS_COMMAND: process.env.DEMA_NODE0_STATUS_COMMAND,
+  };
   process.env.DEMA_HOME = home;
+  // Hermetic: health-snapshot tests assert unbridged preview behaviour.
+  delete process.env.DEMA_NODE0_ADAPTER;
+  delete process.env.DEMA_GATEWAY_URL;
+  delete process.env.DEMA_NODE0_STATUS_COMMAND;
   await runSetup(home);
   return {
     home,
     restore: () => {
-      if (old) process.env.DEMA_HOME = old;
-      else delete process.env.DEMA_HOME;
+      for (const [k, v] of Object.entries(old)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
     },
   };
 }
@@ -87,14 +98,58 @@ describe("buildHealthSnapshot", () => {
     }
   });
 
+  it("unbridged snapshot judges defaultStatus (doctor fails, no network claim)", async () => {
+    const { restore } = await freshHome();
+    const saved = {
+      adapter: process.env.DEMA_NODE0_ADAPTER,
+      gateway: process.env.DEMA_GATEWAY_URL,
+      statusCmd: process.env.DEMA_NODE0_STATUS_COMMAND,
+    };
+    delete process.env.DEMA_NODE0_ADAPTER;
+    delete process.env.DEMA_GATEWAY_URL;
+    delete process.env.DEMA_NODE0_STATUS_COMMAND;
+    try {
+      const s = await buildHealthSnapshot({ now: FIXED_NOW });
+      assert.ok(s.attests.results.doctor.fail >= 1);
+      assert.equal(s.attests.results.doctor.bridged, false);
+      assert.equal(s.attests.boundary.network_used, false);
+      assert.equal(s.attests.boundary.tool_executed, false);
+      assert.notEqual(s.attests.mission_verdict, "CLEAN");
+    } finally {
+      if (saved.adapter) process.env.DEMA_NODE0_ADAPTER = saved.adapter;
+      else delete process.env.DEMA_NODE0_ADAPTER;
+      if (saved.gateway) process.env.DEMA_GATEWAY_URL = saved.gateway;
+      else delete process.env.DEMA_GATEWAY_URL;
+      if (saved.statusCmd)
+        process.env.DEMA_NODE0_STATUS_COMMAND = saved.statusCmd;
+      else delete process.env.DEMA_NODE0_STATUS_COMMAND;
+      restore();
+    }
+  });
+
   it("boundary is all false in preview mode", async () => {
     const { restore } = await freshHome();
+    const saved = {
+      adapter: process.env.DEMA_NODE0_ADAPTER,
+      gateway: process.env.DEMA_GATEWAY_URL,
+      statusCmd: process.env.DEMA_NODE0_STATUS_COMMAND,
+    };
+    delete process.env.DEMA_NODE0_ADAPTER;
+    delete process.env.DEMA_GATEWAY_URL;
+    delete process.env.DEMA_NODE0_STATUS_COMMAND;
     try {
       const s = await buildHealthSnapshot({ now: FIXED_NOW });
       for (const [key, value] of Object.entries(s.attests.boundary)) {
         assert.equal(value, false, `boundary.${key} should be false`);
       }
     } finally {
+      if (saved.adapter) process.env.DEMA_NODE0_ADAPTER = saved.adapter;
+      else delete process.env.DEMA_NODE0_ADAPTER;
+      if (saved.gateway) process.env.DEMA_GATEWAY_URL = saved.gateway;
+      else delete process.env.DEMA_GATEWAY_URL;
+      if (saved.statusCmd)
+        process.env.DEMA_NODE0_STATUS_COMMAND = saved.statusCmd;
+      else delete process.env.DEMA_NODE0_STATUS_COMMAND;
       restore();
     }
   });
