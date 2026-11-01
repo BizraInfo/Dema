@@ -7,7 +7,7 @@
  * measurement_admits_closed / NODE0_CLOSED are reported honestly — never forced.
  */
 import { spawnSync } from "node:child_process";
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";

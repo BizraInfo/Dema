@@ -336,8 +336,28 @@ export async function cmdNode0Run(ctx) {
   const targetKey = (argValue(argv, "--target") || "MINIMUM_OPERATIONAL").toUpperCase();
   const targetMs = Number(argValue(argv, "--duration-ms") ?? ENDURANCE_TARGETS[targetKey] ?? ENDURANCE_TARGETS.MINIMUM_OPERATIONAL);
 
+  // Run ids become directory names under DEMA_HOME — refuse traversal / separators.
+  if (
+    typeof runId !== "string" ||
+    !runId ||
+    runId === "." ||
+    runId === ".." ||
+    runId.includes("/") ||
+    runId.includes("\\") ||
+    runId.includes("\0")
+  ) {
+    console.error("Dema error: --run-id must be a single path segment (no separators). Nothing was written.");
+    process.exitCode = 1;
+    return;
+  }
+
   if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
     console.error("Dema error: --interval-ms must be a positive number. Nothing was written.");
+    process.exitCode = 1;
+    return;
+  }
+  if (!Number.isFinite(targetMs) || targetMs <= 0) {
+    console.error("Dema error: --duration-ms / --target must resolve to a positive finite duration. Nothing was written.");
     process.exitCode = 1;
     return;
   }
@@ -484,6 +504,19 @@ export async function cmdNode0Run(ctx) {
     }
     prev = existing[existing.length - 1];
 
+    // Resume must bind the same runner bytes the header recorded — otherwise a
+    // rebuilt CLI could quietly extend a foreign chain.
+    const liveRunnerHash = await measureRunnerCodeHash();
+    const headerRunnerHash = existing[0]?.runner_code_hash ?? null;
+    if (headerRunnerHash && headerRunnerHash !== liveRunnerHash) {
+      console.error(
+        `Dema error: refusing to extend run '${runId}' — runner_code_hash mismatch `
+        + `(header ${headerRunnerHash}, live ${liveRunnerHash}). Nothing was written. A new --run-id is free.`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+
     // ── FREEZE-1A: a resumed qualifying run must resume under the SAME frozen
     // contract its header binds. A different manifest — or a header that never
     // bound one — is a different experiment wearing this run's identity.
@@ -566,8 +599,18 @@ export async function cmdNode0Run(ctx) {
       drift_sample_count: driftSamples,
     },
     boundary: {
-      daemon: false, model_invoked: false, network: false,
-      effect_executed: false, nonce_claimed: false, transaction_prepared: false,
+      daemon: false,
+      model_invoked: false,
+      // Bridged health snapshots consult gateway-http / STATUS_COMMAND over the
+      // loopback network stack — report that honestly (public internet still false).
+      network: Boolean(
+        process.env.DEMA_NODE0_ADAPTER ||
+          process.env.DEMA_GATEWAY_URL ||
+          process.env.DEMA_NODE0_STATUS_COMMAND,
+      ),
+      effect_executed: false,
+      nonce_claimed: false,
+      transaction_prepared: false,
     },
     authority_delta: 0,
   };

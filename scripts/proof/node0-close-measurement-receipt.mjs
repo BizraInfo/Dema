@@ -21,16 +21,63 @@ import { fileURLToPath } from "node:url";
 import { evaluateNode0ClosureInvariants } from "../../packages/core/src/node0-closure-invariants.js";
 import { buildNode0CloseMeasurementReceipt } from "../../packages/core/src/node0-close-measurement-receipt.js";
 import { projectSoakJudgmentToAdmission } from "../../packages/core/src/node0-soak-judgment-admission.js";
+import { verifyEnduranceChain } from "../../packages/core/src/node0-endurance-chain.js";
 import { gatherClosureReadout } from "../review/node0-closure-invariants-check.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ENDURANCE_RELDIR = join("node0", "endurance");
 const RECEIPT_NAME = "endurance-receipt.json";
+const SAMPLES_NAME = "samples.jsonl";
+const ANCHOR_NAME = "anchor.json";
+const RUN_RECEIPT_SCHEMA = "bizra.dema.node0_run_receipt.v0.1";
+const ENDURANCE_SCHEMA = "bizra.dema.node0_endurance.v0.1";
+
+function loadVerifiedEnduranceReceipt(dir, runId) {
+  const receiptPath = join(dir, RECEIPT_NAME);
+  const samplesPath = join(dir, SAMPLES_NAME);
+  const anchorPath = join(dir, ANCHOR_NAME);
+  let receipt;
+  let records;
+  let anchor;
+  try {
+    receipt = JSON.parse(readFileSync(receiptPath, "utf8"));
+    records = readFileSync(samplesPath, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+    anchor = JSON.parse(readFileSync(anchorPath, "utf8"));
+  } catch {
+    return null;
+  }
+  if (
+    receipt?.schema !== RUN_RECEIPT_SCHEMA &&
+    receipt?.schema !== ENDURANCE_SCHEMA
+  ) {
+    return null;
+  }
+  const chain = verifyEnduranceChain({ records, anchor, runId });
+  if (!chain.ok) return null;
+  const span =
+    typeof receipt?.verdict?.observed_span_ms === "number"
+      ? receipt.verdict.observed_span_ms
+      : typeof receipt?.observed_span_ms === "number"
+        ? receipt.observed_span_ms
+        : -1;
+  if (!(span >= 0)) return null;
+  return {
+    path: receiptPath,
+    run_id: runId,
+    observed_span_ms: span,
+    mtime_ms: statSync(receiptPath).mtimeMs,
+    judgment: receipt,
+    chain_state: chain.chain_state,
+  };
+}
 
 /**
  * Prefer the sealed receipt with the longest observed span so a short probe
- * never shadows a real MULTI_DAY_CONFIDENCE seal. Returns null when none exist
- * — silence stays silence (no invented soak).
+ * never shadows a real MULTI_DAY_CONFIDENCE seal. Only receipts whose samples
+ * + anchor still verify are eligible — silence stays silence.
  */
 export function discoverLongestEnduranceReceipt(demaHome) {
   const root = join(demaHome, ENDURANCE_RELDIR);
@@ -43,40 +90,15 @@ export function discoverLongestEnduranceReceipt(demaHome) {
   let best = null;
   for (const ent of entries) {
     if (!ent.isDirectory()) continue;
-    const path = join(root, ent.name, RECEIPT_NAME);
-    let raw;
-    let mtimeMs = 0;
-    try {
-      raw = readFileSync(path, "utf8");
-      mtimeMs = statSync(path).mtimeMs;
-    } catch {
-      continue;
-    }
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      continue;
-    }
-    const span =
-      typeof parsed?.verdict?.observed_span_ms === "number"
-        ? parsed.verdict.observed_span_ms
-        : typeof parsed?.observed_span_ms === "number"
-          ? parsed.observed_span_ms
-          : -1;
-    if (span < 0) continue;
+    const found = loadVerifiedEnduranceReceipt(join(root, ent.name), ent.name);
+    if (!found) continue;
     if (
       !best ||
-      span > best.observed_span_ms ||
-      (span === best.observed_span_ms && mtimeMs > best.mtime_ms)
+      found.observed_span_ms > best.observed_span_ms ||
+      (found.observed_span_ms === best.observed_span_ms &&
+        found.mtime_ms > best.mtime_ms)
     ) {
-      best = {
-        path,
-        run_id: ent.name,
-        observed_span_ms: span,
-        mtime_ms: mtimeMs,
-        judgment: parsed,
-      };
+      best = found;
     }
   }
   return best;

@@ -34,15 +34,17 @@ async function resolveNode0Status() {
       process.env.DEMA_GATEWAY_URL ||
       process.env.DEMA_NODE0_STATUS_COMMAND,
   );
-  if (!configured) return { status: defaultStatus(), consulted: false };
+  if (!configured) return { status: defaultStatus(), consulted: false, bridge_failed: false };
   try {
     const status = await createNode0Adapter().status();
     if (status?.adapter?.available === false) {
-      return { status: defaultStatus(), consulted: true };
+      // Configured bridge answered "unavailable" — keep red defaultStatus and
+      // do not claim bridged:true downstream.
+      return { status: defaultStatus(), consulted: true, bridge_failed: true };
     }
-    return { status, consulted: true };
+    return { status, consulted: true, bridge_failed: false };
   } catch {
-    return { status: defaultStatus(), consulted: true };
+    return { status: defaultStatus(), consulted: true, bridge_failed: true };
   }
 }
 
@@ -71,9 +73,12 @@ export async function buildHealthSnapshot({ now = new Date(), demaHome } = {}) {
   const harness = buildHarnessIntegrationSummary();
   const node0 = await resolveNode0Status();
   const predicates = evaluatePredicates(node0.status);
-  // consulted=true means a configured bridge was attempted; available===false
-  // already fell back to defaultStatus above.
-  const bridged = node0.consulted && node0.status?.adapter?.available !== false;
+  // consulted=true means a configured bridge was attempted. bridge_failed (or
+  // adapter.available===false on a live payload) must not count as bridged.
+  const bridged =
+    node0.consulted === true &&
+    node0.bridge_failed !== true &&
+    node0.status?.adapter?.available !== false;
   const witnessPath = await findLatestWitness(home);
   let witnessResult = { exists: false, verdict: null };
   if (witnessPath) {

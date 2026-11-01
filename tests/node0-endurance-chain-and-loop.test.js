@@ -16,9 +16,8 @@
 
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -34,8 +33,6 @@ import {
 } from "../packages/core/src/node0-endurance-chain.js";
 import { judgeRun, measureRunnerCodeHash, ENDURANCE_RELDIR, ENDURANCE_ANCHOR_FILE }
   from "../apps/cli/src/commands/node0-run.js";
-import { saveSeasonState, loadSeasonHead } from "../packages/receipts/src/season-state-store.js";
-import { initAuthorshipKey, KEY_INIT_CONSENT_PHRASE } from "../packages/receipts/src/authorship-key-store.js";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DEMA = join(REPO, "bin/dema");
@@ -310,67 +307,4 @@ describe("EC · the endurance record is tamper-evident", () => {
     assert.equal(after.length, recs.length - 1, "a refused run must append nothing");
   });
 });
-
-// ─────────────────── LOOP: the reversible effect, end to end ───────────────────
-
-const ID = "loop-probe";
-const SEASON = "loop-season";
-const future = () => new Date(Date.now() + 3_600_000).toISOString();
-const git = (a) => execFileSync("git", a, { cwd: REPO, encoding: "utf8" }).trim();
-
-function run(home, args, { allowFail = false } = {}) {
-  const seasoned = args.includes("complete") && !args.includes("--season")
-    ? [...args, "--season", SEASON] : args;
-  try {
-    return execFileSync("node", [DEMA, ...seasoned, "--dema-home", home, "--json"],
-      { cwd: REPO, encoding: "utf8", env: { ...process.env, DEMA_HOME: home } });
-  } catch (e) {
-    if (!allowFail) throw new Error(`${e.stdout ?? ""}${e.stderr ?? ""}`);
-    return `${e.stdout ?? ""}${e.stderr ?? ""}`;
-  }
-}
-
-function consented(home, args, nonce) {
-  const base = [...args, "--nonce", nonce, "--expires", future()];
-  const card = JSON.parse(run(home, base));
-  return JSON.parse(run(home, [...base, "--consent", card.required_phrase,
-    "--consent-context", card.consent_context_hash]));
-}
-
-/** A corridor at CHECKPOINT with a seeded estate, under a Season bound to THIS checkout. */
-async function corridorReadyToComplete(mustNotRepeat = []) {
-  const home = await mkdtemp(join(tmpdir(), "loop-"));
-  await saveSeasonState({
-    demaHome: home,
-    state: {
-      season_id: SEASON, mission_id: ID, mission_phase: "LOCAL_EFFECT_PREPARED",
-      completed_steps: [], next_safe_action: "ACTION:CORRIDOR_RENAME_EXECUTE",
-      must_not_repeat: mustNotRepeat,
-      pending_consent: [{ phrase: `GO: complete mission corridor ${ID}`, scope: "corridor" }],
-      repository_commit: git(["rev-parse", "HEAD"]),
-      repository_tree: git(["rev-parse", "HEAD^{tree}"]),
-      saved_at: "2026-08-05T09:00:00Z",
-    },
-  });
-  await initAuthorshipKey({ consent: KEY_INIT_CONSENT_PHRASE, demaHome: home });
-
-  const startArgs = ["mission", "corridor", "start", "--id", ID,
-    "--objective", "LOOP: drive one corridor to a verified COMPLETE",
-    "--base-sha", "0".repeat(40), "--nonce", "loop-start", "--expires", future()];
-  const card = JSON.parse(run(home, startArgs));
-  run(home, [...startArgs, "--created-at", card.created_at_iso,
-    "--consent", card.required_phrase, "--consent-context", card.consent_context_hash]);
-  let n = 0;
-  for (const to of ["PREFLIGHT", "PLANNING", "IMPLEMENTING", "VERIFYING", "SAT_REVIEW", "CHECKPOINT"]) {
-    assert.equal(consented(home, ["mission", "corridor", "advance", ID, "--to", to], `loop-adv-${++n}`).state, to);
-  }
-  const estate = join(home, "missions", ID, "estate");
-  await mkdir(estate, { recursive: true, mode: 0o700 });
-  await writeFile(join(estate, "closure-evidence.draft.json"), JSON.stringify({ claim: "loop" }) + "\n", { mode: 0o600 });
-  return { home, estate };
-}
-
-const countComplete = async (home) =>
-  (await readFile(join(home, "missions", ID, "journal.jsonl"), "utf8"))
-    .trim().split("\n").map((l) => JSON.parse(l)).filter((e) => e.state === "COMPLETE").length;
 
