@@ -100,7 +100,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | — | Dema Autopilot North-star continuity (versioned) | DONE merge #510 @ `727cbb60` — PREVIEW_ONLY card + versioned skill; continuity ≠ write authority |
 | — | Shakedown soak `shakedown-20261031-1755` | DONE sealed — ~2h span, all samples ATTENTION/`ok:false`; unit crash-loop after seal **stopped** |
 | — | Cartographer JSON artifacts | OPEN — PDF measured; three JSON stamps still absent; no silent ingest |
-| — | Focused gates green for active slice | DONE @ merge #510 (continuity 11/11 + skill-routing; run-dema smoke 9/9) |
+| — | Focused gates green for active slice | DONE @ merge #510 — `node --test tests/dema-autopilot-continuity.test.js tests/skill-routing.test.js` 39/39; projection parity PASS |
 
 ## Default next slice when user says SPRINT
 
