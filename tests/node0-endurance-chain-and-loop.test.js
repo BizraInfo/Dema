@@ -16,7 +16,7 @@
 
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, readFile, access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import { tmpdir } from "node:os";
@@ -455,14 +455,31 @@ describe("EC · the endurance record is tamper-evident", () => {
   });
 
   test("EC-12c resume refuses widened --interval-ms vs header binding", async () => {
-    const home = await mkdtemp(join(tmpdir(), "ec-12c-"));
-    const child = spawn("node", [
-      DEMA, "node0", "run", "--dema-home", home, "--run-id", "widen",
-      "--interval-ms", "80", "--duration-ms", "60000",
-    ], { cwd: REPO, env: { ...process.env, DEMA_HOME: home }, stdio: ["ignore", "pipe", "pipe"] });
-    await new Promise((r) => setTimeout(r, 350));
-    child.kill("SIGKILL");
-    await new Promise((r) => child.on("exit", r));
+    // Seed an unsealed chain on disk (no race with SIGKILL before first write).
+    const liveHash = await measureRunnerCodeHash();
+    const header = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: "widen",
+        runner_code_hash: liveHash,
+        evidence_class: ENDURANCE_EVIDENCE_CLASSES.ELAPSED,
+        interval_ms: 80,
+        target_ms: 60_000,
+        started_at_ms: T0,
+      },
+    });
+    const sample = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_SAMPLE_KIND,
+        run_id: "widen",
+        at_ms: T0,
+        ok: true,
+        mission_verdict: "CLEAN",
+      },
+      prev: header,
+    });
+    const { home, write } = await layDownRun([header, sample], { runId: "widen" });
+    await write([header, sample], sample);
 
     const widened = spawnSync("node", [
       DEMA, "node0", "run", "--dema-home", home, "--run-id", "widen",
@@ -470,6 +487,48 @@ describe("EC · the endurance record is tamper-evident", () => {
     ], { cwd: REPO, encoding: "utf8", timeout: 30_000, env: { ...process.env, DEMA_HOME: home } });
     assert.notEqual(widened.status, 0);
     assert.match(`${widened.stdout}${widened.stderr}`, /widens/);
+  });
+
+  test("EC-12d TORN_TAIL resume repairs the lagging anchor before appending", async () => {
+    const liveHash = await measureRunnerCodeHash();
+    const header = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: "torn",
+        runner_code_hash: liveHash,
+        evidence_class: ENDURANCE_EVIDENCE_CLASSES.ELAPSED,
+        interval_ms: 5,
+        target_ms: 1,
+        started_at_ms: T0,
+      },
+    });
+    const sample = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_SAMPLE_KIND,
+        run_id: "torn",
+        at_ms: T0,
+        ok: true,
+        mission_verdict: "CLEAN",
+      },
+      prev: header,
+    });
+    const { home, dir, write } = await layDownRun([header, sample], { runId: "torn" });
+    // Anchor lags by one → TORN_TAIL; resume must repair then append/seal.
+    await write([header, sample], header);
+    const torn = verifyEnduranceChain({
+      records: [header, sample],
+      anchor: JSON.parse(await readFile(join(dir, ENDURANCE_ANCHOR_FILE), "utf8")),
+      runId: "torn",
+    });
+    assert.equal(torn.chain_state, "TORN_TAIL");
+
+    const resumed = spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, "--run-id", "torn",
+      "--interval-ms", "5", "--duration-ms", "1", "--json",
+    ], { cwd: REPO, encoding: "utf8", timeout: 30_000, env: { ...process.env, DEMA_HOME: home } });
+    assert.match(`${resumed.stdout}${resumed.stderr}`, /"chain_state": "SEALED"/);
+    const anchorAfter = JSON.parse(await readFile(join(dir, ENDURANCE_ANCHOR_FILE), "utf8"));
+    assert.ok(anchorAfter.head_seq >= sample.seq, "resume must advance anchor past the torn head");
   });
 });
 
