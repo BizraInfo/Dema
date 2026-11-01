@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
-import { stripTypeScriptTypes } from "node:module";
+
+const nodeMajor = Number.parseInt(process.versions.node, 10);
+const moduleApi = nodeMajor >= 22 ? await import("node:module") : null;
+const stripTypeScriptTypes = moduleApi?.stripTypeScriptTypes;
 
 const source = readFileSync(
   new URL("../packages/dema-ui/src/app/api/mission/node0-runtime.ts", import.meta.url),
@@ -22,14 +25,18 @@ function sourceBlock(startMarker, endMarker) {
   return source.slice(start, end);
 }
 
-const helperSource = stripTypeScriptTypes([
-  sourceLine("LOOPBACK_HOSTS"),
-  sourceLine("RUNTIME_ROUTES"),
-  sourceLine("GOVERNED_RUNTIME_TIMEOUT_MS"),
-  sourceBlock("function runtimeUrl()", "\nexport function proposalBinding"),
-  sourceBlock("export async function callGovernedRuntime", "\nexport function readIntent"),
-].join("\n").replace(/^export /gm, ""));
-const callGovernedRuntime = new Function(`${helperSource}\nreturn callGovernedRuntime;`)();
+const helperSource = stripTypeScriptTypes
+  ? stripTypeScriptTypes([
+      sourceLine("LOOPBACK_HOSTS"),
+      sourceLine("RUNTIME_ROUTES"),
+      sourceLine("GOVERNED_RUNTIME_TIMEOUT_MS"),
+      sourceBlock("function runtimeUrl()", "\nexport function proposalBinding"),
+      sourceBlock("export async function callGovernedRuntime", "\nexport function readIntent"),
+    ].join("\n").replace(/^export /gm, ""))
+  : null;
+const callGovernedRuntime = helperSource
+  ? new Function(`${helperSource}\nreturn callGovernedRuntime;`)()
+  : null;
 
 function listen(server) {
   return new Promise((resolve, reject) => {
@@ -45,7 +52,13 @@ function close(server) {
   });
 }
 
-test("callGovernedRuntime refuses a loopback 307 without forwarding to its target", async () => {
+const redirectTest = (name, fn) => test(name, {
+  skip: stripTypeScriptTypes
+    ? false
+    : "requires Node 22 because node:module.stripTypeScriptTypes is unavailable on Node 20",
+}, fn);
+
+redirectTest("callGovernedRuntime refuses a loopback 307 without forwarding to its target", async () => {
   let firstRequests = 0;
   let secondRequests = 0;
   let secondPort;
