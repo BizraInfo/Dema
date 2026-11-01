@@ -475,43 +475,68 @@ export async function cmdNode0Run(ctx) {
   }
 
   // Exclusive per-run ownership: two foreground recorders must not share a run id.
-  // Crash recovery: a lock whose pid is dead (or unreadable) is cleared once.
+  // Acquire only via O_EXCL (`wx`). Stale recovery displaces the prior lock with
+  // an atomic rename (never unlink-then-create — that TOCTOU races).
   const lockPath = join(dir, "runner.lock");
   let lockFh = null;
+  const tryCreateLock = async () => {
+    const fh = await open(lockPath, "wx");
+    await fh.writeFile(`${process.pid}\n`);
+    return fh;
+  };
   try {
-    lockFh = await open(lockPath, "wx");
-    await lockFh.writeFile(`${process.pid}\n`);
+    lockFh = await tryCreateLock();
   } catch (err) {
-    if (err?.code === "EEXIST") {
-      let stale = false;
+    if (err?.code !== "EEXIST") throw err;
+    let priorPid = null;
+    try {
+      priorPid = Number((await readFile(lockPath, "utf8")).trim());
+    } catch {
+      priorPid = null;
+    }
+    let live = false;
+    if (Number.isInteger(priorPid) && priorPid > 0) {
       try {
-        const prior = Number((await readFile(lockPath, "utf8")).trim());
-        if (Number.isInteger(prior) && prior > 0) {
-          try {
-            process.kill(prior, 0);
-          } catch {
-            stale = true;
-          }
-        } else {
-          stale = true;
-        }
+        process.kill(priorPid, 0);
+        live = true;
       } catch {
-        stale = true;
+        live = false;
       }
-      if (stale) {
-        await unlink(lockPath);
-        lockFh = await open(lockPath, "wx");
-        await lockFh.writeFile(`${process.pid}\n`);
-      } else {
-        console.error(
-          `Dema error: run '${runId}' is already owned by another live runner (lock ${lockPath}). `
-          + "Nothing was written. A new --run-id is free.",
-        );
-        process.exitCode = 1;
-        return;
-      }
-    } else {
-      throw err;
+    }
+    if (live) {
+      console.error(
+        `Dema error: run '${runId}' is already owned by another live runner (lock ${lockPath}). `
+        + "Nothing was written. A new --run-id is free.",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    const displaced = `${lockPath}.dead.${Number.isInteger(priorPid) ? priorPid : "unknown"}.${process.pid}`;
+    try {
+      await rename(lockPath, displaced);
+    } catch (renameErr) {
+      // Another process claimed or removed the lock — refuse rather than race.
+      console.error(
+        `Dema error: run '${runId}' lock contention while recovering stale lock `
+        + `(${renameErr?.code ?? renameErr}). Nothing was written. A new --run-id is free.`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+    try {
+      await unlink(displaced);
+    } catch {
+      // best-effort cleanup of the displaced dead lock
+    }
+    try {
+      lockFh = await tryCreateLock();
+    } catch (createErr) {
+      console.error(
+        `Dema error: run '${runId}' could not re-acquire lock after stale displace `
+        + `(${createErr?.code ?? createErr}). Nothing was written. A new --run-id is free.`,
+      );
+      process.exitCode = 1;
+      return;
     }
   }
   const releaseLock = async () => {
