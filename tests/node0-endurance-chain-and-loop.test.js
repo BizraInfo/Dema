@@ -192,6 +192,23 @@ describe("EC · the endurance record is tamper-evident", () => {
     assert.match(suspicious.reason, /anchor_lags_records_by_2_appends/);
   });
 
+  test("EC-05b negative anchor head_seq is BROKEN, not a crash into records[-1]", () => {
+    const records = buildRecord({ count: 0 }); // header only
+    const bad = verifyEnduranceChain({
+      records,
+      anchor: {
+        schema: "bizra.dema.node0_endurance_anchor.v0.1",
+        run_id: "ec-run",
+        head_seq: -1,
+        head_hash: "sha256:" + "a".repeat(64),
+      },
+      runId: "ec-run",
+    });
+    assert.equal(bad.ok, false);
+    assert.equal(bad.chain_state, "BROKEN");
+    assert.match(bad.reason, /anchor_malformed/);
+  });
+
   test("EC-06 a CUSTOM_TEST record can be HEALTHY but never meets an endurance target", async () => {
     const records = buildRecord({ count: 26, evidenceClass: ENDURANCE_EVIDENCE_CLASSES.CUSTOM_TEST });
     const { home, write } = await layDownRun(records);

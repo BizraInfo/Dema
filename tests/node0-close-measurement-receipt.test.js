@@ -291,7 +291,9 @@ describe("node0-close-measurement-receipt", () => {
           run_id: runId,
           runner_code_hash: codeHash,
           evidence_class: ENDURANCE_EVIDENCE_CLASSES.ELAPSED,
-          interval_ms: 1000,
+          // Interval must cover the fixture span or re-derived judgment is BROKEN
+          // (still discoverable — admission ranks by live observed_span_ms).
+          interval_ms: Math.max(1000, spanMs),
           target_ms: spanMs,
           started_at_ms: 1_700_000_000_000,
         },

@@ -194,7 +194,11 @@ export function verifyEnduranceChain({ records, anchor = null, runId = null } = 
   if (anchor.run_id !== chainRunId) {
     return refuse("BROKEN", `anchor_run_id_mismatch:${String(anchor.run_id)}`, withHead);
   }
-  if (!Number.isInteger(anchor.head_seq) || !isNonEmptyString(anchor.head_hash)) {
+  if (
+    !Number.isInteger(anchor.head_seq) ||
+    anchor.head_seq < 0 ||
+    !isNonEmptyString(anchor.head_hash)
+  ) {
     return refuse("BROKEN", "anchor_malformed", withHead);
   }
   if (anchor.head_seq > last.seq) {

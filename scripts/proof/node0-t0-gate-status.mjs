@@ -161,12 +161,25 @@ function main() {
   }));
   const ledgerOpen = ledgerRows.filter((r) => r.status !== "SATISFIED");
 
+  // T0 doctor probe prefers gateway-http face. Only strip STATUS_COMMAND when
+  // that mode is selected — preserving legacy-shellout must keep its command.
+  const adapterMode =
+    process.env.DEMA_NODE0_ADAPTER ||
+    (process.env.DEMA_GATEWAY_URL ? "gateway-http" : null) ||
+    (process.env.DEMA_NODE0_STATUS_COMMAND ? "legacy-shellout" : "gateway-http");
   const gatewayEnv = {
     ...process.env,
-    DEMA_NODE0_ADAPTER: process.env.DEMA_NODE0_ADAPTER || "gateway-http",
-    DEMA_GATEWAY_URL: process.env.DEMA_GATEWAY_URL || "http://127.0.0.1:7421",
+    DEMA_NODE0_ADAPTER: adapterMode === "legacy-shellout" ? "legacy-shellout" : "gateway-http",
+    ...(adapterMode === "legacy-shellout"
+      ? {}
+      : {
+          DEMA_GATEWAY_URL:
+            process.env.DEMA_GATEWAY_URL || "http://127.0.0.1:7421",
+        }),
   };
-  delete gatewayEnv.DEMA_NODE0_STATUS_COMMAND;
+  if (gatewayEnv.DEMA_NODE0_ADAPTER === "gateway-http") {
+    delete gatewayEnv.DEMA_NODE0_STATUS_COMMAND;
+  }
   const doctor = runDoctorJson(gatewayEnv);
   const soak_runtime = readLiveSoakRuntime(demaHome);
 

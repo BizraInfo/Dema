@@ -53,7 +53,12 @@ function deriveMissionVerdict(results) {
   const harnessOk = results.harness.verdict === "CLEAN";
   const witnessOk =
     results.witness.exists && results.witness.verdict === "VERIFIED";
-  const doctorAllOk = results.doctor.fail === 0 && results.doctor.warn === 0;
+  // Awaiting-activation (`ready: expected`) is not operational — doctor reports
+  // fail=0/warn=0 there, but CLEAN must require every predicate status === "ok".
+  const doctorAllOk =
+    results.doctor.fail === 0 &&
+    results.doctor.warn === 0 &&
+    results.doctor.ok === results.doctor.predicates;
 
   if (setupOk && harnessOk && witnessOk && doctorAllOk) return "CLEAN";
   if (setupOk && harnessOk) return "ATTENTION";

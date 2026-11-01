@@ -342,3 +342,30 @@ test("F13 an unreadable or invalid manifest refuses the run before writing anyth
   const records = await readRecords({ demaHome: home, runId: "f13" });
   assert.equal(records.length, 0);
 });
+
+test("F16 resume of a frozen header without --instrumentation-manifest is refused", async () => {
+  const home = await newDir("dema-freeze-home-");
+  const { manifest } = await fixtureManifest();
+  const manifestPath = await writeManifestFile(manifest);
+  const first = spawnRun(home, "f16", [
+    "--interval-ms", "120", "--duration-ms", "60000",
+    "--instrumentation-manifest", manifestPath,
+  ]);
+  await settle(500);
+  first.kill("SIGKILL");
+  await new Promise((r) => first.on("exit", r));
+  const before = (await readRecords({ demaHome: home, runId: "f16" })).length;
+  assert.ok(before >= 1, "expected a frozen header on disk before resume");
+
+  let stderr = "";
+  const second = spawnRun(home, "f16", [
+    "--interval-ms", "120", "--duration-ms", "300",
+    // deliberately omit --instrumentation-manifest (restart vector)
+  ]);
+  second.stderr.on("data", (c) => { stderr += c; });
+  const code = await new Promise((r) => second.on("exit", r));
+  assert.equal(code, 1);
+  assert.match(stderr, /instrumentation_bundle_hash|instrumentation-manifest/i);
+  const after = (await readRecords({ demaHome: home, runId: "f16" })).length;
+  assert.equal(after, before);
+});

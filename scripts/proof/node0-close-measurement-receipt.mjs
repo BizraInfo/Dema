@@ -21,7 +21,11 @@ import { fileURLToPath } from "node:url";
 import { evaluateNode0ClosureInvariants } from "../../packages/core/src/node0-closure-invariants.js";
 import { buildNode0CloseMeasurementReceipt } from "../../packages/core/src/node0-close-measurement-receipt.js";
 import { projectSoakJudgmentToAdmission } from "../../packages/core/src/node0-soak-judgment-admission.js";
-import { verifyEnduranceChain } from "../../packages/core/src/node0-endurance-chain.js";
+import { evaluateEndurance } from "../../packages/core/src/node0-endurance.js";
+import {
+  verifyEnduranceChain,
+  ENDURANCE_HEADER_KIND,
+} from "../../packages/core/src/node0-endurance-chain.js";
 import { gatherClosureReadout } from "../review/node0-closure-invariants-check.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -31,6 +35,36 @@ const SAMPLES_NAME = "samples.jsonl";
 const ANCHOR_NAME = "anchor.json";
 const RUN_RECEIPT_SCHEMA = "bizra.dema.node0_run_receipt.v0.1";
 const ENDURANCE_SCHEMA = "bizra.dema.node0_endurance.v0.1";
+const GAP_MULTIPLIER = 3;
+
+/**
+ * Re-derive the endurance judgment from samples+header (not the receipt cache).
+ * A forged or stale receipt cannot satisfy soak admission once chain verifies.
+ */
+function rederiveJudgmentFromDisk({ records, chain, runId }) {
+  const header = records.find((r) => r?.kind === ENDURANCE_HEADER_KIND) ?? null;
+  const samples = records.filter((r) => r?.kind !== ENDURANCE_HEADER_KIND);
+  const intervalMs = Number(header?.interval_ms);
+  const targetMs = Number(header?.target_ms);
+  if (!Number.isFinite(intervalMs) || intervalMs <= 0) return null;
+  if (!Number.isFinite(targetMs) || targetMs <= 0) return null;
+  const verdict = evaluateEndurance({
+    samples,
+    targetMs,
+    maxGapMs: intervalMs * GAP_MULTIPLIER,
+  });
+  return Object.freeze({
+    schema: RUN_RECEIPT_SCHEMA,
+    run_id: runId,
+    verdict: Object.freeze({
+      ...verdict,
+      target_met_by_elapsed_run:
+        verdict.ok === true &&
+        chain.ok === true &&
+        chain.elapsed_evidence === true,
+    }),
+  });
+}
 
 function loadVerifiedEnduranceReceipt(dir, runId) {
   const receiptPath = join(dir, RECEIPT_NAME);
@@ -57,20 +91,24 @@ function loadVerifiedEnduranceReceipt(dir, runId) {
   }
   const chain = verifyEnduranceChain({ records, anchor, runId });
   if (!chain.ok) return null;
+  const judgment = rederiveJudgmentFromDisk({ records, chain, runId });
+  if (!judgment) return null;
+  // Projection must accept the re-derived shape (invalid schema/judgment rejected).
+  const projection = projectSoakJudgmentToAdmission(judgment);
+  if (projection.ok === false) return null;
   const span =
-    typeof receipt?.verdict?.observed_span_ms === "number"
-      ? receipt.verdict.observed_span_ms
-      : typeof receipt?.observed_span_ms === "number"
-        ? receipt.observed_span_ms
-        : -1;
+    typeof judgment.verdict?.observed_span_ms === "number"
+      ? judgment.verdict.observed_span_ms
+      : -1;
   if (!(span >= 0)) return null;
   return {
     path: receiptPath,
     run_id: runId,
     observed_span_ms: span,
     mtime_ms: statSync(receiptPath).mtimeMs,
-    judgment: receipt,
+    judgment,
     chain_state: chain.chain_state,
+    receipt_cached_verdict: receipt?.verdict?.verdict ?? receipt?.verdict ?? null,
   };
 }
 

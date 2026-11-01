@@ -19,7 +19,7 @@
 // so a kill between samples loses at most the sample in flight — and the
 // endurance kernel reads that loss as a GAP, never as health.
 
-import { mkdir, open, readFile, writeFile, rename, realpath } from "node:fs/promises";
+import { mkdir, open, readFile, writeFile, rename, realpath, unlink } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join, basename } from "node:path";
 import { homedir } from "node:os";
@@ -422,10 +422,10 @@ export async function cmdNode0Run(ctx) {
   }
 
   const dir = runDir(home, runId);
-  await mkdir(dir, { recursive: true });
   const samplesPath = join(dir, "samples.jsonl");
 
   // ── judge-only mode: read an existing record, write nothing ──
+  // Do not mkdir: missing runs must stay missing (read-only home / absent id).
   if (argv.includes("--judge")) {
     const records = await readRecords({ demaHome: home, runId });
     const timing = resolveJudgeTimingFromHeader(records, { targetMs, intervalMs, explicitTarget });
@@ -446,13 +446,14 @@ export async function cmdNode0Run(ctx) {
     } else {
       console.log(`DEMA · node0 endurance judgment (read-only) · run ${runId}`);
       console.log(`  verdict: ${verdict.verdict} · reason: ${verdict.reason}`);
-      console.log(`  observed span: ${verdict.observed_span_ms}ms of ${verdict.target_ms}ms target (source=${timing.source})`);
-      console.log(`  samples: ${verdict.sample_count} · failures: ${verdict.failure_count} · gaps: ${verdict.gap_count}`);
+      console.log(`  observed span: ${verdict.observed_span_ms}ms of ${verdict.target_ms}ms target (source=${timing.source})`);      console.log(`  samples: ${verdict.sample_count} · failures: ${verdict.failure_count} · gaps: ${verdict.gap_count}`);
       console.log(`  continuously observed: ${verdict.continuously_observed}`);
     }
     process.exitCode = verdict.ok ? 0 : 1;
     return;
   }
+
+  await mkdir(dir, { recursive: true });
 
   // ── FREEZE-1A class-27 guard: a terminally sealed run never grows ──
   // The endurance receipt is the runner's own terminal seal. Appending after
@@ -473,8 +474,65 @@ export async function cmdNode0Run(ctx) {
     return;
   }
 
+  // Exclusive per-run ownership: two foreground recorders must not share a run id.
+  // Crash recovery: a lock whose pid is dead (or unreadable) is cleared once.
+  const lockPath = join(dir, "runner.lock");
+  let lockFh = null;
+  try {
+    lockFh = await open(lockPath, "wx");
+    await lockFh.writeFile(`${process.pid}\n`);
+  } catch (err) {
+    if (err?.code === "EEXIST") {
+      let stale = false;
+      try {
+        const prior = Number((await readFile(lockPath, "utf8")).trim());
+        if (Number.isInteger(prior) && prior > 0) {
+          try {
+            process.kill(prior, 0);
+          } catch {
+            stale = true;
+          }
+        } else {
+          stale = true;
+        }
+      } catch {
+        stale = true;
+      }
+      if (stale) {
+        await unlink(lockPath);
+        lockFh = await open(lockPath, "wx");
+        await lockFh.writeFile(`${process.pid}\n`);
+      } else {
+        console.error(
+          `Dema error: run '${runId}' is already owned by another live runner (lock ${lockPath}). `
+          + "Nothing was written. A new --run-id is free.",
+        );
+        process.exitCode = 1;
+        return;
+      }
+    } else {
+      throw err;
+    }
+  }
+  const releaseLock = async () => {
+    try {
+      await lockFh?.close();
+    } catch {
+      // ignore
+    }
+    try {
+      await unlink(lockPath);
+    } catch {
+      // ignore
+    }
+  };
+
   let stopping = false;
-  const stop = () => { stopping = true; };
+  let wakeSleep = null;
+  const stop = () => {
+    stopping = true;
+    if (typeof wakeSleep === "function") wakeSleep();
+  };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
 
@@ -501,6 +559,7 @@ export async function cmdNode0Run(ctx) {
         `Dema error: run '${runId}' already carries a DIFFERENT instrumentation manifest. `
         + "Refusing. Nothing was written. A new --run-id is free.",
       );
+      await releaseLock();
       process.exitCode = 1;
       return;
     }
@@ -509,7 +568,26 @@ export async function cmdNode0Run(ctx) {
   // ── establish the chain head before observing anything ──
   const existing = await readRecords({ demaHome: home, runId });
   let prev = null;
+  let boundIntervalMs = intervalMs;
+  let boundTargetMs = targetMs;
   if (existing.length === 0) {
+    // Erased samples with a surviving anchor must not be silently rewritten —
+    // that would destroy the evidence of erasure under the same run id.
+    let survivingAnchor = null;
+    try {
+      survivingAnchor = await readAnchor({ demaHome: home, runId });
+    } catch {
+      survivingAnchor = null;
+    }
+    if (survivingAnchor) {
+      console.error(
+        `Dema error: run '${runId}' has an anchor but no samples — refusing to re-initialize. `
+        + "Nothing was written. A new --run-id is free.",
+      );
+      await releaseLock();
+      process.exitCode = 1;
+      return;
+    }
     // The header is seq 0, so every sample chains transitively to the code that
     // produced it. Measured from the executing bytes, never asserted.
     prev = chainEnduranceRecord({
@@ -545,6 +623,7 @@ export async function cmdNode0Run(ctx) {
         `Dema error: refusing to extend run '${runId}' — ${resumed.chain_state}: ${resumed.reason}. `
         + "Nothing was written. Start a new --run-id.",
       );
+      await releaseLock();
       process.exitCode = 1;
       return;
     }
@@ -559,23 +638,59 @@ export async function cmdNode0Run(ctx) {
         `Dema error: refusing to extend run '${runId}' — runner_code_hash mismatch `
         + `(header ${headerRunnerHash}, live ${liveRunnerHash}). Nothing was written. A new --run-id is free.`,
       );
+      await releaseLock();
       process.exitCode = 1;
       return;
     }
 
-    // ── FREEZE-1A: a resumed qualifying run must resume under the SAME frozen
-    // contract its header binds. A different manifest — or a header that never
-    // bound one — is a different experiment wearing this run's identity.
-    if (frozenManifest) {
-      const headerHash = existing[0]?.instrumentation_bundle_hash ?? null;
-      if (headerHash !== instrumentationBundleHash) {
+    // Continuity contract is the header's interval — refuse a widened CLI gap
+    // that would launder blackouts into HEALTHY.
+    const headerInterval = Number(existing[0]?.interval_ms);
+    if (Number.isFinite(headerInterval) && headerInterval > 0) {
+      if (intervalMs > headerInterval) {
         console.error(
-          `Dema error: instrumentation manifest does not match run '${runId}' `
-          + `(header binds ${headerHash ?? "none"}). Nothing was written. A new --run-id is free.`,
+          `Dema error: refusing to extend run '${runId}' — --interval-ms ${intervalMs} widens `
+          + `header interval ${headerInterval}. Nothing was written. A new --run-id is free.`,
         );
+        await releaseLock();
         process.exitCode = 1;
         return;
       }
+      boundIntervalMs = headerInterval;
+    }
+    const headerTarget = Number(existing[0]?.target_ms);
+    if (Number.isFinite(headerTarget) && headerTarget > 0) {
+      boundTargetMs = headerTarget;
+    }
+
+    // ── FREEZE-1A: a resumed qualifying run must resume under the SAME frozen
+    // contract its header binds — including when this invocation omitted the
+    // manifest (the restart vector that would drop per-sample drift checks).
+    const headerHash = existing[0]?.instrumentation_bundle_hash ?? null;
+    if (headerHash) {
+      if (!frozenManifest || headerHash !== instrumentationBundleHash) {
+        console.error(
+          `Dema error: run '${runId}' binds instrumentation_bundle_hash ${headerHash}; `
+          + "resume requires a matching --instrumentation-manifest. Nothing was written. A new --run-id is free.",
+        );
+        await releaseLock();
+        process.exitCode = 1;
+        return;
+      }
+    } else if (frozenManifest) {
+      console.error(
+        `Dema error: instrumentation manifest does not match run '${runId}' `
+        + "(header binds none). Nothing was written. A new --run-id is free.",
+      );
+      await releaseLock();
+      process.exitCode = 1;
+      return;
+    }
+
+    // TORN_TAIL: repair the lagging anchor to the verified head before appending
+    // so a second crash cannot leave the witness two samples behind.
+    if (resumed.chain_state === "TORN_TAIL") {
+      await writeAnchorAtomic({ dir, anchor: buildEnduranceAnchor({ head: prev, runId }) });
     }
   }
 
@@ -583,91 +698,107 @@ export async function cmdNode0Run(ctx) {
   let taken = 0;
   let driftSamples = 0;
 
-  while (!stopping) {
-    const at = Date.now();
-    // ── FREEZE-1A: re-derive the frozen surface BEFORE trusting the probe.
-    // A drifted observer cannot certify health; the sample records what moved.
-    // The chain continues — evidence is preserved, the clock is not laundered.
-    let sample = null;
-    if (frozenManifest) {
-      const observed = await deriveInstrumentationObservation(frozenManifest, { demaHome: home });
-      const cmp = compareInstrumentationObservation({
-        frozen: frozenManifest.rederivable,
-        observed,
-      });
-      if (cmp.drifted) {
-        driftSamples += 1;
-        sample = {
-          at_ms: at,
-          ok: false,
-          mission_verdict: INSTRUMENTATION_DRIFT_VERDICT,
-          instrumentation_drift: cmp.drift,
-        };
+  try {
+    while (!stopping) {
+      const at = Date.now();
+      // ── FREEZE-1A: re-derive the frozen surface BEFORE trusting the probe.
+      // A drifted observer cannot certify health; the sample records what moved.
+      // The chain continues — evidence is preserved, the clock is not laundered.
+      let sample = null;
+      if (frozenManifest) {
+        const observed = await deriveInstrumentationObservation(frozenManifest, { demaHome: home });
+        const cmp = compareInstrumentationObservation({
+          frozen: frozenManifest.rederivable,
+          observed,
+        });
+        if (cmp.drifted) {
+          driftSamples += 1;
+          sample = {
+            at_ms: at,
+            ok: false,
+            mission_verdict: INSTRUMENTATION_DRIFT_VERDICT,
+            instrumentation_drift: cmp.drift,
+          };
+        }
       }
+      if (!sample) sample = await takeSample({ at, demaHome: home });
+      const record = chainEnduranceRecord({
+        record: { kind: ENDURANCE_SAMPLE_KIND, run_id: runId, ...sample },
+        prev,
+      });
+      await appendSampleLine(samplesPath, JSON.stringify(record));
+      await writeAnchorAtomic({ dir, anchor: buildEnduranceAnchor({ head: record, runId }) });
+      prev = record;
+      taken += 1;
+      if (!wantJson) process.stdout.write(`  sample ${taken} · ok=${sample.ok} · ${new Date(at).toISOString()}\n`);
+
+      if (Date.now() - startedAt >= boundTargetMs) break;
+      if (stopping) break;
+      await new Promise((r) => {
+        const t = setTimeout(r, boundIntervalMs);
+        wakeSleep = () => {
+          clearTimeout(t);
+          r();
+        };
+      });
+      wakeSleep = null;
     }
-    if (!sample) sample = await takeSample({ at, demaHome: home });
-    const record = chainEnduranceRecord({
-      record: { kind: ENDURANCE_SAMPLE_KIND, run_id: runId, ...sample },
-      prev,
+
+    const verdict = await judgeRun({
+      demaHome: home,
+      runId,
+      targetMs: boundTargetMs,
+      intervalMs: boundIntervalMs,
     });
-    await appendSampleLine(samplesPath, JSON.stringify(record));
-    await writeAnchorAtomic({ dir, anchor: buildEnduranceAnchor({ head: record, runId }) });
-    prev = record;
-    taken += 1;
-    if (!wantJson) process.stdout.write(`  sample ${taken} · ok=${sample.ok} · ${new Date(at).toISOString()}\n`);
+    const receipt = {
+      schema: NODE0_RUN_SCHEMA,
+      run_id: runId,
+      endurance_schema: NODE0_ENDURANCE_SCHEMA,
+      started_at_ms: startedAt,
+      ended_at_ms: Date.now(),
+      interval_ms: boundIntervalMs,
+      target_ms: boundTargetMs,
+      samples_taken: taken,
+      stopped_by_signal: stopping,
+      verdict,
+      // Surfaced at the top level so a reader never has to infer integrity from
+      // the absence of a complaint.
+      tamper_evident: verdict.chain?.tamper_evident === true,
+      chain_state: verdict.chain?.chain_state ?? null,
+      evidence_class: verdict.chain?.evidence_class ?? null,
+      runner_code_hash: verdict.chain?.runner_code_hash ?? null,
+      target_met_by_elapsed_run: verdict.target_met_by_elapsed_run === true,
+      instrumentation: {
+        bundle_hash: instrumentationBundleHash,
+        drift_sample_count: driftSamples,
+      },
+      boundary: {
+        daemon: false,
+        model_invoked: false,
+        // Bridged health snapshots consult gateway-http / STATUS_COMMAND over the
+        // loopback network stack — report that honestly (public internet still false).
+        network: Boolean(
+          process.env.DEMA_NODE0_ADAPTER ||
+            process.env.DEMA_GATEWAY_URL ||
+            process.env.DEMA_NODE0_STATUS_COMMAND,
+        ),
+        effect_executed: false,
+        nonce_claimed: false,
+        transaction_prepared: false,
+      },
+      authority_delta: 0,
+    };
+    const receiptPath = await writeReceiptAtomic({ demaHome: home, runId, receipt });
 
-    if (Date.now() - startedAt >= targetMs) break;
-    if (stopping) break;
-    await new Promise((r) => setTimeout(r, intervalMs));
+    if (wantJson) console.log(JSON.stringify(receipt, null, 2));
+    else {
+      console.log(`\n  endurance verdict: ${verdict.verdict} — ${verdict.reason}`);
+      console.log(`  observed span: ${verdict.observed_span_ms}ms · samples: ${verdict.sample_count} · gaps: ${verdict.gap_count}`);
+      console.log(`  receipt: ${receiptPath}`);
+      console.log("  nothing was executed: no effect, no nonce, no transaction, authority_delta 0.");
+    }
+    process.exitCode = verdict.ok ? 0 : 1;
+  } finally {
+    await releaseLock();
   }
-
-  const verdict = await judgeRun({ demaHome: home, runId, targetMs, intervalMs });
-  const receipt = {
-    schema: NODE0_RUN_SCHEMA,
-    run_id: runId,
-    endurance_schema: NODE0_ENDURANCE_SCHEMA,
-    started_at_ms: startedAt,
-    ended_at_ms: Date.now(),
-    interval_ms: intervalMs,
-    target_ms: targetMs,
-    samples_taken: taken,
-    stopped_by_signal: stopping,
-    verdict,
-    // Surfaced at the top level so a reader never has to infer integrity from
-    // the absence of a complaint.
-    tamper_evident: verdict.chain?.tamper_evident === true,
-    chain_state: verdict.chain?.chain_state ?? null,
-    evidence_class: verdict.chain?.evidence_class ?? null,
-    runner_code_hash: verdict.chain?.runner_code_hash ?? null,
-    target_met_by_elapsed_run: verdict.target_met_by_elapsed_run === true,
-    instrumentation: {
-      bundle_hash: instrumentationBundleHash,
-      drift_sample_count: driftSamples,
-    },
-    boundary: {
-      daemon: false,
-      model_invoked: false,
-      // Bridged health snapshots consult gateway-http / STATUS_COMMAND over the
-      // loopback network stack — report that honestly (public internet still false).
-      network: Boolean(
-        process.env.DEMA_NODE0_ADAPTER ||
-          process.env.DEMA_GATEWAY_URL ||
-          process.env.DEMA_NODE0_STATUS_COMMAND,
-      ),
-      effect_executed: false,
-      nonce_claimed: false,
-      transaction_prepared: false,
-    },
-    authority_delta: 0,
-  };
-  const receiptPath = await writeReceiptAtomic({ demaHome: home, runId, receipt });
-
-  if (wantJson) console.log(JSON.stringify(receipt, null, 2));
-  else {
-    console.log(`\n  endurance verdict: ${verdict.verdict} — ${verdict.reason}`);
-    console.log(`  observed span: ${verdict.observed_span_ms}ms · samples: ${verdict.sample_count} · gaps: ${verdict.gap_count}`);
-    console.log(`  receipt: ${receiptPath}`);
-    console.log("  nothing was executed: no effect, no nonce, no transaction, authority_delta 0.");
-  }
-  process.exitCode = verdict.ok ? 0 : 1;
 }
