@@ -77,7 +77,7 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 
 | Priority | Slice | Status |
 | --- | --- | --- |
-| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `origin/main` @ `88338ca6` (#509 redirect pin landed; #508 RW-diag on trunk); `measurement_admits_closed=false`; soak missing; remote_write `OBSERVATION_STALE` |
+| **T0** | **Convergent: Node0-close + Dema-active** | **PARTIAL** — `origin/main` @ `727cbb60` (#510 autopilot continuity landed; #509 redirect pin); `measurement_admits_closed=false`; soak missing; remote_write `OBSERVATION_STALE` |
 | P0 | SCORE-TEETH + CLI-EXIT-TEETH | DONE @ `8b48b028` |
 | P1 | Commit PEAK-ZERO-SPIN | DONE @ `bd4d0f3e` |
 | P2 | Outsider first-run truth (`node bin/dema`, TASK-046) | DONE |
@@ -97,11 +97,11 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | — | Soak judgment → admission bridge | DONE merge #507 @ `a9f40522` |
 | — | Close-measurement RW diagnostic surface | DONE merge #508 @ `743fd2b3` |
 | — | Governed runtime redirect pin | DONE merge #509 @ `88338ca6` |
-| — | Dema Autopilot North-star continuity (versioned) | PR #510 open on `slice/dema-autopilot-continuity-1a` — CI green; review triage in progress; push/merge need typed GO |
+| — | Dema Autopilot North-star continuity (versioned) | DONE merge #510 @ `727cbb60` — PREVIEW_ONLY card + versioned skill; continuity ≠ write authority |
 | — | Shakedown soak `shakedown-20261031-1755` | DONE sealed — ~2h span, all samples ATTENTION/`ok:false`; unit crash-loop after seal **stopped** |
 | — | Cartographer JSON artifacts | OPEN — PDF measured; three JSON stamps still absent; no silent ingest |
-| — | Focused gates green for active slice | DONE this turn (continuity + skill-routing 35/35; run-dema smoke 9/9) |
+| — | Focused gates green for active slice | DONE @ merge #510 (continuity 11/11 + skill-routing; run-dema smoke 9/9) |
 
 ## Default next slice when user says SPRINT
 
-Toward **T0**: (1) Commit Autopilot continuity PR locally if still dirty (push needs a separate typed GO), else (2) refresh remote_write observation under exact consent (clear EXTERNAL findings or sterile home), else (3) CLEAN doctor then new 72h soak run-id (not replay sealed shakedown), else (4) Cartographer JSON stamps under typed `--root`.
+Toward **T0**: (1) refresh remote_write observation under exact consent (clear EXTERNAL findings or sterile home), else (2) CLEAN doctor then new 72h soak run-id (not replay sealed shakedown), else (3) Cartographer JSON stamps under typed `--root`.
