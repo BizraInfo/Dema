@@ -38,6 +38,21 @@ test("continuity preview: PR-complete does not close objective", () => {
   assert.equal(isCanonicalBoundary(card.boundary), true);
 });
 
+test("continuity preview: explicit grant may_write when unprotected and unambiguous", () => {
+  const card = evaluateAutopilotContinuity({
+    objective_established: true,
+    slice_just_completed: false,
+    action_authorized: true,
+    next_step_is_protected: false,
+    genuine_ambiguity: false,
+    verification_gate_failed: false,
+  });
+  assert.equal(card.may_write, true);
+  assert.equal(card.pause_for_consent, false);
+  assert.equal(card.do_read_only_rebind, false);
+  assert.equal(isCanonicalBoundary(card.boundary), true);
+});
+
 test("continuity preview: continuity alone never authorizes writes", () => {
   const card = evaluateAutopilotContinuity({
     objective_established: true,
@@ -69,6 +84,36 @@ test("continuity preview: genuine ambiguity never allows may_write", () => {
   assert.equal(card.pause_for_consent, true);
   assert.equal(card.may_write, false);
   assert.equal(card.do_read_only_rebind, false);
+});
+
+test("continuity preview: failed verification gate stops writes", () => {
+  const card = evaluateAutopilotContinuity({
+    objective_established: true,
+    action_authorized: true,
+    next_step_is_protected: false,
+    genuine_ambiguity: false,
+    verification_gate_failed: true,
+  });
+  assert.equal(card.pause_for_consent, true);
+  assert.equal(card.may_write, false);
+  assert.equal(card.do_read_only_rebind, false);
+});
+
+test("continuity preview: modified boundary fails isCanonicalBoundary", () => {
+  const card = evaluateAutopilotContinuity({
+    objective_established: true,
+    action_authorized: true,
+    next_step_is_protected: false,
+    genuine_ambiguity: false,
+  });
+  assert.equal(isCanonicalBoundary(card.boundary), true);
+  assert.equal(
+    isCanonicalBoundary({
+      ...card.boundary,
+      filesystem_write_performed: true,
+    }),
+    false,
+  );
 });
 
 test("continuity preview: missing objective may ask to restate", () => {

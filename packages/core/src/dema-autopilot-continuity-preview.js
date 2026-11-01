@@ -23,6 +23,7 @@ export const DEMA_AUTOPILOT_CONTINUITY_TRUTH_LABEL = "PREVIEW_ONLY";
  * @property {boolean} [action_authorized] — current request authorizes a reversible act
  * @property {boolean} [next_step_is_protected] — next useful step needs fresh GO
  * @property {boolean} [genuine_ambiguity] — cannot safely choose the next step
+ * @property {boolean} [verification_gate_failed] — a safety/verification gate failed
  */
 
 /**
@@ -37,17 +38,21 @@ export function evaluateAutopilotContinuity(input = {}) {
   const actionAuthorized = input.action_authorized === true;
   const nextStepProtected = input.next_step_is_protected === true;
   const genuineAmbiguity = input.genuine_ambiguity === true;
+  const verificationGateFailed = input.verification_gate_failed === true;
 
   const askRestateGoal = !objectiveEstablished;
   const treatSliceAsObjectiveComplete = false;
   const resumeObjective = objectiveEstablished;
-  const pauseForConsent = nextStepProtected || genuineAmbiguity;
+  const pauseForConsent =
+    nextStepProtected || genuineAmbiguity || verificationGateFailed;
   // Continuity never grants writes. An explicit action grant still cannot
-  // write while the next step is protected or the situation is ambiguous.
+  // write while the next step is protected, a gate failed, or the situation
+  // is ambiguous.
   const mayWrite =
     actionAuthorized === true &&
     nextStepProtected !== true &&
-    genuineAmbiguity !== true;
+    genuineAmbiguity !== true &&
+    verificationGateFailed !== true;
   const doReadOnlyRebind =
     resumeObjective && !actionAuthorized && !pauseForConsent;
 

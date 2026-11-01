@@ -97,11 +97,11 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | — | Soak judgment → admission bridge | DONE merge #507 @ `a9f40522` |
 | — | Close-measurement RW diagnostic surface | DONE merge #508 @ `743fd2b3` |
 | — | Governed runtime redirect pin | DONE merge #509 @ `88338ca6` |
-| — | Dema Autopilot North-star continuity (versioned) | LOCAL green on `slice/dema-autopilot-continuity-1a` — registry 8/8, continuity tests 7/7, parity PASS; not committed |
+| — | Dema Autopilot North-star continuity (versioned) | PR #510 open on `slice/dema-autopilot-continuity-1a` — CI green; review triage in progress; push/merge need typed GO |
 | — | Shakedown soak `shakedown-20261031-1755` | DONE sealed — ~2h span, all samples ATTENTION/`ok:false`; unit crash-loop after seal **stopped** |
 | — | Cartographer JSON artifacts | OPEN — PDF measured; three JSON stamps still absent; no silent ingest |
 | — | Focused gates green for active slice | DONE this turn (continuity + skill-routing 35/35; run-dema smoke 9/9) |
 
 ## Default next slice when user says SPRINT
 
-Toward **T0**: (1) Commit/push Autopilot continuity PR if still local, else (2) refresh remote_write observation under exact consent (clear EXTERNAL findings or sterile home), else (3) CLEAN doctor then new 72h soak run-id (not replay sealed shakedown), else (4) Cartographer JSON stamps under typed `--root`.
+Toward **T0**: (1) Commit Autopilot continuity PR locally if still dirty (push needs a separate typed GO), else (2) refresh remote_write observation under exact consent (clear EXTERNAL findings or sterile home), else (3) CLEAN doctor then new 72h soak run-id (not replay sealed shakedown), else (4) Cartographer JSON stamps under typed `--root`.

@@ -22,8 +22,13 @@ const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const binDema = join(repoRoot, "bin", "dema");
 
 // Isolate all local state in a throwaway home so smoke runs are side-effect-free.
+// Also drop operator-bridge env so doctor --preview cannot shell out via
+// DEMA_NODE0_STATUS_COMMAND or contact a configured gateway-http adapter.
 const demaHome = mkdtempSync(join(tmpdir(), "dema-smoke-"));
 const env = { ...process.env, DEMA_HOME: demaHome };
+delete env.DEMA_NODE0_ADAPTER;
+delete env.DEMA_GATEWAY_URL;
+delete env.DEMA_NODE0_STATUS_COMMAND;
 
 // { argv, marker } — marker is a substring stdout must contain (null = any
 // non-empty stdout). All must exit 0.
