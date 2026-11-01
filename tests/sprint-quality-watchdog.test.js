@@ -28,6 +28,9 @@ test("runSprintQualityWatchdog writes LATEST receipt and returns schema", async 
     assert.equal(receipt.boundary.push, false);
     assert.ok(Array.isArray(receipt.checks));
     assert.ok(receipt.checks.some((c) => c.id === "outsider_first_run_loop"));
+    const soakPulse = receipt.checks.find((c) => c.id === "node0_soak_pulse");
+    assert.ok(soakPulse, "node0_soak_pulse check must be present");
+    assert.equal(typeof soakPulse.ok, "boolean");
     const latest = JSON.parse(await readFile(join(logDir, "LATEST.json"), "utf8"));
     assert.equal(latest.receipt_sha256, receipt.receipt_sha256);
     // Pulse may be RED if release evaluate fails on this worktree; schema must still land.

@@ -14,10 +14,19 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync,
+  existsSync,
   mkdirSync,
   readFileSync,
   writeFileSync,
 } from "node:fs";
+
+function existsSyncSafe(path) {
+  try {
+    return existsSync(path);
+  } catch {
+    return false;
+  }
+}
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -137,6 +146,47 @@ export async function runSprintQualityWatchdog({
     });
   }
 
+  // 4) Live Node0 soak pulse (habitat script; outside freeze set).
+  // Only load-bearing when bizra-node0-soak is active — otherwise skip green.
+  const SOAK_UNIT = "bizra-node0-soak";
+  const SOAK_WATCHDOG = "/data/bizra/bin/node0-soak/soak-watchdog.sh";
+  const unitState = spawnSync("systemctl", ["--user", "is-active", SOAK_UNIT], {
+    encoding: "utf8",
+  });
+  const soakActive = (unitState.stdout || "").trim() === "active";
+  if (!soakActive) {
+    checks.push({
+      id: "node0_soak_pulse",
+      ok: true,
+      detail: { skipped: true, reason: "soak_unit_inactive", unit: SOAK_UNIT },
+    });
+  } else if (!existsSyncSafe(SOAK_WATCHDOG)) {
+    checks.push({
+      id: "node0_soak_pulse",
+      ok: false,
+      detail: { error: "soak_watchdog_script_missing", path: SOAK_WATCHDOG },
+    });
+  } else {
+    const soakPulse = spawnSync("bash", [SOAK_WATCHDOG], {
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    let detail = {
+      exitCode: soakPulse.status ?? -1,
+      stdout_tail: (soakPulse.stdout || "").trim().slice(-800),
+    };
+    try {
+      detail.receipt = JSON.parse(soakPulse.stdout || "{}");
+    } catch {
+      /* keep tail only */
+    }
+    checks.push({
+      id: "node0_soak_pulse",
+      ok: (soakPulse.status ?? 1) === 0 && detail.receipt?.ok === true,
+      detail,
+    });
+  }
+
   const ok = checks.every((c) => c.ok === true);
   const receipt = {
     schema: WATCHDOG_SCHEMA,
@@ -157,9 +207,9 @@ export async function runSprintQualityWatchdog({
       authority_delta: 0,
     },
     what_this_proves:
-      "Periodic local quality pulse: outsider loop + focused gates + release evaluate",
+      "Periodic local quality pulse: outsider loop + focused gates + release evaluate + live soak pulse when unit active",
     what_this_does_not_prove:
-      "Unattended agent coding, Node0 runtime green doctor, remote CI, or push",
+      "Unattended agent coding, Node0 closed, remote CI, push, or listener clearance",
   };
 
   const body = `${JSON.stringify(receipt)}\n`;
