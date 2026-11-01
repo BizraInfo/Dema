@@ -2,6 +2,9 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   evaluateNode0ClosureInvariants,
@@ -19,6 +22,7 @@ import {
 } from "../packages/core/src/node0-close-measurement-receipt.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 import { gatherClosureReadout } from "../scripts/review/node0-closure-invariants-check.mjs";
+import { discoverLongestEnduranceReceipt } from "../scripts/proof/node0-close-measurement-receipt.mjs";
 
 function obs(invariant, observed) {
   return {
@@ -264,5 +268,114 @@ describe("node0-close-measurement-receipt", () => {
       resolveRemoteWriteBlockReason("observation_scope_mismatch", n),
       "observation_scope_mismatch",
     );
+  });
+
+  test("discoverLongestEnduranceReceipt prefers longest verified chain; skips unverified", async () => {
+    assert.equal(discoverLongestEnduranceReceipt("/no/such/dema-home"), null);
+    const {
+      chainEnduranceRecord,
+      buildEnduranceAnchor,
+      ENDURANCE_HEADER_KIND,
+      ENDURANCE_SAMPLE_KIND,
+      ENDURANCE_EVIDENCE_CLASSES,
+    } = await import("../packages/core/src/node0-endurance-chain.js");
+    const home = mkdtempSync(join(tmpdir(), "dema-close-disc-"));
+    const writeVerified = (runId, spanMs) => {
+      const dir = join(home, "node0", "endurance", runId);
+      mkdirSync(dir, { recursive: true });
+      const codeHash = "sha256:" + "a".repeat(64);
+      let prev = chainEnduranceRecord({
+        prev: null,
+        record: {
+          kind: ENDURANCE_HEADER_KIND,
+          run_id: runId,
+          runner_code_hash: codeHash,
+          evidence_class: ENDURANCE_EVIDENCE_CLASSES.ELAPSED,
+          // Interval must cover the fixture span or re-derived judgment is BROKEN
+          // (still discoverable — admission ranks by live observed_span_ms).
+          interval_ms: Math.max(1000, spanMs),
+          target_ms: spanMs,
+          started_at_ms: 1_700_000_000_000,
+        },
+      });
+      const records = [prev];
+      prev = chainEnduranceRecord({
+        prev,
+        record: {
+          kind: ENDURANCE_SAMPLE_KIND,
+          run_id: runId,
+          at_ms: 1_700_000_000_000,
+          ok: true,
+          mission_verdict: "CLEAN",
+        },
+      });
+      records.push(prev);
+      prev = chainEnduranceRecord({
+        prev,
+        record: {
+          kind: ENDURANCE_SAMPLE_KIND,
+          run_id: runId,
+          at_ms: 1_700_000_000_000 + spanMs,
+          ok: true,
+          mission_verdict: "CLEAN",
+        },
+      });
+      records.push(prev);
+      writeFileSync(
+        join(dir, "samples.jsonl"),
+        records.map((r) => JSON.stringify(r)).join("\n") + "\n",
+      );
+      writeFileSync(
+        join(dir, "anchor.json"),
+        JSON.stringify(buildEnduranceAnchor({ head: prev, runId })) + "\n",
+      );
+      writeFileSync(
+        join(dir, "endurance-receipt.json"),
+        JSON.stringify({
+          schema: "bizra.dema.node0_run_receipt.v0.1",
+          run_id: runId,
+          verdict: {
+            schema: "bizra.dema.node0_endurance.v0.1",
+            observed_span_ms: spanMs,
+            failure_count: 0,
+            continuously_observed: true,
+            ok: true,
+            verdict: "HEALTHY",
+            target_met_by_elapsed_run: true,
+          },
+        }) + "\n",
+      );
+    };
+    try {
+      // Receipt-only forgery must not win discovery.
+      const fake = join(home, "node0", "endurance", "forged-long");
+      mkdirSync(fake, { recursive: true });
+      writeFileSync(
+        join(fake, "endurance-receipt.json"),
+        JSON.stringify({
+          schema: "bizra.dema.node0_run_receipt.v0.1",
+          run_id: "forged-long",
+          verdict: {
+            schema: "bizra.dema.node0_endurance.v0.1",
+            observed_span_ms: DEFAULT_SOAK_MIN_DURATION_SECONDS * 1000 * 2,
+            failure_count: 0,
+            continuously_observed: true,
+            ok: true,
+            verdict: "HEALTHY",
+            target_met_by_elapsed_run: true,
+          },
+        }),
+      );
+      writeVerified("probe-short", 8_000);
+      writeVerified("soak-long", DEFAULT_SOAK_MIN_DURATION_SECONDS * 1000);
+      const found = discoverLongestEnduranceReceipt(home);
+      assert.equal(found.run_id, "soak-long");
+      assert.equal(
+        found.observed_span_ms,
+        DEFAULT_SOAK_MIN_DURATION_SECONDS * 1000,
+      );
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });

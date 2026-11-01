@@ -3,6 +3,12 @@ export async function cmd_node0(ctx) {
   const sub = argv[1];
   const action = argv[2];
   const wantJson = argv.includes("--json");
+
+  // NODE0-RUN-1A — endurance recorder (foreground; no daemon of its own).
+  if (sub === "run") {
+    const { cmdNode0Run } = await import("./node0-run.js");
+    return cmdNode0Run(ctx);
+  }
   const outIdx = argv.indexOf("--out");
   const outDir =
     outIdx !== -1 && argv[outIdx + 1] ? argv[outIdx + 1] : undefined;
@@ -276,7 +282,8 @@ export async function cmd_node0(ctx) {
   if (sub !== "mumu" || !actions.has(action)) {
     console.error(
       "dema node0: Mumu closed-loop face (read-only; loop stays npm run node0). Subcommands:\n" +
-        "  dema node0 map [--json]\n" +
+        "  dema node0 run [--judge|--target|--duration-ms] [--json]\n" +
+    "  dema node0 map [--json]\n" +
         "  dema node0 activation observe [--json]\n" +
         "  dema node0 ladder [--json]\n" +
         "  dema node0 constellation [--json]\n" +

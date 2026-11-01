@@ -12,7 +12,8 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,9 +21,126 @@ import { fileURLToPath } from "node:url";
 import { evaluateNode0ClosureInvariants } from "../../packages/core/src/node0-closure-invariants.js";
 import { buildNode0CloseMeasurementReceipt } from "../../packages/core/src/node0-close-measurement-receipt.js";
 import { projectSoakJudgmentToAdmission } from "../../packages/core/src/node0-soak-judgment-admission.js";
+import { evaluateEndurance } from "../../packages/core/src/node0-endurance.js";
+import {
+  verifyEnduranceChain,
+  ENDURANCE_HEADER_KIND,
+} from "../../packages/core/src/node0-endurance-chain.js";
 import { gatherClosureReadout } from "../review/node0-closure-invariants-check.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const ENDURANCE_RELDIR = join("node0", "endurance");
+const RECEIPT_NAME = "endurance-receipt.json";
+const SAMPLES_NAME = "samples.jsonl";
+const ANCHOR_NAME = "anchor.json";
+const RUN_RECEIPT_SCHEMA = "bizra.dema.node0_run_receipt.v0.1";
+const ENDURANCE_SCHEMA = "bizra.dema.node0_endurance.v0.1";
+const GAP_MULTIPLIER = 3;
+
+/**
+ * Re-derive the endurance judgment from samples+header (not the receipt cache).
+ * A forged or stale receipt cannot satisfy soak admission once chain verifies.
+ */
+function rederiveJudgmentFromDisk({ records, chain, runId }) {
+  const header = records.find((r) => r?.kind === ENDURANCE_HEADER_KIND) ?? null;
+  const samples = records.filter((r) => r?.kind !== ENDURANCE_HEADER_KIND);
+  const intervalMs = Number(header?.interval_ms);
+  const targetMs = Number(header?.target_ms);
+  if (!Number.isFinite(intervalMs) || intervalMs <= 0) return null;
+  if (!Number.isFinite(targetMs) || targetMs <= 0) return null;
+  const verdict = evaluateEndurance({
+    samples,
+    targetMs,
+    maxGapMs: intervalMs * GAP_MULTIPLIER,
+  });
+  return Object.freeze({
+    schema: RUN_RECEIPT_SCHEMA,
+    run_id: runId,
+    verdict: Object.freeze({
+      ...verdict,
+      target_met_by_elapsed_run:
+        verdict.ok === true &&
+        chain.ok === true &&
+        chain.elapsed_evidence === true,
+    }),
+  });
+}
+
+function loadVerifiedEnduranceReceipt(dir, runId) {
+  const receiptPath = join(dir, RECEIPT_NAME);
+  const samplesPath = join(dir, SAMPLES_NAME);
+  const anchorPath = join(dir, ANCHOR_NAME);
+  let receipt;
+  let records;
+  let anchor;
+  try {
+    receipt = JSON.parse(readFileSync(receiptPath, "utf8"));
+    records = readFileSync(samplesPath, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+    anchor = JSON.parse(readFileSync(anchorPath, "utf8"));
+  } catch {
+    return null;
+  }
+  if (
+    receipt?.schema !== RUN_RECEIPT_SCHEMA &&
+    receipt?.schema !== ENDURANCE_SCHEMA
+  ) {
+    return null;
+  }
+  const chain = verifyEnduranceChain({ records, anchor, runId });
+  if (!chain.ok) return null;
+  const judgment = rederiveJudgmentFromDisk({ records, chain, runId });
+  if (!judgment) return null;
+  // Projection must accept the re-derived shape (invalid schema/judgment rejected).
+  const projection = projectSoakJudgmentToAdmission(judgment);
+  if (projection.ok === false) return null;
+  const span =
+    typeof judgment.verdict?.observed_span_ms === "number"
+      ? judgment.verdict.observed_span_ms
+      : -1;
+  if (!(span >= 0)) return null;
+  return {
+    path: receiptPath,
+    run_id: runId,
+    observed_span_ms: span,
+    mtime_ms: statSync(receiptPath).mtimeMs,
+    judgment,
+    chain_state: chain.chain_state,
+    receipt_cached_verdict: receipt?.verdict?.verdict ?? receipt?.verdict ?? null,
+  };
+}
+
+/**
+ * Prefer the sealed receipt with the longest observed span so a short probe
+ * never shadows a real MULTI_DAY_CONFIDENCE seal. Only receipts whose samples
+ * + anchor still verify are eligible — silence stays silence.
+ */
+export function discoverLongestEnduranceReceipt(demaHome) {
+  const root = join(demaHome, ENDURANCE_RELDIR);
+  let entries;
+  try {
+    entries = readdirSync(root, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  let best = null;
+  for (const ent of entries) {
+    if (!ent.isDirectory()) continue;
+    const found = loadVerifiedEnduranceReceipt(join(root, ent.name), ent.name);
+    if (!found) continue;
+    if (
+      !best ||
+      found.observed_span_ms > best.observed_span_ms ||
+      (found.observed_span_ms === best.observed_span_ms &&
+        found.mtime_ms > best.mtime_ms)
+    ) {
+      best = found;
+    }
+  }
+  return best;
+}
 
 function gitHead() {
   const r = spawnSync("git", ["rev-parse", "HEAD"], {
@@ -94,7 +212,8 @@ function main() {
   const args = parseArgs(process.argv);
   if (args.help) {
     process.stdout.write(
-      "Usage: node scripts/proof/node0-close-measurement-receipt.mjs [--soak-judgment <endurance-judgment.json>]\n",
+      "Usage: node scripts/proof/node0-close-measurement-receipt.mjs [--soak-judgment <endurance-judgment-or-run-receipt.json>]\n" +
+        "  Without --soak-judgment, discovers the longest sealed endurance-receipt.json under $DEMA_HOME/node0/endurance/ (fail-closed if none).\n",
     );
     process.exitCode = 0;
     return;
@@ -105,13 +224,30 @@ function main() {
     return;
   }
   let soak_judgment = null;
+  let discovery = null;
   if (args.soakJudgmentPath) {
     soak_judgment = JSON.parse(readFileSync(args.soakJudgmentPath, "utf8"));
+  } else {
+    const demaHome = process.env.DEMA_HOME || join(homedir(), ".dema");
+    discovery = discoverLongestEnduranceReceipt(demaHome);
+    if (discovery) soak_judgment = discovery.judgment;
   }
   const receipt = runNode0CloseMeasurementReceiptProof({ soak_judgment });
-  process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
+  const out =
+    discovery === null
+      ? receipt
+      : Object.freeze({
+          ...receipt,
+          soak_judgment_discovery: Object.freeze({
+            path: discovery.path,
+            run_id: discovery.run_id,
+            observed_span_ms: discovery.observed_span_ms,
+            mode: "longest_sealed_endurance_receipt",
+          }),
+        });
+  process.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
   // Exit 0 when the measurement is usable (ok). CLOSED is not required.
-  process.exitCode = receipt.ok ? 0 : 1;
+  process.exitCode = out.ok ? 0 : 1;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

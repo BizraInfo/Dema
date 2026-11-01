@@ -16,6 +16,8 @@ import { SOAK_OBSERVATION_SCOPE } from "./node0-close-measurement-receipt.js";
 export const NODE0_SOAK_JUDGMENT_ADMISSION_SCHEMA =
   "bizra.dema.node0_soak_judgment_admission.v0.1";
 export const NODE0_ENDURANCE_JUDGMENT_SCHEMA = "bizra.dema.node0_endurance.v0.1";
+/** Sealed runner envelope from `dema node0 run` — judgment lives at `.verdict`. */
+export const NODE0_RUN_RECEIPT_SCHEMA = "bizra.dema.node0_run_receipt.v0.1";
 export const NODE0_SOAK_JUDGMENT_ADMISSION_TRUTH_LABEL =
   "NODE0_SOAK_JUDGMENT_ADMISSION_LOCAL";
 
@@ -29,7 +31,37 @@ function isPlainObject(v) {
 }
 
 /**
+ * Normalize a sealed `node0 run` receipt into a bare endurance judgment.
+ * Bare judgments pass through. Does not invent fields — only unwraps + carries
+ * `run_id` from the envelope when the nested verdict omits it.
+ */
+export function unwrapEnduranceJudgment(input) {
+  if (!isPlainObject(input)) return input;
+  if (input.schema !== NODE0_RUN_RECEIPT_SCHEMA) return input;
+  const nested = input.verdict;
+  if (!isPlainObject(nested)) {
+    return Object.freeze({
+      schema: null,
+      _unwrap_refuse: "run_receipt_verdict_missing",
+      run_id: typeof input.run_id === "string" ? input.run_id : null,
+    });
+  }
+  const runId =
+    typeof nested.run_id === "string" && nested.run_id.trim()
+      ? nested.run_id
+      : typeof input.run_id === "string"
+        ? input.run_id
+        : undefined;
+  return Object.freeze({
+    ...nested,
+    ...(runId !== undefined ? { run_id: runId } : {}),
+  });
+}
+
+/**
  * Map an endurance judgment into a soak observation for measurement admission.
+ * Also accepts a sealed `bizra.dema.node0_run_receipt.v0.1` and unwraps
+ * `.verdict` (the runner's on-disk endurance-receipt.json shape).
  *
  * @param {object|null|undefined} judgment
  * @returns {{
@@ -85,6 +117,30 @@ export function projectSoakJudgmentToAdmission(judgment) {
       what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
     });
   }
+
+  const unwrapped = unwrapEnduranceJudgment(judgment);
+  if (
+    isPlainObject(unwrapped) &&
+    unwrapped._unwrap_refuse === "run_receipt_verdict_missing"
+  ) {
+    return Object.freeze({
+      schema: NODE0_SOAK_JUDGMENT_ADMISSION_SCHEMA,
+      truth_label: NODE0_SOAK_JUDGMENT_ADMISSION_TRUTH_LABEL,
+      ok: false,
+      soak: null,
+      refuse_reason: "run_receipt_verdict_missing",
+      projection: Object.freeze({
+        observed_duration_seconds: null,
+        healthy: false,
+        run_id: unwrapped.run_id ?? null,
+      }),
+      boundary,
+      authority_delta: 0,
+      what_this_proves: WHAT_THIS_PROVES,
+      what_this_does_not_prove: WHAT_THIS_DOES_NOT_PROVE,
+    });
+  }
+  judgment = unwrapped;
 
   // Schema is mandatory provenance. Missing schema must not project as soak
   // evidence (Codex P1: omit-schema payloads with positive flags).
@@ -165,8 +221,12 @@ export function projectSoakJudgmentToAdmission(judgment) {
   const targetMet = judgment.target_met_by_elapsed_run === true;
   // Accepted verdicts only — never OR with target_met to override an explicit
   // failing verdict such as INSUFFICIENT (Codex P1).
+  // HEALTHY is the live endurance kernel vocabulary (node0-endurance.js);
+  // SUFFICIENT/PASS remain for earlier fixture/ledger spellings.
   const verdictOk =
-    judgment.verdict === "SUFFICIENT" || judgment.verdict === "PASS";
+    judgment.verdict === "HEALTHY" ||
+    judgment.verdict === "SUFFICIENT" ||
+    judgment.verdict === "PASS";
   // Healthy only when the judge itself says the run met its bar with zero
   // failures and continuous observation. Short or failing runs still project
   // a soak object (so admission can cite duration), but observed stays false.

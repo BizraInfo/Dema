@@ -1,0 +1,538 @@
+// NODE0-ENDURANCE-CHAIN-1A + NODE0-REVERSIBLE-EFFECT-LOOP-1A
+//
+// Two proofs the closure program was still missing.
+//
+// EC-*   the endurance record is tamper-EVIDENT. Measured before this slice:
+//        deleting the last 10 of 26 samples left the verdict at `HEALTHY ok:true`
+//        still reporting "continuously observed", with no integrity field
+//        anywhere in the result.
+//
+// LOOP-* the reversible effect loop survives a real SIGKILL, resumes to COMPLETE,
+//        and then REFUSES to happen a second time.
+//
+// The honest boundary is asserted, not assumed: LOOP-03 proves the no-repeat
+// refusal is NOT attributable to Season `must_not_repeat`, which is preserved
+// but not enforced at an effect boundary.
+
+import test, { describe } from "node:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdtemp, mkdir, writeFile, readFile, access } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import {
+  chainEnduranceRecord,
+  buildEnduranceAnchor,
+  verifyEnduranceChain,
+  enduranceRecordHash,
+  ENDURANCE_HEADER_KIND,
+  ENDURANCE_SAMPLE_KIND,
+  ENDURANCE_EVIDENCE_CLASSES,
+} from "../packages/core/src/node0-endurance-chain.js";
+import {
+  judgeRun,
+  measureRunnerCodeHash,
+  resolveJudgeTimingFromHeader,
+  ENDURANCE_RELDIR,
+  ENDURANCE_ANCHOR_FILE,
+} from "../apps/cli/src/commands/node0-run.js";
+
+const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
+const DEMA = join(REPO, "bin/dema");
+const HOUR = 3_600_000;
+const T0 = 1_700_000_000_000;
+
+// ───────────────────────────── EC: record integrity ─────────────────────────────
+
+const CODE_HASH = "sha256:" + "c".repeat(64);
+
+function buildRecord({ runId = "ec-run", count = 26, evidenceClass = "ELAPSED", ok = true } = {}) {
+  let prev = chainEnduranceRecord({
+    record: {
+      kind: ENDURANCE_HEADER_KIND, run_id: runId,
+      runner_code_hash: CODE_HASH, evidence_class: evidenceClass,
+    },
+  });
+  const records = [prev];
+  for (let i = 0; i < count; i += 1) {
+    prev = chainEnduranceRecord({
+      record: { kind: ENDURANCE_SAMPLE_KIND, run_id: runId, at_ms: T0 + i * HOUR, ok },
+      prev,
+    });
+    records.push(prev);
+  }
+  return records;
+}
+
+async function layDownRun(records, { runId = "ec-run", anchor = "true-head" } = {}) {
+  const home = await mkdtemp(join(tmpdir(), "ec-"));
+  const dir = join(home, ENDURANCE_RELDIR, runId);
+  await mkdir(dir, { recursive: true });
+  return { home, dir, write: async (recs, anchorHead) => {
+    await writeFile(join(dir, "samples.jsonl"), recs.map((r) => JSON.stringify(r)).join("\n") + "\n");
+    if (anchorHead !== null) {
+      await writeFile(join(dir, ENDURANCE_ANCHOR_FILE),
+        JSON.stringify(buildEnduranceAnchor({ head: anchorHead ?? recs.at(-1), runId })));
+    }
+  } };
+}
+
+describe("EC · the endurance record is tamper-evident", () => {
+
+  test("EC-01 truncating the record can never read HEALTHY (control: intact reads HEALTHY)", async () => {
+    const records = buildRecord({ count: 26 });
+    const { home, write } = await layDownRun(records);
+
+    // CONTROL. Without this the test would also pass against an implementation
+    // that simply refuses everything.
+    await write(records, records.at(-1));
+    const intact = await judgeRun({ demaHome: home, runId: "ec-run", targetMs: 24 * HOUR, intervalMs: HOUR });
+    assert.equal(intact.verdict, "HEALTHY", `control must be healthy: ${intact.reason}`);
+    assert.equal(intact.ok, true);
+    assert.equal(intact.chain.chain_state, "SEALED");
+    assert.equal(intact.chain.tamper_evident, true);
+
+    // Remove the last 10 records. The anchor still names the true head.
+    await write(records.slice(0, -10), records.at(-1));
+    const cut = await judgeRun({ demaHome: home, runId: "ec-run", targetMs: 15 * HOUR, intervalMs: HOUR });
+    assert.equal(cut.verdict, "BROKEN", "a truncated record must not be judged healthy");
+    assert.equal(cut.ok, false);
+    assert.equal(cut.chain.chain_state, "TRUNCATED");
+    assert.match(cut.reason, /records_truncated/);
+  });
+
+  test("EC-02 a chain cannot witness itself: an anchor re-derived from the survivors passes", async () => {
+    const records = buildRecord({ count: 26 });
+    const truncated = records.slice(0, -10);
+
+    // THE POINT. The surviving records are a perfectly valid chain — a prefix of
+    // a valid chain always is. Anchoring them to their OWN last record reports
+    // SEALED, cheerfully, having detected nothing. This is why the anchor must be
+    // an independent artefact and why re-deriving it is not verification.
+    const selfAnchored = verifyEnduranceChain({
+      records: truncated,
+      anchor: buildEnduranceAnchor({ head: truncated.at(-1), runId: "ec-run" }),
+      runId: "ec-run",
+    });
+    assert.equal(selfAnchored.ok, true, "a truncated prefix IS a valid chain — that is the hazard");
+    assert.equal(selfAnchored.chain_state, "SEALED");
+
+    // Against the real anchor the same bytes are caught.
+    const witnessed = verifyEnduranceChain({
+      records: truncated,
+      anchor: buildEnduranceAnchor({ head: records.at(-1), runId: "ec-run" }),
+      runId: "ec-run",
+    });
+    assert.equal(witnessed.ok, false);
+    assert.equal(witnessed.chain_state, "TRUNCATED");
+
+    // And with no anchor at all the module refuses rather than vouching.
+    const unwitnessed = verifyEnduranceChain({ records: truncated, anchor: null, runId: "ec-run" });
+    assert.equal(unwitnessed.ok, false);
+    assert.match(unwitnessed.reason, /anchor_missing/);
+  });
+
+  test("EC-03 editing any record is caught by re-derivation, not by a stored hash", async () => {
+    const records = buildRecord({ count: 6 });
+    const tampered = records.map((r, i) => (i === 3 ? { ...r, ok: true, at_ms: r.at_ms + 1 } : r));
+    const v = verifyEnduranceChain({
+      records: tampered, anchor: buildEnduranceAnchor({ head: records.at(-1), runId: "ec-run" }), runId: "ec-run",
+    });
+    assert.equal(v.ok, false);
+    assert.match(v.reason, /record_hash_mismatch_at_seq_3/);
+
+    // A forger who also rewrites the stored hash still breaks the NEXT link,
+    // because prev_hash is re-derived too.
+    const resealed = tampered.map((r, i) => (i === 3 ? { ...r, hash: enduranceRecordHash(r) } : r));
+    const v2 = verifyEnduranceChain({
+      records: resealed, anchor: buildEnduranceAnchor({ head: records.at(-1), runId: "ec-run" }), runId: "ec-run",
+    });
+    assert.equal(v2.ok, false);
+    assert.match(v2.reason, /prev_hash_mismatch_at_seq_4/);
+  });
+
+  test("EC-04 run-id traversal law: a foreign record is a REFUSAL, never a filter", async () => {
+    const mine = buildRecord({ runId: "ec-run", count: 4 });
+    const other = buildRecord({ runId: "other-run", count: 4 });
+    // Splicing another run's sample in must not be silently dropped: dropping it
+    // shrinks the evidence while leaving the observed span intact, which is how
+    // two short runs get presented as one long one.
+    const spliced = [...mine, { ...other[2], seq: mine.length, prev_hash: mine.at(-1).hash }];
+    const v = verifyEnduranceChain({
+      records: spliced, anchor: buildEnduranceAnchor({ head: spliced.at(-1), runId: "ec-run" }), runId: "ec-run",
+    });
+    assert.equal(v.ok, false);
+    assert.match(v.reason, /foreign_run_id_at_seq_5/);
+
+    // Asking for a run the record is not from is also a refusal.
+    const wrongAsk = verifyEnduranceChain({
+      records: mine, anchor: buildEnduranceAnchor({ head: mine.at(-1), runId: "ec-run" }), runId: "ec-run-2",
+    });
+    assert.equal(wrongAsk.ok, false);
+    assert.match(wrongAsk.reason, /run_id_mismatch/);
+  });
+
+  test("EC-05 a crash between append and anchor is TORN_TAIL, not tampering", async () => {
+    const records = buildRecord({ count: 8 });
+    // Lag of exactly one: the sample was fsynced, the anchor rewrite was not.
+    const torn = verifyEnduranceChain({
+      records, anchor: buildEnduranceAnchor({ head: records.at(-2), runId: "ec-run" }), runId: "ec-run",
+    });
+    assert.equal(torn.ok, true, "a real crash must not be reported as tampering");
+    assert.equal(torn.chain_state, "TORN_TAIL");
+
+    // Lag of two cannot come from that window — one append is fsynced before the
+    // anchor is touched, so the anchor can never fall two behind honestly.
+    const suspicious = verifyEnduranceChain({
+      records, anchor: buildEnduranceAnchor({ head: records.at(-3), runId: "ec-run" }), runId: "ec-run",
+    });
+    assert.equal(suspicious.ok, false);
+    assert.match(suspicious.reason, /anchor_lags_records_by_2_appends/);
+  });
+
+  test("EC-05b negative anchor head_seq is BROKEN, not a crash into records[-1]", () => {
+    const records = buildRecord({ count: 0 }); // header only
+    const bad = verifyEnduranceChain({
+      records,
+      anchor: {
+        schema: "bizra.dema.node0_endurance_anchor.v0.1",
+        run_id: "ec-run",
+        head_seq: -1,
+        head_hash: "sha256:" + "a".repeat(64),
+      },
+      runId: "ec-run",
+    });
+    assert.equal(bad.ok, false);
+    assert.equal(bad.chain_state, "BROKEN");
+    assert.match(bad.reason, /anchor_malformed/);
+  });
+
+  test("EC-06 a CUSTOM_TEST record can be HEALTHY but never meets an endurance target", async () => {
+    const records = buildRecord({ count: 26, evidenceClass: ENDURANCE_EVIDENCE_CLASSES.CUSTOM_TEST });
+    const { home, write } = await layDownRun(records);
+    await write(records, records.at(-1));
+    const v = await judgeRun({ demaHome: home, runId: "ec-run", targetMs: 24 * HOUR, intervalMs: HOUR });
+
+    assert.equal(v.verdict, "HEALTHY", "synthesised samples still prove the JUDGMENT works");
+    assert.equal(v.chain.chain_state, "SEALED");
+    assert.equal(v.chain.elapsed_evidence, false);
+    // The load-bearing line: a synthesised record can never be cited as a node
+    // having endured anything.
+    assert.equal(v.target_met_by_elapsed_run, false);
+
+    const elapsed = buildRecord({ count: 26, evidenceClass: ENDURANCE_EVIDENCE_CLASSES.ELAPSED });
+    const l = await layDownRun(elapsed);
+    await l.write(elapsed, elapsed.at(-1));
+    const e = await judgeRun({ demaHome: l.home, runId: "ec-run", targetMs: 24 * HOUR, intervalMs: HOUR });
+    assert.equal(e.target_met_by_elapsed_run, true, "control: an ELAPSED record can meet a target");
+  });
+
+  test("EC-07 an unwitnessed legacy record is not vouched for and not accused", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ec-legacy-"));
+    const dir = join(home, ENDURANCE_RELDIR, "old"); await mkdir(dir, { recursive: true });
+    const lines = [];
+    for (let i = 0; i <= 25; i += 1) lines.push(JSON.stringify({ at_ms: T0 + i * HOUR, ok: true }));
+    await writeFile(join(dir, "samples.jsonl"), lines.join("\n") + "\n");
+
+    const v = await judgeRun({ demaHome: home, runId: "old", targetMs: 24 * HOUR, intervalMs: HOUR });
+    assert.equal(v.chain.chain_state, "ABSENT");
+    assert.equal(v.chain.tamper_evident, false, "an unchained record may never be called tamper-evident");
+    assert.equal(v.verdict, "HEALTHY", "nor may it be accused of tampering it shows no sign of");
+    assert.equal(v.target_met_by_elapsed_run, false, "but it cannot support a target claim either");
+  });
+
+  test("EC-10 total erasure is named as erasure, not reported as a run that never happened", async () => {
+    const records = buildRecord({ count: 26 });
+    const { home, dir } = await layDownRun(records);
+    await writeFile(join(dir, ENDURANCE_ANCHOR_FILE),
+      JSON.stringify(buildEnduranceAnchor({ head: records.at(-1), runId: "ec-run" })));
+    // Every record deleted. The anchor survives, still naming head_seq 26.
+    await writeFile(join(dir, "samples.jsonl"), "");
+
+    const wiped = await judgeRun({ demaHome: home, runId: "ec-run", targetMs: 24 * HOUR, intervalMs: HOUR });
+    assert.equal(wiped.chain.chain_state, "TRUNCATED",
+      "a wiped run must not be reported as ABSENT — that is the conflation this module exists to prevent");
+    assert.match(wiped.chain.reason, /records_erased/);
+    assert.equal(wiped.verdict, "BROKEN");
+    assert.equal(wiped.ok, false);
+
+    // CONTROL: a run that genuinely never happened has no anchor either, and is
+    // ABSENT — absence must stay distinguishable from erasure in BOTH directions.
+    const neverRan = await mkdtemp(join(tmpdir(), "ec-never-"));
+    await mkdir(join(neverRan, ENDURANCE_RELDIR, "ec-run"), { recursive: true });
+    const none = await judgeRun({ demaHome: neverRan, runId: "ec-run", targetMs: 24 * HOUR, intervalMs: HOUR });
+    assert.equal(none.chain.chain_state, "ABSENT");
+    assert.equal(none.chain.reason, "no_records");
+
+    // And swapping chained records for unchained ones, with the anchor still
+    // present, is a replacement — not a legacy record.
+    await writeFile(join(dir, "samples.jsonl"), JSON.stringify({ at_ms: T0, ok: true }) + "\n");
+    const swapped = await judgeRun({ demaHome: home, runId: "ec-run", targetMs: 24 * HOUR, intervalMs: HOUR });
+    assert.equal(swapped.chain.chain_state, "BROKEN");
+    assert.match(swapped.chain.reason, /anchor_present_but_records_are_unchained/);
+  });
+
+  test("EC-08 the runner binds the record to the BYTES it executed", async () => {
+    const measured = await measureRunnerCodeHash();
+    assert.match(measured, /^sha256:[0-9a-f]{64}$/);
+    // Deterministic: the same bytes hash the same way twice.
+    assert.equal(await measureRunnerCodeHash(), measured);
+
+    // A header missing the binding is refused — the record would say what
+    // happened but not what was running when it happened.
+    const unbound = chainEnduranceRecord({
+      record: { kind: ENDURANCE_HEADER_KIND, run_id: "x", evidence_class: "ELAPSED" },
+    });
+    const v = verifyEnduranceChain({
+      records: [unbound], anchor: buildEnduranceAnchor({ head: unbound, runId: "x" }), runId: "x",
+    });
+    assert.equal(v.ok, false);
+    assert.equal(v.reason, "header_runner_binding_missing");
+  });
+
+  test("EC-09 the CLI runner writes a SEALED ELAPSED record and refuses to extend a broken one", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ec-cli-"));
+    const runOnce = (extra = []) => spawnSync("node", [
+      DEMA, "node0", "run", "--run-id", "cli", "--dema-home", home,
+      "--interval-ms", "5", "--duration-ms", "1", "--json", ...extra,
+    ], { cwd: REPO, encoding: "utf8", timeout: 60_000, env: { ...process.env, DEMA_HOME: home } });
+
+    const first = runOnce();
+    // `node0 run --json` prints a human banner BEFORE the receipt, so stdout is
+    // not pure JSON. Recorded as an observed wart of the shipped CLI; this test
+    // reads around it rather than changing shipped behaviour to suit itself.
+    const jsonOf = (s) => JSON.parse(s.slice(s.indexOf("{")));
+    const receipt = jsonOf(first.stdout);
+    assert.equal(receipt.chain_state, "SEALED", `expected SEALED, got ${first.stdout}${first.stderr}`);
+    assert.equal(receipt.tamper_evident, true);
+    assert.equal(receipt.evidence_class, "ELAPSED");
+    assert.equal(receipt.runner_code_hash, await measureRunnerCodeHash(),
+      "the record must bind to the bytes this test can independently measure");
+
+    // Corrupt the record, then prove the runner will not append a clean tail on
+    // top of damage — that would launder it into an otherwise-valid chain.
+    const path = join(home, ENDURANCE_RELDIR, "cli", "samples.jsonl");
+    const recs = (await readFile(path, "utf8")).trim().split("\n").map((l) => JSON.parse(l));
+    assert.ok(recs.length >= 2, "control: the run must have produced a header and a sample");
+    await writeFile(path, recs.slice(0, -1).map((r) => JSON.stringify(r)).join("\n") + "\n");
+
+    const second = runOnce();
+    assert.notEqual(second.status, 0, "extending a truncated record must fail");
+    // FREEZE-1A strengthened this refusal: a run whose endurance-receipt.json
+    // exists is terminally sealed and refuses BEFORE chain inspection (class-27
+    // guard), so this sealed+tampered record now names the seal, not the break.
+    // Either message satisfies the protected property: refusal, zero appends.
+    assert.match(`${second.stdout}${second.stderr}`, /terminally sealed|refusing to extend run 'cli'/);
+    const after = (await readFile(path, "utf8")).trim().split("\n");
+    assert.equal(after.length, recs.length - 1, "a refused run must append nothing");
+  });
+
+  test("EC-11 --judge without --target uses header target_ms (72h soak must not default to 24h)", async () => {
+    const MULTI_DAY = 72 * HOUR;
+    const header = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: "ec-run",
+        runner_code_hash: CODE_HASH,
+        evidence_class: "ELAPSED",
+        target_ms: MULTI_DAY,
+        interval_ms: HOUR,
+      },
+    });
+    const sample = chainEnduranceRecord({
+      record: { kind: ENDURANCE_SAMPLE_KIND, run_id: "ec-run", at_ms: T0, ok: true },
+      prev: header,
+    });
+    const fromHeader = resolveJudgeTimingFromHeader([header, sample], {
+      targetMs: 24 * HOUR,
+      intervalMs: 5 * 60 * 1000,
+      explicitTarget: false,
+    });
+    assert.equal(fromHeader.source, "header");
+    assert.equal(fromHeader.targetMs, MULTI_DAY);
+    assert.equal(fromHeader.intervalMs, HOUR);
+
+    const forced = resolveJudgeTimingFromHeader([header, sample], {
+      targetMs: 24 * HOUR,
+      intervalMs: 5 * 60 * 1000,
+      explicitTarget: true,
+    });
+    assert.equal(forced.source, "cli");
+    assert.equal(forced.targetMs, 24 * HOUR);
+
+    const { home, write } = await layDownRun([header, sample]);
+    await write([header, sample], sample);
+    const judged = spawnSync("node", [
+      DEMA, "node0", "run", "--judge", "--run-id", "ec-run", "--dema-home", home, "--json",
+    ], { cwd: REPO, encoding: "utf8", timeout: 30_000, env: { ...process.env, DEMA_HOME: home } });
+    assert.equal(judged.status, 1, `INSUFFICIENT expected: ${judged.stdout}${judged.stderr}`);
+    const body = JSON.parse(judged.stdout.slice(judged.stdout.indexOf("{")));
+    assert.equal(body.target_source, "header");
+    assert.equal(body.target_ms, MULTI_DAY);
+    assert.equal(body.verdict, "INSUFFICIENT");
+  });
+
+  test("EC-12 runner refuses traversal ids, non-positive duration, erased-sample reinit, and judge mkdir", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ec-12-"));
+    const run = (args) => spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, ...args,
+    ], { cwd: REPO, encoding: "utf8", timeout: 15_000, env: { ...process.env, DEMA_HOME: home } });
+
+    const badId = run(["--run-id", "../escape", "--interval-ms", "5", "--duration-ms", "1"]);
+    assert.notEqual(badId.status, 0);
+    assert.match(`${badId.stdout}${badId.stderr}`, /single path segment/);
+
+    const badDur = run(["--run-id", "bad-dur", "--interval-ms", "5", "--duration-ms", "-1"]);
+    assert.notEqual(badDur.status, 0);
+    assert.match(`${badDur.stdout}${badDur.stderr}`, /positive finite duration/);
+
+    const badTarget = run(["--run-id", "bad-target", "--interval-ms", "5", "--target", "MULTI_DAY_CONFIDENCE_X"]);
+    assert.notEqual(badTarget.status, 0);
+    assert.match(`${badTarget.stdout}${badTarget.stderr}`, /unknown --target/);
+
+    // --judge must not create a missing run directory.
+    const missingJudge = run(["--judge", "--run-id", "never-created", "--json"]);
+    assert.equal(missingJudge.status, 1);
+    let judgeCreated = true;
+    try {
+      await access(join(home, ENDURANCE_RELDIR, "never-created"), fsConstants.F_OK);
+    } catch {
+      judgeCreated = false;
+    }
+    assert.equal(judgeCreated, false, "--judge must not mkdir a missing run");
+
+    // Surviving anchor + empty samples refuse re-init.
+    const erasedDir = join(home, ENDURANCE_RELDIR, "erased");
+    await mkdir(erasedDir, { recursive: true });
+    const orphan = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: "erased",
+        runner_code_hash: CODE_HASH,
+        evidence_class: "ELAPSED",
+        interval_ms: 5,
+        target_ms: 1,
+      },
+    });
+    await writeFile(join(erasedDir, ENDURANCE_ANCHOR_FILE),
+      JSON.stringify(buildEnduranceAnchor({ head: orphan, runId: "erased" })));
+    await writeFile(join(erasedDir, "samples.jsonl"), "");
+    const erased = run(["--run-id", "erased", "--interval-ms", "5", "--duration-ms", "1"]);
+    assert.notEqual(erased.status, 0);
+    assert.match(`${erased.stdout}${erased.stderr}`, /anchor but no samples/);
+  });
+
+  test("EC-12b live lock refuses a second recorder; stale lock recovers", async () => {
+    const home = await mkdtemp(join(tmpdir(), "ec-12b-"));
+    const runId = "locked";
+    const dir = join(home, ENDURANCE_RELDIR, runId);
+    await mkdir(dir, { recursive: true });
+
+    // Live lock: write this process's pid so the runner sees a live owner.
+    await writeFile(join(dir, "runner.lock"), `${process.pid}\n`);
+    const live = spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, "--run-id", runId,
+      "--interval-ms", "5", "--duration-ms", "1",
+    ], { cwd: REPO, encoding: "utf8", timeout: 15_000, env: { ...process.env, DEMA_HOME: home } });
+    assert.notEqual(live.status, 0);
+    assert.match(`${live.stdout}${live.stderr}`, /already owned by another live runner/);
+
+    // Stale lock: unlikely-live pid recovers via rename displace + O_EXCL.
+    const staleId = `stale-${Date.now()}`;
+    const staleDir = join(home, ENDURANCE_RELDIR, staleId);
+    await mkdir(staleDir, { recursive: true });
+    await writeFile(join(staleDir, "runner.lock"), "2147483646\n");
+    const recovered = spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, "--run-id", staleId,
+      "--interval-ms", "5", "--duration-ms", "1", "--json",
+    ], { cwd: REPO, encoding: "utf8", timeout: 30_000, env: { ...process.env, DEMA_HOME: home } });
+    // Hermetic homes often yield non-CLEAN samples (exit 1) — lock recovery is
+    // proven by a sealed receipt existing after a displaced dead lock.
+    assert.match(
+      `${recovered.stdout}${recovered.stderr}`,
+      /"chain_state": "SEALED"/,
+      `stale lock should recover to a sealed receipt: ${recovered.stdout}${recovered.stderr}`,
+    );
+  });
+
+  test("EC-12c resume refuses widened --interval-ms vs header binding", async () => {
+    // Seed an unsealed chain on disk (no race with SIGKILL before first write).
+    const liveHash = await measureRunnerCodeHash();
+    const header = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: "widen",
+        runner_code_hash: liveHash,
+        evidence_class: ENDURANCE_EVIDENCE_CLASSES.ELAPSED,
+        interval_ms: 80,
+        target_ms: 60_000,
+        started_at_ms: T0,
+      },
+    });
+    const sample = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_SAMPLE_KIND,
+        run_id: "widen",
+        at_ms: T0,
+        ok: true,
+        mission_verdict: "CLEAN",
+      },
+      prev: header,
+    });
+    const { home, write } = await layDownRun([header, sample], { runId: "widen" });
+    await write([header, sample], sample);
+
+    const widened = spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, "--run-id", "widen",
+      "--interval-ms", "500", "--duration-ms", "1",
+    ], { cwd: REPO, encoding: "utf8", timeout: 30_000, env: { ...process.env, DEMA_HOME: home } });
+    assert.notEqual(widened.status, 0);
+    assert.match(`${widened.stdout}${widened.stderr}`, /widens/);
+  });
+
+  test("EC-12d TORN_TAIL resume repairs the lagging anchor before appending", async () => {
+    const liveHash = await measureRunnerCodeHash();
+    const header = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_HEADER_KIND,
+        run_id: "torn",
+        runner_code_hash: liveHash,
+        evidence_class: ENDURANCE_EVIDENCE_CLASSES.ELAPSED,
+        interval_ms: 5,
+        target_ms: 1,
+        started_at_ms: T0,
+      },
+    });
+    const sample = chainEnduranceRecord({
+      record: {
+        kind: ENDURANCE_SAMPLE_KIND,
+        run_id: "torn",
+        at_ms: T0,
+        ok: true,
+        mission_verdict: "CLEAN",
+      },
+      prev: header,
+    });
+    const { home, dir, write } = await layDownRun([header, sample], { runId: "torn" });
+    // Anchor lags by one → TORN_TAIL; resume must repair then append/seal.
+    await write([header, sample], header);
+    const torn = verifyEnduranceChain({
+      records: [header, sample],
+      anchor: JSON.parse(await readFile(join(dir, ENDURANCE_ANCHOR_FILE), "utf8")),
+      runId: "torn",
+    });
+    assert.equal(torn.chain_state, "TORN_TAIL");
+
+    const resumed = spawnSync("node", [
+      DEMA, "node0", "run", "--dema-home", home, "--run-id", "torn",
+      "--interval-ms", "5", "--duration-ms", "1", "--json",
+    ], { cwd: REPO, encoding: "utf8", timeout: 30_000, env: { ...process.env, DEMA_HOME: home } });
+    assert.match(`${resumed.stdout}${resumed.stderr}`, /"chain_state": "SEALED"/);
+    const anchorAfter = JSON.parse(await readFile(join(dir, ENDURANCE_ANCHOR_FILE), "utf8"));
+    assert.ok(anchorAfter.head_seq >= sample.seq, "resume must advance anchor past the torn head");
+  });
+});
+

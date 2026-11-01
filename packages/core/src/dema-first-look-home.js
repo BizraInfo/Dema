@@ -108,6 +108,9 @@ function buildRecommendedNextStep(profile, keyPresent, mission, checkpoint, cont
     return "Initialize your authorship key with dema authorship init when you are ready to sign local work.";
   }
   if (continuation?.status === "CONTRADICTION") {
+    if (continuation.reason === "season_ambiguous") {
+      return "Inspect a candidate without changing state: dema season status --season <id>.";
+    }
     const reasons = continuation.contradictions
       .map((entry) => entry.reason)
       .filter(Boolean)
@@ -531,6 +534,9 @@ export function renderFirstLookHome(envelope, { noColor = false, useColor } = {}
   const colorOn = useColor !== undefined ? useColor : !noColor;
   const bold = (s) => (colorOn ? `\x1b[1m${s}\x1b[0m` : s);
   const dim = (s) => (colorOn ? `\x1b[2m${s}\x1b[0m` : s);
+  const seasonAmbiguous =
+    envelope.continuation?.status === "CONTRADICTION" &&
+    envelope.continuation.reason === "season_ambiguous";
 
   const continuityLines =
     envelope.continuation?.status === "VERIFIED"
@@ -546,12 +552,23 @@ export function renderFirstLookHome(envelope, { noColor = false, useColor } = {}
       : envelope.continuation?.status === "CONTRADICTION"
         ? [
             bold("Journey continuity"),
-            "  CONTRADICTION · " +
-              (envelope.continuation.contradictions
-                ?.map((entry) => entry.reason)
-                .filter(Boolean)
-                .join(", ") || envelope.continuation.reason),
-            dim("  recovery is read-only; no state was rewritten"),
+            seasonAmbiguous
+              ? "  AMBIGUOUS · season_ambiguous"
+              : "  CONTRADICTION · " +
+                (envelope.continuation.contradictions
+                  ?.map((entry) => entry.reason)
+                  .filter(Boolean)
+                  .join(", ") || envelope.continuation.reason),
+            ...(seasonAmbiguous
+              ? [
+                  "  candidates:",
+                  ...(Array.isArray(envelope.continuation.season_ids)
+                    ? envelope.continuation.season_ids.map((id) => "    " + id)
+                    : []),
+                  dim("  inspect without changing state: dema season status --season <id>"),
+                  dim("  no season selected; state is unchanged"),
+                ]
+              : [dim("  recovery is read-only; no state was rewritten")]),
             "",
           ]
         : envelope.continuation?.status === "BLOCKED"
