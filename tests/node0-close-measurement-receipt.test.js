@@ -2,6 +2,9 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   evaluateNode0ClosureInvariants,
@@ -19,6 +22,7 @@ import {
 } from "../packages/core/src/node0-close-measurement-receipt.js";
 import { isCanonicalBoundary } from "../packages/core/src/preview-boundary.js";
 import { gatherClosureReadout } from "../scripts/review/node0-closure-invariants-check.mjs";
+import { discoverLongestEnduranceReceipt } from "../scripts/proof/node0-close-measurement-receipt.mjs";
 
 function obs(invariant, observed) {
   return {
@@ -264,5 +268,56 @@ describe("node0-close-measurement-receipt", () => {
       resolveRemoteWriteBlockReason("observation_scope_mismatch", n),
       "observation_scope_mismatch",
     );
+  });
+
+  test("discoverLongestEnduranceReceipt prefers longest span; empty home ⇒ null", () => {
+    assert.equal(discoverLongestEnduranceReceipt("/no/such/dema-home"), null);
+    const home = mkdtempSync(join(tmpdir(), "dema-close-disc-"));
+    try {
+      const shortDir = join(home, "node0", "endurance", "probe-short");
+      const longDir = join(home, "node0", "endurance", "soak-long");
+      mkdirSync(shortDir, { recursive: true });
+      mkdirSync(longDir, { recursive: true });
+      writeFileSync(
+        join(shortDir, "endurance-receipt.json"),
+        JSON.stringify({
+          schema: "bizra.dema.node0_run_receipt.v0.1",
+          run_id: "probe-short",
+          verdict: {
+            schema: "bizra.dema.node0_endurance.v0.1",
+            observed_span_ms: 8000,
+            failure_count: 0,
+            continuously_observed: true,
+            ok: true,
+            verdict: "HEALTHY",
+            target_met_by_elapsed_run: true,
+          },
+        }),
+      );
+      writeFileSync(
+        join(longDir, "endurance-receipt.json"),
+        JSON.stringify({
+          schema: "bizra.dema.node0_run_receipt.v0.1",
+          run_id: "soak-long",
+          verdict: {
+            schema: "bizra.dema.node0_endurance.v0.1",
+            observed_span_ms: DEFAULT_SOAK_MIN_DURATION_SECONDS * 1000,
+            failure_count: 0,
+            continuously_observed: true,
+            ok: true,
+            verdict: "HEALTHY",
+            target_met_by_elapsed_run: true,
+          },
+        }),
+      );
+      const found = discoverLongestEnduranceReceipt(home);
+      assert.equal(found.run_id, "soak-long");
+      assert.equal(
+        found.observed_span_ms,
+        DEFAULT_SOAK_MIN_DURATION_SECONDS * 1000,
+      );
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
   });
 });
