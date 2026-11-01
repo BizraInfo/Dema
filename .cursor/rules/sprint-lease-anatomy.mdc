@@ -101,10 +101,10 @@ Stop timer: `systemctl --user disable --now dema-sprint-watchdog.timer`
 | — | Shakedown soak `shakedown-20261031-1755` | DONE sealed — ~2h span, all samples ATTENTION/`ok:false`; unit crash-loop after seal **stopped** |
 | — | Cartographer JSON artifacts | OPEN — PDF measured; three JSON stamps still absent; no silent ingest |
 | — | Focused gates green for active slice | DONE — endurance EC+freeze 35/35; probe HEALTHY |
-| — | Health-snapshot bridge restore | LOCAL @ `88195934` on `slice/health-snapshot-bridge-1a` (push/PR GO) |
-| — | Endurance runner port into Dema-clean | LOCAL uncommitted (`node0-run` + kernels + tests); habitat `start.sh` gateway freeze fixed |
+| — | Health-snapshot + endurance + admission bridge | LOCAL commit `82e70ed2` on `slice/health-snapshot-bridge-1a` (push/PR GO) |
+| — | Endurance runner port into Dema-clean | DONE @ `82e70ed2` (`node0-run` + kernels + tests); habitat `start.sh` gateway freeze fixed |
 | — | 8s instrumented probe under gateway | DONE HEALTHY drift=0 — `probe-gw-20261101-190456` |
-| — | Soak admission HEALTHY + run_receipt unwrap | LOCAL uncommitted — 27/27; live probe now `soak_duration_below_minimum` (was schema_mismatch) |
+| — | Soak admission HEALTHY + run_receipt unwrap | DONE @ `82e70ed2` — live probe `soak_duration_below_minimum` (was schema_mismatch) |
 | — | 72h MULTI_DAY_CONFIDENCE soak | OPEN — preflight GREEN; typed `GO start 72h soak` |
 | — | remote_write NO_EXTERNAL | OPEN — fresh INCOMPLETE; typed `GO measurement window` / sterile host |
 
