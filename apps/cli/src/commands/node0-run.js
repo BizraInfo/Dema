@@ -365,6 +365,14 @@ export async function cmdNode0Run(ctx) {
   const explicitTargetKey = argValue(argv, "--target");
   const intervalMs = Number(explicitInterval ?? DEFAULT_INTERVAL_MS);
   const targetKey = (explicitTargetKey || "MINIMUM_OPERATIONAL").toUpperCase();
+  if (explicitTargetKey != null && !(targetKey in ENDURANCE_TARGETS) && explicitDuration == null) {
+    console.error(
+      `Dema error: unknown --target '${explicitTargetKey}'. `
+      + `Known: ${Object.keys(ENDURANCE_TARGETS).join(", ")}. Nothing was written.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
   const targetMs = Number(explicitDuration ?? ENDURANCE_TARGETS[targetKey] ?? ENDURANCE_TARGETS.MINIMUM_OPERATIONAL);
   const explicitTarget = explicitDuration != null || explicitTargetKey != null;
 
@@ -488,20 +496,33 @@ export async function cmdNode0Run(ctx) {
     lockFh = await tryCreateLock();
   } catch (err) {
     if (err?.code !== "EEXIST") throw err;
+    // Only a confirmed dead positive PID is stale. Empty/malformed locks are
+    // contention (another writer may still be mid-create), not free real estate.
     let priorPid = null;
     try {
       priorPid = Number((await readFile(lockPath, "utf8")).trim());
     } catch {
-      priorPid = null;
+      console.error(
+        `Dema error: run '${runId}' lock unreadable (${lockPath}). `
+        + "Nothing was written. A new --run-id is free.",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    if (!Number.isInteger(priorPid) || priorPid <= 0) {
+      console.error(
+        `Dema error: run '${runId}' lock is malformed (no positive pid). `
+        + "Nothing was written. A new --run-id is free.",
+      );
+      process.exitCode = 1;
+      return;
     }
     let live = false;
-    if (Number.isInteger(priorPid) && priorPid > 0) {
-      try {
-        process.kill(priorPid, 0);
-        live = true;
-      } catch {
-        live = false;
-      }
+    try {
+      process.kill(priorPid, 0);
+      live = true;
+    } catch {
+      live = false;
     }
     if (live) {
       console.error(
@@ -511,7 +532,7 @@ export async function cmdNode0Run(ctx) {
       process.exitCode = 1;
       return;
     }
-    const displaced = `${lockPath}.dead.${Number.isInteger(priorPid) ? priorPid : "unknown"}.${process.pid}`;
+    const displaced = `${lockPath}.dead.${priorPid}.${process.pid}`;
     try {
       await rename(lockPath, displaced);
     } catch (renameErr) {

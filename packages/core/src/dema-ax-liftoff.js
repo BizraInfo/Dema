@@ -135,11 +135,18 @@ export function projectAxLiftoffStrip({
     headline = "In flow · Dema ready · soak CLEAN";
     subtitle = "Companion strip green on measured local truth only";
     reason = "measured_in_flow";
+  } else if (soak == null) {
+    // Missing soak measurement is not "no soak unit" — that would invent absence.
+    mode = "HOLD";
+    flow_state = "UNKNOWN";
+    headline = "Dema ready · soak unmeasured";
+    subtitle = "Face ready; soak_runtime not supplied";
+    reason = "soak_runtime_unmeasured";
   } else {
     mode = "FLOW";
     flow_state = "IN_FLOW";
     headline = "In flow · Dema ready";
-    subtitle = "No soak unit; face ready; no halt gates";
+    subtitle = "Soak unit inactive; face ready; no halt gates";
     reason = "face_ready_no_halts";
   }
 

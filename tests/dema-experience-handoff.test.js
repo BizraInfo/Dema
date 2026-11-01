@@ -45,6 +45,15 @@ describe("DEMA-EXPERIENCE-HANDOFF-1A", () => {
     assert.equal(card.evidence_level, "UNTESTED_ADVICE");
   });
 
+  test("EH-03b session-only card stays UNKNOWN until evidence arrives", () => {
+    const card = buildExperienceHandoffCard({ session_id: "s-empty" });
+    assert.equal(card.ok, true);
+    assert.equal(card.evidence_level, "UNKNOWN");
+    const text = formatExperienceHandoffCard(card);
+    assert.match(text, /truth_label:/);
+    assert.match(text, /preview:/);
+  });
+
   test("EH-04 boundary all-false; never invents NODE0_CLOSED", () => {
     const b = demaExperienceHandoffBoundary();
     for (const v of Object.values(b)) assert.equal(v, false);

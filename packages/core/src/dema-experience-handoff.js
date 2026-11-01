@@ -95,10 +95,10 @@ export function buildExperienceHandoffCard(input = {}) {
     regFailed !== null &&
     regFailed > 0;
 
-  let evidence_level = "OBSERVED";
-  if (observed.length === 0 && (inferences.length > 0 || advice.length > 0)) {
-    evidence_level = inferences.length ? "INFERRED" : "UNTESTED_ADVICE";
-  }
+  let evidence_level = "UNKNOWN";
+  if (observed.length > 0) evidence_level = "OBSERVED";
+  else if (inferences.length > 0) evidence_level = "INFERRED";
+  else if (advice.length > 0) evidence_level = "UNTESTED_ADVICE";
 
   return Object.freeze({
     schema: EXPERIENCE_HANDOFF_SCHEMA,
@@ -140,8 +140,10 @@ export function buildExperienceHandoffCard(input = {}) {
 export function formatExperienceHandoffCard(card = {}) {
   const lines = [
     `DEMA · EXPERIENCE HANDOFF · ${card.evidence_level || "UNKNOWN"}`,
+    `truth_label: ${card.truth_label || EXPERIENCE_HANDOFF_TRUTH_LABEL}`,
     `session: ${card.session_id || "(none)"}`,
     `base→head: ${(card.base_sha || "?").slice(0, 12)} → ${(card.head_sha || "?").slice(0, 12)}`,
+    `preview: ${card.what_this_does_not_prove || "(see JSON boundary)"}`,
     "",
     "NEW BEHAVIOR",
     `  ${card.new_behavior?.label}: pass=${card.new_behavior?.passed} fail=${card.new_behavior?.failed} total=${card.new_behavior?.total}`,

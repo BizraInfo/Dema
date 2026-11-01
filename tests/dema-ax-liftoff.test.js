@@ -99,4 +99,27 @@ describe("DEMA-AX-LIFTOFF-1A", () => {
     assert.equal("node0_closed" in s, false);
     assert.match(s.what_this_does_not_prove, /NODE0_CLOSED/);
   });
+
+  test("AX-07 missing soak_runtime ⇒ UNKNOWN (does not invent inactive soak)", () => {
+    const s = projectAxLiftoffStrip({
+      dema_face: faceReady,
+      soak_runtime: null,
+      halt_gates_exact: [],
+    });
+    assert.equal(s.mode, "HOLD");
+    assert.equal(s.flow_state, "UNKNOWN");
+    assert.equal(s.reason, "soak_runtime_unmeasured");
+    assert.equal(s.soak_in_flow, false);
+  });
+
+  test("AX-08 measured inactive soak + ready face ⇒ IN_FLOW", () => {
+    const s = projectAxLiftoffStrip({
+      dema_face: faceReady,
+      soak_runtime: { unit_active: false, freeze: { drift_count: 0 }, samples: {} },
+      halt_gates_exact: [],
+    });
+    assert.equal(s.mode, "FLOW");
+    assert.equal(s.flow_state, "IN_FLOW");
+    assert.equal(s.reason, "face_ready_no_halts");
+  });
 });

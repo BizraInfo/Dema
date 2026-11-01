@@ -389,6 +389,10 @@ describe("EC · the endurance record is tamper-evident", () => {
     assert.notEqual(badDur.status, 0);
     assert.match(`${badDur.stdout}${badDur.stderr}`, /positive finite duration/);
 
+    const badTarget = run(["--run-id", "bad-target", "--interval-ms", "5", "--target", "MULTI_DAY_CONFIDENCE_X"]);
+    assert.notEqual(badTarget.status, 0);
+    assert.match(`${badTarget.stdout}${badTarget.stderr}`, /unknown --target/);
+
     // --judge must not create a missing run directory.
     const missingJudge = run(["--judge", "--run-id", "never-created", "--json"]);
     assert.equal(missingJudge.status, 1);

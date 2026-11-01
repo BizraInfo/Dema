@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Emit one experience-handoff card for the current Node0/AX session evidence.
- * Preview-only; does not mutate DEMA_HOME.
+ * Emit one experience-handoff card as a HISTORICAL snapshot of a prior session
+ * (fixed SHAs below). Preview-only; does not mutate DEMA_HOME; does not claim
+ * to re-measure the live HEAD.
  */
 import {
   buildExperienceHandoffCard,
@@ -53,6 +54,15 @@ const card = buildExperienceHandoffCard({
   ],
 });
 
-if (wantJson) console.log(JSON.stringify({ preview_only: true, card }, null, 2));
-else console.log(formatExperienceHandoffCard(card));
+if (wantJson) {
+  console.log(JSON.stringify({
+    preview_only: true,
+    historical_snapshot: true,
+    note: "Fixed SHAs below are a past session receipt, not a live HEAD re-measure.",
+    card,
+  }, null, 2));
+} else {
+  console.log("HISTORICAL SNAPSHOT (not live HEAD)");
+  console.log(formatExperienceHandoffCard(card));
+}
 process.exitCode = card.ok ? 0 : 1;
