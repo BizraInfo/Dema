@@ -98,6 +98,7 @@ export const commands = [
   ["node", ["scripts/review/node0-local-urp-shelf-index-preview-check.mjs"]],
   ["node", ["scripts/review/node0-receipt-shelf-compaction-state-preview-check.mjs"]],
   ["node", ["scripts/review/untrusted-corpus-sanitizer-preview-check.mjs"]],
+  ["node", ["scripts/review/human-pain-shield-preview-check.mjs"]],
   ["node", ["scripts/review/public-metric-claim-gate-preview-check.mjs"]],
   ["node", ["scripts/review/materialization-pulse-receipt-schema-preview-check.mjs"]],
   ["node", ["scripts/review/local-model-pulse-binding-preview-check.mjs"]],
