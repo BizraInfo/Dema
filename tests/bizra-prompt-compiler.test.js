@@ -140,3 +140,17 @@ test("BPC-08 hyphenated founder variants bind", () => {
   assert.ok(terms.includes("spearpoint"), `got ${terms}`);
   assert.ok(a.precedence_chain.includes("one_spearpoint"));
 });
+
+test("BPC-09 substring near-misses do not bind; later boundary hit does", () => {
+  // 'snr' embedded in alphanumerics must be skipped (boundary false → scan continues).
+  const embedded = compilePrompt({ text: "measure supersnr score then real snr gate", hash: HASH });
+  assert.equal(embedded.ok, true);
+  assert.equal(embedded.operators.filter((o) => o.term === "snr").length, 1);
+  // Pure near-misses from the founder RED probe — still bind nothing.
+  const near = compilePrompt({
+    text: "hyper graphite spear pointer self consentual",
+    hash: HASH,
+  });
+  assert.equal(near.ok, true);
+  assert.deepEqual(near.operators, []);
+});
