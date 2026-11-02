@@ -56,7 +56,8 @@ export const OPERATOR_TABLE = Object.freeze([
   { term: "process mining", role: ROLE.REASONING_METHOD, phase: "system_reconstruction",
     emits: "component_map" },
   { term: "hypergraph rag", role: ROLE.REASONING_METHOD, phase: "system_reconstruction",
-    emits: "evidence_index" },
+    emits: "evidence_index",
+    aliases: Object.freeze(["hyper graph rag", "hyper-graph rag"]) },
   { term: "hash table", role: ROLE.REASONING_METHOD, phase: "system_reconstruction",
     emits: "knowledge_index" },
   { term: "multi-lens audit", role: REASONING(), phase: "multi_lens_audit", emits: "findings" },
@@ -76,34 +77,49 @@ export const OPERATOR_TABLE = Object.freeze([
     emits: "failure_classification" },
   { term: "ihsan", role: ROLE.VERIFICATION_GATE, phase: "ihsan_gate", emits: "compliance_verdict" },
   { term: "micro-consent", role: ROLE.VERIFICATION_GATE, phase: "ihsan_gate",
-    emits: "consent_checks" },
+    emits: "consent_checks",
+    aliases: Object.freeze(["self consent", "self-consent"]) },
   { term: "proof-of-truth", role: ROLE.VERIFICATION_GATE, phase: "self_critique",
     emits: "convergence_levels" },
   { term: "self-critique", role: ROLE.VERIFICATION_GATE, phase: "self_critique",
-    emits: "critique_report" },
-  { term: "verified-reward", role: ROLE.OBJECTIVE, phase: "ihsan_gate", emits: "reward_law" },
+    emits: "critique_report",
+    aliases: Object.freeze(["self critique"]) },
+  { term: "verified-reward", role: ROLE.OBJECTIVE, phase: "ihsan_gate", emits: "reward_law",
+    aliases: Object.freeze(["verified reward"]) },
   { term: "autopoietic loop", role: ROLE.OBJECTIVE, phase: "implementation",
     emits: "capability_conversion" },
   { term: "spearpoint", role: ROLE.DELIVERABLE, phase: "one_spearpoint",
-    emits: "minimum_provable_act" },
+    emits: "minimum_provable_act",
+    aliases: Object.freeze(["spear point"]) },
   { term: "red-first", role: ROLE.REASONING_METHOD, phase: "implementation", emits: "tests_first" },
   { term: "receipts", role: ROLE.DELIVERABLE, phase: "implementation", emits: "proof_receipt" },
 ]);
 function REASONING() { return ROLE.REASONING_METHOD; }
 
+/** Canonical term plus founder-spelling aliases (space/hyphen variants). */
+function matchNeedles(op) {
+  const aliases = Array.isArray(op.aliases) ? op.aliases : [];
+  return [op.term, ...aliases];
+}
+
 function detectOperators(text) {
   const hay = text.toLowerCase();
   const found = [];
   for (const op of OPERATOR_TABLE) {
-    let idx = hay.indexOf(op.term);
-    while (idx >= 0) {
-      const before = idx === 0 ? " " : hay[idx - 1];
-      const after = hay[idx + op.term.length] ?? " ";
-      if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after)) {
-        found.push({ ...op, index: idx });
-        break; // one binding per term
+    let bound = false;
+    for (const needle of matchNeedles(op)) {
+      let idx = hay.indexOf(needle);
+      while (idx >= 0) {
+        const before = idx === 0 ? " " : hay[idx - 1];
+        const after = hay[idx + needle.length] ?? " ";
+        if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after)) {
+          found.push({ ...op, index: idx });
+          bound = true;
+          break; // one binding per canonical term
+        }
+        idx = hay.indexOf(needle, idx + 1);
       }
-      idx = hay.indexOf(op.term, idx + 1);
+      if (bound) break;
     }
   }
   return found.sort((a, b) => PHASE_ORDER.indexOf(a.phase) - PHASE_ORDER.indexOf(b.phase) || a.index - b.index);

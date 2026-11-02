@@ -81,3 +81,25 @@ test("BPC-05 empty input refuses honestly", () => {
   assert.equal(a.ok, false);
   assert.ok(a.blocked_by.includes("empty_trigger"));
 });
+
+test("BPC-06 unhyphenated founder spellings bind as aliases (no silent miss)", () => {
+  // RED-first: founder prose often omits hyphens ("self critique", "spear point").
+  // Those forms must compile to the same operators as the hyphenated table terms —
+  // never vanish without a binding.
+  const a = compilePrompt({
+    text:
+      "Run hyper graph RAG, then self critique and self consent, " +
+      "pick one Spear POINT, and apply verified reward.",
+    hash: HASH,
+  });
+  assert.equal(a.ok, true);
+  const terms = a.operators.map((o) => o.term);
+  assert.ok(terms.includes("hypergraph rag"), `missing hypergraph rag; got ${terms}`);
+  assert.ok(terms.includes("self-critique"), `missing self-critique; got ${terms}`);
+  assert.ok(terms.includes("micro-consent"), `missing micro-consent via self consent; got ${terms}`);
+  assert.ok(terms.includes("spearpoint"), `missing spearpoint; got ${terms}`);
+  assert.ok(terms.includes("verified-reward"), `missing verified-reward; got ${terms}`);
+  // alias hits must not double-count the canonical term
+  assert.equal(terms.filter((t) => t === "spearpoint").length, 1);
+  assert.equal(terms.filter((t) => t === "self-critique").length, 1);
+});
