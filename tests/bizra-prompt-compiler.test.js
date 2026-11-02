@@ -103,3 +103,40 @@ test("BPC-06 unhyphenated founder spellings bind as aliases (no silent miss)", (
   assert.equal(terms.filter((t) => t === "spearpoint").length, 1);
   assert.equal(terms.filter((t) => t === "self-critique").length, 1);
 });
+
+test("BPC-07 earliest alias occurrence wins over later canonical spelling", () => {
+  const mixed = compilePrompt({
+    text: "self consent then ihsan then micro-consent; hyper graph rag, process mining, hypergraph rag",
+    hash: HASH,
+  });
+  const allCanon = compilePrompt({
+    text: "micro-consent then ihsan then micro-consent; hypergraph rag, process mining, hypergraph rag",
+    hash: HASH,
+  });
+  assert.equal(mixed.ok, true);
+  // Same-phase order follows earliest source hit, not needle-table order.
+  const microIdx = mixed.operators.findIndex((o) => o.term === "micro-consent");
+  const ihsanIdx = mixed.operators.findIndex((o) => o.term === "ihsan");
+  assert.ok(microIdx >= 0 && ihsanIdx >= 0);
+  assert.ok(microIdx < ihsanIdx, `expected micro-consent before ihsan; got ${mixed.operators.map((o) => o.term)}`);
+  const hyperIdx = mixed.operators.findIndex((o) => o.term === "hypergraph rag");
+  const processIdx = mixed.operators.findIndex((o) => o.term === "process mining");
+  assert.ok(hyperIdx < processIdx, `expected hypergraph rag before process mining; got ${mixed.operators.map((o) => o.term)}`);
+  // Equivalent operator sets (canonical-only vs mixed) share phase order for shared ops.
+  assert.deepEqual(
+    mixed.operators.filter((o) => ["micro-consent", "ihsan", "hypergraph rag", "process mining"].includes(o.term)).map((o) => o.term),
+    allCanon.operators.filter((o) => ["micro-consent", "ihsan", "hypergraph rag", "process mining"].includes(o.term)).map((o) => o.term),
+  );
+});
+
+test("BPC-08 hyphenated founder variants bind", () => {
+  const a = compilePrompt({
+    text: "engage hyper-graph-rag then select the spear-point",
+    hash: HASH,
+  });
+  assert.equal(a.ok, true);
+  const terms = a.operators.map((o) => o.term);
+  assert.ok(terms.includes("hypergraph rag"), `got ${terms}`);
+  assert.ok(terms.includes("spearpoint"), `got ${terms}`);
+  assert.ok(a.precedence_chain.includes("one_spearpoint"));
+});
