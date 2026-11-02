@@ -1,3 +1,5 @@
+import { formatReadyForFace } from "./face-correspondence.js";
+
 export function defaultStatus() {
   return {
     schema: "bizra.dema.status.v0.1",
@@ -52,16 +54,30 @@ function colorize(text, code, useColor) {
 export function formatStatus(status, opts = {}) {
   const useColor = shouldUseColor(opts);
   const runtimePulseFired = Boolean(status.runtimePulse?.fired);
+  const nodeState =
+    typeof opts.node_state === "string"
+      ? opts.node_state
+      : typeof status.node_state === "string"
+        ? status.node_state
+        : null;
   const lines = ["DEMA — Sovereign AI Node Companion"];
 
   lines.push("");
   lines.push(colorize("Identity", ANSI.boldCyan, useColor));
   lines.push(`  Node: ${status.node ?? "unknown"}`);
   lines.push(`  Human: ${status.human ?? "unknown"}`);
+  if (nodeState) {
+    lines.push(`  Profile: ${nodeState}`);
+  }
 
   lines.push("");
   lines.push(colorize("Readiness", ANSI.boldYellow, useColor));
-  lines.push(`  Ready: ${Boolean(status.ready)}`);
+  lines.push(
+    `  Ready: ${formatReadyForFace({
+      runtime_ready: Boolean(status.ready),
+      node_state: nodeState,
+    })}`,
+  );
   lines.push(`  Console ready: ${Boolean(status.consoleReady)}`);
   lines.push(`  Activation gate: ${status.activationGate ?? "unknown"}`);
   lines.push(`  Daemon: ${status.daemonStatus ?? "unknown"}`);

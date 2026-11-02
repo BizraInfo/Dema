@@ -7,6 +7,7 @@ import {
 } from "../../../../packages/core/src/doctor-dashboard.js";
 import { wantsJson } from "../../../../packages/core/src/output-mode.js";
 import { statusWithLocalIdentity } from "../lib/status-identity.js";
+import { loadBirthLoopFace } from "../lib/birth-loop-profile.js";
 import { readOperatorLanguage } from "../../../../packages/core/src/operator-profile.js";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -18,8 +19,10 @@ export async function cmd_doctor(ctx) {
   const status = await statusWithLocalIdentity(adapter);
   const home = process.env.DEMA_HOME || join(homedir(), ".dema");
   const lang = await readOperatorLanguage(home);
+  const { node_state } = await loadBirthLoopFace(home);
   const predicates = evaluatePredicates(status, {
     language_code: lang.language_code,
+    node_state,
   });
   const state = doctorState(predicates);
 
@@ -42,6 +45,7 @@ export async function cmd_doctor(ctx) {
           ...state,
           exit_code: exitCode,
           language_code: lang.language_code,
+          node_state,
           predicates,
           status,
         },

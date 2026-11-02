@@ -229,33 +229,34 @@ test("doctor CLI lists specific failing predicates when gateway is not configure
   const env = { ...process.env, DEMA_HOME: root };
   delete env.DEMA_NODE0_ADAPTER;
   delete env.DEMA_NODE0_STATUS_COMMAND;
+  delete env.DEMA_GATEWAY_URL;
   const result = await execFileAsync(
     "node",
     [cliPath, "doctor", "--no-color"],
     { env },
   ).catch((e) => e);
-  // This scenario bridges no runtime at all, so the default-status fingerprint —
-  // ready=false, consoleReady=false, activationGate=BLOCKED, daemonStatus=unknown
-  // (daemon does NOT fail) — is the correct resting state, not an outage. The
-  // rows are still named individually and still carry their real values.
+  // Empty DEMA_HOME → NEW_NODE. FACE-CORRESPONDENCE-1A binds that into doctor
+  // so a missing profile cannot be laundered into "ready and consent-gated".
+  // Unbridged runtime rows stay ⏸ (expected), not ❌.
   //
-  // The exit code is unchanged at 1 and deliberately so: it answers "is this
-  // node operational?", and an unbridged node is not. Only the RENDERING
-  // softened — ⏸ with a note instead of ❌ with a fix. `--preview` is the
-  // opt-in that asks the narrower "is the preview shell intact?" and exits 0.
-  // A bridged-but-failing runtime still prints ❌ and Verdict: blocked; see
-  // tests/doctor-dashboard.test.js for those regression guards.
-  assert.equal(result.code, 1, "unbridged doctor is not operational");
-  assert.match(result.stdout, /Verdict: preview-only — runtime not bridged/);
+  // Exit 1 answers "is this node operational?" — profile incomplete and/or
+  // unbridged both make that false. `--preview` may still exit 0 when the only
+  // fail is operatorProfile (preview shell intact).
+  assert.equal(result.code, 1, "unbridged / incomplete-profile doctor is not operational");
+  assert.match(
+    result.stdout,
+    /Verdict: profile incomplete — repair before claiming a ready face/,
+  );
+  assert.match(result.stdout, /Operator profile\s+NEW_NODE/);
   assert.match(result.stdout, /⏸ Ready\s+false/);
   assert.match(result.stdout, /⏸ Console ready\s+false/);
   assert.match(result.stdout, /⏸ Activation gate\s+BLOCKED/);
   assert.doesNotMatch(
     result.stdout,
-    /healthy/,
-    "an unbridged node has earned no health claim",
+    /healthy|ready and consent-gated/,
+    "an unbridged incomplete face has earned no ready claim",
   );
-  // The operator must still be told what would move these.
+  // The operator must still be told what would move the bridge rows.
   assert.match(result.stdout, /DEMA_NODE0_ADAPTER/);
 });
 

@@ -22,6 +22,7 @@ async function freshEnv() {
   const env = { ...process.env, DEMA_HOME: root };
   delete env.DEMA_NODE0_ADAPTER;
   delete env.DEMA_NODE0_STATUS_COMMAND;
+  delete env.DEMA_GATEWAY_URL;
   return env;
 }
 
@@ -95,7 +96,13 @@ test("dema doctor → unbridged exits non-zero (not operational)", async () => {
     env,
   }).catch((e) => e);
   assert.equal(result.code, 1);
-  assert.match(result.stdout, /Nothing is broken/i);
+  // Empty home ⇒ NEW_NODE; face correspondence refuses a ready-face claim.
+  assert.match(
+    result.stdout,
+    /Verdict: profile incomplete — repair before claiming a ready face/,
+  );
+  assert.match(result.stdout, /Operator profile\s+NEW_NODE/);
+  assert.doesNotMatch(result.stdout, /ready and consent-gated/);
 });
 
 test("dema doctor --preview → unbridged exits 0 (preview shell is intact)", async () => {
@@ -105,7 +112,11 @@ test("dema doctor --preview → unbridged exits 0 (preview shell is intact)", as
     [cliPath, "doctor", "--preview", "--no-color"],
     { env },
   ).catch((e) => e);
-  assert.equal(result.code, undefined, "--preview must exit 0 when nothing failed");
+  assert.equal(
+    result.code,
+    undefined,
+    "--preview must exit 0 when only face/profile is incomplete",
+  );
 });
 
 test("dema doctor --json → typed machine dimensions, exit_code matches process", async () => {
@@ -116,8 +127,9 @@ test("dema doctor --json → typed machine dimensions, exit_code matches process
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.operational, false, "no runtime bridged is not operational");
   assert.equal(parsed.preview_environment_valid, true);
-  assert.equal(parsed.repair_required, false);
-  assert.equal(parsed.reason, "runtime_not_bridged");
+  assert.equal(parsed.repair_required, true, "NEW_NODE profile is a face repair");
+  assert.equal(parsed.reason, "profile_incomplete");
+  assert.equal(parsed.node_state, "NEW_NODE");
   assert.equal(parsed.exit_code, 1);
   assert.equal(result.code, parsed.exit_code, "reported exit_code must be the real one");
 });
