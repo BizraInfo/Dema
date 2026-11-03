@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
+import { describe, it, test } from "node:test";
 import {
   assessFaceCorrespondence,
   formatReadyForFace,
@@ -11,6 +17,11 @@ import {
   doctorState,
 } from "../packages/core/src/doctor-dashboard.js";
 import { formatStatus } from "../packages/core/src/status.js";
+
+const execFileAsync = promisify(execFile);
+const cliPath = fileURLToPath(
+  new URL("../apps/cli/src/index.js", import.meta.url),
+);
 
 function okRuntime() {
   return {
@@ -52,6 +63,36 @@ describe("FACE-CORRESPONDENCE-1A", () => {
     assert.equal(c.face_ready, false);
   });
 
+  it("fails closed on an unknown profile state", () => {
+    const c = assessFaceCorrespondence({
+      runtime_ready: false,
+      node_state: "UNRECOGNIZED_NODE",
+    });
+    assert.equal(c.ok, false);
+    assert.equal(c.face_ready, false);
+    assert.equal(c.ceiling_label, "FACE_CORRESPONDENCE_UNKNOWN");
+    assert.deepEqual(c.reasons, ["unknown_node_state:UNRECOGNIZED_NODE"]);
+  });
+
+  it("does not make a complete profile ready when runtime is not ready", () => {
+    const c = assessFaceCorrespondence({
+      runtime_ready: false,
+      node_state: "EXISTING_NODE",
+    });
+    assert.equal(c.ok, true);
+    assert.equal(c.face_ready, false);
+    assert.equal(c.ceiling_label, "PROFILE_OK_RUNTIME_NOT_READY");
+  });
+
+  it("keeps runtime and incomplete-profile failures separate", () => {
+    const c = assessFaceCorrespondence({
+      runtime_ready: false,
+      node_state: "PARTIAL_NODE",
+    });
+    assert.equal(c.face_ready, false);
+    assert.equal(c.ceiling_label, "FACE_AND_RUNTIME_INCOMPLETE");
+  });
+
   it("doctor never verdicts ready-and-consent-gated under PARTIAL_NODE", () => {
     const preds = evaluatePredicates(okRuntime(), {
       node_state: "PARTIAL_NODE",
@@ -91,4 +132,126 @@ describe("FACE-CORRESPONDENCE-1A", () => {
       "true",
     );
   });
+
+  it("formats FACE_READY only for an existing profile and ready runtime", () => {
+    assert.equal(
+      formatReadyForFace({
+        runtime_ready: true,
+        node_state: "EXISTING_NODE",
+      }),
+      "true",
+    );
+  });
+});
+
+test("status JSON and first-run bind runtime Ready to the profile face", async () => {
+  const demaHome = await mkdtemp(join(tmpdir(), "dema-face-correspondence-"));
+  try {
+    await writeFile(
+      join(demaHome, "profile.json"),
+      JSON.stringify({
+        schema: "bizra.dema.profile.v0.1",
+        preferred_name: null,
+        language_code: "en",
+      }),
+    );
+    const adapterPath = join(demaHome, "status.mjs");
+    const adapterPayload = {
+      ready: true,
+      console_ready: true,
+      activation_gate: "EXPLICIT_GO_REQUIRED",
+      daemon_status: "stopped",
+      mission_executed: false,
+      runtime_pulse: { fired: false },
+      findings: [],
+    };
+    await writeFile(
+      adapterPath,
+      `process.stdout.write(${JSON.stringify(JSON.stringify(adapterPayload))})`,
+    );
+    const env = {
+      ...process.env,
+      DEMA_HOME: demaHome,
+      DEMA_NO_TUI: "1",
+      NODE_ENV: "test",
+      DEMA_NODE0_ADAPTER: "",
+      DEMA_GATEWAY_URL: "",
+      DEMA_NODE0_STATUS_COMMAND: `node ${adapterPath}`,
+    };
+
+    const statusResult = await execFileAsync(
+      "node",
+      [cliPath, "status:json"],
+      { env },
+    );
+    const status = JSON.parse(statusResult.stdout);
+    assert.equal(status.ready, true, "legacy field remains runtime readiness");
+    assert.equal(status.node_state, "PARTIAL_NODE");
+    assert.equal(status.face_correspondence.runtime_ready, true);
+    assert.equal(status.face_correspondence.face_ready, false);
+    assert.equal(
+      status.face_correspondence.ceiling_label,
+      "RUNTIME_READY_FACE_INCOMPLETE",
+    );
+
+    const firstRun = await execFileAsync(
+      "node",
+      [cliPath, "first-run", "--dry-run", "--json", "--no-color"],
+      { env },
+    );
+    const firstRunStatus = JSON.parse(firstRun.stdout).status;
+    assert.equal(firstRunStatus.node_state, "PARTIAL_NODE");
+    assert.equal(firstRunStatus.face_correspondence.face_ready, false);
+    assert.match(
+      firstRun.stderr,
+      /Ready: true \(runtime only — profile PARTIAL_NODE; face not ready\)/,
+    );
+    assert.match(
+      firstRun.stderr,
+      /Verdict: profile incomplete — repair before claiming a ready face/,
+    );
+
+    const humanEnv = { ...env, TERM: "xterm-256color" };
+    delete humanEnv.NO_COLOR;
+    const humanFirstRun = await execFileAsync(
+      "node",
+      [cliPath, "first-run", "--dry-run"],
+      { env: humanEnv },
+    );
+    assert.match(
+      humanFirstRun.stdout,
+      /Ready: true \(runtime only — profile PARTIAL_NODE; face not ready\)/,
+    );
+
+    await writeFile(
+      adapterPath,
+      `process.stdout.write(${JSON.stringify(JSON.stringify({ ...adapterPayload, ready: false }))})`,
+    );
+    const unreadyStatusResult = await execFileAsync(
+      "node",
+      [cliPath, "status:json"],
+      { env },
+    );
+    const unreadyStatus = JSON.parse(unreadyStatusResult.stdout);
+    assert.equal(unreadyStatus.ready, false);
+    assert.equal(unreadyStatus.face_correspondence.runtime_ready, false);
+    assert.equal(unreadyStatus.face_correspondence.face_ready, false);
+    assert.equal(
+      unreadyStatus.face_correspondence.ceiling_label,
+      "FACE_AND_RUNTIME_INCOMPLETE",
+    );
+
+    const unreadyFirstRun = await execFileAsync(
+      "node",
+      [cliPath, "first-run", "--dry-run", "--json", "--no-color"],
+      { env },
+    );
+    assert.match(unreadyFirstRun.stderr, /Ready: false/);
+    assert.match(
+      unreadyFirstRun.stderr,
+      /Verdict: profile incomplete — repair before claiming a ready face/,
+    );
+  } finally {
+    await rm(demaHome, { recursive: true, force: true });
+  }
 });
