@@ -1,0 +1,69 @@
+{
+  "schema": "bizra.conduction_season.receipt.v1",
+  "todo_id": "T-01",
+  "run_id": "20261005T164016Z",
+  "trigger_phrase_sha256": null,
+  "bindings": [
+    {
+      "path": "docs/receipts/crossings/T-01-20261005T163548Z.json",
+      "sha256": "525366f0ed6312f50fcf9f7c4655d52e513bdf88da2a35852fcc6d577271dcde",
+      "state": "UNCOMMITTED"
+    },
+    {
+      "path": "docs/CROSSING_LEDGER.md",
+      "prefix_before_T01_entry_sha256": "7f98a3bc4e1a2e97db0e846668db139dbcd685b3b3755091c75014ee994628f8",
+      "observed_after_T01_entry_sha256": "79b7058e4dd4ea3eef7bea1b0950b986f7db0033f0fb86babab04f0c816db6e6",
+      "incorrect_predicted_after_sha256_in_T01_receipt": "139a6224b8ae5408da84e32585fce1ca78c49acbe86a5e613ad0c547e7e1a841",
+      "state": "UNCOMMITTED"
+    },
+    {
+      "path": "docs/CONDUCTION_SEASON_AGENT_INSTRUCTION_v2_0.md",
+      "sha256": "a19456426c4f1f0ebe7c0e82c3332160e3464f8b3039770f5a1a80a8c13b7ddd",
+      "state": "NEW"
+    }
+  ],
+  "actions": [
+    "Detected that the predicted post-append ledger digest recorded in T-01 does not match the actual ledger digest.",
+    "Verified read-only that removing the appended T-01 line yields the previously observed ledger digest 7f98a3bc...; no other ledger bytes changed in that append.",
+    "Created this additive correction receipt; did not edit the existing T-01 receipt or restore any ledger bytes."
+  ],
+  "results": {
+    "ledger_hash_binding": "T01_RECEIPT_PREDICTION_INVALID; ACTUAL_HASH_REBOUND",
+    "author_of_prior_L01_change": "UNKNOWN",
+    "crossing_statuses_changed": false
+  },
+  "failure_attribution": {
+    "this_step": [
+      "The T-01 receipt's predicted post-append ledger hash was computed incorrectly."
+    ],
+    "pre_existing": [],
+    "flake_ledger": []
+  },
+  "interpretations": [
+    {
+      "decision": "Keep the original T-01 receipt immutable and use this separate record to state the exact correction.",
+      "basis": "Conduction Season law forbids editing finalized receipts; the actual ledger prefix and resulting digest are measured.",
+      "surfaced": true
+    }
+  ],
+  "verdict": "STOPPED",
+  "non_proofs": [
+    "This correction does not close T-01 because the founder's pulse verdict remains pending.",
+    "No runtime/process/source correspondence, live URP readiness, or product conduction was established."
+  ],
+  "did_not": [
+    "edit T-01-20261005T163548Z.json",
+    "restore or rewrite the ledger preimage",
+    "change crossing statuses",
+    "commit or publish",
+    "start or restart runtime",
+    "perform an effect",
+    "mint founder usefulness"
+  ],
+  "authority_delta": 0,
+  "next_todo": "T-01 founder verdict intake",
+  "next_gate": [
+    "GO: record founder verdict for pulse 0833b7a7 — USEFUL",
+    "GO: record founder verdict for pulse 0833b7a7 — NEEDS_CORRECTION: <reasons>"
+  ]
+}

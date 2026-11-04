@@ -1,0 +1,211 @@
+{
+  "schema": "bizra.crossing_engineering_evidence.v0.1",
+  "crossing_id": "C-005",
+  "run_id": "20261004T161401Z",
+  "verdict": "PARTIAL_BLOCKED",
+  "crossing_status": "PENDING",
+  "runtime_receipt": false,
+  "scope": "Apply exact approved UI workflow patch and local validation only",
+  "task_ids": [
+    "TASK-019",
+    "TASK-106"
+  ],
+  "prior_record": {
+    "path": "docs/receipts/crossings/C-005-20261004T155850Z-partial.json",
+    "sha256": "5fc1097286e3f884885254f1d019f59a765c2f1ecfb217484e962d1c7aaa8c20",
+    "state": "UNCHANGED_HISTORICAL"
+  },
+  "authorization": {
+    "received_answer": "GO",
+    "surface": "direct response to the specific UI workflow patch approval question",
+    "authorized_scope": "Apply reviewed patch SHA256 d2e0022da199c531f255b17ffe23ab37774dad2dc7f66109844b684af1b29bb8 and local validation only",
+    "not_authorized": [
+      "push",
+      "hosted dispatch",
+      "required-check mutation",
+      "deploy",
+      "launcher bind",
+      "runtime activation"
+    ],
+    "recorded_at_utc": "2026-10-04T16:04:57.362073+00:00",
+    "answer_sha256": "a0f949497a74dde0c63a35cd9ab147012ffa007b019557ea5cecb9a243d0c5de",
+    "question_item_id": "[\"request_user_input_async\",\"call_mtstl6tHDjnns7iJbzttx0XE\",0]",
+    "basis": "Exact received reply GO directly answers the specific reviewed-patch/local-validation approval question; not a runtime consent artifact or a broader grant."
+  },
+  "action": {
+    "path": ".github/workflows/dema-ui.yml",
+    "before": "ABSENT",
+    "workflow_sha256": "13fb98ad1522c199d26b7b563002260dbb20e741bd84bc4b612e50bbe6ab76e1",
+    "patch_sha256": "d2e0022da199c531f255b17ffe23ab37774dad2dc7f66109844b684af1b29bb8",
+    "approved_payload_matches": true,
+    "applied_locally": true,
+    "committed": false
+  },
+  "identity": {
+    "root": "/home/bizra-operating-system/Downloads/Dema",
+    "branch": "main",
+    "head": "282b2b2903df341a0f5f5bdc626c787e6f764d70",
+    "candidate": "DIRTY_WORKING_TREE",
+    "index": "unchanged empty"
+  },
+  "candidate_manifest": {
+    "path": "/tmp/dema-ui-ci-local-tt2gquqi/final-source-manifest.json",
+    "sha256": "a5a77c268e44380c77c1ccf9048db6c6aeaa1933a3c52d5d30025fe42b3f2a51",
+    "file_count": 2984,
+    "encoding": "sorted-key compact JSON map of Git-listed repository-relative paths to SHA256, trailing newline",
+    "excludes": [
+      "docs/receipts/crossings/C-005-20261004T161401Z-ui-ci-local-partial.json"
+    ],
+    "retention": "temporary local evidence; selected bindings persist below"
+  },
+  "preservation": {
+    "post_apply_snapshot_count": 2984,
+    "unchanged_since_post_apply_snapshot": 2980,
+    "intended_metadata_document_changes": [
+      "backlog/tasks/task-019 - DEMA-UI-CI-TRUTH-GATE-1A-packages-dema-ui-in-canonical-CI.md",
+      "backlog/tasks/task-106 - C-005-qualification-repair-and-proof-bound-season-synthesis.md",
+      "docs/CROSSING_LEDGER.md",
+      "docs/superpowers/plans/2026-10-04-c005-proof-bound-synthesis.md"
+    ],
+    "unexpected_changes": [],
+    "missing_files": [],
+    "ignored_state_included": false,
+    "prior_UI_source_and_proof_bindings": "ALL_MATCH_CURRENT_DISK"
+  },
+  "source_bindings": [
+    {
+      "path": ".github/workflows/dema-ui.yml",
+      "sha256": "13fb98ad1522c199d26b7b563002260dbb20e741bd84bc4b612e50bbe6ab76e1"
+    },
+    {
+      "path": "backlog/tasks/task-019 - DEMA-UI-CI-TRUTH-GATE-1A-packages-dema-ui-in-canonical-CI.md",
+      "sha256": "ac055df7b07177d148c42b099fedb24db51aa7b494e6662aa436f360818de384"
+    },
+    {
+      "path": "backlog/tasks/task-106 - C-005-qualification-repair-and-proof-bound-season-synthesis.md",
+      "sha256": "40d3b4ca76db12eb7a380ddca79a89da8196252c2bf601ffcb3d9fa55aa285e1"
+    },
+    {
+      "path": "docs/CROSSING_LEDGER.md",
+      "sha256": "41928e4c09147db15ea436f8107b5f0e5ed976119cc344f9bc85043bb6e3aac2"
+    },
+    {
+      "path": "docs/receipts/crossings/C-005-20261004T155850Z-partial.json",
+      "sha256": "5fc1097286e3f884885254f1d019f59a765c2f1ecfb217484e962d1c7aaa8c20"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-04-c005-proof-bound-synthesis.md",
+      "sha256": "e8636bffa23d8bd62132c8f045b99eecef747a757490b152b04e43d9b0c0d2ec"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-04-dema-ui-ci-review.patch",
+      "sha256": "d2e0022da199c531f255b17ffe23ab37774dad2dc7f66109844b684af1b29bb8"
+    }
+  ],
+  "checks": [
+    {
+      "command": "node --test tests/release-readiness.test.js",
+      "exit": 0,
+      "result": "26 pass / 0 fail / 0 skip",
+      "log": "/tmp/dema-ui-ci-local-tt2gquqi/focused.log",
+      "sha256": "95c9d4e1b51cad4b836239a4e2cfe5bff52c814a40672f0df93911d81b33355a"
+    },
+    {
+      "command": "npm test with disposable DEMA_HOME",
+      "exit": 0,
+      "result": "10045 pass / 0 fail / 4 skips: RALPH_STOP_HOOK_PATH unset",
+      "log": "/tmp/dema-ui-ci-local-tt2gquqi/npm-test.log",
+      "sha256": "41efe14fb5564cd94b52f5f250333182a7b06ead361e3a467a8fc6891f93d64c"
+    },
+    {
+      "command": "env -u DEMA_HOME npm run check",
+      "exit": 1,
+      "result": "tests10080/0/4, coverage95.51/84.18/97.70, boot102.666ms pass; proof-room gate214 release_readiness94<100; ci.dema_ui_required_check_unverified",
+      "log": "/tmp/dema-ui-ci-local-tt2gquqi/npm-check.log",
+      "sha256": "d08e47ccdb584b7e000923133b98e10b38c1a28d8ef291296e14f364f30d596b"
+    },
+    {
+      "command": "node scripts/release-readiness.mjs --json",
+      "exit": 0,
+      "result": "raw report82/100; dirty-workflow authority heuristic lacks session GO context",
+      "log": "/tmp/dema-ui-ci-local-tt2gquqi/release-readiness.json",
+      "sha256": "826b9a1083eee3306ecee266f8ccd5f38b5271c88c2b68c986ff956d1e79abe7"
+    },
+    {
+      "command": "node scripts/release-readiness.mjs --json --ci-workflow-changes-authorized",
+      "exit": 0,
+      "result": "report94/100; actual GO context supplied; sole risk ci.dema_ui_required_check_unverified",
+      "log": "/tmp/dema-ui-ci-local-tt2gquqi/release-readiness-authorized.json",
+      "sha256": "f727eeb292162f2417378b9f6f6c94c3a9e825348e3f1ccd4d136a22b54894a0"
+    },
+    {
+      "command": "npm run llm:guidance",
+      "exit": 0,
+      "result": "PASS",
+      "log": "/tmp/dema-ui-ci-local-tt2gquqi/llm-guidance.log",
+      "sha256": "a261c164c0df17c3c6804829c1796e68960a72e6344164f9f5b218ea14672dd1"
+    },
+    {
+      "command": "npm run claim:check:corpus",
+      "exit": 0,
+      "result": "PASS current133 baseline133; no baseline mutation",
+      "log": "/tmp/dema-ui-ci-local-tt2gquqi/claim-corpus.log",
+      "sha256": "a18c29b52020ae8ea3bb17e5d8de247a64f8e3cec25f75b84f9a48f76e744a93"
+    },
+    {
+      "command": "git diff --check",
+      "exit": 0,
+      "result": "PASS",
+      "log": "/tmp/dema-ui-ci-local-tt2gquqi/diff-check.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "workflow_static_check": {
+    "path": "/tmp/dema-ui-ci-local-tt2gquqi/workflow-static.json",
+    "sha256": "8442970e385fb50efae10bab6b0dcb85b2d1a71cde171f109b48da0a9b4a9d3d",
+    "events": [
+      "pull_request",
+      "push main",
+      "workflow_dispatch"
+    ],
+    "permissions": "contents:read",
+    "actions": "immutable SHA pins",
+    "explicit_package_proof": "tests/ui-lifecycle.proof.mjs after locked install",
+    "untrusted_expression_interpolation": false
+  },
+  "ui_evidence_reuse": {
+    "source_bindings": "/tmp/dema-c005-proof-UL78wH/ui-source-bindings.json",
+    "sha256": "07ce605ccb1225e240c93e82172ac09b8480cecd81f599fc9c1a619d44fa3c42",
+    "source_proof_bytes_unchanged": true,
+    "prior_observations": "49 package tests, full lint, typecheck and copied-dependency production build PASS",
+    "package_commands_repeated_this_continuation": false,
+    "locked_fresh_install": "NOT_RUN",
+    "dependency_audit": "NOT_RUN"
+  },
+  "readiness": {
+    "raw_audit_score": 82,
+    "authorized_audit_score": 94,
+    "proof_room_min_required": 100,
+    "workflow_status": "WORKFLOW_PRESENT_STATIC_ONLY",
+    "missing_workflow_risk": "RESOLVED_LOCALLY",
+    "remaining_risk": "ci.dema_ui_required_check_unverified",
+    "exact_head_hosted_execution": "NOT_RUN",
+    "required_check_binding": "UNKNOWN",
+    "authorization_context": "User GO is granted. Existing audit flag conveys that actual local-edit context; no threshold or Git status injection."
+  },
+  "review": "Independent read-only review passed applied workflow payload/security/authority boundaries; no hosted qualification inferred",
+  "not_run_in_final_aggregate": "commands215..221 after gate214 failure",
+  "boundary": {
+    "workflow_edit_authorized": true,
+    "push_or_hosted_dispatch": false,
+    "branch_protection_changed": false,
+    "deployment_performed": false,
+    "launcher_changed": false,
+    "runtime_or_model_started": false,
+    "production_signer_used": false,
+    "reward_or_settlement_issued": false,
+    "CURRENT_LIMITS_promoted": false
+  },
+  "proof_ceiling": "Unsigned local engineering evidence; byte bindings and observed source checks do not establish hosted execution, required rail, live mission, usefulness or economic value",
+  "next_frontier": "TASK-019 exact-head hosted UI job evidence and required-check binding under their separate publication/hosting authority; C-005 and AC1/AC5 stay open."
+}

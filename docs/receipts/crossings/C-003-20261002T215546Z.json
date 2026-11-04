@@ -1,0 +1,93 @@
+{
+  "schema": "bizra.crossing_receipt.v0.1",
+  "crossing_id": "C-003",
+  "run_id": "20261002T215546Z",
+  "trigger_phrase_sha256": "ed85b06cf065acfd95a2b1db65ec8cc6cab21cf1676d9aedf17cd111b4d64bc9",
+  "trigger_phrase_scope": "sha256 of the exact UTF-8 C-003 gate string in docs/CROSSING_LEDGER.md, with no trailing newline",
+  "before_identity": {
+    "head": "282b2b2903df341a0f5f5bdc626c787e6f764d70",
+    "head_scope": "git rev-parse HEAD before this run's edit",
+    "dirty_paths": "not recounted; the index was empty"
+  },
+  "bindings": [
+    {
+      "path": "/home/bizra-operating-system/Documents/Codex/2026-10-02/DEMA_MUMU_PRODUCT_EXECUTION_CONTRACT_1A.md",
+      "sha256": "d0fc99155e61a2328d408963d6a519a3a7ec724529614ad98f7bbd7730250a63",
+      "sha256_scope": "external contract bytes; matched C-001; not edited",
+      "state": "EXTERNAL"
+    },
+    {
+      "path": "artifacts/proofs/proof-room-v0.1/proof-room-bundle.json",
+      "sha256": "4fb5861931b1400e603a2173c678af30a6fbd5ae7b7a9eb11400e7690ff728b4",
+      "sha256_scope": "witness bytes before and after the run",
+      "state": "UNCHANGED"
+    },
+    {
+      "path": "docs/receipts/DEMA_MUMU_RUN_CHECKPOINT.json",
+      "sha256": "8e182f65e2aafeea9bca6e0d1f0cc832a271d5311dbd8ebef6a8fa9fb1a951d9",
+      "sha256_scope": "prior RED checkpoint bytes; not edited",
+      "state": "UNCHANGED"
+    },
+    {
+      "path": "packages/core/src/dema-first-look-home.js",
+      "sha256": "5e4a1b53a513580708a022fc7ec1a0590c652702f0d16c25bb48d4349a060415",
+      "sha256_scope": "working-tree bytes after the one repair; before-edit sha256 was 3e8e33be0319aa5a45e22abb1d6f86ac15a6e2e7678fda3dfc003a6ff76920fe",
+      "state": "DIRTY"
+    }
+  ],
+  "actions": [
+    "Re-read the ledger. C-003 was the top PENDING crossing and the spoken phrase matched its gate.",
+    "Re-hashed the contract, the four cited tests, the return owners, and the proof-room witness. The contract and the four tests matched C-001. The witness matched 4fb58619.",
+    "Ran the four Stage 1 tests: 27 pass, 0 fail.",
+    "Ran disposable-home probes. Loader call counts were 0 for the five refusals and 1 for the authorized read.",
+    "One repair: the checkout CLI now prints the kernel saved-progress line. Re-ran the probes and the four tests. Both passed. No second repair.",
+    "Started the loopback listener on 127.0.0.1:3017, curled an empty disposable home, refused three non-loopback addresses, and stopped the process.",
+    "Re-hashed the witness. It was unchanged. Did not restore anything.",
+    "Wrote docs/receipts/DEMA_MUMU_RUN_CHECKPOINT_20261002T215546Z.json. The prior RED checkpoint was left in place.",
+    "Wrote this receipt. The ledger close is the following append, not a fact this file claims as already done."
+  ],
+  "results": {
+    "focused": "27 pass, 0 fail",
+    "npm_test": "not run",
+    "npm_run_check": "not run",
+    "probes": "loader counts asserted; CLI and API labels agreed; restart probe passed; stale label not produced; listener 127.0.0.1",
+    "checkpoint": "docs/receipts/DEMA_MUMU_RUN_CHECKPOINT_20261002T215546Z.json",
+    "witness_unchanged": true
+  },
+  "failure_attribution": {
+    "this_slice": [
+      "DEMA_RETURN_PEER_SEAL remains absent from KNOWN_DEMA_ENV_VARS"
+    ],
+    "pre_existing": [
+      "launcher payload is release 225c5189, not this checkout",
+      "season freshness expiry has no stale label on the return owner",
+      "npm test and npm run check were not run"
+    ]
+  },
+  "verdict": "CANDIDATE",
+  "non_proofs": [
+    "This receipt does not establish GREEN, source-to-delivery, or a bound launcher.",
+    "This receipt does not establish that an expired season is labeled stale.",
+    "This receipt does not establish npm test, npm run check, or a proof-room readiness score.",
+    "The contract's four [x] marks were not edited and are not this run's measurement.",
+    "The prior checkpoint remains RED."
+  ],
+  "did_not": [
+    "commit",
+    "push",
+    "merge",
+    "promote a truth-label row",
+    "edit the contract",
+    "edit the prior RED checkpoint",
+    "edit the C-001 or C-002 receipts",
+    "write or restore the proof-room witness",
+    "bind the launcher",
+    "mutate a real DEMA_HOME",
+    "add a freshness-expiry mechanism",
+    "edit the env-hygiene list"
+  ],
+  "authority_delta": 0,
+  "effects_started": 0,
+  "next_crossing": "C-004",
+  "next_gate": "GO: dispose nested dema checkout"
+}

@@ -1,0 +1,138 @@
+{
+  "schema": "bizra.crossing_engineering_evidence.v0.1",
+  "crossing_id": "C-005",
+  "run_id": "20261004T181623Z",
+  "verdict": "PARTIAL_BLOCKED",
+  "crossing_status": "PENDING",
+  "runtime_receipt": false,
+  "qualification_status": "FAILED",
+  "scope": "Publish the exact reviewed C-005 Dema UI candidate needed to run the hosted UI qualification rail; verify exact-head workflow result and required-check binding only; stop after this receipt.",
+  "authorization": {
+    "received_answer": "GO",
+    "exact_instruction": "GO: publish the exact reviewed C-005 Dema UI candidate needed to run the hosted UI qualification rail, verify the exact-head workflow result and required-check binding only; no merge, deployment, launcher change, runtime mission, DEMA_HOME mutation, keys, economics, federation, or Node1; stop after the qualification receipt.",
+    "authorized_actions_performed": [
+      "push isolated candidate branch",
+      "create draft pull request to trigger pull_request qualification",
+      "read hosted workflow result and required-check configuration"
+    ],
+    "explicit_exclusions_observed": [
+      "merge",
+      "deployment",
+      "launcher change",
+      "runtime mission",
+      "DEMA_HOME mutation",
+      "key use",
+      "economics",
+      "federation",
+      "Node1"
+    ]
+  },
+  "candidate": {
+    "repository": "BizraInfo/Dema",
+    "branch": "codex/c005-dema-ui-qualification-20261004",
+    "commit_sha": "04d007baadf640fe10f1e052f9a8f5b1876fc7b2",
+    "base_branch": "main",
+    "base_sha": "e10d5842726d8c1b228f4bb6c23a9771d3510569",
+    "workflow_path": ".github/workflows/dema-ui.yml",
+    "workflow_sha256": "13fb98ad1522c199d26b7b563002260dbb20e741bd84bc4b612e50bbe6ab76e1",
+    "pull_request": {
+      "number": 479,
+      "url": "https://github.com/BizraInfo/Dema/pull/479",
+      "state": "OPEN",
+      "draft": true,
+      "head_sha": "04d007baadf640fe10f1e052f9a8f5b1876fc7b2"
+    }
+  },
+  "hosted_workflow": {
+    "name": "Dema UI",
+    "event": "pull_request",
+    "run_id": 37223732368,
+    "job_id": 111499025684,
+    "url": "https://github.com/BizraInfo/Dema/actions/runs/37223732368",
+    "created_at_utc": "2026-10-04T18:15:35Z",
+    "completed_at_utc": "2026-10-04T18:16:23Z",
+    "run_head_sha": "04d007baadf640fe10f1e052f9a8f5b1876fc7b2",
+    "exact_candidate_head_match": true,
+    "conclusion": "failure",
+    "steps": {
+      "Install (locked) / npm ci": "success",
+      "Package tests": "success",
+      "Typecheck (tsc --noEmit)": "success",
+      "Lint (eslint)": "success",
+      "Production build (next build)": "success",
+      "Dependency audit (moderate+)": "failure"
+    },
+    "failure": {
+      "command": "npm audit --omit=dev --audit-level=moderate",
+      "dependency": "next",
+      "affected_range_reported": "16.2.0 - 16.3.5",
+      "severity": "critical",
+      "advisory": "GHSA-vcvr-r3jv-pc5j",
+      "advisory_url": "https://github.com/advisories/GHSA-vcvr-r3jv-pc5j",
+      "finding": "Next.js remote code execution in next/og ImageResponse",
+      "runner_reported_remediation": "npm audit fix --force would install next@16.3.8 outside the stated dependency range",
+      "remediation_applied": false
+    }
+  },
+  "required_check_binding": {
+    "status": "UNBOUND",
+    "pr_required_checks": "NONE_REPORTED",
+    "evidence": [
+      "gh pr checks 479 --required reported no required checks on the candidate branch",
+      "GET /repos/BizraInfo/Dema/branches/main/protection returned HTTP 404 Branch not protected",
+      "The only active repository ruleset (16662540, dema protection) contains deletion and non_fast_forward rules; no required_status_checks rule is configured",
+      "GET /repos/BizraInfo/Dema/rulesets?includes_parents=true returned only that ruleset"
+    ]
+  },
+  "local_preflight": {
+    "base": "isolated worktree at the same current main SHA; no primary checkout edits were used for publication",
+    "checks": [
+      {
+        "command": "node --test tests/*.test.mjs tests/ui-lifecycle.proof.mjs",
+        "result": "97 passed / 0 failed"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 npm run typecheck",
+        "result": "PASS"
+      },
+      {
+        "command": "npm run lint",
+        "result": "PASS"
+      },
+      {
+        "command": "NEXT_TELEMETRY_DISABLED=1 npm run build",
+        "result": "PASS; build emitted an NFT tracing warning"
+      },
+      {
+        "command": "node --test tests/first-encounter-admission.test.js tests/dema-identity-root-canon.test.js",
+        "result": "32 passed / 0 failed"
+      },
+      {
+        "command": "package.json dependency/toolchain metadata compared with package-lock.json",
+        "result": "MATCH"
+      },
+      {
+        "command": "git diff --check",
+        "result": "PASS"
+      }
+    ],
+    "local_dependency_audit": "NOT_RUN; hosted workflow performed the audit"
+  },
+  "boundary": {
+    "isolated_candidate_push": true,
+    "draft_pull_request_created": true,
+    "merge_performed": false,
+    "deployment_performed": false,
+    "launcher_changed": false,
+    "runtime_mission_started": false,
+    "DEMA_HOME_mutated": false,
+    "keys_used": false,
+    "economics_or_federation_touched": false,
+    "Node1_touched": false,
+    "required_check_configuration_changed": false,
+    "primary_checkout_modified_for_candidate": false,
+    "receipt_committed_or_pushed": false
+  },
+  "proof_ceiling": "This unsigned engineering receipt proves the hosted workflow ran on the exact candidate commit and records its failed result. The UI build/test/type/lint steps passed; the dependency audit failed on a critical Next.js advisory; no required-check binding exists. C-005 remains PENDING and no runtime, usefulness, economic value, or Node0 closure is established.",
+  "next_frontier": "Stop here as instructed. Any dependency remediation, rerun, or required-check ruleset change requires its own scoped authorization."
+}
