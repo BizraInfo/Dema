@@ -22,10 +22,7 @@ function colorize(text, code, color) {
 
 import { resolveOperatorSurfaceI18n } from "./operator-surface-i18n.js";
 import { displayWidth, padToWidth } from "./display-width.js";
-import {
-  assessFaceCorrespondence,
-  FACE_INCOMPLETE_NODE_STATES,
-} from "./face-correspondence.js";
+import { assessFaceCorrespondence } from "./face-correspondence.js";
 
 const VERDICT_PROFILE_INCOMPLETE =
   "profile incomplete — repair before claiming a ready face";
@@ -226,30 +223,25 @@ export function evaluatePredicates(
 
   // 6. Operator profile face (FACE-CORRESPONDENCE-1A)
   // Omitted node_state keeps legacy predicate sets unchanged (UNBOUND).
+  // Explicit empty string is supplied → fail (not "ok via null profile_complete").
   if (node_state != null) {
     const face = assessFaceCorrespondence({
       runtime_ready: ready,
       node_state,
     });
-    const incomplete = FACE_INCOMPLETE_NODE_STATES.includes(node_state);
+    const profileOk = face.profile_complete === true;
     predicates.push({
       key: "operatorProfile",
       label: d.operator_profile ?? "Operator profile",
       value: String(node_state),
-      status: incomplete || face.profile_complete === false ? "fail" : "ok",
-      ...(incomplete
-        ? {
+      status: profileOk ? "ok" : "fail",
+      ...(profileOk
+        ? {}
+        : {
             fix:
               d.fix_profile_incomplete ??
-              "Profile incomplete — run `dema start` then `dema setup` / choose language. Runtime Ready is not a ready face.",
-          }
-        : face.profile_complete === false
-          ? {
-              fix:
-                d.fix_profile_incomplete ??
-                "Profile incomplete — run `dema start` then `dema setup`.",
-            }
-          : {}),
+              "Profile incomplete — run `dema start`, then interactive `dema setup` (TTY) for name and language. Non-interactive setup only creates skeleton files. Runtime Ready is not a ready face.",
+          }),
     });
   }
 
@@ -313,13 +305,18 @@ export function doctorState(predicates) {
   const profileIncomplete = predicates.some(
     (p) => p.key === "operatorProfile" && p.status === "fail",
   );
+  // profile_incomplete when no concurrent real failure/warn. Preview
+  // `expected` resting (unbridged) may still accompany a NEW_NODE profile —
+  // that is not a runtime outage, so keep the face-repair reason. Fail/warn
+  // alongside an incomplete profile must surface the runtime issue instead.
+  const concurrentRuntimeIssue = nonProfileFail || has("warn");
   return {
     operational: !repair_required && !has("warn") && !has("expected"),
     preview_environment_valid: !nonProfileFail,
     repair_required,
-    reason: profileIncomplete
+    reason: profileIncomplete && !concurrentRuntimeIssue
       ? "profile_incomplete"
-      : repair_required
+      : nonProfileFail
         ? "predicate_failed"
         : has("warn")
           ? "degraded"

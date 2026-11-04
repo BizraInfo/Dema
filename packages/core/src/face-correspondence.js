@@ -112,3 +112,50 @@ export function formatReadyForFace({ runtime_ready, node_state }) {
   }
   return String(Boolean(runtime_ready));
 }
+
+const FACE_RESULT_KEYS = Object.freeze([
+  "schema",
+  "truth_label",
+  "ok",
+  "binding",
+  "face_ready",
+  "runtime_ready",
+  "node_state",
+  "profile_complete",
+  "ceiling_label",
+  "authority_delta",
+]);
+
+/**
+ * Re-derive face correspondence from the same inputs and reject forged fields
+ * (including face_ready / ceiling_label).
+ *
+ * @param {object} result
+ * @param {{ runtime_ready?: boolean, node_state?: string|null }} input
+ */
+export function verifyFaceCorrespondence(result, input = {}) {
+  if (!result || typeof result !== "object") {
+    return Object.freeze({
+      ok: false,
+      blocked_by: Object.freeze(["result_not_object"]),
+    });
+  }
+  const expected = assessFaceCorrespondence(input);
+  const blocked_by = [];
+  for (const key of FACE_RESULT_KEYS) {
+    if (result[key] !== expected[key]) blocked_by.push(`field_mismatch:${key}`);
+  }
+  const gotReasons = Array.isArray(result.reasons) ? result.reasons : null;
+  const expReasons = expected.reasons;
+  if (
+    !gotReasons ||
+    gotReasons.length !== expReasons.length ||
+    gotReasons.some((r, i) => r !== expReasons[i])
+  ) {
+    blocked_by.push("field_mismatch:reasons");
+  }
+  return Object.freeze({
+    ok: blocked_by.length === 0,
+    blocked_by: Object.freeze(blocked_by),
+  });
+}

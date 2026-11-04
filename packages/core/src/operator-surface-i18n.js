@@ -59,7 +59,7 @@ const EN = Object.freeze({
     gateway_probe: "Gateway probe",
     operator_profile: "Operator profile",
     fix_profile_incomplete:
-      "Profile incomplete — run `dema start` then `dema setup` / choose language. Runtime Ready is not a ready face.",
+      "Profile incomplete — run `dema start`, then interactive `dema setup` (TTY) for preferred name and language. Non-interactive setup only creates skeleton files. Runtime Ready is not a ready face.",
     fix_blocked:
       "activation gate is BLOCKED: no Node0 runtime is reporting a gate. Only a governed runtime can move it — bridge one with DEMA_NODE0_ADAPTER=gateway-http plus DEMA_GATEWAY_URL, or DEMA_NODE0_STATUS_COMMAND (see docs/QUICKSTART.md). For preview-only use, BLOCKED is the correct resting state.",
     explain_hint: "Type `node bin/dema explain doctor` for what each predicate means.",
@@ -145,7 +145,7 @@ const AR = Object.freeze({
     gateway_probe: "فحص البوابة",
     operator_profile: "ملف المشغّل",
     fix_profile_incomplete:
-      "الملف غير مكتمل — شغّل `dema start` ثم `dema setup` / اختر اللغة. جاهزية وقت التشغيل ليست وجهاً جاهزاً.",
+      "الملف غير مكتمل — شغّل `dema start`، ثم شغّل `dema setup` من طرفية تفاعلية لتعيين الاسم واللغة. الإعداد غير التفاعلي ينشئ ملفات الهيكل فقط. جاهزية وقت التشغيل ليست وجهاً جاهزاً.",
     fix_blocked:
       "بوابة التفعيل محظورة (BLOCKED): لا يوجد وقت تشغيل Node0 يبلّغ عن بوابة. فقط وقت تشغيل محكوم يمكنه تحريكها — اربط عبر DEMA_NODE0_ADAPTER=gateway-http مع DEMA_GATEWAY_URL، أو DEMA_NODE0_STATUS_COMMAND (انظر docs/QUICKSTART.md). للاستخدام بالمعاينة فقط، BLOCKED هي الحالة الصحيحة.",
     explain_hint: "اكتب `node bin/dema explain doctor` لمعرفة معنى كل شرط.",

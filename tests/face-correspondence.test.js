@@ -9,6 +9,7 @@ import { describe, it, test } from "node:test";
 import {
   assessFaceCorrespondence,
   formatReadyForFace,
+  verifyFaceCorrespondence,
   FACE_CORRESPONDENCE_SCHEMA,
 } from "../packages/core/src/face-correspondence.js";
 import {
@@ -142,6 +143,74 @@ describe("FACE-CORRESPONDENCE-1A", () => {
       "true",
     );
   });
+
+  it("doctor fails operatorProfile when node_state is explicitly empty", () => {
+    const preds = evaluatePredicates(okRuntime(), { node_state: "" });
+    const profile = preds.find((p) => p.key === "operatorProfile");
+    assert.equal(profile.status, "fail");
+    assert.notEqual(doctorVerdict(preds), "ready and consent-gated");
+    assert.equal(doctorState(preds).operational, false);
+  });
+
+  it("doctorState exposes concurrent runtime failure over sole profile reason", () => {
+    const preds = evaluatePredicates(
+      {
+        ...okRuntime(),
+        ready: false,
+        consoleReady: false,
+        gateway: { reachable: false },
+      },
+      { node_state: "PARTIAL_NODE" },
+    );
+    assert.equal(
+      preds.find((p) => p.key === "operatorProfile")?.status,
+      "fail",
+    );
+    assert.equal(doctorState(preds).reason, "predicate_failed");
+  });
+
+  it("verifyFaceCorrespondence accepts a clean re-derived result", () => {
+    const input = { runtime_ready: true, node_state: "EXISTING_NODE" };
+    const clean = assessFaceCorrespondence(input);
+    assert.equal(verifyFaceCorrespondence(clean, input).ok, true);
+  });
+
+  it("verifyFaceCorrespondence rejects forged face_ready and ceiling_label", () => {
+    const input = { runtime_ready: true, node_state: "EXISTING_NODE" };
+    const clean = assessFaceCorrespondence(input);
+    const forgedReady = { ...clean, face_ready: false };
+    const forgedCeiling = {
+      ...clean,
+      ceiling_label: "RUNTIME_READY_FACE_INCOMPLETE",
+    };
+    assert.equal(verifyFaceCorrespondence(forgedReady, input).ok, false);
+    assert.ok(
+      verifyFaceCorrespondence(forgedReady, input).blocked_by.includes(
+        "field_mismatch:face_ready",
+      ),
+    );
+    assert.equal(verifyFaceCorrespondence(forgedCeiling, input).ok, false);
+    assert.ok(
+      verifyFaceCorrespondence(forgedCeiling, input).blocked_by.includes(
+        "field_mismatch:ceiling_label",
+      ),
+    );
+  });
+
+  it("verifyFaceCorrespondence rejects forged-clean boundary (PARTIAL claimed FACE_READY)", () => {
+    const input = { runtime_ready: true, node_state: "PARTIAL_NODE" };
+    const forged = {
+      ...assessFaceCorrespondence(input),
+      ok: true,
+      face_ready: true,
+      profile_complete: true,
+      ceiling_label: "FACE_READY",
+      reasons: [],
+    };
+    const v = verifyFaceCorrespondence(forged, input);
+    assert.equal(v.ok, false);
+    assert.ok(v.blocked_by.includes("field_mismatch:face_ready"));
+  });
 });
 
 test("status JSON and first-run bind runtime Ready to the profile face", async () => {
@@ -176,7 +245,7 @@ test("status JSON and first-run bind runtime Ready to the profile face", async (
       NODE_ENV: "test",
       DEMA_NODE0_ADAPTER: "",
       DEMA_GATEWAY_URL: "",
-      DEMA_NODE0_STATUS_COMMAND: `node ${adapterPath}`,
+      DEMA_NODE0_STATUS_COMMAND: `node ${JSON.stringify(adapterPath)}`,
     };
 
     const statusResult = await execFileAsync(
