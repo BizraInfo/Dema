@@ -100,6 +100,43 @@ test("File op request · path outside scope_root → invalid", () => {
   assert.ok(r.violations.some((v) => v.includes("path_outside_scope")));
 });
 
+test("File op request · sibling name-extension is outside declared scope", () => {
+  const scope = "/home/u/scope";
+  for (const path of [
+    "/home/u/scope-evil/secret.txt",
+    "/home/u/scopeX/a.txt",
+    "/home/u/scope.bak/a.txt",
+  ]) {
+    const r = buildFileOpRequest({
+      path,
+      op_kind: "read",
+      scope_root: scope,
+      purpose: "path containment adversarial probe",
+    });
+    assert.equal(r.valid, false, `${path} must be refused`);
+    assert.equal(r.within_declared_scope, false, `${path} must be outside`);
+    assert.ok(r.violations.some((v) => v.includes("path_outside_scope")));
+  }
+});
+
+test("File op request · scope root and true descendants remain inside", () => {
+  const scope = "/home/u/scope";
+  for (const path of [
+    "/home/u/scope",
+    "/home/u/scope/a.txt",
+    "/home/u/scope/nested/b.txt",
+  ]) {
+    const r = buildFileOpRequest({
+      path,
+      op_kind: "read",
+      scope_root: scope,
+      purpose: "path containment positive control",
+    });
+    assert.equal(r.within_declared_scope, true, `${path} must remain inside`);
+    assert.equal(r.valid, true, `${path} must remain admissible`);
+  }
+});
+
 test("File op request · missing scope_root → invalid", () => {
   const r = buildFileOpRequest({
     path: "x.js",

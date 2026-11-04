@@ -84,6 +84,17 @@ function isPathInForbiddenZone(path) {
   return FORBIDDEN_PATH_PATTERNS.some((p) => p.test(path));
 }
 
+function isPathWithinScope(path, scopeRoot) {
+  if (
+    typeof path !== "string" ||
+    typeof scopeRoot !== "string" ||
+    scopeRoot.length === 0
+  )
+    return false;
+  const root = scopeRoot.endsWith("/") ? scopeRoot.slice(0, -1) : scopeRoot;
+  return path === root || path.startsWith(`${root}/`);
+}
+
 export function buildPATCodeApprenticeEffectCap() {
   return buildEffectCap({
     name: "pat_code_apprentice",
@@ -153,7 +164,7 @@ export function draftCodeChangePlan({
   const pathAnalysis = paths.map((path) => {
     const forbidden = isPathInForbiddenZone(path);
     const outsideScope =
-      safeScopeRoot.length > 0 && !path.startsWith(safeScopeRoot);
+      safeScopeRoot.length > 0 && !isPathWithinScope(path, safeScopeRoot);
     return Object.freeze({
       path,
       in_forbidden_zone: forbidden,
