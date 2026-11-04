@@ -22,10 +22,20 @@ function colorize(text, code, color) {
 
 import { resolveOperatorSurfaceI18n } from "./operator-surface-i18n.js";
 import { displayWidth, padToWidth } from "./display-width.js";
+import { assessFaceCorrespondence } from "./face-correspondence.js";
+
+const VERDICT_PROFILE_INCOMPLETE =
+  "profile incomplete — repair before claiming a ready face";
 
 // Returns an array of predicate objects from a status snapshot.
 // Each object: { key, label, value, status: 'ok'|'fail'|'warn', fix? }
-export function evaluatePredicates(status, { language_code = null } = {}) {
+//
+// Optional `node_state` (from dema-birth-loop) binds the operator-profile face
+// to runtime readiness so Ready:true cannot paper over PARTIAL_NODE.
+export function evaluatePredicates(
+  status,
+  { language_code = null, node_state = null } = {},
+) {
   const s = status ?? {};
   const i18n = resolveOperatorSurfaceI18n(language_code);
   const d = i18n.strings.doctor;
@@ -211,6 +221,30 @@ export function evaluatePredicates(status, { language_code = null } = {}) {
     status: gatewayReachable === false ? "warn" : "ok",
   });
 
+  // 6. Operator profile face (FACE-CORRESPONDENCE-1A)
+  // Omitted node_state keeps legacy predicate sets unchanged (UNBOUND).
+  // Explicit empty string is supplied → fail (not "ok via null profile_complete").
+  if (node_state != null) {
+    const face = assessFaceCorrespondence({
+      runtime_ready: ready,
+      node_state,
+    });
+    const profileOk = face.profile_complete === true;
+    predicates.push({
+      key: "operatorProfile",
+      label: d.operator_profile ?? "Operator profile",
+      value: String(node_state),
+      status: profileOk ? "ok" : "fail",
+      ...(profileOk
+        ? {}
+        : {
+            fix:
+              d.fix_profile_incomplete ??
+              "Profile incomplete — run `dema start`, then interactive `dema setup` (TTY) for name and language. Non-interactive setup only creates skeleton files. Runtime Ready is not a ready face.",
+          }),
+    });
+  }
+
   return predicates;
 }
 
@@ -230,6 +264,16 @@ function isAwaitingActivationGo(predicates) {
 // twice let the JSON surface print "ready and consent-gated" for an install
 // that had merely not been bridged yet — a readiness claim it had not earned.
 export function doctorVerdict(predicates) {
+  const profile = predicates.find((p) => p.key === "operatorProfile");
+  const concurrentRuntimeIssue = predicates.some(
+    (p) =>
+      (p.status === "fail" || p.status === "warn") &&
+      p.key !== "operatorProfile",
+  );
+  // Match doctorState: profile-only → profile incomplete; profile+runtime → blocked.
+  if (profile?.status === "fail" && !concurrentRuntimeIssue) {
+    return VERDICT_PROFILE_INCOMPLETE;
+  }
   if (predicates.some((p) => p.status === "fail" || p.status === "warn")) {
     return "blocked";
   }
@@ -259,19 +303,34 @@ export function doctorVerdict(predicates) {
 export function doctorState(predicates) {
   const has = (s) => predicates.some((p) => p.status === s);
   const repair_required = has("fail");
+  // Profile incompleteness is a face repair, not a broken preview shell —
+  // `--preview` may still exit 0 when the only fail is operatorProfile.
+  const nonProfileFail = predicates.some(
+    (p) => p.status === "fail" && p.key !== "operatorProfile",
+  );
+  const profileIncomplete = predicates.some(
+    (p) => p.key === "operatorProfile" && p.status === "fail",
+  );
+  // profile_incomplete when no concurrent real failure/warn. Preview
+  // `expected` resting (unbridged) may still accompany a NEW_NODE profile —
+  // that is not a runtime outage, so keep the face-repair reason. Fail/warn
+  // alongside an incomplete profile must surface the runtime issue instead.
+  const concurrentRuntimeIssue = nonProfileFail || has("warn");
   return {
     operational: !repair_required && !has("warn") && !has("expected"),
-    preview_environment_valid: !repair_required,
+    preview_environment_valid: !nonProfileFail,
     repair_required,
-    reason: repair_required
-      ? "predicate_failed"
-      : has("warn")
-        ? "degraded"
-        : has("expected")
-          ? isAwaitingActivationGo(predicates)
-            ? "awaiting_activation_go"
-            : "runtime_not_bridged"
-          : null,
+    reason: profileIncomplete && !concurrentRuntimeIssue
+      ? "profile_incomplete"
+      : nonProfileFail
+        ? "predicate_failed"
+        : has("warn")
+          ? "degraded"
+          : has("expected")
+            ? isAwaitingActivationGo(predicates)
+              ? "awaiting_activation_go"
+              : "runtime_not_bridged"
+            : null,
   };
 }
 

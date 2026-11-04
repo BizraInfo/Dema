@@ -18,6 +18,10 @@ import {
   formatDoctorDashboard,
 } from "../../../../packages/core/src/doctor-dashboard.js";
 import { statusWithLocalIdentity } from "../lib/status-identity.js";
+import { loadBirthLoopFace } from "../lib/birth-loop-profile.js";
+import {
+  assessFaceCorrespondence,
+} from "../../../../packages/core/src/face-correspondence.js";
 
 const adapter = createNode0Adapter();
 
@@ -55,12 +59,18 @@ export async function cmd_first_run(ctx) {
   // Step 3: status
   headerStream.write("==> 3. Status\n");
   const status = await statusWithLocalIdentity(adapter);
+  const { node_state } = await loadBirthLoopFace();
+  const face_correspondence = assessFaceCorrespondence({
+    runtime_ready: status.ready === true,
+    node_state,
+  });
+  const statusView = { ...status, node_state, face_correspondence };
   const color = !argv.includes("--no-color") && shouldUseColor();
-  headerStream.write(formatStatus(status, { color }) + "\n\n");
+  headerStream.write(formatStatus(status, { color, node_state }) + "\n\n");
 
   // Step 4: doctor
   headerStream.write("==> 4. Doctor\n");
-  const predicates = evaluatePredicates(status);
+  const predicates = evaluatePredicates(status, { node_state });
   const noColor =
     Boolean(process.env.NO_COLOR) ||
     process.env.TERM === "dumb" ||
@@ -80,7 +90,9 @@ export async function cmd_first_run(ctx) {
 
   if (wantJson) {
     // stdout payload (machine-parseable) — separate from human header.
-    console.log(JSON.stringify({ plan, outcome, predicates, status }, null, 2));
+    console.log(
+      JSON.stringify({ plan, outcome, predicates, status: statusView }, null, 2),
+    );
   }
 
   // first-run exit semantics: the COMMAND succeeded if it walked all 5
