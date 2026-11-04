@@ -8,8 +8,10 @@ export async function cmd_setup(ctx) {
   if (isJsonMode) {
     console.log(JSON.stringify(await runSetup(), null, 2));
   } else {
-    await runSetupWizard();
+    // Create home skeleton first so the wizard can write profile.json
+    // into a fresh DEMA_HOME without ENOENT.
     await runSetup();
+    await runSetupWizard();
   }
   process.exit(process.exitCode ?? 0);
 }

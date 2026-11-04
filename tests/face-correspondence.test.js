@@ -167,6 +167,7 @@ describe("FACE-CORRESPONDENCE-1A", () => {
       "fail",
     );
     assert.equal(doctorState(preds).reason, "predicate_failed");
+    assert.equal(doctorVerdict(preds), "blocked");
   });
 
   it("verifyFaceCorrespondence accepts a clean re-derived result", () => {

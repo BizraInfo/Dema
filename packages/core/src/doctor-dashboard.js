@@ -265,7 +265,13 @@ function isAwaitingActivationGo(predicates) {
 // that had merely not been bridged yet — a readiness claim it had not earned.
 export function doctorVerdict(predicates) {
   const profile = predicates.find((p) => p.key === "operatorProfile");
-  if (profile?.status === "fail") {
+  const concurrentRuntimeIssue = predicates.some(
+    (p) =>
+      (p.status === "fail" || p.status === "warn") &&
+      p.key !== "operatorProfile",
+  );
+  // Match doctorState: profile-only → profile incomplete; profile+runtime → blocked.
+  if (profile?.status === "fail" && !concurrentRuntimeIssue) {
     return VERDICT_PROFILE_INCOMPLETE;
   }
   if (predicates.some((p) => p.status === "fail" || p.status === "warn")) {
