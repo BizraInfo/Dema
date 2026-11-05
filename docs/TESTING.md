@@ -79,6 +79,14 @@ node --test --test-name-pattern="bounded diagnostic" tests/status.test.js
 
 ## Test surfaces
 
+### Retired gateway and UI launch boundaries
+
+| Test file | Surface covered |
+| --- | --- |
+| `tests/gateway-verified-mission.test.js` | HTTP 410 and synthetic protected-chain byte preservation for directory/file aliases, missing/unresolvable targets, target swaps, malformed/oversized payloads, and direct CLI fixture-override refusal. No operator state. |
+| `tests/gateway-server.test.js`, `tests/gateway-exact-consent.test.js`, `tests/node0-local-loop-integration.test.js` | Read-only fixture endpoints, corrupt-chain diagnostics, seeded-state restart reads, and adapter observations after unconditional mission refusal. Exact consent cannot revive retirement. |
+| `tests/dema-ui-loopback-launch.test.js` | Direct dev/start loopback settings plus preservation of existing managed-service and genesis bindings. Script assertions do not prove an installed listener's binding. |
+
 ### Node0 Genesis final-sprint candidate checks (2026-09-10)
 
 These rows cover the locally merged governed runtime and its DEMA bridge. They
